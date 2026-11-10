@@ -1299,8 +1299,8 @@ GAMES.push({
   update(s, dt, I) {
     s.t += dt; FX(s, dt); s.inv -= dt; s.cool -= dt;
     mover1D(s, I, dt, 170 * HERO(s).spd, 30, W - 30);
-    if ((I.A || I.Ap) && !s.shots.length) { s.shots.push({ x: s.px, y: s.py - 12 }); SFX('splash', { vol: 0.25, rate: 1.6 }); }   // one blast in the pipe at a time
-    for (const b of s.shots) b.y -= 360 * dt;
+    if ((I.A || I.Ap) && !s.shots.length && s.cool <= 0) { s.shots.push({ x: s.px, y: s.py - 16 }); s.cool = 0.35; SFX('splash', { vol: 0.25, rate: 1.6 }); }   // one blast in the pipe at a time, and a beat to reload
+    for (const b of s.shots) b.y -= 240 * dt;
     // the march: the whole army steps together, tick... tick... and the fewer are left, the faster the steps come
     const left = s.foes.length; s.stepT -= dt;
     if (left && s.stepT <= 0) { s.stepT = (0.05 + 0.6 * left / s.N0) / [0.85, 1, 1.2][s.diff];
@@ -1355,8 +1355,15 @@ GAMES.push({
     for (const d of s.drips) { if (SPC('glob_2', d.x, d.y, 0.32)) continue; R(d.x - 2, d.y - 4, 4, 6, '#7a5a2e'); R(d.x - 1, d.y - 7, 2, 3, '#7a5a2e'); }
     for (const b of s.shots) { R(b.x - 2, b.y - 8, 4, 12, '#9fd3ff'); R(b.x - 1, b.y + 4, 2, 6, '#5fa8e0'); }
     // the nozzle + the hero behind it
-    if (s.inv <= 0 || Math.floor(s.t * 10) % 2) { R(s.px - 4, s.py - 14, 8, 10, '#c9c4b8'); R(s.px - 10, s.py - 4, 20, 8, '#e8822a'); R(s.px - 14, s.py + 4, 28, 6, '#333'); }
-    HERO_AT(s, s.px + 30, H, 1.7, { face: 'U', horiz: true });
+    // the jetter nozzle on the end of its hose: no crew member, just the hose snaking off the bottom of the screen
+    if (s.inv <= 0 || Math.floor(s.t * 10) % 2) {
+      g.strokeStyle = '#1b1b1b'; g.lineWidth = 7; g.lineCap = 'round'; g.beginPath(); g.moveTo(s.px, s.py + 6);
+      g.bezierCurveTo(s.px, s.py + 22, s.px * 0.5 + 120, H - 6, 240, H + 12); g.stroke();
+      g.strokeStyle = '#3a3a3a'; g.lineWidth = 2; g.beginPath(); g.moveTo(s.px - 2, s.py + 6); g.bezierCurveTo(s.px - 2, s.py + 22, s.px * 0.5 + 118, H - 8, 238, H + 12); g.stroke();
+      R(s.px - 5, s.py - 2, 10, 9, '#8a8f96'); R(s.px - 4, s.py - 1, 3, 7, '#c4c9cf');            // brass-and-steel fitting
+      R(s.px - 3, s.py - 14, 6, 13, '#b9bec5'); R(s.px - 2, s.py - 13, 2, 11, '#e2e6ea');          // the nozzle
+      R(s.px - 4, s.py - 16, 8, 3, '#d4a632');                                                  // its brass tip
+      if (s.cool > 0.2) for (let i = 0; i < 3; i++) C(s.px + (i - 1) * 3, s.py - 18 - i, 1.5, '#cfe9ff'); }   // a little spray after each blast
     DRAWFX(s); HUD(s, 'PIPE INVADERS', null); PANTS(s, 6, 20); T(`LEFT ${s.foes.length}`, W - 8, 24, '#fff', 6, 'right');
   },
 });
