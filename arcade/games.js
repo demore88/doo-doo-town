@@ -1591,7 +1591,7 @@ GAMES.push({
     const acc = skid ? 1700 : p.on ? 520 : 380; p.vx += dir * acc * dt; if (!dir && p.on) p.vx *= Math.pow(0.004, dt);
     p.vx = clamp(p.vx, -top, top); if (dir) p.face = dir; p.skid = skid && p.on;
     const jumpHeld = I.A || I.U || (I.ptr.down && I.ptr.x >= W * 0.33 && I.ptr.x <= W * 0.66);
-    if ((I.Ap || I.Up || (I.ptr.clicked && I.ptr.x >= W * 0.33 && I.ptr.x <= W * 0.66)) && p.on) { p.vy = -305 - Math.abs(p.vx) * 0.32; p.on = false; SFX('ui_tap', { vol: 0.3 }); }   // a running jump goes higher
+    if ((I.Ap || I.Up || (I.ptr.clicked && I.ptr.x >= W * 0.33 && I.ptr.x <= W * 0.66)) && (p.on || s.airJump)) { if (!p.on) s.airJump = false; p.vy = -305 - Math.abs(p.vx) * 0.32; p.on = false; SFX('ui_tap', { vol: 0.3 }); }   // a running jump goes higher
     if (!jumpHeld && p.vy < -110) p.vy = -110;                       // short hop if you let go
     p.vy = Math.min(520, p.vy + (jumpHeld && p.vy < 0 ? 640 : 1250) * dt);   // floaty while you hold jump, snappy coming down
     // move X, collide
@@ -1606,7 +1606,7 @@ GAMES.push({
     p.y += p.vy * dt; p.on = false;
     for (const sx of [p.x - hw + 1, p.x + hw - 1]) {
       const c = Math.floor(sx / SR_TILE);
-      if (p.vy >= 0) { const r = Math.floor(p.y / SR_TILE); if (srSolid(c, r)) { p.y = r * SR_TILE; p.vy = 0; p.on = true; s.combo = 0; } }
+      if (p.vy >= 0) { const r = Math.floor(p.y / SR_TILE); if (srSolid(c, r)) { p.y = r * SR_TILE; p.vy = 0; p.on = true; s.combo = 0; s.airJump = false; } }
       else { const r = Math.floor((p.y - hh) / SR_TILE); if (srSolid(c, r)) { p.y = (r + 1) * SR_TILE + hh; p.vy = 0;
         const k = c + ',' + r; s.bumps.push({ k, t: 0.15 });
         if (L.brickSet.has(k)) { if (s.big) { SR_BROKE.add(k); s.score += 50; SFX('clog'); for (let i = 0; i < 4; i++) s.debris.push({ x: c * SR_TILE + 4 + (i % 2) * 8, y: r * SR_TILE + 4 + (i > 1) * 8, vx: (i % 2 ? 60 : -60), vy: -200 + (i > 1) * 60, t: 1 }); s.quip('smash', "That's a load-bearing cinder block, Ron."); }
@@ -1630,7 +1630,7 @@ GAMES.push({
       } else { f.x += f.vx * dt; f.y = f.y0 + Math.sin(s.t * 2 + f.ph) * 22; }
       const fw = f.k === 'g' ? 8 : 9, ftop = f.k === 'g' ? f.y - 10 : f.y - 9, fbot = f.k === 'g' ? f.y : f.y + 9;
       if (Math.abs(f.x - p.x) < fw + hw && p.y > ftop && p.y - hh < fbot) {
-        if (p.vy > 60 && p.y - ftop < 10) { f.dead = 0.01; p.vy = jumpHeld ? -330 : -230; SFX('squish'); s.combo++; const pts = 100 * Math.pow(2, Math.min(5, s.combo - 1)); s.score += pts; s.texts.push({ x: f.x, y: f.y - 16, txt: String(pts), t: 0.8 }); s.quip(f.k, f.k === 'g' ? "You don't STOMP grease, Ron. You JET it." : 'Flushable wipes. Haunting us even here.'); }
+        if (p.vy > 60 && p.y - ftop < 10) { f.dead = 0.01; p.vy = jumpHeld ? -330 : -230; s.airJump = true; /* a stomp gives you another jump */ SFX('squish'); s.combo++; const pts = 100 * Math.pow(2, Math.min(5, s.combo - 1)); s.score += pts; s.texts.push({ x: f.x, y: f.y - 16, txt: String(pts), t: 0.8 }); s.quip(f.k, f.k === 'g' ? "You don't STOMP grease, Ron. You JET it." : 'Flushable wipes. Haunting us even here.'); }
         else if (s.inv <= 0) { s.quip('hit' + f.k, f.k === 'g' ? 'He got greased. Happens to the best of us.' : 'Wiped out. Literally.'); hurt(s, false); }
       }
     }
