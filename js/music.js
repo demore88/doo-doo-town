@@ -8,13 +8,14 @@ const DDTMusic = (() => {
   // ---------- the van radio: the real Doo Doo Town tracks, one playlist that keeps going from page to page ----------
   const BASE = (() => { try { return document.currentScript.src.replace(/js\/music\.js.*$/, 'assets/music/'); } catch (e) { return 'assets/music/'; } })();
   const TRACKS = [
+    { file: 'doo_doo_town.mp3', name: 'DOO DOO TOWN' },
     { file: 'doo_doo_town_rock.mp3', name: 'DOO DOO TOWN ROCK' },
     { file: 'that_cloggin_sound.mp3', name: "THAT CLOGGIN' SOUND" },
     { file: 'brown_friday.mp3', name: 'BROWN FRIDAY' },
     { file: 'the_brown_note.mp3', name: 'THE BROWN NOTE' },
     { file: 'nightmares.mp3', name: 'NIGHTMARES' },
   ];
-  const START = { van: 0, job: 3, stop: 1, spooky: 4 };   // where a fresh radio starts, by kind of scene
+  const START = { van: 0, job: 4, stop: 2, spooky: 5 };   // where a fresh radio starts, by kind of scene
   // When the game runs inside app.html, the radio lives in that outer page, so it never stops or skips
   // between screens. It only pauses when the crew gets out, and picks up right where it left off.
   const HOST = (() => { try { return window.top !== window && window.parent.DDT_RADIO ? window.parent.DDT_RADIO : null; } catch (e) { return null; } })();
@@ -31,7 +32,7 @@ const DDTMusic = (() => {
   }
   function rLoad(i, t) { rIdx = ((i % TRACKS.length) + TRACKS.length) % TRACKS.length; radio.src = BASE + TRACKS[rIdx].file; try { radio.currentTime = t || 0; } catch (e) {} if (t != null && t < 1) nowPlaying(TRACKS[rIdx].name); }
   radio.addEventListener('loadedmetadata', () => { const st = rState(); if (st && st.i === rIdx && st.t > 0 && radio.currentTime < 0.5) { const t = st.t + (st.off ? 0 : Math.min(30, (Date.now() - st.at) / 1000)); /* radio was off: pick up where it stopped */ if (t < radio.duration - 2) radio.currentTime = t; } });
-  radio.addEventListener('ended', () => { const pool = TRACKS.map((_, i) => i).filter(i => i !== rIdx && (TRACKS[i].file !== 'nightmares.mp3' || rIdx === 4)); rLoad(pool[Math.floor(Math.random() * pool.length)], 0);   /* after the first song: shuffle (Nightmares stays for the alien night) */ if (rOn && !muted) radio.play().catch(() => {}); });
+  radio.addEventListener('ended', () => { const pool = TRACKS.map((_, i) => i).filter(i => i !== rIdx && (TRACKS[i].file !== 'nightmares.mp3' || rIdx === 5)); rLoad(pool[Math.floor(Math.random() * pool.length)], 0);   /* after the first song: shuffle (Nightmares stays for the alien night) */ if (rOn && !muted) radio.play().catch(() => {}); });
   addEventListener('pagehide', rSave); setInterval(rSave, 1000);
   document.addEventListener('visibilitychange', () => { if (!rOn) return; if (document.hidden) radio.pause(); else if (!muted) radio.play().catch(() => {}); });
   let fadeT = null;
@@ -144,7 +145,7 @@ const DDTMusic = (() => {
     handoff() { radio.pause(); rSave(); },
     play(name) {
       song = null; wanted = null; clearInterval(timer);
-      if (name === 'spooky') { rOn = true; rLoad(4, 0); radio.muted = muted; if (!muted) radio.play().catch(() => {}); }   // the alien night gets Nightmares
+      if (name === 'spooky') { rOn = true; rLoad(5, 0); radio.muted = muted; if (!muted) radio.play().catch(() => {}); }   // the alien night gets Nightmares
       else radioOn(name);
       if (document.body) button(); else addEventListener('DOMContentLoaded', button);
     },

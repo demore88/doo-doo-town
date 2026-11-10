@@ -17,7 +17,7 @@
 <script>
 // ---------- the van radio, owned by this outer page so it plays straight through every screen change ----------
 window.DDT_RADIO = (() => {
-  const TR = [['doo_doo_town_rock.mp3', 'DOO DOO TOWN ROCK'], ["that_cloggin_sound.mp3", "THAT CLOGGIN' SOUND"], ['brown_friday.mp3', 'BROWN FRIDAY'], ['the_brown_note.mp3', 'THE BROWN NOTE'], ['nightmares.mp3', 'NIGHTMARES']];
+  const TR = [['doo_doo_town.mp3', 'DOO DOO TOWN'], ['doo_doo_town_rock.mp3', 'DOO DOO TOWN ROCK'], ["that_cloggin_sound.mp3", "THAT CLOGGIN' SOUND"], ['brown_friday.mp3', 'BROWN FRIDAY'], ['the_brown_note.mp3', 'THE BROWN NOTE'], ['nightmares.mp3', 'NIGHTMARES']];
   const a = new Audio(); a.preload = 'auto'; a.volume = 0.5;
   let muted0 = false; try { muted0 = localStorage.getItem('ddt_mute') === '1'; } catch (e) {}
   const st = { idx: -1, on: false, muted: muted0, onTrack: null };
@@ -25,7 +25,7 @@ window.DDT_RADIO = (() => {
   const tell = () => { try { st.onTrack && st.onTrack(TR[st.idx][1]); } catch (e) {} };
   function load(i) { st.idx = ((i % TR.length) + TR.length) % TR.length; a.src = 'assets/music/' + TR[st.idx][0]; tell(); }
   const go = () => { a.muted = st.muted; if (st.on && !st.muted) a.play().catch(() => {}); };
-  a.addEventListener('ended', () => { const pool = TR.map((_, i) => i).filter(i => i !== st.idx && (i !== 4 || st.idx === 4)); load(pool[Math.floor(Math.random() * pool.length)]); go(); });
+  a.addEventListener('ended', () => { const pool = TR.map((_, i) => i).filter(i => i !== st.idx && (i !== 5 || st.idx === 5)); load(pool[Math.floor(Math.random() * pool.length)]); go(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) a.pause(); else go(); });
   return {
     audio: a, st,
@@ -33,7 +33,7 @@ window.DDT_RADIO = (() => {
     fade(ms = 700) { clearInterval(fadeT); if (!st.on) return; st.on = false; const v0 = a.volume, t0 = performance.now();
       fadeT = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / ms); a.volume = v0 * (1 - k); if (k >= 1) { clearInterval(fadeT); a.pause(); a.volume = 0.5; } }, 30); },
     pause() { clearInterval(fadeT); st.on = false; a.pause(); a.volume = 0.5; },
-    spooky() { st.on = true; load(4); go(); },
+    spooky() { st.on = true; load(5); go(); },
     reset() { this.pause(); st.idx = -1; },
     nudge() { if (st.on && !st.muted && a.paused) a.play().catch(() => {}); },
     toggleMute() { st.muted = !st.muted; try { localStorage.setItem('ddt_mute', st.muted ? '1' : '0'); } catch (e) {} go(); if (st.muted) a.muted = true; return st.muted; },
