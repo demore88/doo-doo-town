@@ -1719,7 +1719,7 @@ GAMES.push({
     for (const [px, h] of L.pipes) {                                   // white PVC "pipes" (they're cleanouts, Ron)
       const x = px * SR_TILE - cam, top = (SR_GROUND - h) * SR_TILE; if (x < -40 || x > W + 10) continue;
       if (T2('ptop')) {   // pipe pieces: the cap off the top piece, the flared foot off the base piece, plain pipe repeating in between (clipped to the pipe's height)
-        const pw = 36, px0 = x + 16 - pw / 2, bot = SR_GROUND * SR_TILE, I = T2, part = (n, f0, f1, y, h) => g.drawImage(I(n), 0, I(n).height * f0, I(n).width, I(n).height * (f1 - f0), px0, y, pw, h);
+        const pw = 36, px0 = x + 16 - pw / 2, bot = H + 40, I = T2,   /* the pipe runs down through the dirt, off the bottom of the screen */ part = (n, f0, f1, y, h) => g.drawImage(I(n), 0, I(n).height * f0, I(n).width, I(n).height * (f1 - f0), px0, y, pw, h);
         const capH = pw * I('ptop').height * 0.5 / I('ptop').width, footH = pw * I('pbase').height * 0.22 / I('pbase').width, bodyH = pw * I('pbody').height / I('pbody').width;
         g.save(); g.beginPath(); g.rect(px0 - 2, top + capH * 0.85, pw + 4, bot - top - capH * 0.85); g.clip();   // the body starts under the cap, so nothing pokes out behind it
         let k = 0; for (let y = bot - footH; y > top + capH * 0.6 - bodyH; y -= bodyH) { const n = ['pbody', 'pcoup', 'pbody', 'pstain'][(px + k++) % 4]; part(n, 0, 1, y - bodyH, bodyH + 0.5); }
