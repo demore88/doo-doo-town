@@ -166,7 +166,7 @@ function start() {
   phase = 'ready'; readyT = 1.6; screen(''); $('#quit').style.display = ''; showPad();
 }
 function finish() {
-  const G = GAMES[cur], e = s.end; phase = 'result'; showPad();
+  const G = GAMES[cur], e = s.end; phase = 'result'; showPad(); store.set('seen_' + G.id, 1);
   const key = G.id + '_' + diff, prev = store.get(key) || 0; if (e.win && e.stars > prev) store.set(key, e.stars);
   if (e.win) { beep(523, .12); setTimeout(() => beep(659, .12), 120); setTimeout(() => beep(784, .25), 240); } else { beep(196, .4, 'sawtooth', .05, -80); }
   $('#resbox').innerHTML = `<div class="big" style="color:${e.win ? '#7bd65b' : '#e9665a'}">${e.win ? 'JOB DONE!' : 'NOT THIS TIME'}</div>
@@ -213,7 +213,8 @@ const load = (k, src) => new Promise(r => { const i = new Image(); i.onload = ()
 Promise.all([load('matt', '../assets/matt_dance.png'), load('rod', '../assets/rod_dance.png'), load('van', '../assets/van_left.png'),
   document.fonts ? document.fonts.load('8px "Press Start 2P"').catch(() => {}) : 0]).then(() => {
     buildGrid(); requestAnimationFrame(frame);
-    if (EMBED) { const i = GAMES.findIndex(x => x.id === EMBED); if (i >= 0) openIntro(i); $('#home').textContent = '< BACK'; }
+    if (EMBED) { const i = GAMES.findIndex(x => x.id === EMBED); if (i >= 0) { openIntro(i); if (store.get('seen_' + EMBED)) start(); }   /* played it before: skip the how-to, straight to READY */
+      $('#home').textContent = '< BACK'; }
     if (DDT.param('lead')) $('#heroes').style.display = 'none';
   });
 showPad();
