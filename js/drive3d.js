@@ -177,7 +177,7 @@ function drive3d(choice, opts) {
   // the real van, from behind: 6 frames (straight / lean right / lean left, then the same with brake lights). Falls back to the drawn one.
   const VANS = new Image(); let vanFail = false; VANS.onerror = () => { vanFail = true; }; VANS.src = (window.DDT && DDT.root || '') + 'assets/van_back.png';
   const vanReady = () => vanFail || (VANS.complete && VANS.naturalWidth > 0);
-  let helpSeen = false; try { helpSeen = localStorage.getItem('ddt_drive_help2') === '1'; } catch (e) {} const VCW = 98, VCH = 112;
+  let helpSeen = false; try { helpSeen = localStorage.getItem('ddt_drive_help2') === '1'; } catch (e) {} const VCW = 104, VCH = 98;   // drawn size; the sheet itself is 2x for the 2x canvas
 
   // ---------- dress the roadside ----------
   const put = (n, img, off, scale = 1, kind) => { if (segs[n]) segs[n].sprites.push({ img, off, scale, kind }); };
@@ -215,7 +215,7 @@ function drive3d(choice, opts) {
   let rz = PZ + 5 * SEG, rv = 0, roff = LANE[1], rivalWon = false, rivalImg = null, rivalBump = 0;
   function makeRival() {   // repaint our van in Clog Kings colors (blue->red, yellow->black) once the art has loaded
     if (rivalImg || !(VANS.complete && VANS.naturalWidth)) return;
-    const c = document.createElement('canvas'); c.width = VCW; c.height = VCH; const k = c.getContext('2d'); k.drawImage(VANS, 0, 0, VCW, VCH, 0, 0, VCW, VCH);
+    const c = document.createElement('canvas'); c.width = VCW; c.height = VCH; const k = c.getContext('2d'); k.imageSmoothingEnabled = true; k.drawImage(VANS, 0, 0, VANS.width / 6, VANS.height, 0, 0, VCW, VCH);
     const d = k.getImageData(0, 0, VCW, VCH), p = d.data;
     for (let i = 0; i < p.length; i += 4) { const r0 = p[i], g0 = p[i + 1], b0 = p[i + 2];
       if (b0 > r0 + 30 && b0 > g0) { p[i] = Math.min(255, b0 + 20); p[i + 1] = g0 * 0.3; p[i + 2] = r0 * 0.3; }            // blue wrap -> red
@@ -472,7 +472,7 @@ function drive3d(choice, opts) {
       if (!(inv > 0 && Math.floor(t * 10) % 2)) {
         const vx = W / 2 - 36 + steer * 6, vy = H - 58 - bounce * 6 + (Math.abs(px) > 1 ? (Math.random() - .5) * 3 : 0);
         if (VANS.complete && VANS.naturalWidth) { const fi = (brake ? 3 : 0) + (steer > 0 ? 1 : steer < 0 ? 2 : 0);
-          r.drawImage(VANS, fi * VCW, 0, VCW, VCH, Math.round(vx + 36 - VCW / 2), Math.round(vy + 52 - VCH), VCW, VCH); }
+          r.drawImage(VANS, fi * VANS.width / 6, 0, VANS.width / 6, VANS.height, Math.round(vx + 36 - VCW / 2), Math.round(vy + 52 - VCH), VCW, VCH); }
         else if (vanFail) { r.save(); r.translate(vx + 36, vy + 52); r.rotate(steer * 0.04); r.scale(1.35, 1.35); r.drawImage(brake ? VANBRAKE : VAN, -36, -52); r.restore(); }
         if (gas && speed > CRUISE * 0.9) { r.fillStyle = 'rgba(200,200,205,.6)'; for (let i = 0; i < 3; i++) r.fillRect(vx + 20 + Math.random() * 4, vy + 50 + i * 3, 3, 2); }
       }

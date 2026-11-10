@@ -180,10 +180,10 @@
 
 <audio id="music" src="assets/doo_doo_town.mp3" loop preload="auto"></audio>
 <audio id="call" src="assets/call_fluffernutter.mp3" preload="auto"></audio>
-<script src="js/state.js?v=1794284128"></script>
-<script src="js/sfx.js?v=1794284128"></script>
-<script src="js/drive3d.js?v=1794284128"></script>
-<script src="js/music.js?v=1794284128"></script>
+<script src="js/state.js?v=1794284330"></script>
+<script src="js/sfx.js?v=1794284330"></script>
+<script src="js/drive3d.js?v=1794284330"></script>
+<script src="js/music.js?v=1794284330"></script>
 <script>
 const W = 480, H = 270, LOOP_W = 6688;           // strip loop width at 270px tall
 const cv = document.getElementById('c'), g = cv.getContext('2d');
@@ -223,9 +223,9 @@ function draw(t) {
   while (puffs.length && puffs[0].a <= 0) puffs.shift();
   for (const p of puffs) { g.fillStyle = `rgba(190,190,195,${Math.max(0, p.a)})`; g.fillRect(Math.round(p.x), Math.round(p.y), Math.ceil(p.r), Math.ceil(p.r)); }
 
-  const wheel = Math.floor(t * 14) % Math.max(1, Math.floor(van.width / 144));   // the wheels spin on the title screen
+  const VK = van.width / 432, wheel = Math.floor(t * 14) % 3;   // the wheels spin on the title screen
   const bounce = (Math.floor(t * 6) % 5 === 0) ? -1 : 0;
-  g.drawImage(van, wheel * 144, 0, 144, 64, VAN_X, VAN_Y + bounce, 144, 64);
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(van, wheel * 144 * VK, 0, 144 * VK, 64 * VK, VAN_X, VAN_Y + bounce, 144, 64); g.imageSmoothingEnabled = false;   // big art into the 1x title canvas: smooth it down, don't drop pixels
 
   // Rod up front over the driver's seat, Matt behind him; Matt runs 4 counts behind so one spins while the other kicks
   const roof = VAN_Y + bounce + 6 - 39;

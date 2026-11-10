@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794284128"></script>
-<script src="../js/music.js?v=1794284128"></script>
-<script src="../js/sfx.js?v=1794284128"></script>
-<script src="../js/calls.js?v=1794284128"></script>
-<script src="../js/placeholders.js?v=1794284128"></script>
+<script src="../js/state.js?v=1794284330"></script>
+<script src="../js/music.js?v=1794284330"></script>
+<script src="../js/sfx.js?v=1794284330"></script>
+<script src="../js/calls.js?v=1794284330"></script>
+<script src="../js/placeholders.js?v=1794284330"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');
@@ -314,7 +314,7 @@ function matt(x, y, f = 0, s = 2, a = 1) {
   if (!IMG.matt) return; g.globalAlpha = a;
   g.drawImage(IMG.matt, f * 24, 0, 24, 40, Math.round(x - 12 * s), Math.round(y - 40 * s), 24 * s, 40 * s); g.globalAlpha = 1;
 }
-function van(x, y) { if (IMG.van) { const f = IMG.van.width >= 432 ? Math.floor(Math.abs(x) / 3) % 3 : 0; g.drawImage(IMG.van, f * 144, 0, 144, 64, Math.round(x), Math.round(y - 64), 144, 64); } }   // wheels turn as the van moves
+function van(x, y) { if (IMG.van) { const K = IMG.van.width / 432, f = Math.floor(Math.abs(x) / 3) % 3; g.drawImage(IMG.van, f * 144 * K, 0, 144 * K, 64 * K, Math.round(x), Math.round(y - 64), 144, 64); } }   // wheels turn as the van moves
 const RES = { health: 0, rep: 0, pay: 0, gear: null, splashes: 0, kinks: 0, cat: false };
 
 // Grant: a little guy in a maroon bathrobe and slippers

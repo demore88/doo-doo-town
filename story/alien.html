@@ -17,9 +17,9 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794284128"></script>
-<script src="../js/music.js?v=1794284128"></script>
-<script src="../js/sfx.js?v=1794284128"></script>
+<script src="../js/state.js?v=1794284330"></script>
+<script src="../js/music.js?v=1794284330"></script>
+<script src="../js/sfx.js?v=1794284330"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('spooky');
@@ -352,7 +352,7 @@ SCENES.beam = async () => {
     // Rod's house + porch light
     R(60, 160, 120, 76, '#2a2a36'); g.fillStyle = '#1c1c26'; g.beginPath(); g.moveTo(52, 162); g.lineTo(120, 120); g.lineTo(188, 162); g.fill();
     R(120, 196, 22, 40, '#4a3826'); R(146, 186, 4, 4, '#ffd98a'); R(78, 180, 22, 18, '#0a0f1e');
-    if (IMG.van) g.drawImage(IMG.van, 0, 0, 144, 64, 320, 188, 108, 48);
+    if (IMG.van) g.drawImage(IMG.van, 0, 0, IMG.van.width / 3, IMG.van.height, 320, 188, 108, 48);
     // ship
     const sx = 250, sy = st.shipY, t = performance.now() / 1000;
     if (st.beam > 0) { g.fillStyle = `rgba(125,255,176,${0.18 * st.beam + 0.05 * Math.sin(t * 20) * st.beam})`; g.beginPath(); g.moveTo(sx - 14, sy + 8); g.lineTo(sx + 14, sy + 8); g.lineTo(sx + 46, 238); g.lineTo(sx - 46, 238); g.fill(); }
