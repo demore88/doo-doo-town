@@ -1780,9 +1780,9 @@ GAMES.push({
     if (s.boss) T('FATBERG', 240, 22, '#e9665a', 6, 'center');
     // Rod's running commentary
     if (s.bub) { const lines = []; let ln = ''; for (const w of s.bub.txt.split(' ')) { if ((ln + ' ' + w).length > 34) { lines.push(ln); ln = w; } else ln = ln ? ln + ' ' + w : w; } lines.push(ln);
-      const h = Math.max(34, 18 + lines.length * 10); R(8, 22, 300, h, 'rgba(16,21,31,.92)');  /* at least tall enough for Rod's face */ g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(8.5, 22.5, 299, h - 1);
+      const h = Math.max(34, 18 + lines.length * 10); R(8, 22, 306, h, 'rgba(16,21,31,.92)');  /* at least tall enough for Rod's face */ g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(8.5, 22.5, 305, h - 1);
       const face = IMG['rodf_' + (s.bub.face || 'normal')] || IMG.rod_port;
-      if (face) { const fs = h - 6, fy = 25; R(11, fy, fs, fs, '#2a3346'); g.imageSmoothingEnabled = true; g.drawImage(face, 11, fy, fs, fs); g.imageSmoothingEnabled = false; g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(11.5, fy + .5, fs - 1, fs - 1); } else SPR('rod', 0, 24, 22 + h - 2); T('ROD:', 42, 30, '#f7c418', 6); lines.forEach((l, i) => T(l, 42, 42 + i * 10, '#fff', 6)); }
+      if (face) { const fs = 28, fy = 22 + (h - 28) / 2; R(11, fy, fs, fs, '#2a3346'); g.imageSmoothingEnabled = true; g.drawImage(face, 11, fy, fs, fs); g.imageSmoothingEnabled = false; g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(11.5, fy + .5, fs - 1, fs - 1); } else SPR('rod', 0, 24, 22 + h - 2); T('ROD:', 46, 30, '#f7c418', 6); lines.forEach((l, i) => T(l, 46, 42 + i * 10, '#fff', 6)); }
   },
 });
 
