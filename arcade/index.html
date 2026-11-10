@@ -99,9 +99,9 @@
   <div class="scr" id="result"><div class="box" id="resbox"></div></div>
 </div></div>
 <audio id="music" src="../assets/doo_doo_town.mp3" loop preload="auto"></audio>
-<script src="../js/state.js?v=1794344619"></script>
-<script src="../js/sfx.js?v=1794344619"></script>
-<script src="games.js?v=1794344619"></script>
+<script src="../js/state.js?v=1794345469"></script>
+<script src="../js/sfx.js?v=1794345469"></script>
+<script src="games.js?v=1794345469"></script>
 <script>
 const cv = document.getElementById('c'); g = cv.getContext('2d'); const SCALE = 3; g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
 const $ = s => document.querySelector(s);
@@ -111,6 +111,7 @@ let hero = DDT.param('lead') === 'matt' ? 'matt' : DDT.param('lead') === 'rod' ?
 DDT.root = '../';
 // EMBED MODE: arcade/index.html?play=<id>&diff=<0-2>&ret=<url> plays one game as part of a job, then hands back.
 const EMBED = DDT.param('play');
+const SOLO = DDT.param('solo') === '1';   // started from the main menu just to play it: quitting or continuing goes back to the menu, never into a saved game
 if (EMBED && DDT.param('diff') !== null) diff = +DDT.param('diff');
 const store = { get(k) { try { return JSON.parse(localStorage.getItem('ddt_' + k)); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem('ddt_' + k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -150,7 +151,7 @@ document.querySelectorAll('#pad button').forEach(b => {
 let coarse = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 let padOn = coarse;
 addEventListener('touchstart', () => { if (!coarse) { coarse = true; padOn = true; showPad(); } }, { passive: true });
-$('#home').onclick = () => { DDT.nav(EMBED ? DDT.back('play.html') : '../index.html'); };
+$('#home').onclick = () => { DDT.nav(SOLO ? DDT.back('index.html') : EMBED ? DDT.back('play.html') : '../index.html'); };
 $('#padbtn').onclick = () => { padOn = !padOn; showPad(); };
 function showPad() {
   const G = cur != null ? GAMES[cur] : null;
@@ -209,7 +210,7 @@ function fitIntro() {   // shrink the text until the whole how-to fits on one sc
 }
 addEventListener('resize', () => { if (phase === 'intro') fitIntro(); });
 function toMenu() { phase = 'menu'; screen('menu'); $('#quit').style.display = 'none'; showPad(); buildGrid(); }
-function quit() { openIntro(cur); }
+function quit() { if (SOLO) return DDT.nav(DDT.back('index.html')); openIntro(cur); }
 $('#quit').onclick = quit;
 function start() {
   const G = GAMES[cur];
@@ -230,8 +231,9 @@ function finish() {
   $('#again').onclick = start; $('#all').onclick = toMenu; if ($('#next')) $('#next').onclick = () => openIntro(cur + 1);
   $('#again').focus();
   if (EMBED) {
-    store.set('mg', { id: G.id, win: !!e.win, stars: e.win ? e.stars : 0, at: Date.now() });
-    $('#resbox .row').innerHTML = '<button class="btn" id="cont">CONTINUE &gt;</button>';
+    if (!SOLO) store.set('mg', { id: G.id, win: !!e.win, stars: e.win ? e.stars : 0, at: Date.now() });
+    $('#resbox .row').innerHTML = SOLO ? '<button class="btn" id="again2">PLAY AGAIN</button><button class="btn" id="cont">MAIN MENU</button>' : '<button class="btn" id="cont">CONTINUE &gt;</button>';
+    if (SOLO) $('#again2').onclick = start;
     $('#cont').onclick = () => { DDT.nav(DDT.back('play.html')); }; $('#cont').focus();
   }
 }
