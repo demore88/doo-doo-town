@@ -1339,9 +1339,7 @@ GAMES.push({
   col(k) { return k === 'towel' ? '#e85a8e' : k === 'grease' ? '#2b2620' : '#e8e4d8'; },
   draw(s) {
     // inside the main: a long pipe, seen from the cleanout
-    R(0, 0, W, H, '#1c1e1d'); R(14, 16, W - 28, H - 16, '#3b3f3c');
-    for (let i = 0; i < 12; i++) { const y = 16 + ((i * 24 + s.march * 12) % (H - 16)); R(14, y, W - 28, 2, '#444945'); }   // pipe rings scroll as they march
-    R(14, 16, 4, H, '#55594f'); R(W - 18, 16, 4, H, '#55594f');
+    R(0, 0, W, H, '#2b2d30');   // flat dark gray, nothing moving behind the action
     if (s.duck) { const x = s.duck.x; R(x - 8, 22, 14, 9, '#f7c418'); R(x + 2, 17, 8, 8, '#f7c418'); R(x + 9, 20, 4, 3, '#e8822a'); R(x + 5, 19, 2, 2, '#000'); }
     for (const f of s.foes) {
       const x = f.x, y = f.y, fr = s.march % 2;   // two-step shuffle, in time with the march
