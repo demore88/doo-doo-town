@@ -1,8 +1,8 @@
 /* Doo Doo Town offline cache.
    Pages and scripts: network first (so updates show up right away), cache when offline.
    Art and sound: served from the cache, refreshed in the background. */
-const CACHE = 'ddt-v1';
-const CORE = ['./', './index.html', './play.html', './arcade/index.html', './arcade/games.js',
+const CACHE = 'ddt-v2';
+const CORE = ['./', './index.html', './app.html', './play.html', './arcade/index.html', './arcade/games.js',
   './story/job.html', './story/stop.html', './story/coffee.html', './story/fluffernutter.html', './story/alien.html',
   './js/calls.js', './js/drive3d.js', './js/music.js', './js/placeholders.js', './js/sfx.js', './js/state.js',
   './assets/PressStart2P.ttf', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
