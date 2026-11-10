@@ -17,6 +17,7 @@ const DDTMusic = (() => {
   const START = { van: 0, job: 3, stop: 1, spooky: 4 };   // where a fresh radio starts, by kind of scene
   const radio = new Audio(); radio.preload = 'auto'; radio.volume = 0.5;
   let rIdx = -1, rOn = false;
+  if (/[?&]new=1/.test(location.search)) { try { sessionStorage.removeItem('ddt_radio'); } catch (e) {} }   // New Game: the radio starts over from the first song
   const rState = () => { try { return JSON.parse(sessionStorage.getItem('ddt_radio')) || null; } catch (e) { return null; } };
   const rSave = () => { if (rIdx < 0) return; try { sessionStorage.setItem('ddt_radio', JSON.stringify({ i: rIdx, t: radio.currentTime || 0, at: Date.now(), off: !rOn || radio.paused })); } catch (e) {} };
   function nowPlaying(name) {
@@ -26,7 +27,7 @@ const DDTMusic = (() => {
   }
   function rLoad(i, t) { rIdx = ((i % TRACKS.length) + TRACKS.length) % TRACKS.length; radio.src = BASE + TRACKS[rIdx].file; try { radio.currentTime = t || 0; } catch (e) {} if (t != null && t < 1) nowPlaying(TRACKS[rIdx].name); }
   radio.addEventListener('loadedmetadata', () => { const st = rState(); if (st && st.i === rIdx && st.t > 0 && radio.currentTime < 0.5) { const t = st.t + (st.off ? 0 : Math.min(30, (Date.now() - st.at) / 1000)); /* radio was off: pick up where it stopped */ if (t < radio.duration - 2) radio.currentTime = t; } });
-  radio.addEventListener('ended', () => { rLoad(rIdx + 1, 0); if (rOn && !muted) radio.play().catch(() => {}); });
+  radio.addEventListener('ended', () => { const pool = TRACKS.map((_, i) => i).filter(i => i !== rIdx && (TRACKS[i].file !== 'nightmares.mp3' || rIdx === 4)); rLoad(pool[Math.floor(Math.random() * pool.length)], 0);   /* after the first song: shuffle (Nightmares stays for the alien night) */ if (rOn && !muted) radio.play().catch(() => {}); });
   addEventListener('pagehide', rSave); setInterval(rSave, 1000);
   document.addEventListener('visibilitychange', () => { if (!rOn) return; if (document.hidden) radio.pause(); else if (!muted) radio.play().catch(() => {}); });
   let fadeT = null;
