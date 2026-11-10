@@ -21,9 +21,14 @@ function BAR(x, y, w, h, f, c, label) {
 function SPR(who, frame, cx, feetY, flip, sc) {       // crew sheets: 24x40 frames. 0 front, 6 right, 7 back, 8 left. sc: scale to match a drawn room
   sc = sc || 1; const w = 24 * sc, h = 40 * sc;
   const im = IMG[who]; if (!im) { R(cx - 8 * sc, feetY - 36 * sc, 16 * sc, 36 * sc, who === 'rod' ? '#22325e' : '#2a3d78'); return; }
-  if (flip) { g.save(); g.translate(Math.round(cx), 0); g.scale(-1, 1); g.drawImage(im, frame * 24, 0, 24, 40, Math.round(-w / 2), Math.round(feetY - h), w, h); g.restore(); }
-  else g.drawImage(im, frame * 24, 0, 24, 40, Math.round(cx - w / 2), Math.round(feetY - h), w, h);
+  let src = im, fi = frame; if (frame >= 9) { src = IMG[who + '_more'] || im; fi = src === im ? 0 : frame - 9; }   // 9-17: the extra poses (walk, buckets, kneel, gag, sludge, thumbs up)
+  const fw = src.width / 9, fh = src.height; g.imageSmoothingEnabled = fw > 24;   // hi-res sheets get smoothed down, old 24x40 ones stay crisp
+  if (flip) { g.save(); g.translate(Math.round(cx), 0); g.scale(-1, 1); g.drawImage(src, fi * fw, 0, fw, fh, Math.round(-w / 2), Math.round(feetY - h), w, h); g.restore(); }
+  else g.drawImage(src, fi * fw, 0, fw, fh, Math.round(cx - w / 2), Math.round(feetY - h), w, h);
+  g.imageSmoothingEnabled = false;
 }
+const MORE = (who, f, old) => IMG[who + '_more'] ? f : old;   // new pose if this crew member has the extra sheet, else the closest old frame
+const WALK = (who, t, old) => MORE(who, 9 + Math.floor(t * 8) % 4, old);   // 4-step walk cycle, facing right (flip for left)
 function HUD(s, title, timeLeft) {
   R(0, 0, W, 16, 'rgba(16,21,31,.92)');
   T(title, 6, 8, '#f7c418', 8);
@@ -144,7 +149,7 @@ GAMES.push({
       const x = lerp(o.sx + 14, o.tx, f), y = lerp(40 + dy, 222, f) - Math.sin(f * Math.PI) * 60;
       if (!SPC('glob_' + (Math.floor(f * 8) % 4), x, y, o.r / 14, o.tx < o.sx)) { C(x, y, o.r * 0.8, '#8a6a1e'); C(x - o.r * 0.25, y - o.r * 0.25, o.r * 0.3, '#c9a640'); }
     }
-    if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) SPR(s.hero || 'matt', 0, s.px, 224);
+    { const hw = s.hero || 'matt', hit = s.inv > 0 && IMG[hw + '_more']; if (hit || !(s.inv > 0 && Math.floor(s.t * 12) % 2)) SPR(hw, hit ? 16 : 0, s.px, 224); }
     HUD(s, 'SPLASH DODGE', s.DUR - s.t); PANTS(s, 6, 22);
   },
 });
@@ -558,9 +563,10 @@ GAMES.push({
     g.save(); g.translate(CX, CY); g.rotate(s.turns * Math.PI / 2 / 4); R(-6, -6, 12, 12, '#999'); R(-2, -6, 4, 12, '#666'); g.restore();
     if (s.turns) { g.fillStyle = 'rgba(140,180,80,' + (0.16 + 0.3 * s.turns / s.NEED) + ')'; g.fillRect(s.cloudX, 40, W - s.cloudX, 176);
       for (let i = 0; i < 8; i++) C(s.cloudX + ((i * 47 + s.t * 20) % (W - s.cloudX)), 80 + (i * 29) % 120, 10 + i % 3 * 4, 'rgba(160,200,90,.25)'); }
-    const fr = s.stun > 0 ? 7 : (s.px > 300 ? 6 : 0);
+    const hw = s.hero || 'matt', mv = s.lastPx != null && Math.abs(s.px - s.lastPx) > 0.01, left = mv && s.px < s.lastPx; s.lastPx = s.px;
+    const fr = s.stun > 0 || s.gag > 70 ? MORE(hw, 15, 7) : mv ? WALK(hw, s.t, left ? 8 : 6) : (s.px > 300 ? 6 : 0);
     const MS = room ? 3.4 : 1, top = FY - 40 * MS;   // a 6-ft guy next to a 7-ft door
-    SPR(s.hero || 'matt', fr, s.px, FY, false, MS);
+    SPR(hw, fr, s.px, FY, left && fr >= 9, MS);
     if (s.hold) T('(holding breath)', s.px, Math.min(160, top - 8), '#9fd1ff', 6, 'center');
     if (s.stun > 0) T('*GAG*', s.px, Math.min(160, top - 8), '#e9665a', 8, 'center');
     if (s.px > 350 && s.stun <= 0) T(s.stuck ? 'HOLD SPACE!' : 'SPACE = TURN', s.px, Math.min(132, top - 18), '#f7c418', 6, 'center');
@@ -829,9 +835,10 @@ GAMES.push({
     if (IMG.van) g.drawImage(IMG.van, 0, 0, 432, IMG.van.height, Math.round(s.LEN - cam + 10), 202 - IMG.van.height / 3, 144, IMG.van.height / 3);
     for (const o of s.obs) { const x = o.d - cam; R(x - 14, 192, 28, 6, '#2f6f2a'); if (!o.done) R(x - 1, 170, 2, 10, '#f7c418'); }
     const hy = s.hop > 0 ? -Math.sin((1 - s.hop / 0.45) * Math.PI) * 14 : 0;
-    SPR(s.hero || 'matt', 6, 120, 198 + hy);
+    const hasB = !!IMG[(s.hero || 'matt') + '_more'];
+    SPR(s.hero || 'matt', MORE(s.hero || 'matt', 13, 6), 120, 198 + hy);
     const tilt = s.a * 0.5;
-    for (const side of [-1, 1]) { g.save(); g.translate(120 + side * 14, 178 + hy); g.rotate(tilt); if (!SPI('bucket', 0, 16, 0.52)) { R(-7, 0, 14, 14, '#e07a1f'); R(-6, 2, 12, 6 * s.load / 100 + 1, '#9fd1ff'); } g.restore(); }
+    if (!hasB) for (const side of [-1, 1]) { g.save(); g.translate(120 + side * 14, 178 + hy); g.rotate(tilt); if (!SPI('bucket', 0, 16, 0.52)) { R(-7, 0, 14, 14, '#e07a1f'); R(-6, 2, 12, 6 * s.load / 100 + 1, '#9fd1ff'); } g.restore(); }
     if (Math.abs(s.a) > 0.55) for (let i = 0; i < 3; i++) C(120 + Math.sign(s.a) * (22 + i * 6), 184 + i * 5 + hy, 2, '#9fd1ff');
     if (s.flash > 0) T('TRIPPED!', 120, 140, '#e9665a', 8, 'center');
     HUD(s, 'BUCKET HAUL', s.TIME - s.t);
@@ -911,7 +918,7 @@ GAMES.push({
       else { R(c.x - 9, y - 7, 18, 13, '#c9a36a'); R(c.x - 9, y - 7, 18, 3, '#e8e4d8'); for (let k = 0; k < 4; k++) R(c.x - 7 + k * 4, y - 2, 2, 7, '#8a6a3a'); } }
     const py = this.yAt(s, s.f, s.x) - s.jy, dirF = Math.sign(s.fl[s.f].b - s.fl[s.f].a);
     if (s.cans.some(c => c.f === s.f && (s.x - c.x) * dirF > 0 && (s.x - c.x) * dirF < 120) && Math.floor(s.t * 8) % 2) T('!', s.x - dirF * 18, py - 50, '#e9665a', 10, 'center');
-    if (s.inv <= 0 || Math.floor(s.t * 10) % 2) { SPR(s.hero || 'matt', s.facing > 0 ? 6 : 8, s.x, py, false, cellar ? 1.4 : 1); if (!SPI('jetter', s.x - 15 * s.facing, py - 10, 0.42, s.facing < 0)) { R(s.x - 12 * s.facing - 7, py - 22, 14, 12, '#e8822a'); R(s.x - 12 * s.facing - 5, py - 26, 10, 4, '#333'); } }   // carrying the jetter
+    if (s.inv <= 0 || Math.floor(s.t * 10) % 2) { SPR(s.hero || 'matt', WALK(s.hero || 'matt', s.t, s.facing > 0 ? 6 : 8), s.x, py, s.facing < 0 && !!IMG[(s.hero || 'matt') + '_more'], cellar ? 1.4 : 1); if (!SPI('jetter', s.x - 15 * s.facing, py - 10, 0.42, s.facing < 0)) { R(s.x - 12 * s.facing - 7, py - 22, 14, 12, '#e8822a'); R(s.x - 12 * s.facing - 5, py - 26, 10, 4, '#333'); } }   // carrying the jetter
     DRAWFX(s); HUD(s, 'STAIRS OF DEATH', null); PANTS(s, W - 6 - s.pantsMax * 14, 20); T(`FLIGHT ${s.f + 1}/4`, 6, 24, '#fff', 6);
   },
 });

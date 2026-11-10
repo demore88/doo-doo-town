@@ -17,9 +17,9 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794291365"></script>
-<script src="../js/music.js?v=1794291365"></script>
-<script src="../js/sfx.js?v=1794291365"></script>
+<script src="../js/state.js?v=1794292687"></script>
+<script src="../js/music.js?v=1794292687"></script>
+<script src="../js/sfx.js?v=1794292687"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -135,7 +135,7 @@ async function runFrom(i) {
 // ---------- characters ----------
 function rod(x, y, f = 0, s = 2, a = 1) {      // x,y = feet, center
   if (!IMG.rod) return; g.globalAlpha = a;
-  g.drawImage(IMG.rod, f * 24, 0, 24, 40, Math.round(x - 12 * s), Math.round(y - 40 * s), 24 * s, 40 * s); g.globalAlpha = 1;
+  { const I = IMG.rod, fw = I.width / 9; g.imageSmoothingEnabled = fw > 24; g.drawImage(I, f * fw, 0, fw, I.height, Math.round(x - 12 * s), Math.round(y - 40 * s), 24 * s, 40 * s); g.imageSmoothingEnabled = false; } g.globalAlpha = 1;
 }
 // gray alien. o: {s, wave, point:[tx,ty], tilt, blink, sad}
 function alien(x, y, o = {}) {
@@ -314,7 +314,7 @@ function drawButtons() {
 // ---------- coffee run ----------
 function matt(x, y, f = 0, s = 2, a = 1) {
   if (!IMG.matt) return; g.globalAlpha = a;
-  g.drawImage(IMG.matt, f * 24, 0, 24, 40, Math.round(x - 12 * s), Math.round(y - 40 * s), 24 * s, 40 * s); g.globalAlpha = 1;
+  { const I = IMG.matt, fw = I.width / 9; g.imageSmoothingEnabled = fw > 24; g.drawImage(I, f * fw, 0, fw, I.height, Math.round(x - 12 * s), Math.round(y - 40 * s), 24 * s, 40 * s); g.imageSmoothingEnabled = false; } g.globalAlpha = 1;
 }
 function cup(x, y) { R(x, y, 4, 6, '#f2f0ea'); R(x - 1, y - 1, 6, 2, '#5a3a1c'); R(x, y + 2, 4, 2, '#c0392b'); }
 function van(x, y) { if (IMG.van) { const N = Math.max(1, Math.round(IMG.van.width / 432)), f = Math.floor(Math.abs(x) / 6) % N, vh = IMG.van.height / 3; g.drawImage(IMG.van, f * 432, 0, 432, IMG.van.height, Math.round(x), Math.round(y - vh), 144, vh); } }   // wheels turn as the van moves

@@ -180,10 +180,10 @@
 
 <audio id="music" src="assets/doo_doo_town.mp3" loop preload="auto"></audio>
 <audio id="call" src="assets/call_fluffernutter.mp3" preload="auto"></audio>
-<script src="js/state.js?v=1794291365"></script>
-<script src="js/sfx.js?v=1794291365"></script>
-<script src="js/drive3d.js?v=1794291365"></script>
-<script src="js/music.js?v=1794291365"></script>
+<script src="js/state.js?v=1794292687"></script>
+<script src="js/sfx.js?v=1794292687"></script>
+<script src="js/drive3d.js?v=1794292687"></script>
+<script src="js/music.js?v=1794292687"></script>
 <script>
 const W = 480, H = 270, LOOP_W = 6688;           // strip loop width at 270px tall
 const cv = document.getElementById('c'), g = cv.getContext('2d');
@@ -231,8 +231,8 @@ function draw(t) {
   const roof = VAN_Y + bounce + 6 - 39;
   const dt = (!music.paused && music.currentTime > 0) ? music.currentTime : t;   // lock to the song while it plays
   const r = pose(dt, 0), m = pose(dt, -4);
-  g.drawImage(rod, r.f * 24, 0, 24, 40, VAN_X + 46, roof + r.hop, 24, 40);
-  g.drawImage(matt, m.f * 24, 0, 24, 40, VAN_X + 90, roof + m.hop, 24, 40);
+  g.imageSmoothingEnabled = true; g.drawImage(rod, r.f * rod.width / 9, 0, rod.width / 9, rod.height, VAN_X + 46, roof + r.hop, 24, 40);
+  g.drawImage(matt, m.f * matt.width / 9, 0, matt.width / 9, matt.height, VAN_X + 90, roof + m.hop, 24, 40); g.imageSmoothingEnabled = false;
 }
 
 function loop(ms) { draw(ms / 1000); requestAnimationFrame(loop); }
@@ -722,8 +722,8 @@ function vanBackground() {
     for (let i = 0; i < 10; i++) { const side = i % 2 ? 1 : -1, p = ((t * 0.35 + i / 10) % 1), y = HZ - 2 + p * p * 160, s = 0.3 + p * 3, x = 240 + side * (24 + p * p * 300);
       k.fillStyle = '#2f4a3a'; k.beginPath(); k.moveTo(x - 7 * s, y); k.lineTo(x, y - 24 * s); k.lineTo(x + 7 * s, y); k.fill(); R(x - s, y, 2 * s, 4 * s, '#4a3020'); }
     if (im.van_pov) k.drawImage(im.van_pov, 0, 0);
-    if (im.rod_dance) k.drawImage(im.rod_dance, 7 * 24, 0, 24, 40, 128 - 120, 560 - 400, 240, 400);
-    if (im.matt_dance) k.drawImage(im.matt_dance, 7 * 24, 0, 24, 40, 352 - 120, 552 - 400, 240, 400);
+    if (im.rod_dance) k.drawImage(im.rod_dance, 7 * im.rod_dance.width / 9, 0, im.rod_dance.width / 9, im.rod_dance.height, 128 - 120, 560 - 400, 240, 400);
+    if (im.matt_dance) k.drawImage(im.matt_dance, 7 * im.matt_dance.width / 9, 0, im.matt_dance.width / 9, im.matt_dance.height, 352 - 120, 552 - 400, 240, 400);
     if (document.body.classList.contains('vancall')) requestAnimationFrame(draw);
   })(performance.now());
 }
