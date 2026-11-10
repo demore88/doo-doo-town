@@ -180,10 +180,10 @@
 
 <audio id="music" src="assets/doo_doo_town.mp3" loop preload="auto"></audio>
 <audio id="call" src="assets/call_fluffernutter.mp3" preload="auto"></audio>
-<script src="js/state.js?v=1794284796"></script>
-<script src="js/sfx.js?v=1794284796"></script>
-<script src="js/drive3d.js?v=1794284796"></script>
-<script src="js/music.js?v=1794284796"></script>
+<script src="js/state.js?v=1794284971"></script>
+<script src="js/sfx.js?v=1794284971"></script>
+<script src="js/drive3d.js?v=1794284971"></script>
+<script src="js/music.js?v=1794284971"></script>
 <script>
 const W = 480, H = 270, LOOP_W = 6688;           // strip loop width at 270px tall
 const cv = document.getElementById('c'), g = cv.getContext('2d');
@@ -259,6 +259,10 @@ function start() { if (!started && !cutLive && !IS_EMBED) playMusic(); }
   if (e.target.closest && e.target.closest('#sound')) return;
   start();
 }, { capture: true }));
+// back at the title: the van radio (it lives in the app shell and survives screen changes) has to go quiet,
+// or it plays on top of the title song and the ♪ OFF button can't reach it
+const HOSTRADIO = (() => { try { return window.parent !== window && window.parent.DDT_RADIO || null; } catch (e) { return null; } })();
+if (!IS_EMBED && HOSTRADIO) HOSTRADIO.pause();
 if (!IS_EMBED) playMusic();
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && panel.style.display === 'block') hidePanel();
@@ -697,7 +701,7 @@ document.addEventListener('keydown', e => { if ((e.key === 's' || e.key === 'S')
 $('#sound').onclick = e => {
   e.stopPropagation(); soundOn = !soundOn;
   $('#sound').textContent = soundOn ? '♪ ON' : '♪ OFF';
-  if (soundOn) playMusic(); else { music.pause(); $('#press').style.display = 'none'; }
+  if (soundOn) playMusic(); else { music.pause(); if (HOSTRADIO && !IS_EMBED) HOSTRADIO.pause(); $('#press').style.display = 'none'; }
 };
 document.addEventListener('visibilitychange', () => { if (document.hidden) music.pause(); else if (soundOn && started) music.play().catch(() => {}); });
 
