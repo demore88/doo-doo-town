@@ -21,8 +21,9 @@ function BAR(x, y, w, h, f, c, label) {
 function SPR(who, frame, cx, feetY, flip, sc) {       // crew sheets: 24x40 frames. 0 front, 6 right, 7 back, 8 left. sc: scale to match a drawn room
   sc = sc || 1.8; const w = 24 * sc, h = 40 * sc;   // default 1.4x: readable on a phone
   const im = IMG[who]; if (!im) { R(cx - 8 * sc, feetY - 36 * sc, 16 * sc, 36 * sc, who === 'rod' ? '#22325e' : '#2a3d78'); return; }
-  let src = im, fi = frame; if (frame >= 9) { src = IMG[who + '_more'] || im; fi = src === im ? 0 : frame - 9; }   // 9-17: the extra poses (walk, buckets, kneel, gag, sludge, thumbs up)
-  const fw = src.width / 9, fh = src.height; g.imageSmoothingEnabled = fw > 24;   // hi-res sheets get smoothed down, old 24x40 ones stay crisp
+  let src = im, fi = frame; if (frame >= 18) { src = IMG[who + '_walk'] || im; fi = src === im ? (frame >= 22 ? 7 : 0) : frame - 18; }   // 18-21 walk toward you, 22-25 walk away
+  else if (frame >= 9) { src = IMG[who + '_more'] || im; fi = src === im ? 0 : frame - 9; }   // 9-17: the extra poses (walk, buckets, kneel, gag, sludge, thumbs up)
+  const fw = src.width / (src === IMG[who + '_walk'] ? 8 : 9), fh = src.height; g.imageSmoothingEnabled = fw > 24;   // hi-res sheets get smoothed down, old 24x40 ones stay crisp
   if (flip) { g.save(); g.translate(Math.round(cx), 0); g.scale(-1, 1); g.drawImage(src, fi * fw, 0, fw, fh, Math.round(-w / 2), Math.round(feetY - h), w, h); g.restore(); }
   else g.drawImage(src, fi * fw, 0, fw, fh, Math.round(cx - w / 2), Math.round(feetY - h), w, h);
   g.imageSmoothingEnabled = false;
@@ -41,7 +42,8 @@ function HERO_AT(s, x, feetY, sc, opt) {
   let fr, flip = false, bob = 0;
   if (o.pose != null) fr = o.pose;
   else if (f === 'R' || f === 'L') { fr = walking ? WALK(who, s.t, f === 'R' ? 6 : 8) : (f === 'R' ? 6 : 8); flip = f === 'L' && fr >= 9; }
-  else { fr = f === 'U' ? 7 : 0; if (walking) { flip = step % 2 === 1; bob = step % 2 ? -1.5 : 0; } }   // no front/back walk art: step by mirroring + a bob
+  else if (walking && IMG[who + '_walk']) fr = (f === 'U' ? 22 : 18) + step % 4;   // real steps toward / away from you
+  else { fr = f === 'U' ? 7 : 0; if (walking) { flip = step % 2 === 1; bob = step % 2 ? -1.5 : 0; } }   // no front/back walk art yet: step by mirroring + a bob
   SPR(who, fr, x, feetY + bob * (sc || 1.8), flip, sc || 1.8);
 }
 function HUD(s, title, timeLeft) {
