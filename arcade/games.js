@@ -523,6 +523,8 @@ GAMES.push({
     for (const o of vis) {
       const z = o.d - D; let [x, y] = path(z); if (s.branch) x += branchDir * z * 1.5; const r = rad(z), a = o.ang;
       const wx = x + Math.cos(a) * r * 0.82, wy = y + Math.sin(a) * r * 0.82, k = Math.max(0.4, r / 60);
+      { const nm = o.kind === 'roots' ? (o.ang > 4 ? 'rootmass' : 'roots_' + (Math.floor(t * 1.5 + o.d) % 3)) : o.kind === 'grease' ? (o.ang > 3 ? 'greaseballs' : 'grease') : o.kind === 'crack' && o.ang > 4.5 ? 'broken' : o.kind, im = MG('cam_' + nm);
+        if (im) { g.save(); g.beginPath(); g.arc(x, y, r * 1.02, 0, 7); g.clip(); g.drawImage(im, x - r * 1.08, y - r * 1.08, r * 2.16, r * 2.16); g.restore(); if (o.tagged) T('TAG', x + r * 0.6, y - r * 0.6, '#7dffb0', 6, 'center'); continue; } }   // the drawn camera views
       if (o.kind === 'roots') {   // a curtain of roots hanging through a joint: thick at the top, thin and swaying at the tips, with hairs
         for (let i = 0; i < 14; i++) { const ax = -0.85 + i * 0.13, sx = x + ax * r, sy = y - Math.sqrt(Math.max(0, 1 - ax * ax)) * r * 0.97, len = r * (0.45 + ((i * 37) % 10) / 14), sw = Math.sin(t * 1.6 + i * 1.3) * r * 0.06;
           let px0 = sx, py0 = sy; for (let k = 1; k <= 6; k++) { const f = k / 6, nx = sx + sw * f * f * 2 + Math.sin(i * 2.1 + k) * r * 0.02, ny = sy + len * f;
