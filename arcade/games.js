@@ -559,26 +559,26 @@ GAMES.push({
   how: ['Hold SPACE to reel the auger in. Reeling builds TENSION.', 'It swings side to side in the trap: hold ◀ or ▶ to keep the line straight.', 'Watch for "!" — it is about to TUG. Let go until it calms down.', 'If the line snaps 3 times, it got away. Reel it all the way out.'],
   ctl: 'HOLD SPACE = REEL  ·  ◀ ▶ = KEEP IT STRAIGHT',
   act: 'REEL', dpad: 'lr',
-  init(s) { s.TIME = 32; s.prog = 0; s.ten = 0; s.snaps = 0; s.nextTug = 1.6 + s.rnd(); s.tug = 0; s.warn = 0; s.idle = 0; s.sw = 0; s.swv = 0.5; },
+  init(s) { s.TIME = 40; s.prog = 0; s.ten = 0; s.snaps = 0; s.nextTug = 1.6 + s.rnd(); s.tug = 0; s.warn = 0; s.idle = 0; s.sw = 0; s.swv = 0.5; },
   update(s, dt, I) {
     s.t += dt;
     const reel = I.A || I.ptr.down;
     s.nextTug -= dt;
-    if (s.nextTug <= 0 && s.warn <= 0 && s.tug <= 0) s.warn = 0.65;
+    if (s.nextTug <= 0 && s.warn <= 0 && s.tug <= 0) s.warn = 0.95;   /* a longer heads-up before it tugs */
     if (s.warn > 0) { s.warn -= dt; if (s.warn <= 0) s.tug = 0.85; }
-    if (s.tug > 0) { s.tug -= dt; if (s.tug <= 0) s.nextTug = (1.5 + s.rnd() * 1.6) / Math.sqrt(s.k); }
+    if (s.tug > 0) { s.tug -= dt; if (s.tug <= 0) s.nextTug = (2.2 + s.rnd() * 1.8) / Math.sqrt(s.k); }
     // swing: it drifts in the trap; steer against it
-    s.swv += (s.rnd() - 0.5) * 3 * dt; s.swv = clamp(s.swv, -0.8, 0.8);
-    s.sw = clamp(s.sw + (s.swv * 0.9 * s.k - (I.L ? 1.2 : 0) + (I.R ? 1.2 : 0)) * dt, -1, 1);
+    s.swv += (s.rnd() - 0.5) * 2.2 * dt; s.swv = clamp(s.swv, -0.6, 0.6);
+    s.sw = clamp(s.sw + (s.swv * 0.65 * s.k - (I.L ? 1.6 : 0) + (I.R ? 1.6 : 0)) * dt, -1, 1);
     if (Math.abs(s.sw) >= 1) s.swv *= -0.6;
-    const crooked = Math.abs(s.sw) > 0.5;
-    if (reel) { s.ten += (42 + (s.tug > 0 ? 75 * s.k : 0) + (crooked ? 45 : 0)) / HERO(s).grip * dt; s.prog += (s.tug > 0 ? 2 : 7.5) * dt; s.idle = 0; }
-    else { s.ten -= (s.tug > 0 ? 20 : 65) * dt; s.idle += dt; if (s.tug > 0) s.ten += 30 * s.k * dt; }
+    const crooked = Math.abs(s.sw) > 0.6;
+    if (reel) { s.ten += (30 + (s.tug > 0 ? 60 * s.k : 0) + (crooked ? 30 : 0)) / HERO(s).grip * dt; s.prog += (s.tug > 0 ? 2 : 8.5) * dt; s.idle = 0; }
+    else { s.ten -= (s.tug > 0 ? 25 : 75) * dt; s.idle += dt; if (s.tug > 0) s.ten += 18 * s.k * dt; }
     s.ten = Math.max(0, s.ten);
-    if (s.idle > 1.6) s.prog = Math.max(0, s.prog - 5 * dt);
-    if (s.ten >= 100) { s.snaps++; s.ten = 20; s.prog = Math.max(0, s.prog - 25); s.flash = 0.4; }
+    if (s.idle > 2.2) s.prog = Math.max(0, s.prog - 3 * dt);
+    if (s.ten >= 100) { s.snaps++; s.ten = 15; s.prog = Math.max(0, s.prog - 15); s.flash = 0.4; }
     s.flash = Math.max(0, (s.flash || 0) - dt);
-    if (s.prog >= 100) s.end = { win: true, stars: stars3(s.snaps === 0 && s.t < 22, s.snaps <= 1), line: `Landed it! A ${(14 + s.rnd() * 9).toFixed(1)}-inch trophy.` };
+    if (s.prog >= 100) s.end = { win: true, stars: stars3(s.snaps === 0 && s.t < 26, s.snaps <= 1), line: `Landed it! A ${(14 + s.rnd() * 9).toFixed(1)}-inch trophy.` };
     else if (s.snaps >= 3) s.end = { win: false, stars: 0, line: 'Snapped three times. It got away.' };
     else if (s.t >= s.TIME) s.end = { win: false, stars: 0, line: 'Still down there. Somewhere.' };
   },
