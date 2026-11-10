@@ -219,6 +219,7 @@ function drive3d(choice, opts) {
   // ---------- the rival: the CLOG KINGS van, racing you to the same job ----------
   const RIVAL = !!opts.rival;
   let rz = PZ + 5 * SEG, rv = 0, roff = LANE[1], rivalWon = false, rivalImg = null, rivalBump = 0;
+  let rivalLane = LANE[1], rivalT = 0, rivalSlip = 0;
   function makeRival() {   // repaint our van in Clog Kings colors (blue->red, yellow->black) once the art has loaded
     if (rivalImg || !(VANS.complete && VANS.naturalWidth)) return;
     const c = document.createElement('canvas'); c.width = VCW; c.height = VCH; const k = c.getContext('2d'); k.imageSmoothingEnabled = true; k.drawImage(VANS, 0, 0, VANS.width / 6, VANS.height, 0, 0, VCW, VCH);
@@ -402,12 +403,23 @@ function drive3d(choice, opts) {
           if (near.length >= 2 || (near.length && (moving(c) || near.some(moving) || near.some(o => Math.abs(o.off - c.off) < 0.3)))) {
             const lead = near.reduce((m, o) => o.z < m.z ? o : m); c.z = Math.min(c.z, lead.z - W2); c.speed = Math.min(c.speed, (lead.speed || c.speed)); } } }
       if (RIVAL) for (const o of live2) if (!o.onc && Math.abs(o.off - roff) < 0.16 + o.hw && o.z > rz && o.z - rz < 1.6 * SEG) { rz = o.z - 1.6 * SEG; rv = Math.min(rv, o.speed); }
-      // the rival: fast, takes the left lane, slows for traffic, and never lets the race get boring (rubber band)
+      // the rival: weaves through traffic to get around slow cars, gets boxed in and slowed down, and can be beaten
       if (RIVAL && live) {
         const gap = (rz - (pos + PZ)) / SEG;
-        let want = TOP * 0.93 * (gap > 25 ? 0.82 : gap < -20 ? 1.12 : 1);
-        for (const o of cars) if (!o.onc && !o.parked && Math.abs(o.off - roff) < 0.3 && o.z > rz && o.z - rz < 3 * SEG) { const other = roff === LANE[1] ? LANE[2] : LANE[1];   // pass it if the other lane is open, otherwise wait
-          if (!cars.some(q => q !== o && !q.onc && !q.parked && Math.abs(q.off - other) < 0.3 && Math.abs(q.z - rz) < 4 * SEG)) roff += (other - roff) * Math.min(1, dt * 3); else want = Math.min(want, o.speed); }
+        let want = TOP * 0.9 * (gap > 25 ? 0.85 : gap < -25 ? 1.04 : 1);   // a little catch-up, never a cheat
+        rivalT = (rivalT || 0) - dt; rivalSlip = Math.max(0, (rivalSlip || 0) - dt);
+        const blocking = cars.filter(o => !o.parked && Math.abs(o.off - rivalLane) < 0.3 && o.z > rz && o.z - rz < 3.2 * SEG && !o.onc);
+        if (blocking.length) {
+          const lead = blocking.reduce((m, o) => o.z < m.z ? o : m);
+          const clear = L => !cars.some(q => !q.parked && Math.abs(q.off - L) < 0.3 && q.z > rz - 1.5 * SEG && q.z < rz + (L === LANE[0] ? 7 : 4) * SEG);   // the oncoming lane needs a much bigger gap
+          const tries = rivalLane === LANE[0] ? [LANE[1], LANE[2]] : [rivalLane === LANE[1] ? LANE[2] : LANE[1], LANE[0]];
+          const go = rivalT <= 0 && tries.find(clear);
+          if (go != null) { rivalLane = go; rivalT = 0.9; if (go === LANE[0] && gap > -6 && gap < 14) say('THE CLOG KINGS ARE PASSING IN THE ONCOMING LANE!', 1.4); }
+          else { want = Math.min(want, lead.speed * 0.85); if (lead.z - rz < 1.3 * SEG) rivalSlip = 0.8; }   // boxed in: stuck behind it, and has to brake
+        } else if (rivalLane === LANE[0] && rivalT <= 0) { const back = [LANE[1], LANE[2]].find(L => !cars.some(q => !q.parked && Math.abs(q.off - L) < 0.3 && Math.abs(q.z - rz) < 2.5 * SEG)); if (back != null) { rivalLane = back; rivalT = 0.9; } }
+        if (rivalLane === LANE[0] && cars.some(q => q.onc && q.z > rz && q.z - rz < 4 * SEG)) { want *= 0.5; rivalSlip = 0.6; }   // chickened out of a head-on
+        if (rivalSlip > 0) want *= 0.6;
+        roff += (rivalLane - roff) * Math.min(1, dt * 2.6);   // the swerve itself
         rivalBump = Math.max(0, rivalBump - dt); if (rivalBump > 0) want *= 0.4;
         rv += (want - rv) * Math.min(1, dt * 0.8); rz += rv * dt;
         if (inv <= 0 && Math.abs(rz - (pos + PZ)) < SEG * 1.0 && Math.abs(px - roff) < 0.16 + 0.17) {   // trading paint

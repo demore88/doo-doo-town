@@ -318,16 +318,16 @@ GAMES.push({
   ctl: 'TAP A SQUARE  ·  OR ARROWS + SPACE',
   pad: false, phone: 'tap a square to probe.',
   init(s) {
-    s.C = 16; s.Rw = 9; s.Z = 24; s.ox = 48; s.oy = 18; s.HH = 18;   // big yard, house strip above
+    s.C = 22; s.Rw = 12; s.Z = 18; s.ox = 42; s.oy = 16; s.HH = 18;   // a BIG snowy yard, house strip above
     s.cam = !!s.camera;
-    s.probes = s.left = [26, 22, 20][s.diff];
+    s.probes = s.left = [24, 20, 17][s.diff];
     const wide = s.rnd() < 0.5, tw = wide ? 3 : 2, th = wide ? 2 : 3;
-    s.tc = 1 + Math.floor(s.rnd() * (s.C - tw - 2)); s.tr = Math.floor(s.rnd() * 3);
+    s.tc = 1 + Math.floor(s.rnd() * (s.C - tw - 2)); s.tr = Math.floor(s.rnd() * 5);
     s.tank = new Set(); for (let c = s.tc; c < s.tc + tw; c++) for (let r = s.tr; r < s.tr + th; r++) s.tank.add(`${c},${r}`);
     s.pipeC = s.tc + Math.floor(tw / 2);
-    const lr = s.tr + th + 1 + Math.floor(s.rnd() * 2), lc = clamp(s.tc - 2 + Math.floor(s.rnd() * 4), 0, s.C - 5); s.leach = new Set();
+    const lr = Math.min(s.Rw - 3, s.tr + th + 1 + Math.floor(s.rnd() * 3)), lc = clamp(s.tc - 4 + Math.floor(s.rnd() * 8), 0, s.C - 5); s.leach = new Set();
     for (const r of [lr, lr + 2]) if (r < s.Rw) for (let c = lc; c < lc + 5; c++) s.leach.add(`${c},${r}`);
-    s.probed = {}; s.found = { tank: false, leach: false }; s.cur = { c: 8, r: 4 }; s.msg = s.cam ? 'Camera says the pipe heads out here. Find the TANK.' : 'Find the TANK. No clues. Just you and a probe rod.';
+    s.probed = {}; s.found = { tank: false, leach: false }; s.cur = { c: 11, r: 6 }; s.msg = s.cam ? 'Camera says the pipe heads out here. Find the TANK.' : 'Find the TANK. No clues. Just you and a probe rod.';
   },
   update(s, dt, I) {
     s.t += dt;
@@ -338,7 +338,7 @@ GAMES.push({
     if (I.Ap) pick = { ...s.cur };
     if (pick) this.probe(s, pick.c, pick.r);
     const used = s.probes - s.left;
-    if (s.found.tank && s.found.leach) s.end = { win: true, stars: stars3(used <= 10, used <= 15), line: `Found both with ${used} probes.` };
+    if (s.found.tank && s.found.leach) s.end = { win: true, stars: stars3(used <= 11, used <= 15), line: `Found both with ${used} probes.` };
     else if (s.left <= 0) s.end = { win: false, stars: 0, line: 'Out of probes. Time to call the town for the septic plan.' };
   },
   near(set, c, r) { for (let dc = -1; dc <= 1; dc++) for (let dr = -1; dr <= 1; dr++) if (set.has(`${c + dc},${r + dr}`)) return true; return false; },
@@ -727,7 +727,7 @@ GAMES.push({
       for (const [r, a, b] of cells) s.grid[r][c] = { t: (a + 2) % 4 === b ? 'S' : 'C', rot: Math.floor(s.rnd() * 4), wet: 0 };
       row = tgt;
     }
-    s.wait = [16, 13, 11][s.diff] * HERO(s).steady; s.flow = null; s.SPEED = [0.95, 0.8, 0.68][s.diff] * HERO(s).steady;
+    s.wait = ([16, 13, 11][s.diff] + 10) * HERO(s).steady;   // +10s to plan the route before the water comes s.flow = null; s.SPEED = [0.95, 0.8, 0.68][s.diff] * HERO(s).steady;
   },
   sides(p) { if (p.t === 'X') return [0, 1, 2, 3]; if (p.t === 'S') return p.rot % 2 ? [0, 2] : [1, 3]; return [p.rot % 4, (p.rot + 1) % 4]; },
   update(s, dt, I) {
@@ -829,18 +829,25 @@ GAMES.push({
   how: ['Hold ▶ to walk to the van. Walking makes the buckets slosh.', 'Lean with ▲ / ▼ to steady them: keep the SLOSH needle in the middle.', 'Press SPACE to hop over hoses and steps (hop right at the marker).', 'Get there before time runs out with at least half the load.'],
   ctl: '▶ WALK  ·  ▲ ▼ LEAN  ·  SPACE = HOP',
   act: 'HOP',
-  init(s) { s.TIME = 32; s.x = 0; s.LEN = 900; s.a = 0; s.v = 0; s.load = 100; s.hop = 0; s.trips = 0; s.obs = []; for (let d = 180; d < s.LEN - 80; d += 140 + s.rnd() * 90) s.obs.push({ d, done: false }); },
+  init(s) { s.TIME = 34; s.x = 0; s.LEN = 1000; s.a = 0; s.v = 0; s.load = 100; s.hop = 0; s.trips = 0; s.k = [1.25, 1.5, 1.8][s.diff]; s.drops = []; s.puddles = []; s.gust = 0; s.obs = []; for (let d = 160; d < s.LEN - 80; d += 110 + s.rnd() * 80) s.obs.push({ d, done: false }); },
   update(s, dt, I) {
     s.t += dt;
     const walk = (I.R || I.ptr.down) ? 70 * HERO(s).spd : 0; s.x = Math.min(s.LEN, s.x + walk * dt);
     const lean = (I.U ? -1 : 0) + (I.D ? 1 : 0);
-    const noise = walk ? (Math.sin(s.t * 6.3) * 0.9 + Math.sin(s.t * 2.7 + 1) * 0.6) * 1.15 * s.k : 0;
-    s.v += (-3.2 * s.a - 1.6 * s.v + noise + lean * 2.6) * dt; s.a += s.v * dt; s.a = clamp(s.a, -1.4, 1.4);
+    // every step rocks the water; the lawn is lumpy; and the water keeps swinging after you stop (it's water)
+    if (walk && s.rnd() < dt * 0.9) s.gust = (s.rnd() < 0.5 ? -1 : 1) * (1.2 + s.rnd()) * s.k;   // a lump in the lawn
+    s.gust *= Math.pow(0.08, dt);
+    const noise = walk ? (Math.sin(s.t * 6.3) * 1.2 + Math.sin(s.t * 2.7 + 1) * 0.8) * 1.3 * s.k + s.gust : 0;
+    s.v += (-2.6 * s.a - 0.9 * s.v + noise + lean * 2.4) * dt; s.a += s.v * dt; s.a = clamp(s.a, -1.4, 1.4);
     if (s.hop > 0) s.hop -= dt; else if (I.Ap) s.hop = 0.45;
     for (const o of s.obs) if (!o.done && s.x >= o.d) { o.done = true; if (s.hop > 0) { s.v += (s.rnd() - .5) * 0.6; } else { s.v += (s.rnd() < .5 ? -1 : 1) * 1.6; s.trips++; s.flash = 0.6; } }
-    if (Math.abs(s.a) > 0.55) s.load = Math.max(0, s.load - (Math.abs(s.a) - 0.55) * 40 * dt);
+    const over = Math.abs(s.a) - 0.42;
+    if (over > 0) { s.load = Math.max(0, s.load - over * 75 * dt);   // over the rim
+      if (s.rnd() < dt * 40 * over + 0.1) { const side = Math.sign(s.a); s.drops.push({ x: 120 + side * 10, y: 176 + (s.hop > 0 ? -Math.sin((1 - s.hop / 0.45) * Math.PI) * 14 : 0), vx: side * (40 + s.rnd() * 60), vy: -60 - s.rnd() * 60, t: 1.2 }); } }
+    s.drops.forEach(d => { d.vy += 500 * dt; d.x += d.vx * dt; d.y += d.vy * dt; d.t -= dt; if (d.y > 198 && !d.land) { d.land = 1; d.t = 0; s.puddles.push({ x: d.x + s.x - 120, r: 2 + s.rnd() * 3 }); } });
+    s.drops = s.drops.filter(d => d.t > 0);
     s.flash = Math.max(0, (s.flash || 0) - dt);
-    if (s.x >= s.LEN) s.end = s.load >= 50 ? { win: true, stars: stars3(s.load >= 85, s.load >= 70), line: `Made it with ${Math.round(s.load)}% of the load.` } : { win: false, stars: 0, line: 'Most of it is on the lawn.' };
+    if (s.x >= s.LEN) s.end = s.load >= 50 ? { win: true, stars: stars3(s.load >= 80, s.load >= 65), line: `Made it with ${Math.round(s.load)}% of the load.` } : { win: false, stars: 0, line: 'Most of it is on the lawn.' };
     else if (s.load < 50) s.end = { win: false, stars: 0, line: 'Most of it is on the lawn.' };
     else if (s.t >= s.TIME) s.end = { win: false, stars: 0, line: 'Rod: "Today, please."' };
   },
@@ -855,11 +862,14 @@ GAMES.push({
     const hasB = !!IMG[(s.hero || 'matt') + '_more'];
     SPR(s.hero || 'matt', MORE(s.hero || 'matt', 13, 6), 120, 198 + hy);
     const tilt = s.a * 0.5;
+    for (const pd of s.puddles) { const x = pd.x - cam; if (x > -10 && x < W + 10) { g.fillStyle = 'rgba(120,190,240,.6)'; g.beginPath(); g.ellipse(x, 199, pd.r * 2, pd.r * 0.6, 0, 0, 7); g.fill(); } }
+    if (hasB) { const sw = Math.abs(s.a) > 0.25 ? s.a : 0; g.fillStyle = 'rgba(150,210,255,.9)';   // the water surface tipping inside the buckets
+      for (const bx of [112, 128]) { g.beginPath(); g.ellipse(bx + sw * 6, 170 + hy - Math.abs(sw) * 3, 6, 2 + Math.abs(sw) * 2, sw * 0.5, 0, 7); g.fill(); } }
+    for (const d of s.drops) { C(d.x, d.y, 2, '#9fd1ff'); R(d.x - 1, d.y - 3, 1, 2, '#d8f0ff'); }
     if (!hasB) for (const side of [-1, 1]) { g.save(); g.translate(120 + side * 14, 178 + hy); g.rotate(tilt); if (!SPI('bucket', 0, 16, 0.52)) { R(-7, 0, 14, 14, '#e07a1f'); R(-6, 2, 12, 6 * s.load / 100 + 1, '#9fd1ff'); } g.restore(); }
-    if (Math.abs(s.a) > 0.55) for (let i = 0; i < 3; i++) C(120 + Math.sign(s.a) * (22 + i * 6), 184 + i * 5 + hy, 2, '#9fd1ff');
     if (s.flash > 0) T('TRIPPED!', 120, 140, '#e9665a', 8, 'center');
     HUD(s, 'BUCKET HAUL', s.TIME - s.t);
-    const mx = 160; R(mx, 26, 160, 10, '#2c3326'); R(mx + 80 - 0.55 / 1.4 * 80, 26, 0.55 / 1.4 * 160, 10, '#3f8f2e');
+    const mx = 160; R(mx, 26, 160, 10, '#2c3326'); R(mx + 80 - 0.42 / 1.4 * 80, 26, 0.42 / 1.4 * 160, 10, '#3f8f2e');
     R(mx + 80 + s.a / 1.4 * 80 - 2, 22, 4, 18, '#fff'); T('SLOSH', mx, 18 + 2, '#14110c', 6);
     BAR(6, 30, 120, 8, s.load / 100, '#5f9bc0', 'LOAD'); BAR(340, 30, 130, 8, s.x / s.LEN, '#f7c418', 'TO VAN');
   },
@@ -1228,26 +1238,29 @@ GAMES.push({
 // 17. PIPE INVADERS — a Space Invaders homage. The backup marches down the main; you shoot it with the jetter.
 GAMES.push({
   id: 'flush', name: 'PIPE INVADERS', tag: 'The backup is marching down the main',
-  how: ['A whole army of clogs is marching down the main line toward the cleanout.', 'Slide the jetter nozzle with ◀ ▶ and press SPACE to blast them.', 'They drip on you. Dodge the drips or lose a pair of pants.', 'Clear them all before they reach the bottom. The rubber duck up top is worth bonus.'],
+  how: ['An army of clogs marches down the main line, step by step. The fewer left, the faster they march.', 'Slide the jetter nozzle with ◀ ▶ and press SPACE to blast. One blast in the pipe at a time.', 'Hide behind the green shields from the drips; shots and drips eat the shields away.', 'Clear them all before they reach the bottom. Blast the rubber duck up top for a bonus.'],
   ctl: '◀ ▶ = SLIDE  ·  SPACE = BLAST',
   act: 'BLAST', phone: 'drag to slide, tap BLAST to shoot.', dpad: 'lr',
   init(s) {
     s.px = 240; s.py = 246; s.pantsMax = s.pants = [5, 4, 4][s.diff] + (HERO(s).grip > 1 ? 1 : 0); /* Rod's strong stomach: one more drip */ s.inv = 0; s.hits = 0; s.shots = []; s.drips = []; s.cool = 0; s.score = 0;
-    s.ROWS = [3, 4, 5][s.diff]; s.COLS = 8; s.foes = [];
-    const kinds = ['towel', 'grease', 'wipe', 'wipe', 'grease'];
-    for (let r = 0; r < s.ROWS; r++) for (let c = 0; c < s.COLS; c++) s.foes.push({ x: 92 + c * 38, y: 40 + r * 24, k: kinds[r], hp: r === 0 ? 2 : 1, wob: s.rnd() * 6 });
-    s.N0 = s.foes.length; s.dir = 1; s.step = 0; s.duck = null; s.nextDuck = 9; s.march = 0;
+    s.ROWS = [4, 5, 5][s.diff]; s.COLS = 10; s.foes = [];
+    const kinds = ['towel', 'grease', 'grease', 'wipe', 'wipe'], pts = [30, 20, 20, 10, 10];
+    for (let r = 0; r < s.ROWS; r++) for (let c = 0; c < s.COLS; c++) s.foes.push({ x: 98 + c * 30, y: 42 + r * 22, k: kinds[r], pts: pts[r], hp: 1, wob: 0 });
+    s.N0 = s.foes.length; s.dir = 1; s.step = 0; s.stepT = 0; s.duck = null; s.nextDuck = 12; s.march = 0;
+    // four shields, built from little chunks that get eaten away by shots and drips
+    s.shield = []; for (let k = 0; k < 4; k++) { const x0 = 70 + k * 100; for (let yy = 0; yy < 5; yy++) for (let xx = 0; xx < 9; xx++) { if (yy === 0 && (xx === 0 || xx === 8)) continue; if (yy >= 3 && xx >= 3 && xx <= 5) continue; s.shield.push({ x: x0 + xx * 4, y: 200 + yy * 4 }); } }
   },
   update(s, dt, I) {
     s.t += dt; FX(s, dt); s.inv -= dt; s.cool -= dt;
     mover1D(s, I, dt, 170 * HERO(s).spd, 30, W - 30);
-    if ((I.A || I.Ap) && s.cool <= 0 && s.shots.length < (HERO(s).spd > 1 ? 3 : 2)) { s.shots.push({ x: s.px, y: s.py - 12 }); s.cool = 0.24; SFX('splash', { vol: 0.25, rate: 1.6 }); }
-    for (const b of s.shots) b.y -= 330 * dt;
-    // the march: the fewer clogs left, the faster they go (just like the original)
-    const left = s.foes.length, sp = (14 + 70 * (1 - left / s.N0)) * [0.85, 1, 1.2][s.diff];
-    let edge = false; for (const f of s.foes) { f.x += s.dir * sp * dt; if (f.x < 22 || f.x > W - 22) edge = true; }
-    if (edge) { s.dir *= -1; for (const f of s.foes) { f.y += 10; f.x += s.dir * 3; } SFX('gurgle', { vol: 0.25 }); }
-    s.march += dt * (1 + sp / 30);
+    if ((I.A || I.Ap) && !s.shots.length) { s.shots.push({ x: s.px, y: s.py - 12 }); SFX('splash', { vol: 0.25, rate: 1.6 }); }   // one blast in the pipe at a time
+    for (const b of s.shots) b.y -= 360 * dt;
+    // the march: the whole army steps together, tick... tick... and the fewer are left, the faster the steps come
+    const left = s.foes.length; s.stepT -= dt;
+    if (left && s.stepT <= 0) { s.stepT = (0.05 + 0.6 * left / s.N0) / [0.85, 1, 1.2][s.diff];
+      let edge = s.foes.some(f => (s.dir > 0 && f.x > W - 30) || (s.dir < 0 && f.x < 30));
+      if (edge) { s.dir *= -1; for (const f of s.foes) f.y += 10; } else for (const f of s.foes) f.x += s.dir * 6;
+      s.step++; s.march = s.step; SFX('click', { vol: 0.35, rate: [0.8, 0.9, 0.7, 0.75][s.step % 4] }); }
     // drips
     if (left && s.drips.length < 2 + s.diff && s.rnd() < dt * (0.4 + s.diff * 0.2 + 0.3 * (1 - left / s.N0))) {   // only the bottom clog in a column can drip
       const f = s.foes[Math.floor(s.rnd() * left)], low = s.foes.filter(o => Math.abs(o.x - f.x) < 6).sort((a, b) => b.y - a.y)[0];
@@ -1261,10 +1274,13 @@ GAMES.push({
       if (s.duck && Math.abs(b.x - s.duck.x) < 12 && Math.abs(b.y - 26) < 8) { b.y = -99; POP(s, s.duck.x, 30, '+DUCK!', '#f7c418'); PUFF(s, s.duck.x, 26, '#f7c418', 14, 80); s.score += 300; s.duck = null; SFX('squish'); }
       for (const f of s.foes) if (f.hp > 0 && Math.abs(b.x - f.x) < 14 && Math.abs(b.y - f.y) < 10) {
         b.y = -99; f.hp--; PUFF(s, f.x, f.y, this.col(f.k), 8, 60);
-        if (f.hp <= 0) { s.score += 50; SFX('squish', { vol: 0.5 }); if (s.rnd() < 0.25) POP(s, f.x, f.y, ['SPLOOSH', 'CLEAR', 'GONE'][Math.floor(s.rnd() * 3)]); } else SFX('clog', { vol: 0.4 });
+        if (f.hp <= 0) { s.score += f.pts; SFX('squish', { vol: 0.5 }); if (s.rnd() < 0.25) POP(s, f.x, f.y, ['SPLOOSH', 'CLEAR', 'GONE'][Math.floor(s.rnd() * 3)]); } else SFX('clog', { vol: 0.4 });
         break;
       }
     }
+    for (const b of s.shots) for (let i = s.shield.length - 1; i >= 0; i--) { const c = s.shield[i]; if (b.x > c.x - 3 && b.x < c.x + 5 && b.y > c.y - 4 && b.y < c.y + 6) { s.shield.splice(i, 1); b.y = -99; break; } }
+    for (const d of s.drips) for (let i = s.shield.length - 1; i >= 0; i--) { const c = s.shield[i]; if (d.x > c.x - 3 && d.x < c.x + 5 && d.y > c.y - 2 && d.y < c.y + 6) { s.shield.splice(i, 1); if (i > 0 && s.rnd() < 0.5) s.shield.splice(i - 1, 1); d.y = 999; break; } }
+    for (const f of s.foes) if (f.y > 190) s.shield = s.shield.filter(c => Math.abs(c.x - f.x) > 14 || Math.abs(c.y - f.y) > 10);   // they plow through the shields
     s.foes = s.foes.filter(f => f.hp > 0); s.shots = s.shots.filter(b => b.y > 10);
     for (const d of s.drips) if (s.inv <= 0 && Math.abs(d.x - s.px) < 9 && Math.abs(d.y - s.py) < 10) {
       d.y = 999; s.pants--; s.hits++; s.inv = 1.2; s.shake = 0.3; PUFF(s, s.px, s.py - 8, '#7a5a2e', 14, 70); POP(s, s.px, s.py - 24, 'DRIPPED ON', '#e9665a'); SFX('splash');
@@ -1282,13 +1298,14 @@ GAMES.push({
     R(14, 16, 4, H, '#55594f'); R(W - 18, 16, 4, H, '#55594f');
     if (s.duck) { const x = s.duck.x; R(x - 8, 22, 14, 9, '#f7c418'); R(x + 2, 17, 8, 8, '#f7c418'); R(x + 9, 20, 4, 3, '#e8822a'); R(x + 5, 19, 2, 2, '#000'); }
     for (const f of s.foes) {
-      const b = Math.sin(s.t * 6 + f.wob) * 1.5, x = f.x, y = f.y + b, fr = Math.floor(s.march * 2) % 2;
-      if (f.k === 'towel') { R(x - 12, y - 7, 24, 14, f.hp > 1 ? '#e85a8e' : '#b84070'); R(x - 12, y - 3, 24, 2, '#fff'); R(x - 12, y + 2, 24, 2, '#fff'); R(x - 12 + (fr ? 0 : 20), y + 7, 4, 3, '#e85a8e'); }
-      else if (f.k === 'grease' && SPC('grease', x, y, 0.62 + fr * 0.03)) {}
-      else if (f.k !== 'grease' && SPC('tp', x, y, 0.62 + fr * 0.03)) {}
+      const x = f.x, y = f.y, fr = s.march % 2;   // two-step shuffle, in time with the march
+      if (f.k === 'towel') { R(x - 10, y - 6, 20, 12, '#e85a8e'); R(x - 12, y - 3, 24, 2, '#fff'); R(x - 12, y + 2, 24, 2, '#fff'); R(x - 12 + (fr ? 0 : 20), y + 7, 4, 3, '#e85a8e'); }
+      else if (f.k === 'grease' && SPC('grease', x, y, 0.5 + fr * 0.04)) {}
+      else if (f.k !== 'grease' && SPC('tp', x, y, 0.5 + fr * 0.04)) {}
       else if (f.k === 'grease') { C(x, y, 9, '#2b2620'); C(x - 3, y - 3, 3, '#5a5040'); R(x - 9 + fr * 2, y + 6, 4, 4, '#2b2620'); R(x + 5 - fr * 2, y + 6, 4, 4, '#2b2620'); R(x - 4, y - 1, 2, 2, '#f7c418'); R(x + 2, y - 1, 2, 2, '#f7c418'); }
       else { R(x - 9, y - 7, 18, 14, '#e8e4d8'); R(x - 9, y - 7, 18, 3, '#d0ccc0'); R(x - 9 + fr * 14, y + 7, 4, 3, '#e8e4d8'); R(x - 4, y - 1, 2, 2, '#333'); R(x + 2, y - 1, 2, 2, '#333'); }
     }
+    for (const c of s.shield) R(c.x, c.y, 4, 4, '#5fb848');
     for (const d of s.drips) { if (SPC('glob_2', d.x, d.y, 0.32)) continue; R(d.x - 2, d.y - 4, 4, 6, '#7a5a2e'); R(d.x - 1, d.y - 7, 2, 3, '#7a5a2e'); }
     for (const b of s.shots) { R(b.x - 2, b.y - 8, 4, 12, '#9fd3ff'); R(b.x - 1, b.y + 4, 2, 6, '#5fa8e0'); }
     // the nozzle + the hero behind it
@@ -1471,7 +1488,9 @@ const SR_LEVEL = (() => {
   const L = { len: 210, pits: [[38, 40], [74, 76], [118, 120], [150, 152], [176, 178]], pipes: [[16, 2], [28, 3], [46, 3], [60, 2], [88, 3], [102, 3], [132, 3], [162, 2], [186, 3]],
     blocks: [[10, 11], [11, 11], [12, 11], [52, 11], [53, 11], [54, 10], [55, 10], [80, 11], [81, 11], [96, 11], [97, 11], [98, 11], [140, 10], [141, 10], [142, 10], [168, 11], [169, 11]],
     plungers: [[11, 9], [12, 9], [20, 12], [21, 12], [33, 13], [39, 11], [54, 8], [55, 8], [66, 13], [67, 13], [75, 11], [76, 11], [92, 13], [97, 9], [110, 13], [111, 13], [119, 11], [126, 13], [141, 8], [151, 11], [152, 11], [158, 13], [170, 9], [177, 11], [192, 13], [193, 13]],
-    grease: [24, 35, 57, 69, 84, 95, 108, 128, 138, 158, 172, 182, 196], wipes: [44, 82, 114, 146, 180] };
+    grease: [24, 35, 57, 69, 84, 95, 108, 128, 138, 158, 172, 182, 196], wipes: [44, 82, 114, 146, 180],
+    bricks: [[9, 11], [13, 11], [51, 11], [56, 10], [79, 11], [82, 11], [95, 11], [99, 11], [64, 10], [65, 10], [66, 10], [67, 10], [124, 10], [125, 10], [126, 10], [127, 10], [139, 10], [143, 10], [167, 11], [170, 11], [190, 11], [191, 11], [192, 11]] };
+  L.brickSet = new Set(L.bricks.map(([c, r]) => c + ',' + r));
   return L;
 })();
 function srSolid(c, r) {
@@ -1479,11 +1498,12 @@ function srSolid(c, r) {
   if (c < 0) return true; if (c >= L.len) return false;
   if (r >= SR_GROUND) return !L.pits.some(([a, b]) => c >= a && c <= b);
   for (const [px, h] of L.pipes) if ((c === px || c === px + 1) && r >= SR_GROUND - h) return true;
-  return L.blocks.some(([bx, by]) => bx === c && by === r);
+  return L.blocks.some(([bx, by]) => bx === c && by === r) || (L.brickSet.has(c + ',' + r) && !(SR_BROKE && SR_BROKE.has(c + ',' + r)));
 }
-function srRon(x, y, face, t, run, hurt) {               // feet at (x, y); a tiny Ron
+let SR_BROKE = null;   // cinder blocks smashed this run
+function srRon(x, y, face, t, run, hurt, big) {          // feet at (x, y); a tiny Ron (big = on espresso)
   if (hurt && Math.floor(t * 12) % 2) return;
-  g.save(); g.translate(Math.round(x), Math.round(y)); if (face < 0) g.scale(-1, 1);
+  g.save(); g.translate(Math.round(x), Math.round(y)); if (face < 0) g.scale(-1, 1); if (big) g.scale(1.4, 1.4);
   const leg = run ? Math.sin(t * 18) * 2 : 0;
   R(-7, -18, 6, 14 + Math.sin(t * 6), '#b8262b');                                   // cape
   R(-4, -5, 3, 5 + leg, '#3a3a52'); R(1, -5, 3, 5 - leg, '#3a3a52');                    // legs
@@ -1495,7 +1515,7 @@ function srRon(x, y, face, t, run, hurt) {               // feet at (x, y); a ti
 }
 GAMES.push({
   id: 'superron', name: 'SUPER RON', tag: 'Ron has a video game now. Rod has notes.',
-  how: ['Run right to the golden toilet at the end.', 'Jump over pits and pipes. Bonk toolboxes from below.', 'Land on grease blobs and wipe ghosts to squash them.', 'Grab golden plungers. Rod will be commenting.'],
+  how: ['Run right to the golden toilet at the end. Keep running to build up speed; a running jump goes higher.', 'Bonk toolboxes from below. Some hold an espresso: grab it to get big, smash cinder blocks, and survive one extra hit.', 'Squash grease blobs and wipe ghosts by landing on them. Chain stomps for bigger points.', 'Grab golden plungers. Rod will be commenting.'],
   ctl: 'LEFT / RIGHT TO RUN  ·  SPACE / UP TO JUMP',
   act: 'JUMP',
   init(s) {
@@ -1507,6 +1527,7 @@ GAMES.push({
     s.foes = [...L.grease.map(c => ({ k: 'g', x: c * SR_TILE, y: SR_GROUND * SR_TILE, vx: -26, vy: 0, dead: 0 })),
               ...L.wipes.map(c => ({ k: 'w', x: c * SR_TILE, y: 150, y0: 150, vx: -18, dead: 0, ph: c }))];
     s.said = {}; s.bub = null; s.check = { x: 40, y: SR_GROUND * SR_TILE }; s.won = false; s.flush = 0;
+    SR_BROKE = new Set(); s.big = false; s.items = []; s.debris = []; s.bumps = []; s.score = 0; s.combo = 0; s.runT = 0; s.texts = [];
     s.quip = (k, txt) => { if (s.said[k]) return; s.said[k] = 1; s.bub = { txt, t: 3.2 }; };
     s.quip('start', "Ron has his own game now? ...Sure.");
   },
@@ -1519,14 +1540,16 @@ GAMES.push({
     // run + jump
     let dir = (I.R ? 1 : 0) - (I.L ? 1 : 0);
     if (I.ptr.down && dir === 0) dir = I.ptr.x < W * 0.33 ? -1 : I.ptr.x > W * 0.66 ? 1 : 0;
-    const acc = p.on ? 900 : 600; p.vx += dir * acc * dt; if (!dir && p.on) p.vx *= Math.pow(0.0005, dt);
-    p.vx = clamp(p.vx, -120, 120); if (dir) p.face = dir;
+    s.runT = dir && p.on && Math.sign(p.vx) === dir ? s.runT + dt : (p.on ? 0 : s.runT);          // keep running to build up speed
+    const top = s.runT > 0.7 ? 168 : 112, skid = dir && Math.sign(p.vx) === -dir && Math.abs(p.vx) > 30;
+    const acc = skid ? 1700 : p.on ? 520 : 380; p.vx += dir * acc * dt; if (!dir && p.on) p.vx *= Math.pow(0.004, dt);
+    p.vx = clamp(p.vx, -top, top); if (dir) p.face = dir; p.skid = skid && p.on;
     const jumpHeld = I.A || I.U || (I.ptr.down && I.ptr.x >= W * 0.33 && I.ptr.x <= W * 0.66);
-    if ((I.Ap || I.Up || (I.ptr.clicked && I.ptr.x >= W * 0.33 && I.ptr.x <= W * 0.66)) && p.on) { p.vy = -330; p.on = false; }
-    if (!jumpHeld && p.vy < -120) p.vy = -120;                       // short hop if you let go
-    p.vy = Math.min(520, p.vy + 980 * dt);
+    if ((I.Ap || I.Up || (I.ptr.clicked && I.ptr.x >= W * 0.33 && I.ptr.x <= W * 0.66)) && p.on) { p.vy = -305 - Math.abs(p.vx) * 0.32; p.on = false; SFX('ui_tap', { vol: 0.3 }); }   // a running jump goes higher
+    if (!jumpHeld && p.vy < -110) p.vy = -110;                       // short hop if you let go
+    p.vy = Math.min(520, p.vy + (jumpHeld && p.vy < 0 ? 640 : 1250) * dt);   // floaty while you hold jump, snappy coming down
     // move X, collide
-    const hw = 6, hh = 22;
+    const hw = 6, hh = s.big ? 31 : 22;
     p.x += p.vx * dt;
     for (const sx of [p.x - hw, p.x + hw]) for (const sy of [p.y - hh + 1, p.y - 1]) {
       const c = Math.floor(sx / SR_TILE), r = Math.floor(sy / SR_TILE);
@@ -1537,9 +1560,14 @@ GAMES.push({
     p.y += p.vy * dt; p.on = false;
     for (const sx of [p.x - hw + 1, p.x + hw - 1]) {
       const c = Math.floor(sx / SR_TILE);
-      if (p.vy >= 0) { const r = Math.floor(p.y / SR_TILE); if (srSolid(c, r)) { p.y = r * SR_TILE; p.vy = 0; p.on = true; } }
+      if (p.vy >= 0) { const r = Math.floor(p.y / SR_TILE); if (srSolid(c, r)) { p.y = r * SR_TILE; p.vy = 0; p.on = true; s.combo = 0; } }
       else { const r = Math.floor((p.y - hh) / SR_TILE); if (srSolid(c, r)) { p.y = (r + 1) * SR_TILE + hh; p.vy = 0;
-        const k = c + ',' + r; if (L.blocks.some(([bx, by]) => bx === c && by === r) && !s.bonked.has(k)) { s.bonked.add(k); s.got++; s.pops.push({ x: c * SR_TILE + 8, y: r * SR_TILE - 4, t: 0.6 }); s.quip('box', "Don't headbutt the toolbox, Ron. We need that."); } } }
+        const k = c + ',' + r; s.bumps.push({ k, t: 0.15 });
+        if (L.brickSet.has(k)) { if (s.big) { SR_BROKE.add(k); s.score += 50; SFX('clog'); for (let i = 0; i < 4; i++) s.debris.push({ x: c * SR_TILE + 4 + (i % 2) * 8, y: r * SR_TILE + 4 + (i > 1) * 8, vx: (i % 2 ? 60 : -60), vy: -200 + (i > 1) * 60, t: 1 }); s.quip('smash', "That's a load-bearing cinder block, Ron."); }
+          else { SFX('click', { vol: 0.5 }); s.quip('bump', 'Too small to break it. Have you tried espresso?'); } }
+        const bi = L.blocks.findIndex(([bx, by]) => bx === c && by === r);
+        if (bi >= 0 && !s.bonked.has(k) && bi % 4 === 1 && !s.big) { s.bonked.add(k); s.items.push({ x: c * SR_TILE + 8, y: r * SR_TILE, vx: 0, vy: 0, rise: 16 }); SFX('ui_select'); s.quip('espresso', "An espresso? From a toolbox? ...Okay that one I respect."); }
+        else if (bi >= 0 && !s.bonked.has(k)) { s.bonked.add(k); s.got++; s.score += 100; s.pops.push({ x: c * SR_TILE + 8, y: r * SR_TILE - 4, t: 0.6 }); s.quip('box', "Don't headbutt the toolbox, Ron. We need that."); } } }
     }
     if (p.on && p.y >= SR_GROUND * SR_TILE - 0.5 && p.x > s.check.x + 120) s.check = { x: p.x, y: p.y };   // checkpoints only on solid ground
     // fell in a pit
@@ -1556,15 +1584,26 @@ GAMES.push({
       } else { f.x += f.vx * dt; f.y = f.y0 + Math.sin(s.t * 2 + f.ph) * 22; }
       const fw = f.k === 'g' ? 8 : 9, ftop = f.k === 'g' ? f.y - 10 : f.y - 9, fbot = f.k === 'g' ? f.y : f.y + 9;
       if (Math.abs(f.x - p.x) < fw + hw && p.y > ftop && p.y - hh < fbot) {
-        if (p.vy > 60 && p.y - ftop < 10) { f.dead = 0.01; p.vy = -230; SFX('squish'); s.quip(f.k, f.k === 'g' ? "You don't STOMP grease, Ron. You JET it." : 'Flushable wipes. Haunting us even here.'); }
+        if (p.vy > 60 && p.y - ftop < 10) { f.dead = 0.01; p.vy = jumpHeld ? -330 : -230; SFX('squish'); s.combo++; const pts = 100 * Math.pow(2, Math.min(5, s.combo - 1)); s.score += pts; s.texts.push({ x: f.x, y: f.y - 16, txt: String(pts), t: 0.8 }); s.quip(f.k, f.k === 'g' ? "You don't STOMP grease, Ron. You JET it." : 'Flushable wipes. Haunting us even here.'); }
         else if (s.inv <= 0) { s.quip('hit' + f.k, f.k === 'g' ? 'He got greased. Happens to the best of us.' : 'Wiped out. Literally.'); hurt(s, false); }
       }
     }
+    for (const it of s.items) {   // espresso: pops up out of the toolbox, then slides along and falls off ledges
+      if (it.rise > 0) { it.rise -= 30 * dt; it.y -= 30 * dt; if (it.rise <= 0) it.vx = 50; continue; }
+      it.vy = Math.min(400, it.vy + 900 * dt); it.x += it.vx * dt; if (srSolid(Math.floor((it.x + Math.sign(it.vx) * 6) / SR_TILE), Math.floor((it.y - 4) / SR_TILE))) it.vx = -it.vx;
+      it.y += it.vy * dt; if (srSolid(Math.floor(it.x / SR_TILE), Math.floor(it.y / SR_TILE))) { it.y = Math.floor(it.y / SR_TILE) * SR_TILE; it.vy = 0; }
+      if (!it.got && Math.abs(it.x - p.x) < 12 && Math.abs((it.y - 6) - (p.y - hh / 2)) < hh / 2 + 8) { it.got = true; s.big = true; s.score += 500; SFX('ui_select'); s.texts.push({ x: it.x, y: it.y - 14, txt: 'WIRED!', t: 1 }); }
+      if (it.y > H + 40) it.got = true; }
+    s.items = s.items.filter(it => !it.got);
+    s.debris.forEach(d => { d.vy += 900 * dt; d.x += d.vx * dt; d.y += d.vy * dt; d.t -= dt; }); s.debris = s.debris.filter(d => d.t > 0);
+    s.bumps.forEach(b => b.t -= dt); s.bumps = s.bumps.filter(b => b.t > 0);
+    s.texts.forEach(o => { o.t -= dt; o.y -= 24 * dt; }); s.texts = s.texts.filter(o => o.t > 0);
     // the golden toilet
     if (p.x > (L.len - 8) * SR_TILE && !s.won) { s.won = true; SFX('flush_big'); s.quip('end', "This isn't how drains work. What IS this?"); s.bub = { txt: "This isn't how drains work. What IS this?", t: 9 }; }
     s.cam = clamp(p.x - 180, 0, L.len * SR_TILE - W);
     s.pops.forEach(o => { o.t -= dt; o.y -= 30 * dt; }); s.pops = s.pops.filter(o => o.t > 0);
     function hurt(s, fell) {
+      if (!fell && s.big) { s.big = false; s.inv = 1.6; SFX('bubble'); s.p.vy = -150; s.quip('shrink', 'Caffeine crash. Happens.'); return; }   // the espresso takes the hit
       SFX(fell ? 'splash' : 'bubble'); s.hits++; s.hearts--; s.inv = 1.6;
       if (fell) { s.p.x = s.check.x; s.p.y = s.check.y; s.p.vx = s.p.vy = 0; for (const f of s.foes) if (!f.dead && Math.abs(f.x - s.p.x) < 60) f.x += 80 * Math.sign(f.x - s.p.x || 1); }
       else { s.p.vy = -200; s.p.vx = -s.p.face * 90; }
@@ -1586,8 +1625,15 @@ GAMES.push({
       R(x + 2, top + 6, 28, h * SR_TILE - 6, '#e8ecef'); R(x + 4, top + 6, 5, h * SR_TILE - 6, '#ffffff'); R(x + 24, top + 6, 5, h * SR_TILE - 6, '#c9ced6');
       R(x, top, 32, 8, '#f2f4f6'); R(x, top + 7, 32, 2, '#aab1ba'); T('4"', x + 16, top + 20, '#7a8a9a', 5, 'center');
     }
+    for (const [bx, by] of L.bricks) {                                // cinder blocks (break them when you're big)
+      const k = bx + ',' + by; if (SR_BROKE && SR_BROKE.has(k)) continue; const x = bx * SR_TILE - cam, y = by * SR_TILE - (s.bumps.some(b => b.k === k) ? 3 : 0); if (x < -16 || x > W) continue;
+      R(x, y, 16, 16, '#9a958c'); R(x, y, 16, 1, '#c4bfb4'); R(x, y + 7, 16, 2, '#6f6a62'); R(x + 7, y, 2, 7, '#6f6a62'); R(x + 3, y + 9, 2, 7, '#6f6a62'); R(x + 11, y + 9, 2, 7, '#6f6a62'); R(x + 2, y + 2, 4, 4, '#7d786f'); R(x + 10, y + 2, 4, 4, '#7d786f');
+    }
+    s.debris.forEach(d => R(d.x - cam - 3, d.y - 3, 6, 6, '#8a857c'));
+    for (const it of s.items) { const x = it.x - cam; R(x - 5, it.y - 10, 10, 10, '#f4f4f2'); R(x - 4, it.y - 9, 8, 3, '#5a3a1c'); R(x + 5, it.y - 8, 3, 5, '#f4f4f2'); R(x - 6, it.y - 1, 12, 1, '#c9c4b8');   // espresso cup
+      for (let i = 0; i < 2; i++) R(x - 2 + i * 4, it.y - 14 - Math.abs(Math.sin(t * 6 + i)) * 3, 1, 3, '#ffffffaa'); }
     for (const [bx, by] of L.blocks) {                                // toolboxes
-      const x = bx * SR_TILE - cam, y = by * SR_TILE, used = s.bonked.has(bx + ',' + by); if (x < -16 || x > W) continue;
+      const x = bx * SR_TILE - cam, y = by * SR_TILE - (s.bumps.some(b => b.k === bx + ',' + by) ? 3 : 0), used = s.bonked.has(bx + ',' + by); if (x < -16 || x > W) continue;
       R(x, y, 16, 16, used ? '#7a4a40' : '#c0392b'); R(x, y + 6, 16, 2, '#8b2a1f'); R(x + 5, y + 2, 6, 2, '#222'); if (!used) R(x + 7, y + 9, 2, 3, '#f7c418');
     }
     for (const q of s.plg) if (!q.got) {                              // golden plungers (spinning)
@@ -1604,10 +1650,12 @@ GAMES.push({
     // the golden toilet
     const tx = (L.len - 6) * SR_TILE - cam; if (tx < W + 40) { R(tx, 212, 26, 28, '#f2c94c'); g.fillStyle = '#f7d96a'; g.beginPath(); g.ellipse(tx + 13, 212, 18, 7, 0, 0, Math.PI * 2); g.fill(); R(tx + 14, 180, 18, 26, '#f2c94c'); T('FLUSH', tx + 13, 172, '#f7c418', 5, 'center');
       if (s.won) { for (let i = 0; i < 8; i++) { const a = s.flush * 6 + i; C(tx + 13 + Math.cos(a) * 14 * (1 - s.flush / 2.2), 210 + Math.sin(a) * 5, 2, '#9fd0e0'); } } }
-    if (!s.won || s.flush < 0.8) srRon(s.p.x - cam, s.p.y, s.p.face, t, Math.abs(s.p.vx) > 10 && s.p.on, s.inv > 0);
+    if (!s.won || s.flush < 0.8) srRon(s.p.x - cam, s.p.y, s.p.skid ? -s.p.face : s.p.face, t * (1 + Math.abs(s.p.vx) / 140), Math.abs(s.p.vx) > 10 && s.p.on, s.inv > 0, s.big);
+    s.texts.forEach(o => T(o.txt, o.x - cam, o.y, '#fff', 6, 'center'));
     HUD(s, 'SUPER RON', s.time);
     for (let i = 0; i < s.heartsMax; i++) { const on = i < s.hearts; C(130 + i * 12, 8, 3, on ? '#e9665a' : '#444'); C(135 + i * 12, 8, 3, on ? '#e9665a' : '#444'); g.fillStyle = on ? '#e9665a' : '#444'; g.beginPath(); g.moveTo(127 + i * 12, 9); g.lineTo(132.5 + i * 12, 15); g.lineTo(138 + i * 12, 9); g.fill(); }
     R(305, 3, 2, 10, '#c98a1e'); R(301, 2, 10, 4, '#f2c94c'); T(`${s.got}/${s.total}`, 314, 8, '#f2c94c', 6);   // golden plunger count
+    T(String(s.score).padStart(6, '0'), 400, 8, '#fff', 6);
     // Rod's running commentary
     if (s.bub) { const lines = []; let ln = ''; for (const w of s.bub.txt.split(' ')) { if ((ln + ' ' + w).length > 34) { lines.push(ln); ln = w; } else ln = ln ? ln + ' ' + w : w; } lines.push(ln);
       const h = 18 + lines.length * 10; R(8, 22, 300, h, 'rgba(16,21,31,.92)'); g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(8.5, 22.5, 299, h - 1);
@@ -1703,7 +1751,7 @@ GAMES.push({
     const Y = r => s.ys[r], top = Y(1) - 11, bot = Y(s.nl) + 11, p = s.pipe;
     if (s.bg && BGI('bg_mainstreet')) {
       R(p[0][0] - 4, Y(s.nl + 2) - 3, 8, 8, '#ddd'); R(p[0][0] - 3, Y(s.nl + 2) - 2, 6, 6, '#2c8a4a');
-      SPR('rod', 7, p[0][0] + 14, Y(s.nl + 2) + 10);
+      // (only the crew member you're playing is out here)
       const f = Math.floor(s.t * 4) % 2, gx = (s.t * 14) % (W + 80) - 40, sx = W + 40 - (s.t * 22) % (W + 80);
       SPI('gull_' + f, gx, Y(0) + 6, 0.5); SPI('squirrel_' + f, sx, Y(s.nl + 1) + 6, 0.45, true);
     } else {
@@ -1722,7 +1770,7 @@ GAMES.push({
     // city main manhole + the shop cleanout
     C(p[2][0], Y(0), 7, '#555'); C(p[2][0], Y(0), 5, '#6d6d6d'); R(p[2][0] - 4, Y(0) - 1, 8, 2, '#4a4a4a');
     R(p[0][0] - 4, Y(8) - 3, 8, 8, '#ddd'); R(p[0][0] - 3, Y(8) - 2, 6, 6, '#2c8a4a');
-    SPR('rod', 7, p[0][0] + 14, Y(8) + 10);   // Rod, feeding the push rod
+
     }
     // spray marks
     for (const m of s.marks) { const x = m.x, y = Y(m.row); R(x - 7, y - 1, 14, 3, '#ff2d95'); R(x - 1, y - 7, 3, 14, '#ff2d95'); T(String(m.n), x + 9, y - 6, '#ff2d95', 6); }

@@ -17,9 +17,9 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794294414"></script>
-<script src="../js/music.js?v=1794294414"></script>
-<script src="../js/sfx.js?v=1794294414"></script>
+<script src="../js/state.js?v=1794338136"></script>
+<script src="../js/music.js?v=1794338136"></script>
+<script src="../js/sfx.js?v=1794338136"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -135,9 +135,25 @@ async function runFrom(i) {
 }
 
 // ---------- characters ----------
+
+// crew in cutscenes: when they're moving sideways, play the real walk cycle (and face the way they're going)
+const CREW_MV = {};
+function crewSheet(n) { if (IMG[n] === undefined) { IMG[n] = null; const im = new Image(); im.onload = () => IMG[n] = im; im.src = '../assets/' + n + '.png'; } return IMG[n]; }
+function crewDraw(who, x, y, f, s, a) {
+  const base = IMG[who]; if (!base) return; g.globalAlpha = a;
+  const now = performance.now(), p = CREW_MV[who + s] || (CREW_MV[who + s] = { x, mv: 0, dir: 1 }), dx = x - p.x;
+  if (Math.abs(dx) > 0.05) { p.mv = now; p.dir = dx > 0 ? 1 : -1; } p.x = x;
+  let I = base, fi = f, fw = base.width / 9, flip = false;
+  const more = crewSheet(who + '_more');
+  if (now - p.mv < 140 && more && (f === 0 || f === 6 || f === 8)) { I = more; fw = more.width / 9; fi = Math.floor(now / 125) % 4; flip = p.dir < 0; }   // walking, not sliding
+  const q = who === 'rod' ? 0.94 : 1, w = 24 * s * q, h = 40 * s * q;   /* Matt stands a little taller than Rod */
+  g.imageSmoothingEnabled = fw > 24;
+  if (flip) { g.save(); g.translate(Math.round(x), 0); g.scale(-1, 1); g.drawImage(I, fi * fw, 0, fw, I.height, Math.round(-w / 2), Math.round(y - h), w, h); g.restore(); }
+  else g.drawImage(I, fi * fw, 0, fw, I.height, Math.round(x - w / 2), Math.round(y - h), w, h);
+  g.imageSmoothingEnabled = false;
+}
 function rod(x, y, f = 0, s = 2, a = 1) {      // x,y = feet, center
-  if (!IMG.rod) return; g.globalAlpha = a;
-  { const I = IMG.rod, fw = I.width / 9; g.imageSmoothingEnabled = fw > 24; const q = I === IMG.rod ? 0.94 : 1; /* Matt stands a little taller than Rod */ g.drawImage(I, f * fw, 0, fw, I.height, Math.round(x - 12 * s * q), Math.round(y - 40 * s * q), 24 * s * q, 40 * s * q); g.imageSmoothingEnabled = false; } g.globalAlpha = 1;
+  crewDraw('rod', x, y, f, s, a); g.globalAlpha = 1;
 }
 // gray alien. o: {s, wave, point:[tx,ty], tilt, blink, sad}
 function alien(x, y, o = {}) {
@@ -260,7 +276,7 @@ function drawDialog() {
   d.shown = Math.min(d.text.length, d.shown + 1.1);
   // the box grows upward when a long list of options would spill out the bottom
   const grow = d.opts ? Math.max(0, 210 + Math.max(1, wrap(d.text, 360, 8).length) * 13 - 2 + d.opts.length * 13 - 262) : 0;
-  const Y = (st.dialogTop ? -158 : 0) - (st.dialogTop ? 0 : grow);   // dialog can sit at the top so the crew stays visible
+  const top = st.dialogTop || window.DIALOG_TOP, Y = (top ? -158 : 0) - (top ? 0 : grow);   // dialog can sit at the top so the crew stays visible
   g.save(); g.translate(0, Y);
   R(6, 180, W - 12, 86 + grow, '#10151f'); g.strokeStyle = '#fff'; g.lineWidth = 3; g.strokeRect(7.5, 181.5, W - 15, 83 + grow);
   const p = d.port === 'alien' ? IMG.alienP : (IMG[d.port] || portLoad(d.port));
@@ -315,8 +331,7 @@ function drawButtons() {
 
 // ---------- coffee run ----------
 function matt(x, y, f = 0, s = 2, a = 1) {
-  if (!IMG.matt) return; g.globalAlpha = a;
-  { const I = IMG.matt, fw = I.width / 9; g.imageSmoothingEnabled = fw > 24; const q = I === IMG.rod ? 0.94 : 1; /* Matt stands a little taller than Rod */ g.drawImage(I, f * fw, 0, fw, I.height, Math.round(x - 12 * s * q), Math.round(y - 40 * s * q), 24 * s * q, 40 * s * q); g.imageSmoothingEnabled = false; } g.globalAlpha = 1;
+  crewDraw('matt', x, y, f, s, a); g.globalAlpha = 1;
 }
 function cup(x, y) { R(x, y, 4, 6, '#f2f0ea'); R(x - 1, y - 1, 6, 2, '#5a3a1c'); R(x, y + 2, 4, 2, '#c0392b'); }
 function van(x, y) { if (IMG.van) { const N = Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35))), fw = IMG.van.width / N, f = Math.floor(Math.abs(x) / 6) % N, vh = 144 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(IMG.van, f * fw, 0, fw, IMG.van.height, Math.round(x), Math.round(y - vh), 144, vh); g.imageSmoothingEnabled = false; } }   // wheels turn as the van moves
