@@ -158,7 +158,9 @@ function drive3d(choice, opts) {
   const LOG_B = DI('logtruck_back'), LOG_F = DI('logtruck_front');
   const DSPLAT = DI('deer_splat');
   const FEATH = DI('feathers');
-  const CRASH = DI('crash');   // bumper-hit burst (6 frames, 2x sheet)
+  const CRASH = DI('crash');
+  const MREACT = DI('moose_react'), MFR = [];   // the moose, unimpressed (6 frames, faces left)
+  const mooseFrame = i => { if (!(MREACT.complete && MREACT.naturalWidth)) return null; if (!MFR.length) { const fw = MREACT.width / 6; for (let k = 0; k < 6; k++) { const c = document.createElement('canvas'); c.width = fw; c.height = MREACT.height; c.getContext('2d').drawImage(MREACT, k * fw, 0, fw, MREACT.height, 0, 0, fw, MREACT.height); MFR.push(c); } } return MFR[i]; };   // bumper-hit burst (6 frames, 2x sheet)
   const bursts = [];   // the turkey family, all at once (6 frames, 2x sheet)   // the deer, face on the windshield (6 frames, sliding down)
   const ANIM = { moose: [DI('moose_0'), DI('moose_1')], deer: [DI('deer_0'), DI('deer_1')], turkeys: [DI('turkey_0'), DI('turkey_1')] };
   const artReady = () => DL.every(i => i.failed || (i.complete && i.naturalWidth > 0));
@@ -274,7 +276,7 @@ function drive3d(choice, opts) {
   rc.onpointerup = rc.onpointercancel = rc.onlostpointercapture = e => { pts.delete(e.pointerId); retouch(); };
   addEventListener('pointerup', e => { if (pts.delete(e.pointerId)) retouch(); }); addEventListener('blur', () => { pts.clear(); retouch(); });
   const say = (m, s = 1.4) => { msg = m; msgT = s; };
-  if (typeof DDT !== 'undefined' && DDT.DEV) window.__crash = () => bursts.push({ t: 0, side: 0.3, big: false }); window.__turk = () => critters.push({ kind: 'turkeys', seg: 0, off: 0, dir: 1, hit: true, fly: 0.001, flyDir: 1 }); window.__deer = (d = 1) => critters.push({ kind: 'deer', seg: 0, off: 0, dir: d, hit: true, fly: 0.001, flyDir: d });   // dev: test the windshield deer
+  if (typeof DDT !== 'undefined' && DDT.DEV) window.__moose = () => { const c = { kind: 'moose', seg: Math.floor((pos + PZ) / SEG), off: px, dir: -1, hit: true, react: 0.001 }; critters.push(c); }; window.__crash = () => bursts.push({ t: 0, side: 0.3, big: false }); window.__turk = () => critters.push({ kind: 'turkeys', seg: 0, off: 0, dir: 1, hit: true, fly: 0.001, flyDir: 1 }); window.__deer = (d = 1) => critters.push({ kind: 'deer', seg: 0, off: 0, dir: d, hit: true, fly: 0.001, flyDir: d });   // dev: test the windshield deer
   const sfx = (n, o) => { if (window.DDTSfx) DDTSfx.play(n, o); };
   // ---------- the windshield: cracks that stick around (and grow with every hit), bugs, mud, and now and then some weather ----------
   let glass = 0; try { glass = (DDT.get() || {}).glass || 0; } catch (e) {}
@@ -417,6 +419,7 @@ function drive3d(choice, opts) {
         const dz = cr.seg * SEG - pos;
         if (!cr.dir && dz > 0 && dz < 60 * SEG) { cr.dir = -Math.sign(cr.off); say({ moose: 'MOOSE!', deer: 'DEER!', turkeys: 'TURKEYS!', peeper: 'LEAF PEEPER IN THE ROAD!' }[cr.kind]); }
         if (cr.fly > 0) { cr.fly += dt; continue; }
+        if (cr.react > 0) { cr.react += dt; if (cr.react < 2.6) continue; }   // the moose takes its time
         if (cr.dir) {
           if (cr.kind === 'peeper' && !cr.snapped && Math.abs(cr.off) < 0.4) { cr.snapped = true; cr.snap = 1.6; }
           if (cr.snap > 0) { cr.snap -= dt; cr.flash = (cr.flash + dt) % 0.4; } else cr.off += cr.dir * CSPD[cr.kind] * dt * 1.4;
@@ -424,7 +427,7 @@ function drive3d(choice, opts) {
         if (live && !cr.hit && inv <= 0 && Math.abs(dz - PZ) < SEG * 1.1 && Math.abs(px - cr.off) < CW[cr.kind] + 0.1) {
           cr.hit = true; crashes++; hurtGlass(glassFor[cr.kind]); inv = 1.4; shake = cr.kind === 'moose' ? 0.7 : 0.3; penalty += PEN[cr.kind]; speed *= cr.kind === 'moose' ? 0.1 : 0.4;
           cr.dir = Math.sign(cr.off - px) || 1; cr.snap = 0;
-          if (cr.kind !== 'moose') { cr.fly = 0.001; cr.flyDir = cr.dir; }   // up and over the roof
+          if (cr.kind !== 'moose') { cr.fly = 0.001; cr.flyDir = cr.dir; } else cr.react = 0.001;   // up and over the roof
           sfx(cr.kind === 'moose' ? 'horn_angry' : 'horn');
           say({ moose: 'HIT THE MOOSE! +20 MIN', deer: 'OH DEER. +12 MIN', turkeys: 'FEATHERS! +5 MIN', peeper: 'SLAMMED THE BRAKES! +8 MIN' }[cr.kind]);
         }
@@ -497,12 +500,18 @@ function drive3d(choice, opts) {
             r.fillStyle = '#ffb020'; r.fillRect(bx, b.Y + b.h * 0.5, bw, bh); r.fillStyle = 'rgba(255,176,32,.35)'; r.fillRect(bx - bw * 0.5, b.Y + b.h * 0.5 - bh * 0.5, bw * 2, bh * 2); } }
         for (const cr of critters) if (!cr.fly && cr.seg === sg.i && Math.abs(cr.off) < 3) {
           { let im = ANIM[cr.kind] ? ANIM[cr.kind][cr.dir && !cr.snap ? Math.floor(t * 6) % 2 : 0] : CIMG[cr.kind]; if (cr.dir < 0 && ANIM[cr.kind]) im = flipped(im);   // walk cycle, facing the way it's going
-            S(im, cr.kind === 'moose' ? 2.1 : cr.kind === 'turkeys' ? 0.9 : 1.5, p.sx, p.sy, cr.off, p.sw, sg.clip); }
+            let sc = cr.kind === 'moose' ? 2.1 : cr.kind === 'turkeys' ? 0.9 : 1.5;
+            if (cr.react > 0 && cr.react < 2.6 && mooseFrame(0)) continue;   // drawn up close, in front of the van, below
+            S(im, sc, p.sx, p.sy, cr.off, p.sw, sg.clip); }
           if (cr.kind === 'peeper' && cr.snap > 0 && cr.flash < 0.15) S(FLASH, 1, p.sx, p.sy - p.sw * 0.1, cr.off + 0.08, p.sw, sg.clip);
         }
       }
       // falling snow
       if (SNOW) { r.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < 60; i++) r.fillRect((i * 97 + t * 30 * (1 + i % 3) + px * 40) % W, (i * 53 + t * (40 + i % 7 * 9)) % H, 1, 1); }
+      // the moose you just bumped: right in front of the van, staring you down, not moving
+      for (const cr of critters) if (cr.react > 0 && cr.react < 2.6) { const mf = mooseFrame(Math.min(5, Math.floor(cr.react / 0.42))); if (!mf) continue;
+        const dh = 170, dw = mf.width * dh / mf.height, cx = W / 2 + steer * 6 + Math.max(-60, Math.min(60, (cr.off - px) * 90)), by = H - 30;
+        r.save(); if (cr.react < 0.25) r.translate((Math.random() - 0.5) * 3, 0); if (cr.dir > 0) { r.translate(cx, 0); r.scale(-1, 1); r.drawImage(mf, -dw / 2, by - dh, dw, dh); } else r.drawImage(mf, cx - dw / 2, by - dh, dw, dh); r.restore(); }
       // our van
       if (!(inv > 0 && Math.floor(t * 10) % 2)) {
         const vx = W / 2 - 36 + steer * 6, vy = H - 58 - bounce * 6 + (Math.abs(px) > 1 ? (Math.random() - .5) * 3 : 0);

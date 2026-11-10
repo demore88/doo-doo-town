@@ -740,6 +740,9 @@ GAMES.push({
     const ty = s.oy + s.dst * s.Z, bx = s.ox + s.C * s.Z + 4; if (!SPI('bucket', bx + 12, ty + 36, 0.9)) { R(bx, ty + 8, 24, 26, '#e8822a'); R(bx - 2, ty + 6, 28, 4, '#c96a1a'); R(bx + 2, ty + 14, 20, 6, '#f4f4f2'); g.strokeStyle = '#999'; g.lineWidth = 1; g.beginPath(); g.arc(bx + 12, ty + 6, 12, Math.PI, 0); g.stroke(); }
     for (let r = 0; r < s.Rw; r++) for (let c = 0; c < s.C; c++) {
       const p = s.grid[r][c], x = s.ox + c * s.Z, y = s.oy + r * s.Z;
+      { const sd = this.sides(p), key = p.t === 'X' ? 'X' : ['T', 'R', 'B', 'L'].filter((_, i) => sd.includes(i)).join('').replace('TRBL', 'X');
+        const name = { TR: 'TR', RB: 'RB', BL: 'BL', TL: 'LT', RL: 'LR', TB: 'TB', X: 'X' }[key], im = name && MG((p.wet > 0 ? 'ptw_' : 'pt_') + name);
+        if (im) { g.drawImage(im, x, y, s.Z, s.Z); continue; } }   // the drawn tiles; plain shapes below are the fallback
       R(x + 1, y + 1, s.Z - 2, s.Z - 2, '#3a4036');
       const m = s.Z / 2, wet = p.wet > 0, col = wet ? '#5fa8e0' : '#c9c4b8';
       for (const sd of this.sides(p)) { if (sd === 0) R(x + m - 5, y, 10, m + 5, '#777'); if (sd === 2) R(x + m - 5, y + m - 5, 10, m + 5, '#777'); if (sd === 1) R(x + m - 5, y + m - 5, m + 5, 10, '#777'); if (sd === 3) R(x, y + m - 5, m + 5, 10, '#777'); }
@@ -1613,7 +1616,9 @@ GAMES.push({
     const k = s.rnd(), kind = k < 0.12 ? 'log' : k < 0.3 ? 'truck' : k < 0.36 ? 'clog' : 'car';
     const w = { car: 30, truck: 44, log: 72, clog: 40 }[kind];
     const cols = ['#c0392b', '#2a5ab0', '#e8e4d8', '#b8bcc2', '#27ae60', '#f39c12', '#8e44ad'];
-    return { row: r, x, w, kind, col: cols[Math.floor(s.rnd() * cols.length)], spd: kind === 'clog' ? 1.6 : kind === 'log' ? 0.75 : 1 };
+    const spr = { car: ['sedan', 'hatch', 'subaru', 'minivan', 'pickup'][Math.floor(s.rnd() * 5)], truck: 'bus', log: 'logtruck', clog: 'blackvan' }[kind], im = MG('car_' + spr), base = MG('car_sedan');
+    const sw = im && base ? Math.round(im.width * 30 / base.width) : w;   // drawn cars: keep their real sizes relative to a 30px sedan
+    return { row: r, x, w: sw, kind, spr: im ? 'car_' + spr : null, col: cols[Math.floor(s.rnd() * cols.length)], spd: kind === 'clog' ? 1.6 : kind === 'log' ? 0.75 : 1 };
   },
   rowY: r => 36 + r * 22,
   Y(s, r) { return s.ys[r]; },
@@ -1694,6 +1699,10 @@ GAMES.push({
     for (const c of s.cars) {
       const y = Y(c.row), x0 = c.x - c.w / 2, d = s.lanes[c.row].dir;
       R(x0 + 2, y + 6, c.w - 4, 3, 'rgba(0,0,0,.35)');
+      if (c.spr && MG(c.spr)) { const im = MG(c.spr), h = im.height * c.w / im.width;   // facing the way the lane goes
+        if (d < 0) { g.save(); g.translate(Math.round(c.x), 0); g.scale(-1, 1); g.drawImage(im, Math.round(-c.w / 2), Math.round(y + 8 - h), c.w, Math.round(h)); g.restore(); }
+        else g.drawImage(im, Math.round(x0), Math.round(y + 8 - h), c.w, Math.round(h));
+        continue; }
       if (c.kind === 'log') { R(x0, y - 7, 18, 14, '#c0392b'); R(x0 + 20, y - 6, c.w - 20, 12, '#5a3e26'); for (let i = 0; i < 3; i++) C(d > 0 ? x0 + 20 : x0 + c.w - 2, y - 4 + i * 4, 2.5, '#c9a06a'); if (d < 0) { R(x0, y - 7, 18, 14, '#5a3e26'); R(x0 + c.w - 18, y - 7, 18, 14, '#c0392b'); } }
       else if (c.kind === 'truck') { R(x0, y - 8, c.w, 15, c.col); R(d > 0 ? x0 + c.w - 12 : x0, y - 8, 12, 15, '#ddd'); R(d > 0 ? x0 + c.w - 8 : x0 + 2, y - 6, 6, 5, '#2b3a48'); }
       else if (c.kind === 'clog') { R(x0, y - 8, c.w, 15, '#c0392b'); R(x0, y - 2, c.w, 3, '#111'); T('CK', c.x, y - 4, '#111', 5, 'center'); R(d > 0 ? x0 + c.w - 9 : x0 + 2, y - 7, 7, 5, '#2b3a48'); }
