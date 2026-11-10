@@ -132,6 +132,12 @@ function drive3d(choice, opts) {
     P(8, 17, 7, 6, '#2b3a48'); P(25, 17, 7, 6, '#2b3a48'); P(17, 22, 6, 12, '#5a3e26'); if (SNOW) { P(2, 9, 36, 2, '#fff'); k.fillStyle = '#fff'; k.beginPath(); k.moveTo(6, 10); k.lineTo(20, 1); k.lineTo(34, 10); k.lineTo(30, 10); k.lineTo(20, 4); k.lineTo(10, 10); k.fill(); } }));
   const STACK = art(28, 90, (k, P) => { P(10, 10, 9, 80, '#8a5a4a'); for (let y = 16; y < 90; y += 12) P(10, y, 9, 2, '#6a4a3a'); P(8, 8, 13, 4, '#5a3a2e');   // the Berlin mill smokestack, puffing
     k.fillStyle = 'rgba(230,230,235,.75)'; for (let i = 0; i < 4; i++) { k.beginPath(); k.arc(14 + i * 3, 4 - i * 2, 4 + i, 0, 7); k.fill(); } });
+  const MILL = art(90, 90, (k, P) => {   // the Berlin paper mill: brick buildings, two stacks, steam
+    P(4, 52, 82, 38, '#8a5a4a'); P(4, 52, 82, 4, '#6a4a3a'); for (let x = 10; x < 84; x += 12) P(x, 62, 7, 8, '#2b3a48');
+    P(46, 40, 36, 14, '#7a4f40'); P(46, 40, 36, 3, '#5a3a2e'); for (let x = 50; x < 80; x += 10) P(x, 45, 6, 5, '#2b3a48');
+    P(14, 8, 8, 46, '#8a5a4a'); P(12, 6, 12, 4, '#5a3a2e'); P(30, 20, 6, 34, '#7a4f40'); P(28, 18, 10, 3, '#5a3a2e');
+    if (SNOW) { P(4, 50, 82, 2, '#fff'); P(46, 38, 36, 2, '#fff'); }
+    k.fillStyle = 'rgba(230,230,235,.7)'; for (let i = 0; i < 4; i++) { k.beginPath(); k.arc(18 + i * 4, 4 - i * 2, 4 + i, 0, 7); k.fill(); } });
   const MOOSESIGN = art(40, 44, (k, P) => { P(18, 26, 3, 18, '#777'); k.fillStyle = '#f2c12e'; k.beginPath(); k.moveTo(20, 0); k.lineTo(40, 20); k.lineTo(20, 40); k.lineTo(0, 20); k.fill(); P(13, 16, 14, 7, '#111'); P(25, 13, 4, 5, '#111'); P(14, 23, 2, 6, '#111'); P(24, 23, 2, 6, '#111'); });
   function carBack(col) { return art(40, 30, (k, P) => { P(2, 6, 36, 20, '#111'); P(3, 7, 34, 18, col); P(7, 1, 26, 8, '#111'); P(8, 2, 24, 6, '#2b3a48'); P(4, 16, 6, 3, '#c0392b'); P(30, 16, 6, 3, '#c0392b'); P(14, 18, 12, 4, '#ddd'); P(3, 26, 8, 4, '#111'); P(29, 26, 8, 4, '#111'); }); }
   function carFront(col) { return art(40, 30, (k, P) => { P(2, 6, 36, 20, '#111'); P(3, 7, 34, 18, col); P(7, 1, 26, 8, '#111'); P(8, 2, 24, 6, '#6a8aa8'); P(4, 15, 7, 4, '#fff3b0'); P(29, 15, 7, 4, '#fff3b0'); P(13, 18, 14, 4, '#333'); P(3, 26, 8, 4, '#111'); P(29, 26, 8, 4, '#111'); }); }
@@ -160,6 +166,7 @@ function drive3d(choice, opts) {
 
   // ---------- dress the roadside ----------
   const put = (n, img, off, scale = 1, kind) => { if (segs[n]) segs[n].sprites.push({ img, off, scale, kind }); };
+  let millPut = false;
   for (let n = 20; n < N - 20; n++) {
     const L = LEGS_HERE[segs[n].leg] || LEGS_HERE[0], sc = L.scene, wet = sc.includes('river') || sc.includes('lake');
     const treeSide = () => wet ? -1 : (Math.random() < .5 ? -1 : 1);                  // water is on the right, so the woods crowd the left
@@ -168,7 +175,7 @@ function drive3d(choice, opts) {
       const pick = Math.random(); put(n, pick < (sc.includes('notch') ? .8 : .55) ? PINE : pick < .93 ? MAPLES[n % MAPLES.length] : BIRCH, side * d, rnd(0.9, 1.4) * (sc.includes('notch') ? 1.3 : 1)); }
     if (n % 16 === 0) put(n, PINE, treeSide() * rnd(3.5, 6), rnd(1.2, 1.8));
     if (sc.includes('town') && n % 9 === 0) put(n, HOUSES_ART[n % HOUSES_ART.length], (n % 18 ? -1 : 1) * rnd(2.5, 3.4), rnd(0.9, 1.15));
-    if (sc.includes('mill') && n % 60 === 0) put(n, STACK, 4.2, 2.4);
+    if (sc.includes('mill') && !millPut && segs[n].leg === LEGS_HERE.findIndex(q => q.scene.includes('mill')) && (n - 40) % 400 === 140) { millPut = true; put(n, MILL, 5.5, 2.2); }   // one paper mill, set back from the road
     if (SNOW && n % 2 === 0) { put(n, BANK, -1.53 - (n % 6) * 0.02, 0.62); put(n, BANK, 1.53 + (n % 6) * 0.02, 0.62); }   // banks sit on the shoulder, off the travel lanes
     if (n % 97 === 0) put(n, MAILBOX, 1.3, 0.8);
     if (n % 211 === 0) put(n, MOOSESIGN, -1.5, 1);
