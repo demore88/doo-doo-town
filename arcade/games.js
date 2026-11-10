@@ -1819,7 +1819,7 @@ GAMES.push({
   init(s) {
     const bg = !!MG('bg_mainstreet'); s.bg = bg; s.nl = bg ? 4 : 6; const NL = s.nl;
     s.ys = bg ? [70, 90, 110, 130, 150, 172, 206, 238] : [36, 58, 80, 102, 124, 146, 168, 190, 212, 234];
-    s.DUR = [80, 70, 62][s.diff]; s.row = NL + 2; s.px = 300; s.cool = 0; s.pantsMax = s.pants = [4, 3, 3][s.diff]; s.inv = 0; s.hits = 0; s.marks = []; s.bad = 0; s.beepT = 0; s.flash = 0; s.say = ''; s.sayT = 0;
+    s.DUR = [80, 70, 62][s.diff]; s.row = bg ? NL + 1 : NL + 2; /* start on the near sidewalk, not in the lot by the fence */ s.px = 300; s.cool = 0; s.pantsMax = s.pants = [4, 3, 3][s.diff]; s.inv = 0; s.hits = 0; s.marks = []; s.bad = 0; s.beepT = 0; s.flash = 0; s.say = ''; s.sayT = 0;
     // the pipe: shop cleanout → kinks once under the road → city main at the far curb
     const x0 = 300 + (s.rnd() - 0.5) * 60, xk = 120 + s.rnd() * 240, x1 = clamp(xk + (s.rnd() - 0.5) * 140, 40, 440), rk = (bg ? 2 : 3) + Math.floor(s.rnd() * 2);
     s.pipe = [[x0, NL + 2], [xk, rk], [bg ? 245 : x1, 0]];
