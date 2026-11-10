@@ -46,7 +46,7 @@ function drive3d(choice, opts) {
   }
   const rnd = (a, b) => a + Math.random() * (b - a);
   const shade = (hex, f) => { const n = parseInt(hex.slice(1), 16), c = v => Math.max(0, Math.min(255, Math.round(v * f))); return `rgb(${c(n >> 16)},${c(n >> 8 & 255)},${c(n & 255)})`; };
-  const G1 = SEA.ground, G2 = shade(SEA.ground, 0.9);
+  const G1 = SEA.ground, G2 = G1;   // no alternating ground bands: they strobe on a phone
   // ---------- the real roads: legs between towns, each with its own character ----------
   // mi = rough real mileage · curve/hill = how twisty/hilly · heave = frost heaves · climb = steady up (then down) · busy = traffic
   // scene: river (water beside the road), town (buildings, more traffic), mill (Berlin smokestacks), lake, notch (steep woods)
@@ -192,8 +192,11 @@ function drive3d(choice, opts) {
     if (n % 16 === 0) put(n, T_PINES[0], treeSide() * rnd(3.5, 6), rnd(0.95, 1.35));
     if (sc.includes('town') && n % 9 === 0) put(n, BLDG[(n / 9 | 0) % BLDG.length], (n % 18 ? -1 : 1) * rnd(2.5, 3.4), rnd(0.85, 1.05));
     if (sc.includes('mill') && !millPut && segs[n].leg === LEGS_HERE.findIndex(q => q.scene.includes('mill')) && (n - 40) % 400 === 140) { millPut = true; put(n, MILL, 5.5, 2.2); }   // one paper mill, set back from the road
-    if (SNOW && n % 2 === 0) { const b = n % 46 === 0 ? 2 : (n / 2 | 0) % 2; put(n, SHOULDER[b], -1.53 - (n % 6) * 0.02, 0.62); put(n, SHOULDER[(b + 1) % 2], 1.53 + (n % 6) * 0.02, 0.62); }   // banks sit on the shoulder, off the travel lanes
-    else if (!SNOW && n % 3 === 0) { const b = n % 39 === 0 ? 2 : (n / 3 | 0) % 2; put(n, SHOULDER[b], (n % 2 ? -1 : 1) * (1.45 + (n % 5) * 0.03), 0.5); }   // mud, grass, wildflowers, leaf piles
+    {   // shoulder piles: scattered by a hash, not a metronome, so the eye has nothing to lock onto
+      const hs = k => { let x = (n * 374761393 + k * 668265263) | 0; x = (x ^ (x >>> 13)) * 1274126177; return ((x ^ (x >>> 16)) >>> 0) / 4294967296; };
+      const p = SNOW ? 0.11 : 0.07, sc = SNOW ? 0.62 : 0.5;
+      for (const side of [-1, 1]) { const r = hs(side + 3); if (r < p) put(n, SHOULDER[r < p * 0.15 ? 2 : (hs(side + 9) < 0.5 ? 0 : 1)], side * ((SNOW ? 1.53 : 1.45) + hs(side + 5) * 0.14), sc * (0.85 + hs(side + 7) * 0.3)); }
+    }   // snowbanks / mud, grass, wildflowers, leaf piles
     if (n % 97 === 0) put(n, MAILBOX, 1.3, 0.8);
     if (n % 211 === 0) put(n, MOOSESIGN, -1.5, 1);
   }
@@ -428,7 +431,7 @@ function drive3d(choice, opts) {
         if (p1.z - camZ <= DEPTH || p2.sy >= maxy || p2.sy >= p1.sy) continue;
         r.fillStyle = sg.dark ? G2 : G1; r.fillRect(-10, p2.sy, W + 20, p1.sy - p2.sy + 1);
         const rum = w => w * 0.08, lane = w => w * 0.022;
-        if (sg.river || sg.lake) { const wc = SNOW ? (sg.dark ? '#6f8ea8' : '#7f9db6') : (sg.dark ? '#3f6f9c' : '#4a7ab0');   // the river (or lake) off to the right
+        if (sg.river || sg.lake) { const wc = SNOW ? '#7896af' : '#4574a6';   // the river (or lake) off to the right
           poly(p1.sx + p1.sw * (sg.lake ? 3.4 : 2.6), p1.sy, p1.sw * (sg.lake ? 1.4 : 0.7), p2.sx + p2.sw * (sg.lake ? 3.4 : 2.6), p2.sy, p2.sw * (sg.lake ? 1.4 : 0.7), wc); }
         poly(p1.sx, p1.sy, p1.sw * 1.16, p2.sx, p2.sy, p2.sw * 1.16, SNOW ? '#95908a' : '#7f674a');   // dirt (or slushy sand) shoulder, one solid color
         poly(p1.sx, p1.sy, p1.sw, p2.sx, p2.sy, p2.sw, '#4f5258');   /* asphalt: one solid color */                                                                // asphalt
