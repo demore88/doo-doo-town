@@ -32,6 +32,17 @@
   .box ul{padding-left:1.2em;margin:.6em 0}
   .box li{margin:.35em 0}
   .ctl{color:#7bd65b;margin:1em 0}
+  /* the how-to fills the whole screen: two columns, no scrolling */
+  #introbox{position:absolute;inset:3% 2.5%;margin:0;max-width:none;box-sizing:border-box;padding:2.2% 3%;overflow:hidden;display:grid;grid-template-columns:2fr 1fr;grid-template-rows:auto 1fr;column-gap:4%;font-size:clamp(7px,1.55vw,16px);line-height:1.45}
+  #introbox .head{grid-column:1 / -1}
+  #introbox .head h2{font-size:1.7em;margin:.1em 0 .25em}
+  #introbox .head .tag{margin-bottom:.4em}
+  #introbox ul{margin:0;padding-left:1.1em;align-self:start}
+  #introbox li{margin:.45em 0}
+  #introbox .side{display:flex;flex-direction:column;justify-content:space-between;min-height:0}
+  #introbox .side .ctl{margin:0}
+  #introbox .side .row{margin:0;justify-content:flex-start;flex-wrap:wrap;gap:.6em}
+  #introbox .side .btn{font-size:1.25em;padding:.8em 1.2em}
   .big{font-size:2.2em;text-align:center;margin:.2em 0}
   .stars{font-size:2em;text-align:center;color:#f7c418;letter-spacing:.2em}
   #pad{position:absolute;inset:0;pointer-events:none;display:none}
@@ -68,9 +79,9 @@
   <div class="scr" id="result"><div class="box" id="resbox"></div></div>
 </div></div>
 <audio id="music" src="../assets/doo_doo_town.mp3" loop preload="auto"></audio>
-<script src="../js/state.js?v=1794272639"></script>
-<script src="../js/sfx.js?v=1794272639"></script>
-<script src="games.js?v=1794272639"></script>
+<script src="../js/state.js?v=1794273040"></script>
+<script src="../js/sfx.js?v=1794273040"></script>
+<script src="games.js?v=1794273040"></script>
 <script>
 const cv = document.getElementById('c'); g = cv.getContext('2d'); const SCALE = 3; g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
 const $ = s => document.querySelector(s);
@@ -148,13 +159,23 @@ function screen(id) { document.querySelectorAll('.scr').forEach(x => x.classList
 function openIntro(i) {
   cur = i; const G = GAMES[i]; phase = 'intro'; screen('intro'); $('#quit').style.display = 'none'; showPad();
   const HS = HEROES[hero];
-  $('#introbox').innerHTML = `<h2>${G.name}</h2><div class="tag">${G.tag} · ${DIFF_N[diff]}</div><ul>${G.how.map(h => `<li>${h}</li>`).join('')}</ul>
-    <div class="ctl" style="color:#f7c418">YOU'RE PLAYING AS ${HS.name}: ${HS.blurb}</div>
-    <div class="ctl">KEYBOARD: ${G.ctl}<br>PHONE: ${G.phone || (G.pad === false ? 'tap the game.' : 'the pad on the left moves, the big button is ' + (G.act || 'GO') + '.')}</div>
-    <div class="row"><button class="btn" id="go">START &gt;</button><button class="btn" id="back">ALL GAMES</button></div>`;
+  const touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const ctl = touch ? (G.phone || (G.pad === false ? 'Tap the game.' : 'The pad on the left moves. The big button is ' + (G.act || 'GO') + '.')) : G.ctl;
+  const job = EMBED && DDT.param('job') ? `<div class="tag" style="color:#f7c418;margin:0">ON THE JOB: ${DDT.param('job')}</div>` : '';
+  $('#introbox').innerHTML = `<div class="head">${job}<h2>${G.name}</h2><div class="tag">${G.tag} · ${DIFF_N[diff]}</div></div>
+    <ul>${G.how.map(h => `<li>${h}</li>`).join('')}</ul>
+    <div class="side"><div class="ctl">${touch ? 'PHONE' : 'KEYBOARD'}: ${ctl}</div>
+    <div class="row"><button class="btn" id="go">START &gt;</button><button class="btn" id="back">ALL GAMES</button></div></div>`;
   $('#go').onclick = start; $('#back').onclick = toMenu; $('#go').focus();
-  if (EMBED) { $('#back').style.display = 'none'; const j = DDT.param('job'); if (j) $('#introbox').insertAdjacentHTML('afterbegin', `<div class="tag" style="color:#f7c418">ON THE JOB: ${j}</div>`); }
+  if (EMBED) $('#back').style.display = 'none';
+  fitIntro();
 }
+function fitIntro() {   // shrink the text until the whole how-to fits on one screen
+  const b = $('#introbox'); if (!b || !b.offsetParent) return;
+  let fs = Math.min(17, b.clientWidth / 46); b.style.fontSize = fs + 'px';
+  while (fs > 5 && (b.scrollHeight > b.clientHeight + 1 || b.scrollWidth > b.clientWidth + 1)) { fs -= 0.5; b.style.fontSize = fs + 'px'; }
+}
+addEventListener('resize', () => { if (phase === 'intro') fitIntro(); });
 function toMenu() { phase = 'menu'; screen('menu'); $('#quit').style.display = 'none'; showPad(); buildGrid(); }
 function quit() { openIntro(cur); }
 $('#quit').onclick = quit;
