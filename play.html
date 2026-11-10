@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794274706"></script>
-<script src="js/calls.js?v=1794274706"></script>
-<script src="js/placeholders.js?v=1794274706"></script>
-<script src="js/music.js?v=1794274706"></script>
-<script src="js/sfx.js?v=1794274706"></script>
+<script src="js/state.js?v=1794274747"></script>
+<script src="js/calls.js?v=1794274747"></script>
+<script src="js/placeholders.js?v=1794274747"></script>
+<script src="js/music.js?v=1794274747"></script>
+<script src="js/sfx.js?v=1794274747"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -92,10 +92,13 @@ let lastDown = 0;
 function pDown(cx, cy) { const n = performance.now(); if (n - lastDown < 250 && ptr.down) return; lastDown = n; toCanvasXY(cx, cy); ptr.down = true; ptr.clicked = true; ptr.released = false; ac(); smear.push({ x: ptr.x, y: ptr.y, t: n, dot: true }); }
 function pMove(cx, cy) { toCanvasXY(cx, cy); if (ptr.down) { const l = smear[smear.length - 1]; if (!l || Math.hypot(l.x - ptr.x, l.y - ptr.y) > 2) smear.push({ x: ptr.x, y: ptr.y, t: performance.now(), px: l ? l.x : ptr.x, py: l ? l.y : ptr.y }); } }
 function pUp() { if (ptr.down) ptr.released = true; ptr.down = false; }
-cv.addEventListener('touchstart', e => { e.preventDefault(); const t = e.changedTouches[0]; pDown(t.clientX, t.clientY); }, { passive: false });
-cv.addEventListener('touchmove', e => { e.preventDefault(); const t = e.changedTouches[0]; pMove(t.clientX, t.clientY); }, { passive: false });
-cv.addEventListener('touchend', e => { e.preventDefault(); pUp(); }, { passive: false });
-cv.addEventListener('touchcancel', pUp);
+let touchId = null;   // only the first finger draws a streak; extra fingers just smudge where they land
+cv.addEventListener('touchstart', e => { e.preventDefault(); const t = e.changedTouches[0];
+  if (touchId === null || ![...e.touches].some(q => q.identifier === touchId)) { touchId = t.identifier; pDown(t.clientX, t.clientY); }
+  else { const b = cv.getBoundingClientRect(); smear.push({ x: (t.clientX - b.left) / b.width * W, y: (t.clientY - b.top) / b.height * H, t: performance.now(), dot: true }); } }, { passive: false });
+cv.addEventListener('touchmove', e => { e.preventDefault(); const t = [...e.changedTouches].find(q => q.identifier === touchId); if (t) pMove(t.clientX, t.clientY); }, { passive: false });
+cv.addEventListener('touchend', e => { e.preventDefault(); if ([...e.changedTouches].some(q => q.identifier === touchId)) { touchId = null; pUp(); } }, { passive: false });
+cv.addEventListener('touchcancel', () => { touchId = null; pUp(); });
 cv.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') return; pDown(e.clientX, e.clientY); });
 cv.addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; pMove(e.clientX, e.clientY); });
 addEventListener('pointerup', e => { if (e.pointerType !== 'touch') pUp(); });
