@@ -46,6 +46,10 @@ function HERO_AT(s, x, feetY, sc, opt) {
   else { fr = f === 'U' ? 7 : 0; if (walking) { flip = step % 2 === 1; bob = step % 2 ? -1.5 : 0; } }   // no front/back walk art yet: step by mirroring + a bob
   SPR(who, fr, x, feetY + bob * (sc || 1.8), flip, sc || 1.8);
 }
+// enemy animation: hold each frame for `hold` seconds before stepping to the next (each enemy keeps its own clock)
+function ANIM(o, now, n, hold) { if (o._af == null) { o._af = Math.floor(Math.random() * n); o._at = now; } if (now - o._at >= hold) { o._af = (o._af + 1) % n; o._at = now; } return o._af; }
+// draw every frame of an enemy at ONE scale (from its first frame), so squash/stretch frames don't jump in size
+function SCL(base, h) { return base ? h / base.height : 1; }
 function HUD(s, title, timeLeft) {
   R(0, 0, W, 16, 'rgba(16,21,31,.92)');
   T(title, 6, 8, '#f7c418', 8);
@@ -1538,8 +1542,8 @@ GAMES.push({
       g.save(); g.translate(pn.x, pn.y - 5); g.rotate(pn.spin); R(-7, -3, 14, 6, '#2b2d31'); R(-6, -2, 12, 2, '#55595f'); R(6, -1, 9, 2, '#1a1a1a'); g.restore(); }
     for (const l of s.loot) { if (l.kind === 'soap') { R(l.x - 6, l.y - 6, 12, 6, '#9fd1ff'); R(l.x - 4, l.y - 8, 8, 2, '#fff'); } else { R(l.x - 4, l.y - 10, 8, 10, '#f4f1ea'); R(l.x - 4, l.y - 6, 8, 3, '#8a5a2e'); } }
     for (const f of s.foes) { if (f.st !== 'walk') continue; const bob = Math.sin(s.t * 10 + f.x) * 1.5;
-      { const k = f.kind === 'wipe' ? 'wipe_' : 'grease_', im = MG('sr_' + k + (Math.floor(s.t * (f.kind === 'wipe' ? 3 : 1.4) + f.x * 0.01) % 6));
-        if (im) { const h = f.kind === 'wipe' ? 20 : 16, w = h * im.width / im.height; g.save(); g.translate(f.x, 0); if (f.vx > 0 && f.kind !== 'wipe') g.scale(-1, 1); if (f.angry) g.filter = 'saturate(1.6) hue-rotate(-20deg)';
+      { const k = f.kind === 'wipe' ? 'wipe_' : 'grease_', im = MG('sr_' + k + ANIM(f, s.t, 6, f.kind === 'wipe' ? 0.5 : 0.75));
+        if (im) { const sc = SCL(MG('sr_' + k + '0'), f.kind === 'wipe' ? 20 : 16), w = im.width * sc, h = im.height * sc; g.save(); g.translate(f.x, 0); if (f.vx > 0 && f.kind !== 'wipe') g.scale(-1, 1); if (f.angry) g.filter = 'saturate(1.6) hue-rotate(-20deg)';
           g.drawImage(im, -w / 2, f.kind === 'wipe' ? f.y - h - 4 + bob : f.y - h + 1, w, h); g.restore(); continue; } }
       if (f.kind === 'wipe') { R(f.x - 9, f.y - 20 + bob, 18, 16, '#f4f4f2'); R(f.x - 7, f.y - 18 + bob, 14, 2, '#d9d4c8'); R(f.x - 4, f.y - 14 + bob, 2, 3, f.angry ? '#e9665a' : '#222'); R(f.x + 2, f.y - 14 + bob, 2, 3, f.angry ? '#e9665a' : '#222'); }
       else { C(f.x, f.y - 8 + bob, 9, f.angry ? '#8a5a1e' : '#c9a640'); C(f.x - 3, f.y - 11 + bob, 3, '#e8d48a'); R(f.x - 4, f.y - 9 + bob, 2, 3, f.angry ? '#e9665a' : '#222'); R(f.x + 2, f.y - 9 + bob, 2, 3, f.angry ? '#e9665a' : '#222'); } }
@@ -1772,7 +1776,7 @@ GAMES.push({
     s.pops.forEach(o => { if (SI('plunger')) { g.drawImage(SI('plunger'), o.x - cam - 6, o.y - 10, 13, 16); return; } R(o.x - cam - 1, o.y - 4, 2, 9, '#c98a1e'); R(o.x - cam - 4, o.y - 6, 8, 3, '#f2c94c'); });
     for (const f of s.foes) {
       const x = f.x - cam; if (x < -20 || x > W + 20) continue;
-      if (SI('grease_0')) { const k = f.k === 'g' ? 'grease_' : 'wipe_', n8 = !!SI(k + '7'), fr = f.dead ? (n8 ? 7 : 3) : Math.floor(t * (n8 ? (f.k === 'g' ? 1.4 : 3) : 2) + f.x * 0.01) % (n8 ? 6 : 2)   /* each pose holds a moment before the next */, im = SI(k + fr), h = f.k === 'g' ? 22 : 26, w = h * im.width / im.height;   // 6-frame waddle / float cycles
+      if (SI('grease_0')) { const k = f.k === 'g' ? 'grease_' : 'wipe_', n8 = !!SI(k + '7'), fr = f.dead ? (n8 ? 7 : 3) : ANIM(f, t, n8 ? 6 : 2, f.k === 'g' ? 0.75 : 0.5), im = SI(k + fr), sc = SCL(SI(k + '0'), f.k === 'g' ? 22 : 26), w = im.width * sc, h = im.height * sc;
         if (f.dead && f.dead > 0.5) continue; g.globalAlpha = f.dead ? Math.max(0, 1 - f.dead / 0.5) : 1; g.save(); g.translate(x, 0); if (f.vx > 0) g.scale(-1, 1);
         g.drawImage(im, -w / 2, f.k === 'g' ? f.y - h : f.y - h / 2, w, h); g.restore(); g.globalAlpha = 1; continue; }
       if (f.dead) { if (f.dead < 0.4) { g.globalAlpha = 1 - f.dead / 0.4; R(x - 9, f.y - 3, 18, 3, f.k === 'g' ? '#c9a24a' : '#f2f0ea'); g.globalAlpha = 1; } continue; }
