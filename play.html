@@ -591,6 +591,58 @@ async function incomingCall(name, town) {
   }
 }
 
+
+// ---------- pick your player: the whole screen, once at the start ----------
+const HEROES_PICK = [
+  { id: 'rod', name: 'ROD', port: 'rod', blurb: ['Steady hands. Strong stomach.', 'Slow on his feet. Drives 40.'], line: ['ROD', 'rod_stare', "MY NAME IS ROD. R. O. D. If you can't remember it, then there really is no hope for me."] },
+  { id: 'matt', name: 'MATT', port: 'matt', blurb: ['Fast and nimble. Twitchy hands.', 'Quick on his feet. Drives 60.'], line: ['MATT', 'matt_happy', "It's poop. It's always poop."] },
+];
+const HeroUI = {
+  init() { this.cur = 0; this.pick = null; this.t = 0; ['rod_normal', 'rod_happy', 'matt_normal', 'matt_happy'].forEach(artImg); },
+  panel(i) { return [28 + i * 220, 42, 204, 184]; },
+  yes() { return [136, 236, 96, 22]; }, no() { return [248, 236, 96, 22]; },
+  update(dt) {
+    this.t += dt;
+    if (this.pick === null) {
+      if (pressed('ArrowLeft')) this.cur = 0; if (pressed('ArrowRight')) this.cur = 1;
+      let p = null; if (ptr.clicked) for (let i = 0; i < 2; i++) if (inBox(...this.panel(i))) p = i;
+      if (confirmHit()) p = this.cur;
+      if (p !== null) { this.cur = p; this.pick = p; SND.good(); }
+      return;
+    }
+    if (pressed('ArrowLeft') || pressed('ArrowRight')) this.sel = this.sel ? 0 : 1;
+    let a = null; if (ptr.clicked) { if (inBox(...this.yes())) a = 'yes'; else if (inBox(...this.no())) a = 'no'; }
+    if (confirmHit()) a = this.sel ? 'no' : 'yes'; if (pressed('Escape')) a = 'no';
+    if (a === 'yes') { SND.ding(); return this.done(HEROES_PICK[this.pick].id); }
+    if (a === 'no') { SND.blip(); this.pick = null; this.sel = 0; }
+  },
+  draw() {
+    R(0, 0, W, H, '#0e1118'); for (let y = 0; y < H; y += 6) R(0, y, W, 1, 'rgba(255,255,255,.02)');
+    T('WHO ARE YOU PLAYING AS?', 240, 31, '#f7c418', 9, 'center');
+    HEROES_PICK.forEach((h, i) => {
+      const [x, y, w, hh] = this.panel(i), on = (this.pick ?? this.cur) === i, dim = this.pick !== null && this.pick !== i;
+      g.globalAlpha = dim ? 0.35 : 1;
+      R(x, y, w, hh, on ? '#1f3a6a' : '#1d2638'); g.strokeStyle = on ? '#f7c418' : '#33405a'; g.lineWidth = on ? 3 : 1; g.strokeRect(x + 1.5, y + 1.5, w - 3, hh - 3);
+      const img = artImg(h.port + (this.pick === i ? '_happy' : '_normal')), bob = on && this.pick === null ? Math.round(Math.sin(this.t * 4) * 2) : this.pick === i ? -Math.round(Math.abs(Math.sin(this.t * 9)) * 3) : 0;
+      g.imageSmoothingEnabled = false; if (img) g.drawImage(img, x + w / 2 - 60, y + 10 + bob, 120, 120);
+      T(h.name, x + w / 2, y + 144, on ? '#f7c418' : '#fff', 10, 'center');
+      h.blurb.forEach((l, k) => T(l, x + w / 2, y + 160 + k * 10, '#cfd8e8', 5, 'center', false));
+      g.globalAlpha = 1;
+    });
+    if (this.pick === null) { if (Math.floor(this.t * 2) % 2) T('TAP ONE TO PICK', 240, 244, '#fff', 6, 'center'); return; }
+    R(0, 196, W, 74, 'rgba(10,14,22,.96)'); R(0, 196, W, 2, '#f7c418');
+    T('ARE YOU SURE?', 240, 208, '#fff', 9, 'center');
+    T("DON'T WORRY, YOU CAN CHANGE ANY TIME IN THE VAN.", 240, 223, '#9fb3d9', 5, 'center', false);
+    [[this.yes(), 'YES', 0], [this.no(), 'NO', 1]].forEach(([[x, y, w, hh], l, k]) => { R(x, y, w, hh, (this.sel || 0) === k ? '#2c6cd6' : '#262f45'); T(l, x + w / 2, y + hh / 2 + 1, '#fff', 7, 'center'); });
+  },
+};
+async function pickHero() {
+  const id = await play(HeroUI), h = HEROES_PICK.find(q => q.id === id);
+  view = () => { R(0, 0, W, H, '#0e1118'); const img = artImg(h.port + '_happy'); g.imageSmoothingEnabled = false; if (img) g.drawImage(img, 180, 30, 120, 120); T(h.name, 240, 166, '#f7c418', 12, 'center'); };
+  await say(h.line[0], h.line[1], h.line[2]);
+  return id;
+}
+
 // ---------- the day loop ----------
 // A workday: breakfast → pick calls off the voicemail board → 4 calls → lunch (the day's one chat) → 1 more call → bed.
 // Two workdays a month. Calls you never get to go to the Clog Kings at the end of the month.
@@ -685,6 +737,7 @@ SCENES.hub = async () => {
     if (s.month >= 12) { await yearEnd(); return; }
 
     if (s.step === 'startup') {
+      if (!s.prefLead) { const who = await pickHero(); s = DDT.get(); s.prefLead = who; s.prefDrive = s.prefDrive ?? 1; DDT.save(s); }   // first thing in a new game
       view = () => backdrop();
       await say('ROD', 'rod_normal', 'Well. The bank gave us eighty thousand dollars.');
       await say('MATT', 'matt_shocked', "That's a LOT of doo doo calls, Rod.");
@@ -698,10 +751,8 @@ SCENES.hub = async () => {
     if (s.step === 'daystart') {
       view = () => { backdrop(); if (st.savedT) T('GAME SAVED', 472, 56, 'rgba(125,255,176,.9)', 5, 'right'); };
       if (!s.prefLead) {   // asked once. After this it lives on the voicemail board.
-        const r = await pickList('WHO ARE YOU PLAYING AS?', [
-          { label: 'ROD', sub: 'Steady hands, strong stomach. Slow on his feet. Drives 40.' },
-          { label: 'MATT', sub: 'Fast and nimble. Twitchy hands. Drives 60.' }], 'YOU CAN SWAP ANY TIME ON THE VOICEMAIL BOARD');
-        s = DDT.get(); s.prefLead = r === 0 ? 'rod' : 'matt'; s.prefDrive = s.prefDrive ?? 1; DDT.save(s);
+        const who = await pickHero();
+        s = DDT.get(); s.prefLead = who; s.prefDrive = s.prefDrive ?? 1; DDT.save(s);
       }
       st.savedT = 1; await card([`${MONTHS[s.month]} · DAY ${(s.day || 0) + 1}`, `${BOARD_SIZE} NEW VOICEMAILS`], 1500); st.savedT = 0;
       s = DDT.get();
