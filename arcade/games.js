@@ -1858,7 +1858,7 @@ GAMES.push({
       else if (I.L || I.Lp) s.px = clamp(s.px - 12, 12, W - 12);
       else if (I.R || I.Rp) s.px = clamp(s.px + 12, 12, W - 12);
       else moved = false;
-      if (I.ptr.down && !moved) { const ty = I.ptr.y; let tr = 0; s.ys.forEach((yy, i) => { if (Math.abs(yy - 10 - ty) < Math.abs(s.ys[tr] - 10 - ty)) tr = i; }); const dx = I.ptr.x - s.px;
+      if (I.ptr.down && !moved) { const ty = I.ptr.y, me = s.ys[s.row] - 2; let tr = s.row; if (Math.abs(ty - me) > 16) { tr = 0; s.ys.forEach((yy, i) => { if (Math.abs(yy - 2 - ty) < Math.abs(s.ys[tr] - 2 - ty)) tr = i; }); } const dx = I.ptr.x - s.px;   // a tap near your own row walks sideways; only a clear tap above/below steps into the road
         if (tr < s.row) { s.row--; moved = true; } else if (tr > s.row) { s.row = Math.min(s.nl + 3, s.row + 1); moved = true; } else if (Math.abs(dx) > 8) { s.px = clamp(s.px + Math.sign(dx) * 12, 12, W - 12); moved = true; } }
       if (moved) s.cool = hop;
     }
@@ -1872,7 +1872,7 @@ GAMES.push({
       if (L.dir < 0 && c.x < -60) { const last = Math.max(...s.cars.filter(o => o.row === c.row).map(o => o.x)); Object.assign(c, this.car(s, c.row, Math.max(W + 60, last + 120 + s.rnd() * 140))); }
       if (L.dir > 0 && c.x > W + 60) { const first = Math.min(...s.cars.filter(o => o.row === c.row).map(o => o.x)); Object.assign(c, this.car(s, c.row, Math.min(-60, first - 120 - s.rnd() * 140))); } }
     // getting clipped
-    if (s.inv <= 0 && s.row >= 1 && s.row <= s.nl) for (const c of s.cars) if (c.row === s.row && Math.abs(c.x - s.px) < c.w / 2 + 6) {
+    if (s.inv <= 0 && s.row >= 1 && s.row <= s.nl) for (const c of s.cars) if (c.row === s.row && Math.abs(c.x - s.px) < c.w / 2 + 3) {
       s.pants--; s.hits++; s.inv = 1.4; s.shake = 0.35; s.row = s.nl + 1; SFX(c.kind === 'log' ? 'horn_angry' : 'horn'); PUFF(s, s.px, this.Y(s, s.nl + 1) - 10, '#fff', 10);
       s.say = ['WATCH IT!', 'HONK HONK', 'GET OUTTA THE ROAD!', 'NICE VEST, IDIOT'][Math.floor(s.rnd() * 4)]; s.sayT = 1.4; break; }
     // the locator
