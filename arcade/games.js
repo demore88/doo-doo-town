@@ -19,7 +19,7 @@ function BAR(x, y, w, h, f, c, label) {
   if (label) T(label, x, y - 6, '#fff', 6);
 }
 function SPR(who, frame, cx, feetY, flip, sc) {       // crew sheets: 24x40 frames. 0 front, 6 right, 7 back, 8 left. sc: scale to match a drawn room
-  sc = sc || 1; const w = 24 * sc, h = 40 * sc;
+  sc = sc || 1.8; const w = 24 * sc, h = 40 * sc;   // default 1.4x: readable on a phone
   const im = IMG[who]; if (!im) { R(cx - 8 * sc, feetY - 36 * sc, 16 * sc, 36 * sc, who === 'rod' ? '#22325e' : '#2a3d78'); return; }
   let src = im, fi = frame; if (frame >= 9) { src = IMG[who + '_more'] || im; fi = src === im ? 0 : frame - 9; }   // 9-17: the extra poses (walk, buckets, kneel, gag, sludge, thumbs up)
   const fw = src.width / 9, fh = src.height; g.imageSmoothingEnabled = fw > 24;   // hi-res sheets get smoothed down, old 24x40 ones stay crisp
@@ -29,6 +29,21 @@ function SPR(who, frame, cx, feetY, flip, sc) {       // crew sheets: 24x40 fram
 }
 const MORE = (who, f, old) => IMG[who + '_more'] ? f : old;   // new pose if this crew member has the extra sheet, else the closest old frame
 const WALK = (who, t, old) => MORE(who, 9 + Math.floor(t * 8) % 4, old);   // 4-step walk cycle, facing right (flip for left)
+// The hero, facing and walking the way they're actually moving: right/left = walk cycle, up = back view, down = front view, stepping.
+// Remembers the last direction when standing still. sc defaults to 1.5 (bigger, easier to read on a phone).
+function HERO_AT(s, x, feetY, sc, opt) {
+  const who = s.hero || 'matt', o = opt || {}, dt = 1 / 60;
+  const dx = s._hx == null ? 0 : x - s._hx, dy = s._hy == null || o.horiz ? 0 : feetY - s._hy; s._hx = x; s._hy = feetY;   // horiz: jumping doesn't count as walking up
+  const mv = Math.abs(dx) + Math.abs(dy) > 0.05 && !o.still;
+  if (mv) { s._face = Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy < 0 ? 'U' : 'D'); s._walk = 0.12; } else s._walk = Math.max(0, (s._walk || 0) - dt);
+  if (!s._face || (o.force && o.face)) s._face = o.face || 'D';
+  const f = s._face || o.face || 'D', walking = s._walk > 0, step = Math.floor(s.t * 8);
+  let fr, flip = false, bob = 0;
+  if (o.pose != null) fr = o.pose;
+  else if (f === 'R' || f === 'L') { fr = walking ? WALK(who, s.t, f === 'R' ? 6 : 8) : (f === 'R' ? 6 : 8); flip = f === 'L' && fr >= 9; }
+  else { fr = f === 'U' ? 7 : 0; if (walking) { flip = step % 2 === 1; bob = step % 2 ? -1.5 : 0; } }   // no front/back walk art: step by mirroring + a bob
+  SPR(who, fr, x, feetY + bob * (sc || 1.8), flip, sc || 1.8);
+}
 function HUD(s, title, timeLeft) {
   R(0, 0, W, 16, 'rgba(16,21,31,.92)');
   T(title, 6, 8, '#f7c418', 8);
@@ -149,7 +164,7 @@ GAMES.push({
       const x = lerp(o.sx + 14, o.tx, f), y = lerp(40 + dy, 222, f) - Math.sin(f * Math.PI) * 60;
       if (!SPC('glob_' + (Math.floor(f * 8) % 4), x, y, o.r / 14, o.tx < o.sx)) { C(x, y, o.r * 0.8, '#8a6a1e'); C(x - o.r * 0.25, y - o.r * 0.25, o.r * 0.3, '#c9a640'); }
     }
-    { const hw = s.hero || 'matt', hit = s.inv > 0 && IMG[hw + '_more']; if (hit || !(s.inv > 0 && Math.floor(s.t * 12) % 2)) SPR(hw, hit ? 16 : 0, s.px, 224); }
+    { const hw = s.hero || 'matt', hit = s.inv > 0 && IMG[hw + '_more']; if (hit || !(s.inv > 0 && Math.floor(s.t * 12) % 2)) HERO_AT(s, s.px, 224, 2.1, { face: 'D', horiz: true, pose: hit ? 16 : null }); }
     HUD(s, 'SPLASH DODGE', s.DUR - s.t); PANTS(s, 6, 22);
   },
 });
@@ -209,7 +224,7 @@ GAMES.push({
     const sh = s.warn > 0 ? (Math.random() - .5) * 4 : 0;
     if (!SPC('cleanout', cx + sh, cy, 0.6)) { C(cx + sh, cy, 10, '#d6d6d6'); C(cx + sh, cy, 6, '#5b3a1c'); }
     if (s.warn > 0) T('!', cx, cy - 22, '#e9665a', 12, 'center');
-    if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) SPR(s.hero || 'matt', 7, s.px, s.py + 12);
+    if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) HERO_AT(s, s.px, s.py + 12, 2, { face: 'U' });
     HUD(s, 'CLEANOUT BLOWOUT', s.DUR - s.t); PANTS(s, 6, 22);
     if (!s.on) T('SPUTTERING - CROSS NOW!', 240, 252, '#7bd65b', 8, 'center');
   },
@@ -918,7 +933,7 @@ GAMES.push({
       else { R(c.x - 9, y - 7, 18, 13, '#c9a36a'); R(c.x - 9, y - 7, 18, 3, '#e8e4d8'); for (let k = 0; k < 4; k++) R(c.x - 7 + k * 4, y - 2, 2, 7, '#8a6a3a'); } }
     const py = this.yAt(s, s.f, s.x) - s.jy, dirF = Math.sign(s.fl[s.f].b - s.fl[s.f].a);
     if (s.cans.some(c => c.f === s.f && (s.x - c.x) * dirF > 0 && (s.x - c.x) * dirF < 120) && Math.floor(s.t * 8) % 2) T('!', s.x - dirF * 18, py - 50, '#e9665a', 10, 'center');
-    if (s.inv <= 0 || Math.floor(s.t * 10) % 2) { SPR(s.hero || 'matt', WALK(s.hero || 'matt', s.t, s.facing > 0 ? 6 : 8), s.x, py, s.facing < 0 && !!IMG[(s.hero || 'matt') + '_more'], cellar ? 1.4 : 1); if (!SPI('jetter', s.x - 15 * s.facing, py - 10, 0.42, s.facing < 0)) { R(s.x - 12 * s.facing - 7, py - 22, 14, 12, '#e8822a'); R(s.x - 12 * s.facing - 5, py - 26, 10, 4, '#333'); } }   // carrying the jetter
+    if (s.inv <= 0 || Math.floor(s.t * 10) % 2) { SPR(s.hero || 'matt', WALK(s.hero || 'matt', s.t, s.facing > 0 ? 6 : 8), s.x, py, s.facing < 0 && !!IMG[(s.hero || 'matt') + '_more'], 1.4); if (!SPI('jetter', s.x - 15 * s.facing, py - 10, 0.42, s.facing < 0)) { R(s.x - 12 * s.facing - 7, py - 22, 14, 12, '#e8822a'); R(s.x - 12 * s.facing - 5, py - 26, 10, 4, '#333'); } }   // carrying the jetter
     DRAWFX(s); HUD(s, 'STAIRS OF DEATH', null); PANTS(s, W - 6 - s.pantsMax * 14, 20); T(`FLIGHT ${s.f + 1}/4`, 6, 24, '#fff', 6);
   },
 });
@@ -965,7 +980,7 @@ GAMES.push({
     T('VAN', P.x + 26, P.y - 24, '#000', 6, 'center');
     R(200, 200, 26, 26, '#555'); C(213, 213, 9, '#222');                         // the inspection hole
     s.dogs.forEach((d, i) => { if (SPI((i % 2 ? 'lab_' : 'dog_') + (Math.floor(s.t * 8 + i) % 2), d.x, d.y + 6, 0.6, d.vx < 0)) return; R(d.x - 6, d.y - 4, 12, 8, d.col); R(d.x + (d.vx >= 0 ? 4 : -8), d.y - 6, 4, 4, d.col); R(d.x + (d.vx >= 0 ? -8 : 6), d.y - 3, 3, 2, d.col); });
-    SPR(s.hero || 'matt', 7, s.px, s.py + 14);
+    HERO_AT(s, s.px, s.py + 14, 2, { face: 'U' });
     HUD(s, 'DOG ROUNDUP', s.TIME - s.t); T('IN VAN ' + (s.n || 0) + '/5', 6, 28, '#fff', 8);
   },
 });
@@ -1276,7 +1291,7 @@ GAMES.push({
     for (const b of s.shots) { R(b.x - 2, b.y - 8, 4, 12, '#9fd3ff'); R(b.x - 1, b.y + 4, 2, 6, '#5fa8e0'); }
     // the nozzle + the hero behind it
     if (s.inv <= 0 || Math.floor(s.t * 10) % 2) { R(s.px - 4, s.py - 14, 8, 10, '#c9c4b8'); R(s.px - 10, s.py - 4, 20, 8, '#e8822a'); R(s.px - 14, s.py + 4, 28, 6, '#333'); }
-    SPR(s.hero || 'matt', 7, s.px + 30, H, false);
+    HERO_AT(s, s.px + 30, H, 1.7, { face: 'U', horiz: true });
     DRAWFX(s); HUD(s, 'PIPE INVADERS', null); PANTS(s, 6, 20); T(`LEFT ${s.foes.length}`, W - 8, 24, '#fff', 6, 'right');
   },
 });
@@ -1354,7 +1369,7 @@ GAMES.push({
     { const f = Math.floor(s.t * 3) % 2; SPI('dog_' + f, 452, 70, 0.8, true); SPI('lab_' + (1 - f), 450, 130, 0.8, true); SPI('dog_' + (1 - f), 452, 190, 0.8, true); }
     const gx = s.ox + s.goal.c * s.Z, gy = s.oy + s.goal.r * s.Z; if (!SPC('septiclid', gx + 15, gy + 15, 0.5)) C(gx + 15, gy + 15, 11, '#8a8f94'); C(gx + 15, gy + 15, 8, '#a0a5aa'); T('LID', gx + 15, gy + 15, '#333', 5, 'center');
     g.strokeStyle = '#f7c418'; g.lineWidth = 2; g.strokeRect(s.ox + s.cur.c * s.Z + 1, s.oy + s.cur.r * s.Z + 1, s.Z - 2, s.Z - 2);
-    SPR(s.hero || 'matt', 0, s.ox + s.pos.c * s.Z + 15, s.oy + s.pos.r * s.Z + 30);
+    HERO_AT(s, s.ox + s.pos.c * s.Z + 15, s.oy + s.pos.r * s.Z + 30, 1.15, { face: 'D' });
     HUD(s, 'POOP SWEEPER', null);
     T('BOOTS ' + 'U'.repeat(s.boots) + '-'.repeat(s.bootsMax - s.boots), W - 6, 8, '#fff', 8, 'right');
     R(334, 246, 140, 20, s.flagMode ? '#e9665a' : '#10151f'); T(s.flagMode ? 'FLAG MODE: ON' : 'FLAG MODE: OFF', 404, 256, '#fff', 6, 'center');
@@ -1440,7 +1455,7 @@ GAMES.push({
       else { C(f.x, f.y - 8 + bob, 9, f.angry ? '#8a5a1e' : '#c9a640'); C(f.x - 3, f.y - 11 + bob, 3, '#e8d48a'); R(f.x - 4, f.y - 9 + bob, 2, 3, f.angry ? '#e9665a' : '#222'); R(f.x + 2, f.y - 9 + bob, 2, 3, f.angry ? '#e9665a' : '#222'); } }
     for (const b of s.bubs) { g.globalAlpha = 0.85; C(b.x, b.y, 11, 'rgba(159,209,255,.35)'); g.strokeStyle = '#9fd1ff'; g.lineWidth = 1.5; g.beginPath(); g.arc(b.x, b.y, 11, 0, 7); g.stroke(); g.globalAlpha = 1; R(b.x - 5, b.y - 6, 3, 3, '#fff');
       if (b.foe) { if (b.foe.kind === 'wipe') R(b.x - 6, b.y - 5, 12, 10, '#f4f4f2'); else C(b.x, b.y, 6, '#c9a640'); if (b.t > 4) T('!', b.x, b.y - 16, '#e9665a', 7, 'center'); } }
-    if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) SPR(s.hero || 'matt', s.face > 0 ? 6 : 8, s.px, s.py);
+    if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) HERO_AT(s, s.px, s.py, 1.5, { face: s.face > 0 ? 'R' : 'L', force: true, horiz: true });
     DRAWFX(s);
     HUD(s, 'GREASE BOBBLE', s.TIME - s.t); PANTS(s, 6, 22);
     T('LEFT ' + s.foes.filter(f => f.st !== 'gone').length, W - 6, 26, '#f7c418', 6, 'right');
@@ -1724,7 +1739,7 @@ GAMES.push({
       R(x0 + 4, y + 5, 6, 3, '#111'); R(x0 + c.w - 10, y + 5, 6, 3, '#111');
     }
     // you, with the locator wand
-    if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) { const fy = Y(s.row) + 10; SPR(s.hero || 'matt', 7, s.px, fy); R(s.px + 7, fy - 22, 2, 18, '#f39c12'); R(s.px + 4, fy - 26, 8, 5, '#f7c418'); R(s.px - 7, fy - 30, 14, 3, '#ff7a00'); }
+    if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) { const fy = Y(s.row) + 10; HERO_AT(s, s.px, fy, 1.3, { face: 'U' }); R(s.px + 7, fy - 22, 2, 18, '#f39c12'); R(s.px + 4, fy - 26, 8, 5, '#f7c418'); R(s.px - 7, fy - 30, 14, 3, '#ff7a00'); }
     DRAWFX(s);
     if (s.sayT > 0) T(s.say, W / 2, Y(s.nl + 1) - 26, '#fff', 7, 'center');
     if (s.flash > 0) { g.globalAlpha = s.flash; R(0, 0, W, H, '#ff2d95'); g.globalAlpha = 1; }
