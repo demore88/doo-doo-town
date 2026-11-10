@@ -125,7 +125,7 @@
 </head>
 <body>
 <div id="wrap"><div id="stage">
-  <canvas id="c" width="480" height="270"></canvas>
+  <canvas id="c" width="1440" height="810"></canvas>
   <div id="ui">
     <div class="pre">MT. WASHINGTON SEWER AND DRAIN presents:</div>
     <div class="title">DOO DOO TOWN<br>THE GAME!</div>
@@ -180,14 +180,14 @@
 
 <audio id="music" src="assets/doo_doo_town.mp3" loop preload="auto"></audio>
 <audio id="call" src="assets/call_fluffernutter.mp3" preload="auto"></audio>
-<script src="js/state.js?v=1794285065"></script>
-<script src="js/sfx.js?v=1794285065"></script>
-<script src="js/drive3d.js?v=1794285065"></script>
-<script src="js/music.js?v=1794285065"></script>
+<script src="js/state.js?v=1794285160"></script>
+<script src="js/sfx.js?v=1794285160"></script>
+<script src="js/drive3d.js?v=1794285160"></script>
+<script src="js/music.js?v=1794285160"></script>
 <script>
 const W = 480, H = 270, LOOP_W = 6688;           // strip loop width at 270px tall
 const cv = document.getElementById('c'), g = cv.getContext('2d');
-g.imageSmoothingEnabled = false;
+g.setTransform(3, 0, 0, 3, 0, 0); g.imageSmoothingEnabled = false;   // 3x canvas: the pixel art looks the same, the hi-res van stays sharp
 const load = s => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = s; });
 const music = document.getElementById('music');
 let soundOn = true, started = false;
@@ -225,7 +225,7 @@ function draw(t) {
 
   const VN = Math.max(1, Math.round(van.width / 432)), wheel = Math.floor(t * 24) % VN;   // the wheels spin on the title screen
   const bounce = (Math.floor(t * 6) % 5 === 0) ? -1 : 0;
-  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(van, wheel * 432, 0, 432, van.height, VAN_X, VAN_Y + bounce + 64 - van.height / 3, 144, van.height / 3); g.imageSmoothingEnabled = false;   // big art into the 1x title canvas: smooth it down, don't drop pixels
+  g.drawImage(van, wheel * 432, 0, 432, van.height, VAN_X, VAN_Y + bounce + 64 - van.height / 3, 144, van.height / 3);   /* 1:1 on the 3x canvas */   // big art into the 1x title canvas: smooth it down, don't drop pixels
 
   // Rod up front over the driver's seat, Matt behind him; Matt runs 4 counts behind so one spins while the other kicks
   const roof = VAN_Y + bounce + 6 - 39;
