@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794292687"></script>
-<script src="../js/calls.js?v=1794292687"></script>
-<script src="../js/placeholders.js?v=1794292687"></script>
-<script src="../js/music.js?v=1794292687"></script>
-<script src="../js/sfx.js?v=1794292687"></script>
+<script src="../js/state.js?v=1794293143"></script>
+<script src="../js/calls.js?v=1794293143"></script>
+<script src="../js/placeholders.js?v=1794293143"></script>
+<script src="../js/music.js?v=1794293143"></script>
+<script src="../js/sfx.js?v=1794293143"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -339,17 +339,16 @@ async function lines(list) {
 function tightRod() {   // Rod's sprite in a white MEDIUM: shirt turns white, belly pokes out the bottom
   if (IMG.rodTight || !IMG.rod) return IMG.rodTight;
   const c = document.createElement('canvas'); c.width = IMG.rod.width; c.height = IMG.rod.height; const k = c.getContext('2d'); k.drawImage(IMG.rod, 0, 0);
-  const d = k.getImageData(0, 0, c.width, c.height), p = d.data;
-  for (let y = 17; y < 29; y++) for (let x = 0; x < c.width; x++) { const i = (y * c.width + x) * 4; if (!p[i + 3]) continue;
-    const blue = p[i + 2] > p[i] + 20 && p[i + 2] > 60;
-    if (blue && y >= 26 && (x % 24) >= 7 && (x % 24) <= 16) { p[i] = 234; p[i + 1] = 182; p[i + 2] = 140; }   // belly
+  const d = k.getImageData(0, 0, c.width, c.height), p = d.data, fw = c.width / 9, sy = c.height / 40;   // works on any sheet size: rows/columns in 24x40 units
+  for (let y = Math.floor(17 * sy); y < Math.floor(29 * sy); y++) for (let x = 0; x < c.width; x++) { const i = (y * c.width + x) * 4; if (!p[i + 3]) continue;
+    const blue = p[i + 2] > p[i] + 20 && p[i + 2] > 60, fx = (x % fw) / fw * 24;
+    if (blue && y >= 26 * sy && fx >= 7 && fx <= 16) { p[i] = 234; p[i + 1] = 182; p[i + 2] = 140; }   // belly
     else if (blue) { const l = p[i + 2] > 90 ? 244 : 206; p[i] = l; p[i + 1] = l; p[i + 2] = l - 4; } }
-  for (let f = 0; f < c.width / 24; f++) { const i = (27 * c.width + f * 24 + 11) * 4; p[i] = 160; p[i + 1] = 110; p[i + 2] = 80; }   // belly button
   k.putImageData(d, 0, 0); return (IMG.rodTight = c);
 }
 async function tightShirt() {
   const t = tightRod();
-  view = () => { interior(JOB.room, JOB.cust.seed, MONTH, roomArtFor(JOB)); if (st.shirt && t) g.drawImage(t, 0, 0, 24, 40, 150 - 24, FEET - 80, 48, 80); else rod(150, FEET, 0, 2); matt(210, FEET, 0, 2); customer(330, FEET, JOB.cust.seed, 2); };
+  view = () => { interior(JOB.room, JOB.cust.seed, MONTH, roomArtFor(JOB)); if (st.shirt && t) { g.imageSmoothingEnabled = t.width > 216; g.drawImage(t, 0, 0, t.width / 9, t.height, 150 - 24, FEET - 80, 48, 80); g.imageSmoothingEnabled = false; } else rod(150, FEET, 0, 2); matt(210, FEET, 0, 2); customer(330, FEET, JOB.cust.seed, 2); };
   await sayL('CUST', "Oh, honey. You can't drive home like that. Here, take one of my husband's shirts.");
   await card(['A CRISP WHITE SHIRT', 'SIZE: MEDIUM'], 1800);
   st.shirt = true; IMG.rod_tight = IMG.rod_tight || null;

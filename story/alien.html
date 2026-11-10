@@ -17,9 +17,9 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794292687"></script>
-<script src="../js/music.js?v=1794292687"></script>
-<script src="../js/sfx.js?v=1794292687"></script>
+<script src="../js/state.js?v=1794293143"></script>
+<script src="../js/music.js?v=1794293143"></script>
+<script src="../js/sfx.js?v=1794293143"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('spooky');
@@ -386,7 +386,7 @@ const WORDS = [
 const LABEL = Object.fromEntries(WORDS.map(w => [w.id, w.label]));
 function picIcon(id, x, y) {   // 28x28 picture tiles
   const cx = x + 14, cy = y + 14;
-  if (id === 'you') { if (IMG.rod) g.drawImage(IMG.rod, 0, 0, 24, 24, x + 2, y + 2, 24, 24); }
+  if (id === 'you') { if (IMG.rod) { const fw = IMG.rod.width / 9; g.imageSmoothingEnabled = fw > 24; g.drawImage(IMG.rod, 0, 0, fw, fw, x + 2, y + 2, 24, 24); g.imageSmoothingEnabled = false; } }
   if (id === 'me') { g.save(); g.translate(cx, cy + 22); alien(0, 0, { s: 0.6, blink: false }); g.restore(); }
   if (id === 'toilet') { E(cx, cy + 2, 9, 4, '#e8ecf2'); R(cx - 4, cy + 2, 8, 9, '#c9ced6'); R(cx + 2, cy - 10, 8, 10, '#c9ced6'); }
   if (id === 'broken') { g.strokeStyle = '#e9665a'; g.lineWidth = 2; g.beginPath(); g.moveTo(x + 6, y + 4); g.lineTo(x + 16, y + 14); g.lineTo(x + 10, y + 16); g.lineTo(x + 22, y + 25); g.stroke(); R(x + 18, y + 6, 3, 3, '#f7c418'); }
