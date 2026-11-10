@@ -21,7 +21,7 @@
 <script src="../js/sfx.js"></script>
 <script>
 DDT.root = '../';
-DDTMusic.play('stop');
+DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
 // =====================================================================
 // BREAKFAST STOP: CORE SHOT COFFEE BAR (Gorham). Scenes: coffee.html?scene=arrive|order|leave
 // =====================================================================
@@ -337,7 +337,7 @@ SCENES.arrive = async () => {
   await card(['7:20 AM · GORHAM, NH', 'CORE SHOT COFFEE BAR'], 1500);
   DDTSfx.play('van_arrive'); await tween(st, 'vanX', 36, 2200, t => 1 - Math.pow(1 - t, 3));
   DDTSfx.play('seatbelt'); await wait(300); DDTSfx.play('van_door_open'); st.crew = true; await wait(300);
-  await Promise.all([tween(st, 'mx', 196, 900, t => t), tween(st, 'rx', 70, 700, t => t)]); st.mBehind = false; st.rBehind = false; st.mf = 0; st.rf = 0; DDTSfx.play('van_door_close'); await wait(200);
+  await Promise.all([tween(st, 'mx', 196, 900, t => t), tween(st, 'rx', 70, 700, t => t)]); st.mBehind = false; st.rBehind = false; st.mf = 0; st.rf = 0; DDTSfx.play('van_door_close'); DDTMusic.fadeOut(700); await wait(200);
   if (FIRST) await say('MATT', 'matt_normal', "Coffee first. Then we go see how much poop 'everywhere' is.");
   else if (DONE_STORIES().length && !(SV0.toldKevin || []).length) { await say('ROD', 'rod_happy', "Kevin's gonna want to hear about Randolph."); await say('MATT', 'matt_happy', 'Kevin loves a good poop story.'); }
   else await say('MATT', 'matt_normal', ['Coffee. Then poop.', 'Same as always?', 'I need this one, Rod.'][VISIT % 3]);
@@ -412,7 +412,7 @@ SCENES.leave = async () => {
   if (RESULT.jitters) await say('MATT', 'matt_shocked', "I can hear colors.");
   await say('ROD', 'rod_happy', FIRST ? "Alright. Randolph. Let's go see that boat race." : "Alright. Let's go to work.");
   st.mBehind = true; st.ra = 0; DDTSfx.play('van_door_close'); await tween(st, 'mx', 110, 800, t => t);
-  st.crew = false; DDTSfx.play('van_door_close'); await wait(300); DDTSfx.play('engine_start', { vol: 0.8 });
+  st.crew = false; DDTSfx.play('van_door_close'); DDTMusic.radioOn('van'); await wait(300); DDTSfx.play('engine_start', { vol: 0.8 });
   await tween(st, 'vanX', -170, 1800, t => t * t);
   st.summary = true; SND.ding(); await wait(2600); st.summary = false;
   if (DDT.inCampaign()) { const sv = DDT.get(); if (sv.today) { sv.today.snack = { stop: 'coreshot', drink: true }; DDT.save(sv); } }

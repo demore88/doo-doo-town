@@ -23,7 +23,7 @@
 <script src="../js/placeholders.js"></script>
 <script>
 DDT.root = '../';
-DDTMusic.play('job');
+DDTMusic.play('van');
 // =====================================================================
 // JOB: THE FLUFFERNUTTER CALL — 23 Boulder Lane, Randolph. Scenes: fluffernutter.html?scene=arrive|gear|basement|wade|cable|culprit|payday
 // =====================================================================
@@ -402,7 +402,7 @@ SCENES.arrive = async () => {
   await card([clockStr(), '23 BOULDER LANE · RANDOLPH'], 1500);
   DDTSfx.play('van_arrive'); await tween(st, 'vanX', 20, 2000, t => 1 - Math.pow(1 - t, 3));
   st.crew = true; await wait(300);
-  st.mf = 6; await Promise.all([tween(st, 'mx', 180, 900, t => t), tween(st, 'rx', 54, 700, t => t)]); st.mBehind = false; st.rBehind = false; st.mf = 0; st.rf = 0; await wait(200);
+  st.mf = 6; await Promise.all([tween(st, 'mx', 180, 900, t => t), tween(st, 'rx', 54, 700, t => t)]); st.mBehind = false; st.rBehind = false; st.mf = 0; st.rf = 0; DDTSfx.play('van_door_close'); DDTMusic.fadeOut(700); await wait(200);
   st.gr = true; st.panic = true; tone(300, 0.1, 'square', 0.04); tone(300, 0.1, 'square', 0.04, 0.15);
   await say('GRANT', 'grant_panic', `OH THANK GOD. ${wrongName()}! You're here. It's in the basement. It's... it's EVERYWHERE.`);
   await say('ROD', 'rod_annoyed', '...Rod.');

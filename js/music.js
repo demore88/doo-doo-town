@@ -18,19 +18,24 @@ const DDTMusic = (() => {
   const radio = new Audio(); radio.preload = 'auto'; radio.volume = 0.5;
   let rIdx = -1, rOn = false;
   const rState = () => { try { return JSON.parse(sessionStorage.getItem('ddt_radio')) || null; } catch (e) { return null; } };
-  const rSave = () => { if (rIdx < 0) return; try { sessionStorage.setItem('ddt_radio', JSON.stringify({ i: rIdx, t: radio.currentTime || 0, at: Date.now() })); } catch (e) {} };
+  const rSave = () => { if (rIdx < 0) return; try { sessionStorage.setItem('ddt_radio', JSON.stringify({ i: rIdx, t: radio.currentTime || 0, at: Date.now(), off: !rOn || radio.paused })); } catch (e) {} };
   function nowPlaying(name) {
     if (!document.body) return; let el = document.getElementById('ddt-np');
     if (!el) { el = document.createElement('div'); el.id = 'ddt-np'; el.style.cssText = 'position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:9000;font:9px "Press Start 2P",monospace;color:#f7c418;background:#10151fdd;border:2px solid #f7c418;padding:6px 10px;pointer-events:none;transition:opacity .6s'; document.body.appendChild(el); }
     el.textContent = '♪ ' + name; el.style.opacity = 1; clearTimeout(nowPlaying.t); nowPlaying.t = setTimeout(() => { el.style.opacity = 0; }, 3200);
   }
   function rLoad(i, t) { rIdx = ((i % TRACKS.length) + TRACKS.length) % TRACKS.length; radio.src = BASE + TRACKS[rIdx].file; try { radio.currentTime = t || 0; } catch (e) {} if (t != null && t < 1) nowPlaying(TRACKS[rIdx].name); }
-  radio.addEventListener('loadedmetadata', () => { const st = rState(); if (st && st.i === rIdx && st.t > 0 && radio.currentTime < 0.5) { const t = st.t + Math.min(30, (Date.now() - st.at) / 1000); if (t < radio.duration - 2) radio.currentTime = t; } });
+  radio.addEventListener('loadedmetadata', () => { const st = rState(); if (st && st.i === rIdx && st.t > 0 && radio.currentTime < 0.5) { const t = st.t + (st.off ? 0 : Math.min(30, (Date.now() - st.at) / 1000)); /* radio was off: pick up where it stopped */ if (t < radio.duration - 2) radio.currentTime = t; } });
   radio.addEventListener('ended', () => { rLoad(rIdx + 1, 0); if (rOn && !muted) radio.play().catch(() => {}); });
   addEventListener('pagehide', rSave); setInterval(rSave, 1000);
   document.addEventListener('visibilitychange', () => { if (!rOn) return; if (document.hidden) radio.pause(); else if (!muted) radio.play().catch(() => {}); });
+  let fadeT = null;
+  function fadeOut(ms = 700) {   // the crew shuts the van door: the radio goes quiet
+    clearInterval(fadeT); if (!rOn) return; rOn = false; const v0 = radio.volume, t0 = performance.now();
+    fadeT = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / ms); radio.volume = v0 * (1 - k); if (k >= 1) { clearInterval(fadeT); radio.pause(); rSave(); radio.volume = 0.5; } }, 30);
+  }
   function radioOn(kind) {
-    rOn = true; const st = rState();
+    clearInterval(fadeT); radio.volume = 0.5; rOn = true; const st = rState();
     if (rIdx < 0 || (!st && (radio.currentTime || 0) < 0.5 && (START[kind] || 0) !== rIdx)) { if (st) { rLoad(st.i, st.t); } else rLoad(START[kind] || 0, 0); }
     radio.muted = muted; if (!muted) radio.play().then(() => { if (!rState()) nowPlaying(TRACKS[rIdx].name); }).catch(() => {});
   }
@@ -127,7 +132,7 @@ const DDTMusic = (() => {
       if (document.body) button(); else addEventListener('DOMContentLoaded', button);
     },
     stop() { song = null; wanted = null; clearInterval(timer); rOn = false; radio.pause(); rSave(); },
-    radio, tracks: TRACKS, radioOn, save: rSave, toggleMute, nowName: () => (rIdx >= 0 ? TRACKS[rIdx].name : ''),
+    radio, tracks: TRACKS, radioOn, fadeOut, save: rSave, toggleMute, nowName: () => (rIdx >= 0 ? TRACKS[rIdx].name : ''),
     get muted() { return muted; },
   };
 })();
