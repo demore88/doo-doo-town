@@ -1,7 +1,8 @@
 /* Doo Doo Town offline cache.
    Pages and scripts: network first (so updates show up right away), cache when offline.
-   Art and sound: served from the cache, refreshed in the background. */
-const CACHE = 'ddt-v3';
+   Art: network first too (a cheap 'not modified' check), falling back to the cache if the signal is slow or gone.
+   Music: served from the cache, refreshed in the background (big files). */
+const CACHE = 'ddt-v4';
 const CORE = ['./', './index.html', './app.html', './play.html', './arcade/index.html', './arcade/games.js',
   './story/job.html', './story/stop.html', './story/coffee.html', './story/fluffernutter.html', './story/alien.html',
   './js/calls.js', './js/drive3d.js', './js/music.js', './js/placeholders.js', './js/sfx.js', './js/state.js',
@@ -14,10 +15,16 @@ self.addEventListener('fetch', e => {
   if (code) {
     e.respondWith(fetch(r, { cache: 'no-cache' }).then(res =>   /* always check GitHub for a newer copy */ { const cp = res.clone(); caches.open(CACHE).then(c => c.put(r, cp)); return res; })
       .catch(() => caches.match(r, { ignoreSearch: true })));
-  } else {
+  } else if (/\.(mp3|ogg|wav|ttf)$/.test(path)) {
     e.respondWith(caches.match(r).then(hit => {
-      const net = fetch(r).then(res => { if (res.ok) { const cp = res.clone(); caches.open(CACHE).then(c => c.put(r, cp)); } return res; }).catch(() => hit);
+      const net = fetch(r, { cache: 'no-cache' }).then(res => { if (res.ok) { const cp = res.clone(); caches.open(CACHE).then(c => c.put(r, cp)); } return res; }).catch(() => hit);
       return hit || net;
+    }));
+  } else {   // art: always ask GitHub first so new sprites show up on the very next load
+    e.respondWith(caches.match(r).then(hit => {
+      const net = fetch(r, { cache: 'no-cache' }).then(res => { if (res.ok) { const cp = res.clone(); caches.open(CACHE).then(c => c.put(r, cp)); } return res; });
+      if (!hit) return net;
+      return Promise.race([net.catch(() => hit), new Promise(res => setTimeout(() => res(hit), 2500))]);   /* bad signal: use the cached copy */
     }));
   }
 });
