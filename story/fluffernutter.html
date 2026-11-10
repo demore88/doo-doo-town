@@ -16,11 +16,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js"></script>
-<script src="../js/music.js"></script>
-<script src="../js/sfx.js"></script>
-<script src="../js/calls.js"></script>
-<script src="../js/placeholders.js"></script>
+<script src="../js/state.js?v=1794271895"></script>
+<script src="../js/music.js?v=1794271895"></script>
+<script src="../js/sfx.js?v=1794271895"></script>
+<script src="../js/calls.js?v=1794271895"></script>
+<script src="../js/placeholders.js?v=1794271895"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');
@@ -402,7 +402,7 @@ SCENES.arrive = async () => {
   await card([clockStr(), '23 BOULDER LANE · RANDOLPH'], 1500);
   DDTSfx.play('van_arrive'); await tween(st, 'vanX', 20, 2000, t => 1 - Math.pow(1 - t, 3));
   st.crew = true; await wait(300);
-  st.mf = 6; await Promise.all([tween(st, 'mx', 180, 900, t => t), tween(st, 'rx', 54, 700, t => t)]); st.mBehind = false; st.rBehind = false; st.mf = 0; st.rf = 0; DDTSfx.play('van_door_close'); DDTMusic.fadeOut(700); await wait(200);
+  st.mf = 6; await Promise.all([tween(st, 'mx', 180, 900, t => t), tween(st, 'rx', 54, 700, t => t)]); st.mBehind = false; st.rBehind = false; st.mf = 0; st.rf = 0; DDTSfx.play('van_door_close'); (DDTMusic.fadeOut ? DDTMusic.fadeOut(700) : DDTMusic.stop()); await wait(200);
   st.gr = true; st.panic = true; tone(300, 0.1, 'square', 0.04); tone(300, 0.1, 'square', 0.04, 0.15);
   await say('GRANT', 'grant_panic', `OH THANK GOD. ${wrongName()}! You're here. It's in the basement. It's... it's EVERYWHERE.`);
   await say('ROD', 'rod_annoyed', '...Rod.');

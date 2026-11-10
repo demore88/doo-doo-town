@@ -149,7 +149,7 @@ function drive3d(choice, opts) {
   // the real van, from behind: 6 frames (straight / lean right / lean left, then the same with brake lights). Falls back to the drawn one.
   const VANS = new Image(); let vanFail = false; VANS.onerror = () => { vanFail = true; }; VANS.src = (window.DDT && DDT.root || '') + 'assets/van_back.png';
   const vanReady = () => vanFail || (VANS.complete && VANS.naturalWidth > 0);
-  let helpSeen = false; try { helpSeen = localStorage.getItem('ddt_drive_help') === '1'; } catch (e) {} const VCW = 98, VCH = 112;
+  let helpSeen = false; try { helpSeen = localStorage.getItem('ddt_drive_help2') === '1'; } catch (e) {} const VCW = 98, VCH = 112;
 
   // ---------- dress the roadside ----------
   const put = (n, img, off, scale = 1, kind) => { if (segs[n]) segs[n].sprites.push({ img, off, scale, kind }); };
@@ -227,8 +227,10 @@ function drive3d(choice, opts) {
   addEventListener('keydown', kd); addEventListener('keyup', ku);
   const pts = new Map();
   function zone(e) { const b = rc.getBoundingClientRect(), x = (e.clientX - b.left) / b.width, y = (e.clientY - b.top) / b.height;
-    if (y > 0.74 && x < 0.22) return 'U'; if (y > 0.74 && x > 0.78) return 'D'; return x < 0.5 ? 'L' : 'R'; }
-  function retouch() { touch.L = touch.R = touch.U = touch.D = 0; for (const z of pts.values()) touch[z] = 1; }
+    if (y > 0.74 && (x < 0.22 || x > 0.78)) return 'D'; return x < 0.5 ? 'L' : 'R'; }   // brake in both bottom corners, steer with either side
+  // phone: one thumb steers. Both thumbs down (left AND right) = gas. No thumbs = cruise.
+  function retouch() { touch.L = touch.R = touch.U = touch.D = 0; for (const z of pts.values()) touch[z] = 1; if (touch.L && touch.R && !touch.D) touch.U = 1; }
+  const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   rc.onpointerdown = e => { e.preventDefault(); pts.set(e.pointerId, zone(e)); try { rc.setPointerCapture(e.pointerId); } catch (_) {} retouch(); };
   rc.onpointermove = e => { if (pts.has(e.pointerId)) { pts.set(e.pointerId, zone(e)); retouch(); } };
   rc.onpointerup = rc.onpointercancel = e => { pts.delete(e.pointerId); retouch(); };
@@ -259,7 +261,7 @@ function drive3d(choice, opts) {
       if (last === null) last = ms;
       const dt = Math.min(0.05, (ms - last) / 1000); last = ms; if (vanReady()) t += dt;   /* the clock doesn't start until our van's art is in */
       const live = t > 1.2;   /* hands on the wheel at GO, not before */
-      if (t > 2 && !helpSeen) { helpSeen = true; try { localStorage.setItem('ddt_drive_help', '1'); } catch (e) {} }
+      if (t > 2 && !helpSeen) { helpSeen = true; try { localStorage.setItem('ddt_drive_help2', '1'); } catch (e) {} }
       if (typeof DDT !== 'undefined' && DDT.DEV && key.skip) pos = (N - 40) * SEG;   // dev shortcut: ] jumps to the finish
       const L = key.L || touch.L, Rr = key.R || touch.R, gas = live && (key.U || touch.U), brake = live && (key.D || touch.D);
       const seg = segAt(pos + PZ), ratio = speed / MAX;
@@ -459,9 +461,15 @@ function drive3d(choice, opts) {
       r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(W - 78, 26, 72, 18); r.fillStyle = speed > TOP * 0.97 ? '#f7c418' : '#7bd65b'; r.textAlign = 'right'; r.fillText(mph + ' MPH', W - 10, 35); r.textAlign = 'left';
       if (crashes) { r.fillStyle = '#e9665a'; r.textAlign = 'right'; r.fillText('CRASHES ' + crashes, W - 6, 52); r.textAlign = 'left'; }
       // phone buttons (also show what the keys do)
-      r.fillStyle = gas ? 'rgba(123,214,91,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40);
-      r.fillStyle = brake ? 'rgba(233,102,90,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(W - 96, H - 46, 92, 40);
-      r.fillStyle = '#fff'; r.textAlign = 'center'; r.fillText(gas ? 'GAS!' : '▲ GAS', 50, H - 26); r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', W - 50, H - 26); r.textAlign = 'left';
+      if (TOUCH) {   // phone: brake in both corners, gas = both thumbs
+        r.fillStyle = brake ? 'rgba(233,102,90,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40); r.fillRect(W - 96, H - 46, 92, 40);
+        r.fillStyle = '#fff'; r.textAlign = 'center'; r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', 50, H - 26); r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', W - 50, H - 26);
+        if (gas) { r.fillStyle = '#7bd65b'; r.fillText('GAS!', 240, H - 26); } r.textAlign = 'left';
+      } else {
+        r.fillStyle = gas ? 'rgba(123,214,91,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40);
+        r.fillStyle = brake ? 'rgba(233,102,90,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(W - 96, H - 46, 92, 40);
+        r.fillStyle = '#fff'; r.textAlign = 'center'; r.fillText(gas ? 'GAS!' : '▲ GAS', 50, H - 26); r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', W - 50, H - 26); r.textAlign = 'left';
+      }
       if (t < 2.0 && helpSeen) {   // seen the controls before: just the road name and the go signal
         r.fillStyle = 'rgba(16,21,31,.85)'; r.fillRect(150, 80, 180, RIVAL ? 58 : 46); r.textAlign = 'center';
         const L0 = LEGS_HERE[0]; r.fillStyle = '#9fb3d9'; r.fillText(L0 && L0.name ? `${L0.rt} · ${L0.name}` : (opts.route || 'ROUTE 2').toUpperCase(), 240, 94);
@@ -470,7 +478,7 @@ function drive3d(choice, opts) {
       } else if (t < 2.0) {
         r.fillStyle = 'rgba(16,21,31,.9)'; r.fillRect(110, 70, 260, 90);
         r.fillStyle = '#f7c418'; r.textAlign = 'center'; r.fillText((opts.route || 'ROUTE 2').toUpperCase(), 240, 86);
-        r.fillStyle = '#fff'; r.fillText('◀ ▶ STEER   ▲ GAS   ▼ BRAKE', 240, 106);
+        r.fillStyle = '#fff'; r.fillText(TOUCH ? 'ONE THUMB STEERS · BOTH = GAS' : '◀ ▶ STEER   ▲ GAS   ▼ BRAKE', 240, 106);
         if (RIVAL) { r.fillStyle = '#e9665a'; r.fillText('RACE THE CLOG KINGS!', 240, 96); }
         r.fillStyle = '#9fb3d9'; r.fillText(`${DRIVER === 'matt' ? 'MATT' : 'ROD'} DRIVES · TOP ${DRIVER === 'matt' ? 60 : 40} MPH`, 240, 124); r.fillText('WATCH FOR BLINKERS + MOOSE', 240, 138);
         r.fillStyle = '#f7c418'; r.font = '12px "Press Start 2P", monospace'; r.fillText(t < 1.2 ? 'READY' : 'GO!', 240, 154); r.textAlign = 'left';

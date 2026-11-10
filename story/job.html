@@ -16,11 +16,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js"></script>
-<script src="../js/calls.js"></script>
-<script src="../js/placeholders.js"></script>
-<script src="../js/music.js"></script>
-<script src="../js/sfx.js"></script>
+<script src="../js/state.js?v=1794271895"></script>
+<script src="../js/calls.js?v=1794271895"></script>
+<script src="../js/placeholders.js?v=1794271895"></script>
+<script src="../js/music.js?v=1794271895"></script>
+<script src="../js/sfx.js?v=1794271895"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -352,7 +352,7 @@ SCENES.arrive = async () => {
   const t = SAVE.today ? DDT.clock(SAVE.today.time) : '';
   await card([t ? `${t} · ${JOB.town}` : JOB.town, JOB.addr.toUpperCase()], 1400);
   DDTSfx.play('van_arrive'); await tween(st, 'vanX', 20, 1800, k => 1 - Math.pow(1 - k, 3));
-  st.crew = true; await wait(250); await Promise.all([tween(st, 'mx', 180, 800, k => k), tween(st, 'rx', 54, 700, k => k)]); st.mBehind = false; st.rBehind = false; DDTSfx.play('van_door_close'); DDTMusic.fadeOut(700); await wait(150);
+  st.crew = true; await wait(250); await Promise.all([tween(st, 'mx', 180, 800, k => k), tween(st, 'rx', 54, 700, k => k)]); st.mBehind = false; st.rBehind = false; DDTSfx.play('van_door_close'); (DDTMusic.fadeOut ? DDTMusic.fadeOut(700) : DDTMusic.stop()); await wait(150);
   st.cust = true;
   if (REPEAT) { await sayL('CUST', pick2(["You're back! It's doing it again.", "Remember me? Same thing.", "I swear I didn't do anything this time."])); st.upset = false; return; }
   if (Math.random() < 0.15) {   // this one gets it right. It won't matter.
