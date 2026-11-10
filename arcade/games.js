@@ -1700,12 +1700,13 @@ GAMES.push({
     for (let c = c0; c <= c1; c++) {
       const x = c * SR_TILE - cam;
       if (srSolid(c, SR_GROUND) && SI('grass')) { const l = !srSolid(c - 1, SR_GROUND), rr = !srSolid(c + 1, SR_GROUND);
-        g.drawImage(l ? SI('edgeL') : rr ? SI('edgeR') : SI('grass'), x, 238, 16, 18); for (let y = 256; y < 304; y += 16) g.drawImage(SI('dirt'), x, y, 16, 16); continue; }
+        g.drawImage(l ? SI('edgeR') : rr ? SI('edgeL') : SI('grass'), x - 0.5, 238, 17, 19);  /* the art's edge tiles are named for the side the drop is on */ for (let y = 255; y < 304; y += 16) g.drawImage(SI('dirt'), x - 0.5, y, 17, 17); continue; }
       if (srSolid(c, SR_GROUND)) { R(x, 240, 16, 64, '#8a5a32'); R(x, 240, 16, 4, '#5fb848'); R(x + 3, 250, 3, 3, '#6b4423'); R(x + 10, 260, 3, 3, '#6b4423'); }
     }
     for (const [px, h] of L.pipes) {                                   // white PVC "pipes" (they're cleanouts, Ron)
       const x = px * SR_TILE - cam, top = (SR_GROUND - h) * SR_TILE; if (x < -40 || x > W + 10) continue;
-      if (SI('pipetop')) { for (let y = top + 16; y < SR_GROUND * SR_TILE; y += 16) g.drawImage(SI('pipemid'), x, y, 32, 16); g.drawImage(SI('pipetop'), x, top, 32, 18); continue; }
+      if (SI('pipetop')) { const pw = 40, px0 = x - 4, mh = pw * SI('pipemid').height / SI('pipemid').width; g.save(); g.beginPath(); g.rect(px0, top, pw, SR_GROUND * SR_TILE - top + 2); g.clip();
+        for (let y = SR_GROUND * SR_TILE - mh + 4; y > top - mh; y -= mh) g.drawImage(SI('pipemid'), px0, y, pw, mh); g.restore(); g.drawImage(SI('pipetop'), px0 - 1, top - 4, pw + 2, 22); continue; }
       R(x + 2, top + 6, 28, h * SR_TILE - 6, '#e8ecef'); R(x + 4, top + 6, 5, h * SR_TILE - 6, '#ffffff'); R(x + 24, top + 6, 5, h * SR_TILE - 6, '#c9ced6');
       R(x, top, 32, 8, '#f2f4f6'); R(x, top + 7, 32, 2, '#aab1ba'); T('4"', x + 16, top + 20, '#7a8a9a', 5, 'center');
     }
@@ -1758,7 +1759,7 @@ GAMES.push({
     // Rod's running commentary
     if (s.bub) { const lines = []; let ln = ''; for (const w of s.bub.txt.split(' ')) { if ((ln + ' ' + w).length > 34) { lines.push(ln); ln = w; } else ln = ln ? ln + ' ' + w : w; } lines.push(ln);
       const h = 18 + lines.length * 10; R(8, 22, 300, h, 'rgba(16,21,31,.92)'); g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(8.5, 22.5, 299, h - 1);
-      SPR('rod', 0, 24, 22 + h - 2); T('ROD:', 42, 30, '#f7c418', 6); lines.forEach((l, i) => T(l, 42, 42 + i * 10, '#fff', 6)); }
+      if (IMG.rod_port) { R(10, 24, 28, 28, '#2a3346'); g.imageSmoothingEnabled = true; g.drawImage(IMG.rod_port, 11, 25, 26, 26); g.imageSmoothingEnabled = false; g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(10.5, 24.5, 27, 27); } else SPR('rod', 0, 24, 22 + h - 2); T('ROD:', 42, 30, '#f7c418', 6); lines.forEach((l, i) => T(l, 42, 42 + i * 10, '#fff', 6)); }
   },
 });
 
