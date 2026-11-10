@@ -156,6 +156,7 @@ function drive3d(choice, opts) {
   const MTN_IMG = DI(`mtn_${SK}`);
   const CAR_B = [...Array(12).keys()].map(i => DI(`car_back_${i}`)), CAR_F = [...Array(12).keys()].map(i => DI(`car_front_${i}`));
   const LOG_B = DI('logtruck_back'), LOG_F = DI('logtruck_front');
+  const DSPLAT = DI('deer_splat');   // the deer, face on the windshield (6 frames, sliding down)
   const ANIM = { moose: [DI('moose_0'), DI('moose_1')], deer: [DI('deer_0'), DI('deer_1')], turkeys: [DI('turkey_0'), DI('turkey_1')] };
   const artReady = () => DL.every(i => i.failed || (i.complete && i.naturalWidth > 0));
   const flipC = new Map(), flipped = img => { if (!img.width) return img; let c = flipC.get(img); if (!c) { c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const k = c.getContext('2d'); k.scale(-1, 1); k.drawImage(img, -img.width, 0); flipC.set(img, c); } return c; };
@@ -270,7 +271,7 @@ function drive3d(choice, opts) {
   rc.onpointerup = rc.onpointercancel = rc.onlostpointercapture = e => { pts.delete(e.pointerId); retouch(); };
   addEventListener('pointerup', e => { if (pts.delete(e.pointerId)) retouch(); }); addEventListener('blur', () => { pts.clear(); retouch(); });
   const say = (m, s = 1.4) => { msg = m; msgT = s; };
-  if (typeof DDT !== 'undefined' && DDT.DEV) window.__deer = () => critters.push({ kind: 'deer', seg: 0, off: 0, dir: 1, hit: true, fly: 0.001, flyDir: 1 });   // dev: test the windshield deer
+  if (typeof DDT !== 'undefined' && DDT.DEV) window.__deer = (d = 1) => critters.push({ kind: 'deer', seg: 0, off: 0, dir: d, hit: true, fly: 0.001, flyDir: d });   // dev: test the windshield deer
   const sfx = (n, o) => { if (window.DDTSfx) DDTSfx.play(n, o); };
 
   // ---------- projection ----------
@@ -477,25 +478,20 @@ function drive3d(choice, opts) {
         else if (vanFail) { r.save(); r.translate(vx + 36, vy + 52); r.rotate(steer * 0.04); r.scale(1.35, 1.35); r.drawImage(brake ? VANBRAKE : VAN, -36, -52); r.restore(); }
         if (gas && speed > CRUISE * 0.9) { r.fillStyle = 'rgba(200,200,205,.6)'; for (let i = 0; i < 3; i++) r.fillRect(vx + 20 + Math.random() * 4, vy + 50 + i * 3, 3, 2); }
       }
-      for (const cr of critters) if (cr.kind === 'deer' && cr.fly > 0 && cr.fly < 4.2) {   // the deer: spins up over the hood and lands face-first on the windshield
-        const img = CIMG.deer, f = cr.fly, HIT = 0.75;
+      for (const cr of critters) if (cr.kind === 'deer' && cr.fly > 0 && cr.fly < 3.8) {   // the deer: spins up over the hood and lands face-first on the windshield
+        const img = CIMG.deer, f = cr.fly, HIT = 0.75, side = cr.flyDir < 0 ? -1 : 1;
         if (f < HIT) {   // tumbling up and toward us, getting huge
-          const k = f / HIT, sc = 1.2 + k * 1.8, fx = W / 2 + 10 + (W - 150 - W / 2) * k, fy = H - 70 - Math.sin(k * Math.PI * 0.9) * 120;
-          r.save(); r.translate(fx, fy); r.rotate(k * Math.PI * 4); r.drawImage(img, -img.width * sc / 2, -img.height * sc / 2, img.width * sc, img.height * sc); r.restore();
-        } else {   // SPLAT: face-first on the glass, upside down, then a slow slide down leaving a streak
-          const u = Math.min(1, (f - HIT) / 2.6), slide = u * u * 170, ix = W - 70, iy = 58, hy = iy + slide, fade = f > 3.5 ? 1 - (f - 3.5) / 0.7 : 1;
+          const k = f / HIT, sc = 1.2 + k * 1.8, fx = W / 2 + 10 * side + (side > 0 ? W - 80 - W / 2 : 80 - W / 2) * k, fy = H - 70 - Math.sin(k * Math.PI * 0.9) * 120;
+          r.save(); r.translate(fx, fy); r.rotate(side * k * Math.PI * 4); r.drawImage(img, -img.width * sc / 2, -img.height * sc / 2, img.width * sc, img.height * sc); r.restore();
+        } else if (DSPLAT.complete && DSPLAT.naturalWidth) {   // SPLAT: face on the glass, licking it, sliding down out of view
+          const e = f - HIT, fi = Math.min(5, Math.floor(e / 0.4)), fade = e > 2.6 ? Math.max(0, 1 - (e - 2.6) / 0.45) : 1;
           if (!cr.splat) { cr.splat = 1; shake = Math.max(shake, 0.35); sfx('horn'); say('SPLAT!', 1.4); }
-          r.save();
-          r.globalAlpha = 0.85 * fade; r.fillStyle = '#e8eef2';   // star crack where the face hit
-          for (let a = 0; a < 7; a++) { const an = a * 0.9 + 0.2; for (let d = 4; d < 34; d += 2) r.fillRect(Math.round(ix + Math.cos(an) * d), Math.round(iy + Math.sin(an) * d * 0.8), 1.5, 1.5); }
-          r.globalAlpha = 0.75 * fade;   // the smear: a wide brown streak from the hit down to where the face is now
-          r.fillStyle = '#6b4423'; r.fillRect(ix - 13, iy, 26, slide);
-          r.fillStyle = '#4e3018'; r.fillRect(ix - 9, iy, 6, slide); r.fillRect(ix + 4, iy, 5, slide);
-          r.fillStyle = '#8a5a2e'; for (let i = 0; i < 6; i++) { const dx = -15 + i * 6, len = slide * (0.55 + (i * 37 % 10) / 22); r.fillRect(ix + dx, iy, 2, len); r.fillRect(ix + dx - 1, iy + len, 4, 3); }   // drips
-          r.beginPath(); r.arc(ix, iy, 15, 0, 7); r.fill();
-          r.globalAlpha = fade; const sc = 3, w = img.width * sc, h = img.height * sc, sq = f - HIT < 0.15 ? 0.75 : 1;
-          r.translate(ix, hy); r.rotate(1.85 + Math.sin(f * 7) * 0.04); r.scale(1, sq);   // head at the glass, body hanging above it
-          r.drawImage(img, -0.78 * w, -0.17 * h, w, h);
+          const fw = DSPLAT.width / 6, fh = DSPLAT.height, dw = fw / 2, dh = fh / 2, pop = e < 0.12 ? 1.12 - e : 1;   /* sheet is 2x for the 2x canvas */
+          const x0 = side > 0 ? W - 6 - dw : 6, nx = x0 + (side > 0 ? dw * 0.89 : dw * 0.11), ny = H - dh + dh * 0.31;
+          r.save(); r.globalAlpha = 0.8 * fade; r.fillStyle = '#e8eef2';   // star crack where the nose hit
+          for (let a = 0; a < 7; a++) { const an = a * 0.9 + 0.2; for (let d = 4; d < 34; d += 2) r.fillRect(Math.round(nx + Math.cos(an) * d), Math.round(ny + Math.sin(an) * d * 0.8), 1.5, 1.5); }
+          r.globalAlpha = fade; r.translate(side > 0 ? x0 + dw : x0, H); r.scale(side * pop, pop);   // anchored at the bottom corner; mirrored on the left side
+          r.drawImage(DSPLAT, fi * fw, 0, fw, fh, -dw, -dh, dw, dh);
           r.restore();
         }
       }
