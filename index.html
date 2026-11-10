@@ -180,14 +180,15 @@
 
 <audio id="music" src="assets/doo_doo_town.mp3" loop preload="auto"></audio>
 <audio id="call" src="assets/call_fluffernutter.mp3" preload="auto"></audio>
-<script src="js/state.js?v=1794294010"></script>
-<script src="js/sfx.js?v=1794294010"></script>
-<script src="js/drive3d.js?v=1794294010"></script>
-<script src="js/music.js?v=1794294010"></script>
+<script src="js/state.js?v=1794294414"></script>
+<script src="js/sfx.js?v=1794294414"></script>
+<script src="js/drive3d.js?v=1794294414"></script>
+<script src="js/music.js?v=1794294414"></script>
 <script>
 const W = 480, H = 270, LOOP_W = 6688;           // strip loop width at 270px tall
 const cv = document.getElementById('c'), g = cv.getContext('2d');
-g.setTransform(3, 0, 0, 3, 0, 0); g.imageSmoothingEnabled = false;   // 3x canvas: the pixel art looks the same, the hi-res van stays sharp
+const fitTitle = () => { const b = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1, w = Math.max(1440, Math.round(b.width * d)), h = Math.round(w * 270 / 480); if (cv.width !== w) { cv.width = w; cv.height = h; } g.setTransform(w / 480, 0, 0, h / 270, 0, 0); g.imageSmoothingEnabled = false; };
+fitTitle(); addEventListener('resize', fitTitle);   // match the screen's real pixels, so the hi-res van isn't stretched or pixelated: the pixel art looks the same, the hi-res van stays sharp
 const load = s => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = s; });
 const music = document.getElementById('music');
 let soundOn = true, started = false;
@@ -223,12 +224,12 @@ function draw(t) {
   while (puffs.length && puffs[0].a <= 0) puffs.shift();
   for (const p of puffs) { g.fillStyle = `rgba(190,190,195,${Math.max(0, p.a)})`; g.fillRect(Math.round(p.x), Math.round(p.y), Math.ceil(p.r), Math.ceil(p.r)); }
 
-  const VN = Math.max(1, Math.round(van.width / 432)), wheel = Math.floor(t * 8) % VN;   // the wheels spin on the title screen
+  const VN = Math.max(1, Math.round(van.width / (van.height * 2.35))), VFW = van.width / VN, VH = 144 * van.height / VFW, wheel = Math.floor(t * 8) % VN;   // the wheels spin on the title screen
   const bounce = (Math.floor(t * 6) % 5 === 0) ? -1 : 0;
-  g.drawImage(van, wheel * 432, 0, 432, van.height, VAN_X, VAN_Y + bounce + 64 - van.height / 3, 144, van.height / 3);   /* 1:1 on the 3x canvas */   // big art into the 1x title canvas: smooth it down, don't drop pixels
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(van, wheel * VFW, 0, VFW, van.height, VAN_X, VAN_Y + bounce + 64 - VH, 144, VH); g.imageSmoothingEnabled = false;   /* 1:1 on the 3x canvas */   // big art into the 1x title canvas: smooth it down, don't drop pixels
 
   // Rod up front over the driver's seat, Matt behind him; Matt runs 4 counts behind so one spins while the other kicks
-  const roof = VAN_Y + bounce + 64 - van.height / 3 + 1.3;   // the top of the van's roof, where their boots go
+  const roof = VAN_Y + bounce + 64 - VH + 1;   // the top of the van's roof, where their boots go
   const dt = (!music.paused && music.currentTime > 0) ? music.currentTime : t;   // lock to the song while it plays
   const r = pose(dt, 0), m = pose(dt, -4);
   const RW = 48 * 0.94, RH = 80 * 0.94, MW = 48, MH = 80;   // 2x size, standing on the roof; Matt a little taller than Rod

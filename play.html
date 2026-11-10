@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794294010"></script>
-<script src="js/calls.js?v=1794294010"></script>
-<script src="js/placeholders.js?v=1794294010"></script>
-<script src="js/music.js?v=1794294010"></script>
-<script src="js/sfx.js?v=1794294010"></script>
+<script src="js/state.js?v=1794294414"></script>
+<script src="js/calls.js?v=1794294414"></script>
+<script src="js/placeholders.js?v=1794294414"></script>
+<script src="js/music.js?v=1794294414"></script>
+<script src="js/sfx.js?v=1794294414"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -30,7 +30,9 @@ DDTMusic.play('van');   // you pull in with the van radio on; it goes off when t
 // =====================================================================
 const W = 480, H = 270, cv = document.getElementById('c');
 let g = cv.getContext('2d');
-const SCALE = 3;   // draw at 3x so text is sharp; all game coordinates stay 480x270
+let SCALE = 3;   // at least 3x; on a phone it matches the screen's real pixels so hi-res art stays sharp. All game coordinates stay 480x270
+const fitRes = () => { const b = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1; SCALE = Math.max(3, b.width * d / 480); const w = Math.round(480 * SCALE), h = Math.round(270 * SCALE); if (cv.width !== w) { cv.width = w; cv.height = h; } };
+fitRes(); addEventListener('resize', fitRes);
 g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
 const FONT = n => `${n < 6 ? n + 1 : n}px "Press Start 2P", monospace`;   // nothing smaller than 5px
 const R = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
@@ -320,7 +322,7 @@ function matt(x, y, f = 0, s = 2, a = 1) {
   if (!IMG.matt) return; g.globalAlpha = a;
   { const I = IMG.matt, fw = I.width / 9; g.imageSmoothingEnabled = fw > 24; const q = I === IMG.rod ? 0.94 : 1; /* Matt stands a little taller than Rod */ g.drawImage(I, f * fw, 0, fw, I.height, Math.round(x - 12 * s * q), Math.round(y - 40 * s * q), 24 * s * q, 40 * s * q); g.imageSmoothingEnabled = false; } g.globalAlpha = 1;
 }
-function van(x, y) { if (IMG.van) { const N = Math.max(1, Math.round(IMG.van.width / 432)), f = Math.floor(Math.abs(x) / 6) % N, vh = IMG.van.height / 3; g.drawImage(IMG.van, f * 432, 0, 432, IMG.van.height, Math.round(x), Math.round(y - vh), 144, vh); } }   // wheels turn as the van moves
+function van(x, y) { if (IMG.van) { const N = Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35))), fw = IMG.van.width / N, f = Math.floor(Math.abs(x) / 6) % N, vh = 144 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(IMG.van, f * fw, 0, fw, IMG.van.height, Math.round(x), Math.round(y - vh), 144, vh); g.imageSmoothingEnabled = false; } }   // wheels turn as the van moves
 load('assets/fittings.png').then(i => IMG.fit = i);
 // shop shelf art (from the mini-game sheets)
 const SHOPART = { fernco125: 'coupling', fernco15: 'coupling', fernco2: 'coupling', waxring: 'waxring', heads: 'cable', muckboots: 'boots', waders: 'waders', ppe: 'gloves', camera: 'camera', jetter: 'jetter', ptrap: 'pvc_2' };
@@ -1130,7 +1132,7 @@ async function drawShareCard(s) {
   const gr = k.createLinearGradient(0, 300, 0, 560); gr.addColorStop(0, 'rgba(14,17,24,0)'); gr.addColorStop(1, 'rgba(14,17,24,1)'); k.fillStyle = gr; k.fillRect(0, 300, Z, 260);
   k.fillStyle = 'rgba(14,17,24,.82)'; k.fillRect(60, 40, Z - 120, 190); k.strokeStyle = '#f7c418'; k.lineWidth = 6; k.strokeRect(63, 43, Z - 126, 184);
   txt('DOO DOO TOWN', Z / 2, 100, '#f7c418', 56); txt('THE GAME!', Z / 2, 172, '#f7c418', 40);
-  if (van) { const sm = k.imageSmoothingEnabled; k.imageSmoothingEnabled = true; k.imageSmoothingQuality = 'high'; k.drawImage(van, 0, 0, 432, van.height, 660, 532 - van.height * 360 / 432, 360, van.height * 360 / 432); k.imageSmoothingEnabled = sm; }
+  if (van) { const sm = k.imageSmoothingEnabled; k.imageSmoothingEnabled = true; k.imageSmoothingQuality = 'high'; { const fw = van.width / Math.max(1, Math.round(van.width / (van.height * 2.35))), vh = 360 * van.height / fw; k.drawImage(van, 0, 0, fw, van.height, 660, 532 - vh, 360, vh); }; k.imageSmoothingEnabled = sm; }
   if (port) { k.fillStyle = '#10151f'; k.fillRect(80, 300, 252, 252); k.drawImage(port, 86, 306, 240, 240); k.strokeStyle = '#f7c418'; k.lineWidth = 6; k.strokeRect(83, 303, 246, 246); }
   txt(`I PLAYED AS ${lead.toUpperCase()}`, 360, 590, '#fff', 24, 'left');
   const title = s.rep >= 40 ? 'LEGENDS OF THE NORTH COUNTRY' : s.rep >= 20 ? 'THE GUYS YOU CALL' : s.rep >= 0 ? 'HONEST WORK' : 'MAYBE TRY THE OTHER GUYS';

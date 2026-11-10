@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794294010"></script>
-<script src="../js/calls.js?v=1794294010"></script>
-<script src="../js/placeholders.js?v=1794294010"></script>
-<script src="../js/music.js?v=1794294010"></script>
-<script src="../js/sfx.js?v=1794294010"></script>
+<script src="../js/state.js?v=1794294414"></script>
+<script src="../js/calls.js?v=1794294414"></script>
+<script src="../js/placeholders.js?v=1794294414"></script>
+<script src="../js/music.js?v=1794294414"></script>
+<script src="../js/sfx.js?v=1794294414"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -30,7 +30,9 @@ DDTMusic.play('van');   // you pull in with the van radio on; it goes off when t
 // =====================================================================
 const W = 480, H = 270, cv = document.getElementById('c');
 let g = cv.getContext('2d');
-const SCALE = 3;   // draw at 3x so text is sharp; all game coordinates stay 480x270
+let SCALE = 3;   // at least 3x; on a phone it matches the screen's real pixels so hi-res art stays sharp. All game coordinates stay 480x270
+const fitRes = () => { const b = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1; SCALE = Math.max(3, b.width * d / 480); const w = Math.round(480 * SCALE), h = Math.round(270 * SCALE); if (cv.width !== w) { cv.width = w; cv.height = h; } };
+fitRes(); addEventListener('resize', fitRes);
 g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
 const FONT = n => `${n < 6 ? n + 1 : n}px "Press Start 2P", monospace`;   // nothing smaller than 5px
 const R = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
@@ -319,7 +321,7 @@ function matt(x, y, f = 0, s = 2, a = 1) {
   if (!IMG.matt) return; g.globalAlpha = a;
   { const I = IMG.matt, fw = I.width / 9; g.imageSmoothingEnabled = fw > 24; const q = I === IMG.rod ? 0.94 : 1; /* Matt stands a little taller than Rod */ g.drawImage(I, f * fw, 0, fw, I.height, Math.round(x - 12 * s * q), Math.round(y - 40 * s * q), 24 * s * q, 40 * s * q); g.imageSmoothingEnabled = false; } g.globalAlpha = 1;
 }
-function van(x, y) { if (IMG.van) { const N = Math.max(1, Math.round(IMG.van.width / 432)), f = Math.floor(Math.abs(x) / 6) % N, vh = IMG.van.height / 3; g.drawImage(IMG.van, f * 432, 0, 432, IMG.van.height, Math.round(x), Math.round(y - vh), 144, vh); } }   // wheels turn as the van moves
+function van(x, y) { if (IMG.van) { const N = Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35))), fw = IMG.van.width / N, f = Math.floor(Math.abs(x) / 6) % N, vh = 144 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(IMG.van, f * fw, 0, fw, IMG.van.height, Math.round(x), Math.round(y - vh), 144, vh); g.imageSmoothingEnabled = false; } }   // wheels turn as the van moves
 const SAVE = DDT.get(), MONTH = SAVE.month || 0;
 const JOB = CALLS.flat().find(c => c.id === DDT.param('id')) || CALLS[0][1];
 const REPEAT = !!(SAVE.today && SAVE.today.repeat && SAVE.today.id === JOB.id);   // a repeat customer: same house, same problem, less talk

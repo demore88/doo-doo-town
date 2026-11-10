@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794294010"></script>
-<script src="../js/music.js?v=1794294010"></script>
-<script src="../js/sfx.js?v=1794294010"></script>
-<script src="../js/calls.js?v=1794294010"></script>
-<script src="../js/placeholders.js?v=1794294010"></script>
+<script src="../js/state.js?v=1794294414"></script>
+<script src="../js/music.js?v=1794294414"></script>
+<script src="../js/sfx.js?v=1794294414"></script>
+<script src="../js/calls.js?v=1794294414"></script>
+<script src="../js/placeholders.js?v=1794294414"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');
@@ -314,7 +314,7 @@ function matt(x, y, f = 0, s = 2, a = 1) {
   if (!IMG.matt) return; g.globalAlpha = a;
   { const I = IMG.matt, fw = I.width / 9; g.imageSmoothingEnabled = fw > 24; const q = I === IMG.rod ? 0.94 : 1; /* Matt stands a little taller than Rod */ g.drawImage(I, f * fw, 0, fw, I.height, Math.round(x - 12 * s * q), Math.round(y - 40 * s * q), 24 * s * q, 40 * s * q); g.imageSmoothingEnabled = false; } g.globalAlpha = 1;
 }
-function van(x, y) { if (IMG.van) { const N = Math.max(1, Math.round(IMG.van.width / 432)), f = Math.floor(Math.abs(x) / 6) % N, vh = IMG.van.height / 3; g.drawImage(IMG.van, f * 432, 0, 432, IMG.van.height, Math.round(x), Math.round(y - vh), 144, vh); } }   // wheels turn as the van moves
+function van(x, y) { if (IMG.van) { const N = Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35))), fw = IMG.van.width / N, f = Math.floor(Math.abs(x) / 6) % N, vh = 144 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(IMG.van, f * fw, 0, fw, IMG.van.height, Math.round(x), Math.round(y - vh), 144, vh); g.imageSmoothingEnabled = false; } }   // wheels turn as the van moves
 const RES = { health: 0, rep: 0, pay: 0, gear: null, splashes: 0, kinks: 0, cat: false };
 
 // Grant: a little guy in a maroon bathrobe and slippers

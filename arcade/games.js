@@ -849,7 +849,7 @@ GAMES.push({
     if (lawn) { const ox = -(((cam % W) + W) % W); R(0, 0, W, H, '#5fb83a'); g.drawImage(lawn, ox, -7, W, H); g.drawImage(lawn, ox + W, -7, W, H); }   // scrolls with you; grass line at 200
     else { R(0, 0, W, H, '#a9cfe6'); R(0, 200, W, 70, '#5a8a41'); R(0, 196, W, 6, '#4a7a35');
     R(-cam - 40, 90, 60, 110, '#b88660'); }
-    if (IMG.van) g.drawImage(IMG.van, 0, 0, 432, IMG.van.height, Math.round(s.LEN - cam + 10), 202 - IMG.van.height / 3, 144, IMG.van.height / 3);
+    if (IMG.van) { const fw = (IMG.van.width / Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35)))), vh = 144 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.drawImage(IMG.van, 0, 0, fw, IMG.van.height, Math.round(s.LEN - cam + 10), 202 - vh, 144, vh); g.imageSmoothingEnabled = false; };
     for (const o of s.obs) { const x = o.d - cam; R(x - 14, 192, 28, 6, '#2f6f2a'); if (!o.done) R(x - 1, 170, 2, 10, '#f7c418'); }
     const hy = s.hop > 0 ? -Math.sin((1 - s.hop / 0.45) * Math.PI) * 14 : 0;
     const hasB = !!IMG[(s.hero || 'matt') + '_more'];
