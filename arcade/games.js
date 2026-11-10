@@ -1720,7 +1720,7 @@ GAMES.push({
       if (T2('ptop')) {   // pipe pieces: the cap off the top piece, the flared foot off the base piece, plain pipe repeating in between (clipped to the pipe's height)
         const pw = 36, px0 = x + 16 - pw / 2, bot = SR_GROUND * SR_TILE, I = T2, part = (n, f0, f1, y, h) => g.drawImage(I(n), 0, I(n).height * f0, I(n).width, I(n).height * (f1 - f0), px0, y, pw, h);
         const capH = pw * I('ptop').height * 0.5 / I('ptop').width, footH = pw * I('pbase').height * 0.22 / I('pbase').width, bodyH = pw * I('pbody').height / I('pbody').width;
-        g.save(); g.beginPath(); g.rect(px0 - 2, top, pw + 4, bot - top); g.clip();
+        g.save(); g.beginPath(); g.rect(px0 - 2, top + capH * 0.85, pw + 4, bot - top - capH * 0.85); g.clip();   // the body starts under the cap, so nothing pokes out behind it
         let k = 0; for (let y = bot - footH; y > top + capH * 0.6 - bodyH; y -= bodyH) { const n = ['pbody', 'pcoup', 'pbody', 'pstain'][(px + k++) % 4]; part(n, 0, 1, y - bodyH, bodyH + 0.5); }
         part('pbase', 0.78, 1, bot - footH, footH); g.restore();
         g.drawImage(I('ptop'), 0, 0, I('ptop').width, I('ptop').height * 0.5, px0 - 1, top - 3, pw + 2, capH); continue; }
@@ -1753,7 +1753,7 @@ GAMES.push({
     s.pops.forEach(o => { if (SI('plunger')) { g.drawImage(SI('plunger'), o.x - cam - 6, o.y - 10, 13, 16); return; } R(o.x - cam - 1, o.y - 4, 2, 9, '#c98a1e'); R(o.x - cam - 4, o.y - 6, 8, 3, '#f2c94c'); });
     for (const f of s.foes) {
       const x = f.x - cam; if (x < -20 || x > W + 20) continue;
-      if (SI('grease_0')) { const k = f.k === 'g' ? 'grease_' : 'wipe_', n8 = !!SI(k + '7'), fr = f.dead ? (n8 ? 7 : 3) : Math.floor(t * (n8 ? 9 : 4) + f.x) % (n8 ? 6 : 2), im = SI(k + fr), h = f.k === 'g' ? 22 : 26, w = h * im.width / im.height;   // 6-frame waddle / float cycles
+      if (SI('grease_0')) { const k = f.k === 'g' ? 'grease_' : 'wipe_', n8 = !!SI(k + '7'), fr = f.dead ? (n8 ? 7 : 3) : Math.floor(t * (n8 ? 5 : 3) + f.x) % (n8 ? 6 : 2), im = SI(k + fr), h = f.k === 'g' ? 22 : 26, w = h * im.width / im.height;   // 6-frame waddle / float cycles
         if (f.dead && f.dead > 0.5) continue; g.globalAlpha = f.dead ? Math.max(0, 1 - f.dead / 0.5) : 1; g.save(); g.translate(x, 0); if (f.vx > 0) g.scale(-1, 1);
         g.drawImage(im, -w / 2, f.k === 'g' ? f.y - h : f.y - h / 2, w, h); g.restore(); g.globalAlpha = 1; continue; }
       if (f.dead) { if (f.dead < 0.4) { g.globalAlpha = 1 - f.dead / 0.4; R(x - 9, f.y - 3, 18, 3, f.k === 'g' ? '#c9a24a' : '#f2f0ea'); g.globalAlpha = 1; } continue; }
@@ -1764,7 +1764,7 @@ GAMES.push({
     const tx = (L.len - 6) * SR_TILE - cam; if (tx < W + 40 && SI('toilet_0')) { const fr = !s.won ? 0 : s.flush < 0.5 ? 1 : s.flush < 1.4 ? 2 : 3, im = SI('toilet_' + fr), h = 52, w = h * im.width / im.height; g.drawImage(im, tx + 13 - w / 2, 240 - h, w, h); }
     else if (tx < W + 40) { R(tx, 212, 26, 28, '#f2c94c'); g.fillStyle = '#f7d96a'; g.beginPath(); g.ellipse(tx + 13, 212, 18, 7, 0, 0, Math.PI * 2); g.fill(); R(tx + 14, 180, 18, 26, '#f2c94c'); T('FLUSH', tx + 13, 172, '#f7c418', 5, 'center');
       if (s.won) { for (let i = 0; i < 8; i++) { const a = s.flush * 6 + i; C(tx + 13 + Math.cos(a) * 14 * (1 - s.flush / 2.2), 210 + Math.sin(a) * 5, 2, '#9fd0e0'); } } }
-    if (s.boss) { const B = s.boss, x = B.x - cam, n8 = !!SI('fat_7'), fr = n8 ? (B.hp <= 0 ? (B.dead < 0.4 ? 6 : 7) : B.inv > 0.6 ? 6 : B.mouth > 0 ? 5 : B.roar > 0 ? 4 : B.hop ? 3 : (B.roar <= 0 ? 2 + Math.floor(t * 5) % 2 : Math.floor(t * 2) % 2)) : (B.hp <= 0 ? 3 : B.inv > 0 ? 3 : B.mouth > 0 ? 2 : B.roar > 0 ? 1 : 0), im = SI('fat_' + fr), sq = n8 ? 1 : B.hp <= 0 ? Math.max(0.05, 1 - B.dead / 1.4) : 1;
+    if (s.boss) { const B = s.boss, x = B.x - cam, n8 = !!SI('fat_7'), fr = n8 ? (B.hp <= 0 ? (B.dead < 0.4 ? 6 : 7) : B.inv > 0.6 ? 6 : B.mouth > 0 ? 5 : B.roar > 0 ? 4 : B.hop ? 3 : (B.roar <= 0 ? 2 + Math.floor(t * 2.5) % 2 : Math.floor(t * 1.5) % 2)) : (B.hp <= 0 ? 3 : B.inv > 0 ? 3 : B.mouth > 0 ? 2 : B.roar > 0 ? 1 : 0), im = SI('fat_' + fr), sq = n8 ? 1 : B.hp <= 0 ? Math.max(0.05, 1 - B.dead / 1.4) : 1;
       if (!(B.inv > 0 && Math.floor(t * 14) % 2)) { if (im) { const h = 62 * sq, w = h * im.width / im.height * (sq < 1 ? 1 / sq : 1); g.save(); g.translate(x, 0); if (B.vx > 0) g.scale(-1, 1); g.drawImage(im, -w / 2, B.y - h, w, h); g.restore(); } else { R(x - 24, B.y - 40 * sq, 48, 40 * sq, '#8a6a2a'); } }
       for (const o of s.globs || []) { if (SI('grease_3')) g.drawImage(SI('grease_3'), o.x - cam - 6, o.y - 4, 12, 7); else C(o.x - cam, o.y, 3, '#d9b04a'); }
       for (let i = 0; i < 3; i++) C(W / 2 - 14 + i * 14, 70, 4, i < B.hp ? '#e9665a' : 'rgba(255,255,255,.25)'); }   // boss health
