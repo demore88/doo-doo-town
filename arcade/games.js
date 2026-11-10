@@ -1692,6 +1692,7 @@ GAMES.push({
   draw(s) {
     const L = SR_LEVEL, cam = Math.round(s.cam), t = s.t;
     const BG = MG('sr_bg'), SI = n => MG('sr_' + n);
+    R(0, 0, W, H, '#2a1d14');   // nothing stale ever shows below the level
     if (BG) { const ox = -((cam * 0.3) % W); g.drawImage(BG, ox, -20, W, H); g.drawImage(BG, ox + W, -20, W, H); }   // the White Mountains, scrolling slowly
     else { const gr = g.createLinearGradient(0, 0, 0, 240); gr.addColorStop(0, '#5aa8f0'); gr.addColorStop(1, '#bfe6ff'); g.fillStyle = gr; g.fillRect(0, 0, W, H); }
     g.save(); g.translate(0, -34);   // the whole level sits higher, so your thumbs on the bottom don't cover Ron
@@ -1700,8 +1701,14 @@ GAMES.push({
     const c0 = Math.floor(cam / SR_TILE), c1 = c0 + Math.ceil(W / SR_TILE) + 1;
     for (let c = c0; c <= c1; c++) {
       const x = c * SR_TILE - cam;
-      if (srSolid(c, SR_GROUND) && SI('grass')) { const l = !srSolid(c - 1, SR_GROUND), rr = !srSolid(c + 1, SR_GROUND);
-        g.drawImage(l ? SI('edgeR') : rr ? SI('edgeL') : SI('grass'), x - 0.5, 238, 17, 19);  /* the art's edge tiles are named for the side the drop is on */ for (let y = 255; y < 304; y += 16) g.drawImage(SI('dirt'), x - 0.5, y, 17, 17); continue; }
+      if (SI('grass')) {   // solid dirt columns; pits are a dark drop; edge tiles only lend their curled grass lip
+        if (!srSolid(c, SR_GROUND)) { R(x, 246, 16, 80, '#1e150e'); R(x, 246, 16, 3, '#3a2a1c'); continue; }
+        const l = !srSolid(c - 1, SR_GROUND), rr = !srSolid(c + 1, SR_GROUND);
+        for (let y = 255; y < 320; y += 16) g.drawImage(SI('dirt'), x - 0.5, y, 17, 17);
+        const e = l ? SI('edgeR') : rr ? SI('edgeL') : null;   // edgeL curls to the right (ground on the left of a pit), edgeR curls to the left
+        if (e) { g.drawImage(SI('grass'), x - 0.5, 238, 17, 19); R(l ? x : x + 13, 250, 3, 70, 'rgba(0,0,0,.4)'); R(l ? x : x + 15, 246, 1, 6, '#2e5a1c'); }   // a clean cliff: the dirt wall, shaded on the pit side
+        else g.drawImage(SI('grass'), x - 0.5, 238, 17, 19);
+        continue; }
       if (srSolid(c, SR_GROUND)) { R(x, 240, 16, 64, '#8a5a32'); R(x, 240, 16, 4, '#5fb848'); R(x + 3, 250, 3, 3, '#6b4423'); R(x + 10, 260, 3, 3, '#6b4423'); }
     }
     for (const [px, h] of L.pipes) {                                   // white PVC "pipes" (they're cleanouts, Ron)
