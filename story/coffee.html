@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script id="ddt-fs">(function(){var st=matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches;if(st||window.top!==window||!("ontouchstart" in window))return;function go(){var d=document.documentElement;if(document.fullscreenElement||!d.requestFullscreen)return;d.requestFullscreen({navigationUI:"hide"}).then(function(){if(screen.orientation&&screen.orientation.lock)screen.orientation.lock("landscape").catch(function(){})}).catch(function(){})}addEventListener("pointerdown",go,true);addEventListener("keydown",go,true)})();</script>
 <link rel="manifest" href="../manifest.webmanifest"><meta name="theme-color" content="#2a5ab0"><link rel="icon" href="../icons/icon-192.png"><link rel="apple-touch-icon" href="../icons/apple-180.png"><meta name="mobile-web-app-capable" content="yes"><script>if ("serviceWorker" in navigator && window.top === window && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch(() => {});</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,7 +11,7 @@
   @font-face{font-family:'Press Start 2P';src:url('../assets/PressStart2P.ttf') format('truetype');font-display:block}
   html,body{margin:0;height:100%;background:#05070c;overflow:hidden;font-family:'Press Start 2P',monospace}
   #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
-  canvas{aspect-ratio:16/9;width:min(100vw,calc(100vh*16/9));image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;display:block}
+  canvas{aspect-ratio:16/9;width:min(100vw,calc(100vh*16/9));width:min(100vw,calc(100dvh*16/9));image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;display:block}
 </style>
 </head>
 <body>
