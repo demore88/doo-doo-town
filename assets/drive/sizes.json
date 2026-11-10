@@ -1,0 +1,282 @@
+{
+"tree_winter_pine": [
+43,
+84
+],
+"tree_winter_fir": [
+38,
+69
+],
+"tree_winter_maple": [
+54,
+83
+],
+"tree_winter_birch": [
+38,
+82
+],
+"tree_winter_spruce": [
+29,
+44
+],
+"tree_winter_shrub": [
+36,
+27
+],
+"shoulder_winter_0": [
+100,
+22
+],
+"shoulder_winter_1": [
+65,
+18
+],
+"shoulder_winter_2": [
+76,
+41
+],
+"tree_spring_pine": [
+42,
+84
+],
+"tree_spring_fir": [
+37,
+69
+],
+"tree_spring_maple": [
+57,
+83
+],
+"tree_spring_birch": [
+40,
+83
+],
+"tree_spring_spruce": [
+29,
+45
+],
+"tree_spring_shrub": [
+36,
+28
+],
+"shoulder_spring_0": [
+100,
+16
+],
+"shoulder_spring_1": [
+74,
+19
+],
+"shoulder_spring_2": [
+81,
+19
+],
+"tree_summer_pine": [
+42,
+84
+],
+"tree_summer_fir": [
+34,
+69
+],
+"tree_summer_maple": [
+60,
+84
+],
+"tree_summer_birch": [
+42,
+83
+],
+"tree_summer_spruce": [
+28,
+60
+],
+"tree_summer_shrub": [
+37,
+28
+],
+"shoulder_summer_0": [
+100,
+33
+],
+"shoulder_summer_1": [
+98,
+33
+],
+"shoulder_summer_2": [
+98,
+29
+],
+"tree_fall_pine": [
+40,
+84
+],
+"tree_fall_maple_r": [
+45,
+80
+],
+"tree_fall_maple_o": [
+46,
+80
+],
+"tree_fall_maple_y": [
+46,
+80
+],
+"tree_fall_birch": [
+42,
+82
+],
+"tree_fall_shrub": [
+33,
+29
+],
+"shoulder_fall_0": [
+100,
+34
+],
+"shoulder_fall_1": [
+98,
+34
+],
+"shoulder_fall_2": [
+99,
+51
+],
+"car_back_0": [
+44,
+34
+],
+"car_back_1": [
+41,
+37
+],
+"car_back_2": [
+46,
+44
+],
+"car_back_3": [
+43,
+39
+],
+"car_back_4": [
+45,
+44
+],
+"car_back_5": [
+45,
+42
+],
+"car_front_0": [
+41,
+32
+],
+"car_front_1": [
+39,
+34
+],
+"car_front_2": [
+46,
+41
+],
+"car_front_3": [
+40,
+37
+],
+"car_front_4": [
+44,
+41
+],
+"car_front_5": [
+43,
+39
+],
+"logtruck_back": [
+50,
+59
+],
+"logtruck_front": [
+54,
+59
+],
+"moose_0": [
+59,
+55
+],
+"moose_1": [
+60,
+55
+],
+"deer_0": [
+46,
+48
+],
+"deer_1": [
+47,
+48
+],
+"turkey_0": [
+56,
+30
+],
+"turkey_1": [
+56,
+30
+],
+"bldg_winter_0": [
+45,
+49
+],
+"bldg_winter_1": [
+45,
+54
+],
+"bldg_winter_2": [
+46,
+45
+],
+"bldg_winter_3": [
+44,
+44
+],
+"bldg_winter_4": [
+48,
+38
+],
+"bldg_summer_0": [
+45,
+48
+],
+"bldg_summer_1": [
+44,
+55
+],
+"bldg_summer_2": [
+45,
+43
+],
+"bldg_summer_3": [
+44,
+44
+],
+"bldg_summer_4": [
+48,
+37
+],
+"mtn_winter": [
+480,
+104
+],
+"mtn_spring": [
+480,
+103
+],
+"mtn_summer": [
+480,
+103
+],
+"mtn_fall": [
+480,
+103
+]
+}

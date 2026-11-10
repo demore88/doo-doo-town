@@ -144,6 +144,21 @@ function drive3d(choice, opts) {
   const LOGTRUCK = art(48, 40, (k, P) => { P(2, 4, 44, 30, '#111'); P(3, 5, 42, 28, '#5a3e26'); for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) { P(6 + i * 10, 8 + j * 8, 8, 7, '#c9a36a'); P(8 + i * 10, 10 + j * 8, 4, 3, '#8a6a3e'); } P(4, 30, 6, 3, '#c0392b'); P(38, 30, 6, 3, '#c0392b'); P(4, 34, 10, 6, '#111'); P(34, 34, 10, 6, '#111'); });
   const COLS = ['#c0392b', '#2e86de', '#e5e5e5', '#27ae60', '#7f8c8d', '#8e44ad', '#d35400', '#222'];
   const BACKS = COLS.map(carBack), FRONTS = COLS.map(carFront);
+  // ---------- the drawn sprite sheets (assets/drive): seasonal trees, shoulders, buildings, mountains, traffic, animals ----------
+  const SK = SNOW ? 'winter' : FALL ? 'fall' : SEA.name === 'summer' ? 'summer' : 'spring';
+  const DROOT = (window.DDT && DDT.root || '') + 'assets/drive/', DL = [];
+  const DI = n => { const i = new Image(); i.onerror = () => { i.failed = true; }; i.src = DROOT + n + '.png'; DL.push(i); return i; };
+  const T_PINES = (SK === 'fall' ? ['pine'] : ['pine', 'fir', 'spruce']).map(n => DI(`tree_${SK}_${n}`));
+  const T_LEAF = (SK === 'fall' ? ['maple_r', 'maple_o', 'maple_y'] : ['maple']).map(n => DI(`tree_${SK}_${n}`));
+  const T_BIRCH = DI(`tree_${SK}_birch`), T_SHRUB = DI(`tree_${SK}_shrub`);
+  const SHOULDER = [0, 1, 2].map(i => DI(`shoulder_${SK}_${i}`));
+  const BLDG = [0, 1, 2, 3, 4].map(i => DI(`bldg_${SNOW ? 'winter' : 'summer'}_${i}`));
+  const MTN_IMG = DI(`mtn_${SK}`);
+  const CAR_B = [0, 1, 2, 3, 4, 5].map(i => DI(`car_back_${i}`)), CAR_F = [0, 1, 2, 3, 4, 5].map(i => DI(`car_front_${i}`));
+  const LOG_B = DI('logtruck_back'), LOG_F = DI('logtruck_front');
+  const ANIM = { moose: [DI('moose_0'), DI('moose_1')], deer: [DI('deer_0'), DI('deer_1')], turkeys: [DI('turkey_0'), DI('turkey_1')] };
+  const artReady = () => DL.every(i => i.failed || (i.complete && i.naturalWidth > 0));
+  const flipC = new Map(), flipped = img => { if (!img.width) return img; let c = flipC.get(img); if (!c) { c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const k = c.getContext('2d'); k.scale(-1, 1); k.drawImage(img, -img.width, 0); flipC.set(img, c); } return c; };
   const MOOSE = art(56, 44, (k, P) => { P(10, 12, 34, 18, '#3a2416'); P(12, 30, 4, 14, '#2a180e'); P(20, 30, 4, 14, '#2a180e'); P(32, 30, 4, 14, '#2a180e'); P(40, 30, 4, 14, '#2a180e'); P(42, 8, 10, 12, '#3a2416'); P(48, 16, 6, 6, '#4a3020'); P(38, 2, 18, 4, '#d9c8a0'); P(36, 0, 3, 4, '#d9c8a0'); P(54, 0, 2, 4, '#d9c8a0'); });
   const DEER = art(40, 36, (k, P) => { P(8, 10, 24, 12, '#b88a55'); P(10, 22, 3, 14, '#8a6440'); P(28, 22, 3, 14, '#8a6440'); P(30, 2, 8, 10, '#b88a55'); P(6, 10, 4, 4, '#fff'); });
   const TURKEY = art(20, 20, (k, P) => { P(4, 6, 12, 10, '#3a2a22'); P(0, 2, 8, 14, '#5a3a22'); P(14, 2, 4, 6, '#8a5a30'); P(16, 6, 2, 3, '#c0392b'); P(7, 16, 2, 4, '#c98a3e'); P(11, 16, 2, 4, '#c98a3e'); });
@@ -172,11 +187,13 @@ function drive3d(choice, opts) {
     const treeSide = () => wet ? -1 : (Math.random() < .5 ? -1 : 1);                  // water is on the right, so the woods crowd the left
     const dense = sc.includes('notch') ? 4 : sc.includes('town') ? 10 : 6;               // the notch is wall-to-wall woods
     if (n % dense === 0) { const side = treeSide(), d = sc.includes('notch') ? rnd(1.35, 2.2) : rnd(1.4, 3.2);
-      const pick = Math.random(); put(n, pick < (sc.includes('notch') ? .8 : .55) ? PINE : pick < .93 ? MAPLES[n % MAPLES.length] : BIRCH, side * d, rnd(0.9, 1.4) * (sc.includes('notch') ? 1.3 : 1)); }
-    if (n % 16 === 0) put(n, PINE, treeSide() * rnd(3.5, 6), rnd(1.2, 1.8));
-    if (sc.includes('town') && n % 9 === 0) put(n, HOUSES_ART[n % HOUSES_ART.length], (n % 18 ? -1 : 1) * rnd(2.5, 3.4), rnd(0.9, 1.15));
+      const pick = Math.random(); put(n, pick < (sc.includes('notch') ? .8 : .55) ? T_PINES[n % T_PINES.length] : pick < .93 ? T_LEAF[n % T_LEAF.length] : T_BIRCH, side * d, rnd(0.7, 1.05) * (sc.includes('notch') ? 1.25 : 1)); }
+    if (n % 11 === 5) put(n, T_SHRUB, treeSide() * rnd(1.3, 1.9), rnd(0.55, 0.8));
+    if (n % 16 === 0) put(n, T_PINES[0], treeSide() * rnd(3.5, 6), rnd(0.95, 1.35));
+    if (sc.includes('town') && n % 9 === 0) put(n, BLDG[(n / 9 | 0) % BLDG.length], (n % 18 ? -1 : 1) * rnd(2.5, 3.4), rnd(0.85, 1.05));
     if (sc.includes('mill') && !millPut && segs[n].leg === LEGS_HERE.findIndex(q => q.scene.includes('mill')) && (n - 40) % 400 === 140) { millPut = true; put(n, MILL, 5.5, 2.2); }   // one paper mill, set back from the road
-    if (SNOW && n % 2 === 0) { put(n, BANK, -1.53 - (n % 6) * 0.02, 0.62); put(n, BANK, 1.53 + (n % 6) * 0.02, 0.62); }   // banks sit on the shoulder, off the travel lanes
+    if (SNOW && n % 2 === 0) { const b = n % 46 === 0 ? 2 : (n / 2 | 0) % 2; put(n, SHOULDER[b], -1.53 - (n % 6) * 0.02, 0.62); put(n, SHOULDER[(b + 1) % 2], 1.53 + (n % 6) * 0.02, 0.62); }   // banks sit on the shoulder, off the travel lanes
+    else if (!SNOW && n % 3 === 0) { const b = n % 39 === 0 ? 2 : (n / 3 | 0) % 2; put(n, SHOULDER[b], (n % 2 ? -1 : 1) * (1.45 + (n % 5) * 0.03), 0.5); }   // mud, grass, wildflowers, leaf piles
     if (n % 97 === 0) put(n, MAILBOX, 1.3, 0.8);
     if (n % 211 === 0) put(n, MOOSESIGN, -1.5, 1);
   }
@@ -206,11 +223,11 @@ function drive3d(choice, opts) {
   // ---------- traffic + critters ----------
   const cars = [];   // { z, off, speed, img, onc }
   function addCar(z, onc) {
-    const c = Math.floor(Math.random() * COLS.length), truck = !onc && Math.random() < MODE.trucks, sc = truck ? 1.7 : 1.4, img = onc ? FRONTS[c] : truck ? LOGTRUCK : BACKS[c];
+    const c = Math.floor(Math.random() * CAR_B.length), truck = Math.random() < MODE.trucks * (onc ? 0.5 : 1), sc = truck ? 1.6 : 1.3, img = onc ? (truck ? LOG_F : CAR_F[c]) : truck ? LOG_B : CAR_B[c];
     const lane = onc ? 0 : Math.random() < 0.65 ? 2 : 1;
     // our-way traffic is slower than us (you catch up and pass); log trucks crawl
     return { z, lane, off: LANE[lane], tgt: LANE[lane], speed: onc ? -rnd(25, 45) * MPH : (truck ? rnd(18, 24) : rnd(22, 34)) * MPH * (DRIVER === 'rod' ? 0.8 : 1),
-      img, onc, hw: img.width * sc / 320, sc, truck, blink: 0 };
+      img, onc, hw: (img.width || (truck ? 50 : 44)) * sc / 320, sc, truck, blink: 0 };
   }
   // traffic lives in a window around the van: anything that falls behind gets sent back up the road (so it never runs dry)
   const BUSY_MAX = Math.max(...LEGS_HERE.map(L => L.busy || 1));
@@ -228,12 +245,12 @@ function drive3d(choice, opts) {
   const critters = [];
   const CK = FALL ? ['peeper', 'peeper', 'moose', 'deer', 'turkeys'] : ['moose', 'deer', 'turkeys', 'moose'];
   for (let i = 0; i < MODE.crit; i++) critters.push({ seg: Math.floor(rnd(0.12, 0.92) * N), kind: CK[Math.floor(Math.random() * CK.length)], off: Math.random() < .5 ? -1.6 : 1.6, dir: 0, hit: false, snap: 0, flash: 0 });
-  const CIMG = { moose: MOOSE, deer: DEER, turkeys: TURKEY, peeper: PEEPER }, CW = { moose: 0.36, deer: 0.18, turkeys: 0.1, peeper: 0.08 },   // half-widths, matching how big they're drawn
+  const CIMG = { moose: ANIM.moose[0], deer: ANIM.deer[0], turkeys: ANIM.turkeys[0], peeper: PEEPER }, CW = { moose: 0.36, deer: 0.18, turkeys: 0.1, peeper: 0.08 },   // half-widths, matching how big they're drawn
        
         CSPD = { moose: 0.25, deer: 0.9, turkeys: 0.3, peeper: 0.35 }, PEN = { moose: 20, deer: 12, turkeys: 5, peeper: 8 };
 
   // ---------- state + input ----------
-  let wasLive = false, offT = 0, pos = 0, speed = 0, px = LANE[2], t = 0, play = 0, crashes = 0, penalty = 0, inv = 0, shake = 0, msg = '', msgT = 0, done = false, last = null, bounce = 0, skyX = 0;
+  let artOK = false, wasLive = false, offT = 0, pos = 0, speed = 0, px = LANE[2], t = 0, play = 0, crashes = 0, penalty = 0, inv = 0, shake = 0, msg = '', msgT = 0, done = false, last = null, bounce = 0, skyX = 0;
   const key = { L: 0, R: 0, U: 0, D: 0 }, touch = { L: 0, R: 0, U: 0, D: 0 };
   const KM = { arrowleft: 'L', a: 'L', arrowright: 'R', d: 'R', arrowup: 'U', w: 'U', arrowdown: 'D', s: 'D', ' ': 'D' };
   const kd = e => { if (e.key === ']') key.skip = 1; const k = KM[e.key.toLowerCase()]; if (k) { e.preventDefault(); key[k] = 1; } };
@@ -274,7 +291,7 @@ function drive3d(choice, opts) {
     function frame(ms) {
       if (done) return;
       if (last === null) last = ms;
-      const dt = Math.min(0.05, (ms - last) / 1000); last = ms; if (vanReady()) t += dt;   /* the clock doesn't start until our van's art is in */
+      const dt = Math.min(0.05, (ms - last) / 1000); last = ms; if (vanReady() && artReady()) { if (!artOK) { artOK = true; for (const c of cars) c.hw = (c.img.width || 44) * c.sc / 320; } t += dt; }   /* the clock doesn't start until the art is in */
       const live = t > 1.2;   /* hands on the wheel at GO, not before */
       if (live && !wasLive) { wasLive = true; pts.clear(); retouch(); }   /* forget any tap from before GO: you start with no fingers down */
       if (t > 2 && !helpSeen) { helpSeen = true; try { localStorage.setItem('ddt_drive_help2', '1'); } catch (e) {} }
@@ -392,7 +409,10 @@ function drive3d(choice, opts) {
       // sky
       if (!draw.sky) { draw.sky = r.createLinearGradient(0, 0, 0, HORIZON + 10); draw.sky.addColorStop(0, SEA.sky[0]); draw.sky.addColorStop(1, SEA.sky[1]); }
       r.fillStyle = draw.sky; r.fillRect(-10, -10, W + 20, HORIZON + 30);
-      const mx = ((skyX % 480) + 480) % 480; r.drawImage(MTN, -mx, HORIZON - 70); r.drawImage(MTN, 480 - mx, HORIZON - 70); r.drawImage(MTN, -480 - mx, HORIZON - 70);
+      if (MTN_IMG.width) {   // the real range, tiled with every other copy mirrored so the seams always line up
+        const mw = 380, mh = MTN_IMG.height * mw / MTN_IMG.width, my = HORIZON + 12 - mh, m2 = ((skyX % (mw * 2)) + mw * 2) % (mw * 2);
+        for (let k = -1; k < 2; k++) { const x0 = k * mw * 2 - m2; r.drawImage(MTN_IMG, x0, my, mw, mh); r.save(); r.translate(x0 + mw * 2, my); r.scale(-1, 1); r.drawImage(MTN_IMG, 0, 0, mw, mh); r.restore(); }
+      } else { const mx = ((skyX % 480) + 480) % 480; r.drawImage(MTN, -mx, HORIZON - 70); r.drawImage(MTN, 480 - mx, HORIZON - 70); r.drawImage(MTN, -480 - mx, HORIZON - 70); }
       r.fillStyle = SEA.ground; r.fillRect(-10, HORIZON + 8, W + 20, H);
       // road, far to near clipped
       const base = segAt(pos), pct = (pos % SEG) / SEG, playerY = (base.p1.y + (base.p2.y - base.p1.y) * pct);
@@ -423,7 +443,7 @@ function drive3d(choice, opts) {
       // sprites, cars, critters back to front
       const S = (img, sc, sx, sy, off, sw, clip, rot) => {
         const wpx = img.width * sc * sw / 160, hpx = img.height * sc * sw / 160, X = sx + sw * off - wpx / 2, Y = sy - hpx;
-        if (wpx < 1 || Y > H) return;
+        if (wpx < 1 || Y > H || (hpx > 190 && !rot)) return;   // anything taller than the screen is whooshing past: skip it rather than smear giant pixels
         if (rot) { r.save(); r.translate(X + wpx / 2, Y + hpx / 2); r.rotate(rot); r.drawImage(img, -wpx / 2, -hpx / 2, wpx, hpx); r.restore(); return { X, Y, w: wpx, h: hpx }; }
         const ch = clip != null ? Math.max(0, Y + hpx - clip) : 0; if (ch >= hpx || (ch > hpx * 0.45 && !rot)) return;
         const srcH = img.height * (1 - ch / hpx);
@@ -438,7 +458,8 @@ function drive3d(choice, opts) {
           if (b && c.blink > 0 && Math.floor(t * 4) % 2) { const bw = Math.max(2, b.w * 0.16), bh = Math.max(2, b.w * 0.1), bx = c.next < c.lane ? b.X - bw * 0.3 : b.X + b.w - bw * 0.7;
             r.fillStyle = '#ffb020'; r.fillRect(bx, b.Y + b.h * 0.5, bw, bh); r.fillStyle = 'rgba(255,176,32,.35)'; r.fillRect(bx - bw * 0.5, b.Y + b.h * 0.5 - bh * 0.5, bw * 2, bh * 2); } }
         for (const cr of critters) if (!cr.fly && cr.seg === sg.i && Math.abs(cr.off) < 3) {
-          S(CIMG[cr.kind], cr.kind === 'moose' ? 2.2 : 1.5, p.sx, p.sy, cr.off, p.sw, sg.clip);
+          { let im = ANIM[cr.kind] ? ANIM[cr.kind][cr.dir && !cr.snap ? Math.floor(t * 6) % 2 : 0] : CIMG[cr.kind]; if (cr.dir < 0 && ANIM[cr.kind]) im = flipped(im);   // walk cycle, facing the way it's going
+            S(im, cr.kind === 'moose' ? 2.1 : cr.kind === 'turkeys' ? 0.9 : 1.5, p.sx, p.sy, cr.off, p.sw, sg.clip); }
           if (cr.kind === 'peeper' && cr.snap > 0 && cr.flash < 0.15) S(FLASH, 1, p.sx, p.sy - p.sw * 0.1, cr.off + 0.08, p.sw, sg.clip);
         }
       }
