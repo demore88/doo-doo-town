@@ -1679,4 +1679,74 @@ GAMES.push({
   },
 });
 
+// =====================================================================
+// THAW IT OUT — the steamer. Feed the steam hose up the frozen line from the cleanout, melt the ice,
+// don't cook the pipe, and swap the bucket before the meltwater runs over.
+GAMES.push({
+  id: 'steamer', name: 'THAW IT OUT', tag: 'The frozen line · steamer up through the cleanout',
+  how: ['The line froze solid along the outside wall. You are at the cleanout with the steamer.', '◀ ▶ feeds the steam hose up the pipe (or pulls it back).', 'Hold SPACE to steam the ice in front of the nozzle.', 'Steam too long in one spot and the pipe gets soft. Watch the HEAT bar.', 'The melt runs back down into your bucket. ▼ swaps the bucket before it spills.', 'Melt every chunk of ice to open the line.'],
+  ctl: '◀ ▶ HOSE · SPACE STEAM · ▼ SWAP BUCKET',
+  phone: 'the pad moves the hose (▼ swaps the bucket), the big button steams.',
+  act: 'STEAM',
+  init(s) {
+    s.DUR = [60, 55, 50][s.diff]; s.hx = 92; s.heat = 0; s.bucket = 0; s.swap = 0; s.pantsMax = s.pants = [4, 3, 3][s.diff]; s.inv = 0; s.soft = 0; s.spill = 0;
+    const n = [3, 4, 5][s.diff]; s.ice = [];
+    let x = 150 + s.rnd() * 30;
+    for (let i = 0; i < n; i++) { const w = 18 + s.rnd() * 22; s.ice.push({ x, w, hp: 1, max: (1.4 + s.rnd() * 1.0) * (1 + s.diff * 0.15) }); x += w + 20 + s.rnd() * 40; }
+    s.drips = []; s.puffs = []; s.melted = 0;
+  },
+  update(s, dt, I) {
+    s.t += dt; const H0 = HERO(s);
+    s.inv = Math.max(0, s.inv - dt);
+    const front = s.ice.find(c => c.hp > 0);
+    const maxX = front ? front.x - 6 : 440;
+    if (s.swap > 0) { s.swap -= dt; if (s.swap <= 0) { s.bucket = 0; POP(s, 60, 196, 'FRESH BUCKET', '#7dffb0'); } }
+    else if (I.Dp || (I.D && s.bucket > 0.15)) { s.swap = 1.1 / Math.sqrt(H0.spd); SFX('splash'); }
+    const dir = (I.R ? 1 : 0) - (I.L ? 1 : 0) + (I.ptr.down && !I.A ? Math.sign(I.ptr.x - s.hx) * (Math.abs(I.ptr.x - s.hx) > 4 ? 1 : 0) : 0);
+    s.hx = clamp(s.hx + dir * 70 * H0.spd * dt, 92, maxX);
+    const steaming = (I.A || (I.ptr.down && Math.abs(I.ptr.x - s.hx) <= 4)) && s.swap <= 0;
+    // heat builds where you steam and bleeds off when you stop. Rod's steadier hands spread it out.
+    if (steaming) {
+      s.heat += dt * (0.42 + s.diff * 0.06) / H0.grip;
+      if (front && front.x - s.hx < 16) { const m = dt / front.max; front.hp -= m; s.bucket += m * 0.42 * (1 + s.diff * 0.1); if (s.rnd() < dt * 8) s.drips.push({ x: s.hx, v: 0 }); if (front.hp <= 0) { s.melted++; POP(s, front.x + front.w / 2, 120, 'CRACK!', '#9fe0ff'); SFX('drain'); } }
+      if (s.rnd() < dt * 20) s.puffs.push({ x: s.hx + 6, y: 150, l: 0.6 });
+    } else s.heat = Math.max(0, s.heat - dt * 0.38);
+    if (s.heat >= 1 && s.inv <= 0) { s.pants--; s.soft++; s.inv = 1; s.heat = 0.55; s.shake = 0.3; POP(s, s.hx, 120, "PIPE'S GOING SOFT!", '#e9665a'); }
+    if (s.bucket >= 1 && s.inv <= 0) { s.pants--; s.spill++; s.inv = 1; s.bucket = 0.3; s.shake = 0.3; SFX('splash'); POP(s, 60, 190, 'BUCKET SPILLED!', '#e9665a'); }
+    for (const d of s.drips) { d.v += dt * 140; d.x -= d.v * dt; } s.drips = s.drips.filter(d => d.x > 74);
+    for (const p of s.puffs) { p.l -= dt; p.y -= dt * 30; p.x += dt * 10; } s.puffs = s.puffs.filter(p => p.l > 0);
+    FX(s, dt);
+    if (s.pants <= 0) s.end = { win: false, stars: 0, line: s.soft >= s.spill ? 'Cooked the pipe. Now it needs a new one.' : 'Meltwater all over the basement floor.' };
+    else if (!front) s.end = { win: true, stars: stars3(s.soft + s.spill === 0 && s.t < s.DUR * 0.7, s.soft + s.spill <= 1), line: s.soft + s.spill ? 'Line is open. A little messy.' : 'Line is open. Not a drop on the floor.' };
+    else if (s.t >= s.DUR) s.end = { win: false, stars: 0, line: 'Still frozen. Doreen is pouring hot water down it again.' };
+  },
+  draw(s) {
+    R(0, 0, W, H, '#3b4048');
+    R(0, 0, 470, 240, '#5d5650'); for (let y = 10; y < 240; y += 14) for (let x = (y / 14 % 2) * 14; x < 470; x += 28) R(x, y, 26, 12, '#6a625b');   // basement block wall
+    R(470, 0, 10, 240, '#e8eef4'); R(400, 0, 70, 240, 'rgba(180,210,235,.18)');   // the cold outside wall
+    for (let i = 0; i < 12; i++) R(404 + (i * 37) % 60, (i * 53) % 230, 2, 2, '#e8f4ff');
+    R(0, 240, W, 30, '#4a4038');
+    // the kitchen sink upstairs and the drain running down to the cleanout
+    R(410, 18, 60, 10, '#c9ccd1'); R(426, 28, 28, 14, '#9aa0a6'); R(436, 42, 8, 108, '#e8e4d8'); R(436, 42, 3, 108, '#fff');
+    R(70, 144, 374, 16, '#e8e4d8'); R(70, 144, 374, 4, '#fff'); R(70, 157, 374, 3, '#b9b4a8');   // the line
+    R(60, 140, 14, 24, '#ddd'); R(62, 160, 10, 4, '#2c8a4a');   // cleanout
+    // ice inside the pipe
+    for (const c of s.ice) if (c.hp > 0) { const a = 0.35 + 0.65 * c.hp; g.globalAlpha = a; R(c.x, 147, c.w * (0.4 + 0.6 * c.hp), 10, '#bfe6ff'); R(c.x + 2, 148, 4, 8, '#ffffff'); g.globalAlpha = 1; }
+    // the hose and nozzle
+    R(74, 151, s.hx - 74, 3, '#2a2a2e'); R(s.hx - 2, 149, 8, 7, '#d0a03a');
+    for (const p of s.puffs) { g.globalAlpha = Math.max(0, p.l / 0.6) * 0.8; C(p.x, p.y, 4 + (0.6 - p.l) * 10, '#f4f6f8'); g.globalAlpha = 1; }
+    for (const d of s.drips) R(d.x, 155, 3, 2, '#7fc4ff');
+    // the bucket under the cleanout
+    const bx = 44, by = 196;
+    if (s.swap > 0) { T('SWAP!', bx + 16, by - 8, '#f7c418', 6, 'center'); g.globalAlpha = 0.4; }
+    R(bx, by, 32, 28, '#e8762b'); R(bx + 2, by + 28 - 26 * Math.min(1, s.bucket), 28, 26 * Math.min(1, s.bucket), '#7fc4ff'); R(bx - 2, by - 2, 36, 3, '#c45f1e'); g.globalAlpha = 1;
+    if (s.bucket > 0.8 && Math.floor(s.t * 6) % 2) T('!', bx + 16, by - 18, '#e9665a', 10, 'center');
+    if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) SPR(s.hero || 'rod', 6, 104, 240);
+    DRAWFX(s);
+    HUD(s, `THAW IT OUT  ${s.melted}/${s.ice.length}`, s.DUR - s.t); PANTS(s, 6, 22);
+    BAR(330, 26, 140, 6, s.heat, s.heat > 0.8 ? '#e9665a' : '#f39c12', 'PIPE HEAT');
+    BAR(330, 44, 140, 6, s.bucket, s.bucket > 0.8 ? '#e9665a' : '#7fc4ff', 'BUCKET');
+  },
+});
+
 if (typeof module !== 'undefined') module.exports = { GAMES, HEROES, srSolid: typeof srSolid !== 'undefined' ? srSolid : null, setCtx: c => { g = c; } };

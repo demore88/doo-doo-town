@@ -21,7 +21,7 @@ const TOWNS = {
 
 // physical games go better with Matt leading; skill games go better with Rod leading
 const PHYS = ['bubble', 'dodge', 'sprinkler', 'haul', 'stairs', 'crawl', 'dogs', 'pull', 'overflow', 'pour', 'locate'];
-const SKILL = ['cable', 'camera', 'septic', 'detective', 'jetter', 'gag', 'claw', 'flush', 'poop'];
+const SKILL = ['steamer', 'cable', 'camera', 'septic', 'detective', 'jetter', 'gag', 'claw', 'flush', 'poop'];
 
 const CALLS = [
 // ---------------- JANUARY ----------------
@@ -32,7 +32,7 @@ const CALLS = [
     intro: [['CUST', "It just stopped. The water sits there and never goes down."], ['ROD', 'Line runs along the outside wall. It froze.'], ['CUST', "I've been pouring hot water down it all morning."], ['MATT', "Yeah... that won't do it."]],
     tool: { q: "Frozen kitchen line. How do we attack it?", opts: ['FROM BELOW: STEAMER UP THROUGH THE CLEANOUT', 'MORE HOT WATER DOWN THE SINK', 'CABLE IT FROM THE SINK'], right: 0,
       good: 'Steam hose up through the cleanout. Bucket underneath to catch it.', bad: "Hot water floats on cold water. It'll never reach the ice." },
-    roomArt: 'bg_kitchen2', game: 'cable', lead: 'rod',
+    roomArt: 'bg_kitchen2', game: 'steamer', lead: 'rod',
     culprit: [['MATT', "Steam's through the ice. Got a hole open. Water's coming down into the bucket."], ['ROD', 'Cap the cleanout. Now run the hot water in the sink.'],
               ['CUST', "That's what I was doing all morning!"], ['ROD', "Before, your hot water just sat on top of the cold water in the pipe. Now there's a hole, so the hot water passes right through the freeze-up and melts the rest."],
               ['MATT', "Let it run hot for a good ten minutes."]],
@@ -324,7 +324,7 @@ const CALLS = [
     ring: "First cold night and nothing drains. Again. Like last year.",
     intro: [['ROD', 'Line has a belly. Water sits and freezes.'], ['CUST', 'A belly?'], ['MATT', 'A sag in the pipe. Water naps there.']],
     tool: { q: 'Frozen belly in the line. Gear?', opts: ['STEAMER + CABLE', 'SALT', 'WAIT FOR SPRING'], right: 0, good: 'Thaw it and clear it.', bad: "It'll back up first." },
-    game: 'cable', lead: 'rod', culprit: [['ROD', "Thawed. Get that belly fixed this summer."], ['CUST', 'Will you come back?'], ['MATT', 'Every year, apparently.']], tip: 'Lines that freeze every year need a fix, not a thaw.', pay: 400 },
+    game: 'steamer', lead: 'rod', culprit: [['ROD', "Thawed. Get that belly fixed this summer."], ['CUST', 'Will you come back?'], ['MATT', 'Every year, apparently.']], tip: 'Lines that freeze every year need a fix, not a thaw.', pay: 400 },
   // story job: the grease highway (finished basement, no cleanout, two buckets, one medium shirt)
   { id: 'grease-highway', title: 'THE GREASE HIGHWAY', story: true, town: 'BERLIN', addr: 'Norway St', cust: { name: 'DEB', seed: 335 }, ext: 'house', room: 'basement', window: 110, extra: 'tightShirt', stink: true, roomArt: 'bg_basement4',
     ring: "Kitchen sink's backed up. I plunged it. I Drano'd it. Nothing.",

@@ -16,11 +16,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794273040"></script>
-<script src="../js/calls.js?v=1794273040"></script>
-<script src="../js/placeholders.js?v=1794273040"></script>
-<script src="../js/music.js?v=1794273040"></script>
-<script src="../js/sfx.js?v=1794273040"></script>
+<script src="../js/state.js?v=1794273268"></script>
+<script src="../js/calls.js?v=1794273268"></script>
+<script src="../js/placeholders.js?v=1794273268"></script>
+<script src="../js/music.js?v=1794273268"></script>
+<script src="../js/sfx.js?v=1794273268"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -444,9 +444,9 @@ SCENES.payday = async () => {
     const rows = [[broke ? 'NOT FIXED' : JS.retries ? `FIXED (TRY ${JS.retries + 1})` : 'FIXED', broke ? '#e9665a' : '#7dffb0'], [broke ? 'NO CHARGE' : `${'*'.repeat(stars)}${'-'.repeat(3 - stars)}`, '#f7c418'],
       [parts ? `+$${pay}  (INCL. $${parts} PARTS)` : `+$${pay}`, '#7dffb0'], [`${rep >= 0 ? '+' : ''}${rep} REPUTATION`, rep >= 0 ? '#7dffb0' : '#e9665a'],
       [`${hp} HEALTH · ${sta} STAMINA`, '#9fb3d9'], [JS.toolRight ? 'RIGHT GEAR FIRST TRY' : 'WRONG GEAR FIRST', JS.toolRight ? '#7dffb0' : '#e9665a']];
-    rows.forEach(([t, c], i) => T(t, 240, 92 + i * 14, c, 6, 'center'));
-    wrap(JOB.tip.toUpperCase(), 258, 5).slice(0, 4).forEach((l, i) => T(l, 240, 180 + i * 9, '#f7c418', 5, 'center'));
-    T('TAP TO CONTINUE', 240, 226, '#fff', 6, 'center');
+    rows.forEach(([t, c], i) => T(t, 240, 88 + i * 13, c, 6, 'center'));
+    wrap(JOB.tip.toUpperCase(), 258, 5).slice(0, 3).forEach((l, i) => T(l, 240, 170 + i * 9, '#f7c418', 5, 'center'));
+    T('TAP TO CONTINUE', 240, 213, '#fff', 6, 'center');
   };
   await fadeIn(400); SND.ding();
   await cancellable(res => { st.waitTap = res; });
