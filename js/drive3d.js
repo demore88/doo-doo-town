@@ -461,10 +461,10 @@ function drive3d(choice, opts) {
       r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(W - 78, 26, 72, 18); r.fillStyle = speed > TOP * 0.97 ? '#f7c418' : '#7bd65b'; r.textAlign = 'right'; r.fillText(mph + ' MPH', W - 10, 35); r.textAlign = 'left';
       if (crashes) { r.fillStyle = '#e9665a'; r.textAlign = 'right'; r.fillText('CRASHES ' + crashes, W - 6, 52); r.textAlign = 'left'; }
       // phone buttons (also show what the keys do)
-      if (TOUCH) {   // phone: brake in both corners, gas = both thumbs
+      if (true) {   // brake in both corners, gas = both thumbs (keyboard: ▲)
         r.fillStyle = brake ? 'rgba(233,102,90,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40); r.fillRect(W - 96, H - 46, 92, 40);
         r.fillStyle = '#fff'; r.textAlign = 'center'; r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', 50, H - 26); r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', W - 50, H - 26);
-        if (gas) { r.fillStyle = '#7bd65b'; r.fillText('GAS!', 240, H - 26); } r.textAlign = 'left';
+        if (gas) { r.fillStyle = '#7bd65b'; r.textAlign = 'right'; r.fillText('GAS!', W - 10, crashes ? 66 : 52); } r.textAlign = 'left';
       } else {
         r.fillStyle = gas ? 'rgba(123,214,91,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40);
         r.fillStyle = brake ? 'rgba(233,102,90,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(W - 96, H - 46, 92, 40);
