@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="../manifest.webmanifest"><meta name="theme-color" content="#2a5ab0"><link rel="icon" href="../icons/icon-192.png"><link rel="apple-touch-icon" href="../icons/apple-180.png"><meta name="mobile-web-app-capable" content="yes"><script>if ("serviceWorker" in navigator && window.top === window && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch(() => {});</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Doo Doo Town — Mini-Game Arcade</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  @font-face{font-family:'Press Start 2P';src:url('../assets/PressStart2P.ttf') format('truetype');font-display:block}
+  html,body{margin:0;height:100%;background:#0b0e15;color:#fff;font-family:'Press Start 2P',monospace;overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  #stage{position:relative;aspect-ratio:16/9;width:min(100vw,calc(100vh*16/9))}
+  canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;touch-action:none}
+  .scr{position:absolute;inset:0;display:none;overflow:auto;background:#0b0e15f2;font-size:clamp(7px,1.15vw,13px);line-height:1.9}
+  .scr.on{display:block}
+  h1{color:#f7c418;font-size:2em;text-align:center;margin:3% 0 .4em;text-shadow:3px 3px 0 #2c6cd6}
+  .sub{text-align:center;color:#9fb3d9;margin-bottom:1.2em}
+  .row{display:flex;justify-content:center;gap:.8em;margin:.6em 0 1.2em;flex-wrap:wrap}
+  .pill,.btn{font:inherit;background:#10151f;color:#fff;border:3px solid #f7c418;padding:.55em 1em;cursor:pointer;box-shadow:3px 3px 0 #000}
+  .pill.on{background:#f7c418;color:#10151f}
+  .btn:hover,.btn:focus-visible,.pill:hover,.card:hover,.card:focus-visible{background:#2c6cd6;outline:none}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(15em,1fr));gap:.8em;padding:0 4% 6%}
+  .card{font:inherit;text-align:left;background:#151c2b;color:#fff;border:3px solid #3a4a6a;padding:.8em;cursor:pointer;box-shadow:3px 3px 0 #000}
+  .card b{color:#f7c418;display:block;margin-bottom:.3em}
+  .card i{font-style:normal;color:#9fb3d9;font-size:.85em;display:block}
+  .card .st{color:#f7c418;margin-top:.4em}
+  .box{max-width:44em;margin:4% auto;background:#10151f;border:4px solid #f7c418;box-shadow:6px 6px 0 #000;padding:3% 4%}
+  .box h2{color:#f7c418;margin:0 0 .3em;font-size:1.5em}
+  .box .tag{color:#9fb3d9;margin-bottom:1em}
+  .box ul{padding-left:1.2em;margin:.6em 0}
+  .box li{margin:.35em 0}
+  .ctl{color:#7bd65b;margin:1em 0}
+  .big{font-size:2.2em;text-align:center;margin:.2em 0}
+  .stars{font-size:2em;text-align:center;color:#f7c418;letter-spacing:.2em}
+  #pad{position:absolute;inset:0;pointer-events:none;display:none}
+  #pad.on{display:block}
+  #pad button{pointer-events:auto;position:absolute;font:inherit;font-size:clamp(10px,2.4vw,22px);background:rgba(16,21,31,.35);color:#fff;border:2px solid rgba(255,255,255,.5);border-radius:10px;width:9%;aspect-ratio:1;touch-action:none}
+  #pad button.dn{background:rgba(247,196,24,.6)}
+  #pad .A{right:3%;bottom:8%;width:15%;border-radius:50%;border-color:#f7c418;font-size:clamp(8px,1.6vw,16px)}
+  #pad.nodp .dp{display:none}
+  #pad.lr .dp[data-k=U],#pad.lr .dp[data-k=D],#pad.ud .dp[data-k=L],#pad.ud .dp[data-k=R]{display:none}
+  #pad.lr .dp[data-k=L]{left:3%;bottom:8%;width:12%}#pad.lr .dp[data-k=R]{left:18%;bottom:8%;width:12%}
+  #top{position:absolute;top:.4%;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:5}
+  #top button{font:inherit;font-size:clamp(5px,.8vw,9px);background:#10151fcc;color:#fff;border:1px solid #9fb3d9;padding:.35em .55em;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+  <canvas id="c" width="1440" height="810"></canvas>
+  <div id="pad">
+    <button class="dp" data-k="L" style="left:2%;bottom:18%">◀</button><button class="dp" data-k="R" style="left:22%;bottom:18%">▶</button>
+    <button class="dp" data-k="U" style="left:12%;bottom:34%">▲</button><button class="dp" data-k="D" style="left:12%;bottom:2%">▼</button>
+    <button data-k="A" class="A" id="actbtn">GO</button>
+  </div>
+  <div id="top"><button id="quit" style="display:none">✕ QUIT</button><button id="padbtn">PAD</button><button id="snd">♪ OFF</button></div>
+
+  <div class="scr on" id="menu">
+    <h1>MINI-GAME ARCADE</h1>
+    <div class="sub">DOO DOO TOWN THE GAME! · EVERY JOB SKILL, ONE AT A TIME</div>
+    <div class="row"><button class="btn" id="home">&lt; MAIN MENU</button></div>
+    <div class="row" id="diffs"><button class="pill" data-d="0">EASY</button><button class="pill on" data-d="1">NORMAL</button><button class="pill" data-d="2">HARD</button></div>
+    <div class="row" id="heroes"><button class="pill" data-h="rod">PLAY AS ROD</button><button class="pill" data-h="matt">PLAY AS MATT</button></div>
+    <div class="grid" id="grid"></div>
+  </div>
+  <div class="scr" id="intro"><div class="box" id="introbox"></div></div>
+  <div class="scr" id="result"><div class="box" id="resbox"></div></div>
+</div></div>
+<audio id="music" src="../assets/doo_doo_town.mp3" loop preload="auto"></audio>
+<script src="../js/state.js"></script>
+<script src="../js/sfx.js"></script>
+<script src="games.js"></script>
+<script>
+const cv = document.getElementById('c'); g = cv.getContext('2d'); const SCALE = 3; g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
+const $ = s => document.querySelector(s);
+const DIFF_K = [0.85, 1, 1.2], DIFF_N = ['EASY', 'NORMAL', 'HARD'];
+let diff = 1, cur = null, s = null, phase = 'menu', readyT = 0, last = 0, soundOn = false;
+let hero = DDT.param('lead') === 'matt' ? 'matt' : DDT.param('lead') === 'rod' ? 'rod' : ((DDT.get() || {}).arcadeHero || 'matt');
+DDT.root = '../';
+// EMBED MODE: arcade/index.html?play=<id>&diff=<0-2>&ret=<url> plays one game as part of a job, then hands back.
+const EMBED = DDT.param('play');
+if (EMBED && DDT.param('diff') !== null) diff = +DDT.param('diff');
+const store = { get(k) { try { return JSON.parse(localStorage.getItem('ddt_' + k)); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem('ddt_' + k, JSON.stringify(v)); } catch (e) {} } };
+
+// ---------- input ----------
+const held = { L: 0, R: 0, U: 0, D: 0, A: 0 }, edge = { L: 0, R: 0, U: 0, D: 0, A: 0 };
+const ptr = { x: 0, y: 0, down: false, clicked: false };
+const KEYS = { arrowleft: 'L', a: 'L', arrowright: 'R', d: 'R', arrowup: 'U', w: 'U', arrowdown: 'D', s: 'D', ' ': 'A', enter: 'A', z: 'A', x: 'A', j: 'A', k: 'A' };   // SPACE is the action key everywhere
+addEventListener('keydown', e => {
+  const k = KEYS[e.key.toLowerCase()];
+  if (e.key === 'Escape' && phase === 'play') return quit();
+  if (!k || phase !== 'play' && phase !== 'ready') return;
+  e.preventDefault(); if (!e.repeat) edge[k] = 1; held[k] = 1;
+});
+addEventListener('keyup', e => { const k = KEYS[e.key.toLowerCase()]; if (k) held[k] = 0; });
+addEventListener('blur', () => { for (const k in held) held[k] = 0; ptr.down = false; });
+function toCanvas(e) { const b = cv.getBoundingClientRect(); return [(e.clientX - b.left) / b.width * W, (e.clientY - b.top) / b.height * H]; }
+cv.addEventListener('pointerdown', e => { [ptr.x, ptr.y] = toCanvas(e); ptr.down = true; ptr.clicked = true; try { cv.setPointerCapture(e.pointerId); } catch (_) {} });
+cv.addEventListener('pointermove', e => { if (ptr.down) [ptr.x, ptr.y] = toCanvas(e); });
+cv.addEventListener('pointerup', () => ptr.down = false); cv.addEventListener('pointercancel', () => ptr.down = false);
+document.querySelectorAll('#pad button').forEach(b => {
+  const k = b.dataset.k;
+  b.addEventListener('pointerdown', e => { e.preventDefault(); held[k] = 1; edge[k] = 1; b.classList.add('dn'); try { b.setPointerCapture(e.pointerId); } catch (_) {} });
+  const up = () => { held[k] = 0; b.classList.remove('dn'); };
+  b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+});
+let coarse = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+let padOn = coarse;
+addEventListener('touchstart', () => { if (!coarse) { coarse = true; padOn = true; showPad(); } }, { passive: true });
+$('#home').onclick = () => { location.href = EMBED ? DDT.back('play.html') : '../index.html'; };
+$('#padbtn').onclick = () => { padOn = !padOn; showPad(); };
+function showPad() {
+  const G = cur != null ? GAMES[cur] : null;
+  $('#pad').classList.toggle('on', padOn && (phase === 'play' || phase === 'ready') && !(G && G.pad === false));
+  $('#pad').classList.toggle('nodp', !!(G && G.dpad === false)); $('#pad').classList.toggle('lr', !!(G && G.dpad === 'lr')); $('#pad').classList.toggle('ud', !!(G && G.dpad === 'ud'));
+  $('#actbtn').textContent = (G && G.act) || 'GO'; $('#actbtn').style.display = G && G.act === null ? 'none' : '';
+  $('#padbtn').textContent = padOn ? 'PAD ON' : 'PAD';
+}
+
+// ---------- sound ----------
+let ac = null;
+function beep(f, d, type = 'square', v = 0.05, slide = 0) {
+  if (!soundOn) return;
+  try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), gg = ac.createGain(), t = ac.currentTime;
+    o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.linearRampToValueAtTime(f + slide, t + d);
+    gg.gain.setValueAtTime(v, t); gg.gain.exponentialRampToValueAtTime(0.0001, t + d); o.connect(gg).connect(ac.destination); o.start(t); o.stop(t + d); } catch (e) {}
+}
+const music = $('#music'); music.volume = 0.35;
+$('#snd').onclick = () => { soundOn = !soundOn; $('#snd').textContent = soundOn ? '♪ ON' : '♪ OFF'; if (soundOn) music.play().catch(() => {}); else music.pause(); };
+
+// ---------- menu ----------
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function buildGrid() {
+  $('#grid').innerHTML = '';
+  GAMES.forEach((G, i) => {
+    const best = store.get(G.id + '_' + diff) || 0;
+    const b = document.createElement('button'); b.className = 'card';
+    b.innerHTML = `<b>${i + 1}. ${G.name}</b><i>${G.tag}</i><div class="st">${'★'.repeat(best)}${'☆'.repeat(3 - best)}</div>`;
+    b.onclick = () => openIntro(i); $('#grid').appendChild(b);
+  });
+}
+function heroPills() { document.querySelectorAll('#heroes .pill').forEach(q => q.classList.toggle('on', q.dataset.h === hero)); }
+document.querySelectorAll('#heroes .pill').forEach(p => p.onclick = () => { hero = p.dataset.h; heroPills(); try { const sv = DDT.get(); sv.arcadeHero = hero; DDT.save(sv); } catch (e) {} });
+heroPills();
+document.querySelectorAll('#diffs .pill').forEach(p => p.onclick = () => { diff = +p.dataset.d; document.querySelectorAll('#diffs .pill').forEach(q => q.classList.toggle('on', q === p)); buildGrid(); });
+function screen(id) { document.querySelectorAll('.scr').forEach(x => x.classList.toggle('on', x.id === id)); }
+function openIntro(i) {
+  cur = i; const G = GAMES[i]; phase = 'intro'; screen('intro'); $('#quit').style.display = 'none'; showPad();
+  const HS = HEROES[hero];
+  $('#introbox').innerHTML = `<h2>${G.name}</h2><div class="tag">${G.tag} · ${DIFF_N[diff]}</div><ul>${G.how.map(h => `<li>${h}</li>`).join('')}</ul>
+    <div class="ctl" style="color:#f7c418">YOU'RE PLAYING AS ${HS.name}: ${HS.blurb}</div>
+    <div class="ctl">KEYBOARD: ${G.ctl}<br>PHONE: ${G.phone || (G.pad === false ? 'tap the game.' : 'the pad on the left moves, the big button is ' + (G.act || 'GO') + '.')}</div>
+    <div class="row"><button class="btn" id="go">START &gt;</button><button class="btn" id="back">ALL GAMES</button></div>`;
+  $('#go').onclick = start; $('#back').onclick = toMenu; $('#go').focus();
+  if (EMBED) { $('#back').style.display = 'none'; const j = DDT.param('job'); if (j) $('#introbox').insertAdjacentHTML('afterbegin', `<div class="tag" style="color:#f7c418">ON THE JOB: ${j}</div>`); }
+}
+function toMenu() { phase = 'menu'; screen('menu'); $('#quit').style.display = 'none'; showPad(); buildGrid(); }
+function quit() { openIntro(cur); }
+$('#quit').onclick = quit;
+function start() {
+  const G = GAMES[cur];
+  s = { hero, H: HEROES[hero], diff, k: DIFF_K[diff], rnd: rng((Date.now() ^ (cur * 7919)) >>> 0), t: 0, shake: 0, room: DDT.param('room') || '', camera: DDT.param('cam') === '1', item: DDT.param('item') || '' };   // room: kitchen = black grease, not brown
+  G.init(s); if (DDT.param('boots') === '1' && s.pantsMax) { s.pantsMax++; s.pants++; }   // boots or waders: one more pair of pants in the messy games
+  for (const k in held) { held[k] = 0; edge[k] = 0; } ptr.down = false; ptr.clicked = false;
+  phase = 'ready'; readyT = 1.6; screen(''); $('#quit').style.display = ''; showPad();
+}
+function finish() {
+  const G = GAMES[cur], e = s.end; phase = 'result'; showPad();
+  const key = G.id + '_' + diff, prev = store.get(key) || 0; if (e.win && e.stars > prev) store.set(key, e.stars);
+  if (e.win) { beep(523, .12); setTimeout(() => beep(659, .12), 120); setTimeout(() => beep(784, .25), 240); } else { beep(196, .4, 'sawtooth', .05, -80); }
+  $('#resbox').innerHTML = `<div class="big" style="color:${e.win ? '#7bd65b' : '#e9665a'}">${e.win ? 'JOB DONE!' : 'NOT THIS TIME'}</div>
+    <div class="stars">${e.win ? '★'.repeat(e.stars) + '☆'.repeat(3 - e.stars) : '☆☆☆'}</div>
+    <p style="text-align:center">${e.line}</p>
+    <div class="row"><button class="btn" id="again">RETRY</button>${cur < GAMES.length - 1 ? '<button class="btn" id="next">NEXT GAME &gt;</button>' : ''}<button class="btn" id="all">ALL GAMES</button></div>`;
+  screen('result'); $('#quit').style.display = 'none';
+  $('#again').onclick = start; $('#all').onclick = toMenu; if ($('#next')) $('#next').onclick = () => openIntro(cur + 1);
+  $('#again').focus();
+  if (EMBED) {
+    store.set('mg', { id: G.id, win: !!e.win, stars: e.win ? e.stars : 0, at: Date.now() });
+    $('#resbox .row').innerHTML = '<button class="btn" id="cont">CONTINUE &gt;</button>';
+    $('#cont').onclick = () => { location.href = DDT.back('play.html'); }; $('#cont').focus();
+  }
+}
+
+// ---------- loop ----------
+let prevShake = 0, prevPants = null;
+function frame(ms) {
+  g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
+  const dt = Math.min(1 / 30, (ms - last) / 1000 || 0); last = ms;
+  if (phase === 'ready' || phase === 'play' || phase === 'result') {
+    const G = GAMES[cur];
+    if (phase === 'play') {
+      const I = { L: held.L, R: held.R, U: held.U, D: held.D, A: held.A, Lp: edge.L, Rp: edge.R, Up: edge.U, Dp: edge.D, Ap: edge.A, ptr: { ...ptr } };
+      for (const k in edge) edge[k] = 0; ptr.clicked = false;
+      if (I.Ap) beep(880, .03, 'square', .025);
+      G.update(s, dt, I);
+      if ((s.shake || 0) > prevShake + 0.01) beep(110, .18, 'sawtooth', .06, -40);
+      prevShake = s.shake || 0;
+      if (s.end) finish();
+    } else if (phase === 'ready') { readyT -= dt; for (const k in edge) edge[k] = 0; ptr.clicked = false; if (readyT <= 0) { phase = 'play'; beep(1046, .1); } }
+    g.save();
+    if (s.shake > 0) { s.shake = Math.max(0, s.shake - dt); g.translate((Math.random() - .5) * 6, (Math.random() - .5) * 6); }
+    G.draw(s, {}); g.restore();
+    if (phase === 'ready') { R(0, 110, W, 50, 'rgba(16,21,31,.85)'); T(readyT > 0.8 ? 'GET READY' : 'GO!', 240, 135, '#f7c418', 16, 'center'); }
+  } else { R(0, 0, W, H, '#0b0e15'); }
+  requestAnimationFrame(frame);
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden && phase === 'play') { for (const k in held) held[k] = 0; openIntro(cur); } });
+
+// ---------- boot ----------
+const load = (k, src) => new Promise(r => { const i = new Image(); i.onload = () => { IMG[k] = i; r(); }; i.onerror = r; i.src = src; });
+Promise.all([load('matt', '../assets/matt_dance.png'), load('rod', '../assets/rod_dance.png'), load('van', '../assets/van_left.png'),
+  document.fonts ? document.fonts.load('8px "Press Start 2P"').catch(() => {}) : 0]).then(() => {
+    buildGrid(); requestAnimationFrame(frame);
+    if (EMBED) { const i = GAMES.findIndex(x => x.id === EMBED); if (i >= 0) openIntro(i); $('#home').textContent = '< BACK'; }
+    if (DDT.param('lead')) $('#heroes').style.display = 'none';
+  });
+showPad();
+</script>
+</body>
+</html>

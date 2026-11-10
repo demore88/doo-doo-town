@@ -1,0 +1,252 @@
+// =====================================================================
+// PLACEHOLDER ART — procedural backdrops, customers and portraits.
+// Swap any of these for real pixel art later (480x270 backgrounds, 80x80 portraits).
+// Needs the engine globals: g, W, H, R, E, T.
+// =====================================================================
+function srand(seed) { let s = seed >>> 0 || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+const pick = (r, a) => a[Math.floor(r() * a.length)];
+const SKIN = ['#f1c9a5', '#e0ac85', '#c68863', '#9a6544', '#6e4630', '#f6d7bd'];
+const HAIR = ['#2a1d14', '#5a3a22', '#8a5a2e', '#c9a050', '#d9d4ca', '#7a2e1e', '#111'];
+const SHIRT = ['#2c6cd6', '#c0392b', '#2e8a3a', '#7a2d5a', '#d08a30', '#4a4a52', '#2b6f7a', '#8a6a3a'];
+function season(month) { const n = DDT.seasonPal(month).name; return n === 'winter' || n === 'thaw' ? 'winter' : n === 'fall' || n === 'early fall' ? 'fall' : 'summer'; }
+function placeholderTag() { T('PLACEHOLDER ART', 474, 26, 'rgba(255,255,255,.35)', 5, 'right', false); }
+
+// ---------- customers ----------
+function custLook(seed) {
+  const r = srand(seed * 9973 + 7);
+  return { skin: pick(r, SKIN), hair: pick(r, HAIR), shirt: pick(r, SHIRT), style: Math.floor(r() * 5), glasses: r() < 0.35, beard: r() < 0.3, pants: pick(r, ['#2a3346', '#4a3a2a', '#3a3a3a', '#5a6a7a']) };
+}
+// small standing customer, feet at (x, y)
+function customer(x, y, seed, s = 2, mood = 'normal') {
+  const L = custLook(seed), t = performance.now() / 1000, j = mood === 'upset' ? Math.round(Math.sin(t * 16)) : 0;
+  g.save(); g.translate(Math.round(x + j), Math.round(y)); g.scale(s, s);
+  R(-6, -14, 5, 14, L.pants); R(1, -14, 5, 14, L.pants); R(-7, -1, 6, 2, '#222'); R(1, -1, 6, 2, '#222');
+  R(-7, -28, 14, 15, L.shirt); R(-10, -27, 3, 12, L.shirt); R(7, -27, 3, 12, L.shirt);
+  if (mood === 'upset') { R(-11, -36, 3, 10, L.shirt); R(8, -36, 3, 10, L.shirt); }
+  R(-5, -40, 10, 12, L.skin);
+  if (L.style === 1) R(-6, -42, 12, 4, L.hair);
+  if (L.style === 2) { R(-6, -42, 12, 4, L.hair); R(-7, -40, 3, 14, L.hair); R(4, -40, 3, 14, L.hair); }
+  if (L.style === 3) { R(-6, -42, 12, 4, L.hair); R(-3, -46, 6, 4, L.hair); }
+  if (L.style === 4) { R(-6, -43, 12, 5, '#c0392b'); R(-9, -39, 4, 2, '#c0392b'); }
+  if (L.beard) R(-5, -32, 10, 4, L.hair);
+  R(-3, -36, 2, 2, '#1a1a1a'); R(1, -36, 2, 2, '#1a1a1a');
+  if (L.glasses) { g.strokeStyle = '#222'; g.lineWidth = 0.6; g.strokeRect(-4.5, -37.5, 4, 3); g.strokeRect(0.5, -37.5, 4, 3); }
+  g.restore();
+}
+// 80x80 portrait canvas for the dialog box
+const _ports = {};
+function custPortrait(seed, mood = 'normal') {
+  const key = seed + mood; if (_ports[key]) return _ports[key];
+  const L = custLook(seed), c = document.createElement('canvas'); c.width = c.height = 40; const k = c.getContext('2d');
+  const r = (x, y, w, h, col) => { k.fillStyle = col; k.fillRect(x, y, w, h); };
+  r(0, 0, 40, 40, '#2a3346');
+  r(4, 32, 32, 8, L.shirt); r(16, 28, 8, 5, L.skin);
+  r(11, 9, 18, 21, L.skin); r(9, 17, 2, 5, L.skin); r(29, 17, 2, 5, L.skin);
+  if (L.style === 1) r(10, 7, 20, 5, L.hair);
+  if (L.style === 2) { r(10, 7, 20, 5, L.hair); r(8, 10, 4, 22, L.hair); r(28, 10, 4, 22, L.hair); }
+  if (L.style === 3) { r(10, 7, 20, 5, L.hair); r(15, 3, 10, 5, L.hair); }
+  if (L.style === 4) { r(9, 6, 22, 6, '#c0392b'); r(5, 10, 8, 3, '#c0392b'); }
+  if (L.style === 0) r(12, 9, 16, 2, '#00000022');
+  if (L.beard) { r(11, 24, 18, 7, L.hair); r(13, 30, 14, 3, L.hair); }
+  const eye = '#1a1a1a';
+  if (mood === 'happy') { r(14, 18, 4, 1, eye); r(22, 18, 4, 1, eye); r(16, 25, 8, 2, '#7a3030'); }
+  else if (mood === 'upset') { r(15, 18, 2, 3, eye); r(23, 18, 2, 3, eye); r(13, 15, 5, 1, L.hair === '#d9d4ca' ? '#999' : L.hair); r(22, 15, 5, 1, L.hair === '#d9d4ca' ? '#999' : L.hair); r(18, 24, 4, 4, '#46141a'); }
+  else { r(15, 18, 2, 2, eye); r(23, 18, 2, 2, eye); r(17, 25, 6, 1, '#7a3030'); }
+  if (L.glasses) { k.strokeStyle = '#222'; k.lineWidth = 1; k.strokeRect(13.5, 16.5, 6, 5); k.strokeRect(20.5, 16.5, 6, 5); }
+  r(19, 20, 2, 3, '#00000022');
+  const big = document.createElement('canvas'); big.width = big.height = 80; const b = big.getContext('2d'); b.imageSmoothingEnabled = false; b.drawImage(c, 0, 0, 80, 80);
+  return (_ports[key] = big);
+}
+
+// ---------- art loaded on demand (portraits like ron_smug.png) ----------
+const ART = (() => { let b = ''; try { const s = document.currentScript && document.currentScript.src; if (s) b = s.replace(/js\/placeholders\.js.*$/, ''); } catch (e) {} return b + 'assets/'; })();
+const _art = {};
+function artImg(name) {
+  if (name in _art) return _art[name];
+  _art[name] = null; const i = new Image(); i.onload = () => (_art[name] = i); i.src = ART + name + '.png'; return null;
+}
+['ron_smug', 'ron_happy', 'ron_cover'].forEach(artImg);
+
+// ---------- RON, GOD OF DRAINS: flowing hair, cape, holding a plunger crackling with lightning ----------
+function drawRon(x, y, s = 1) {           // x,y = feet
+  const t = performance.now() / 1000;
+  g.save(); g.translate(Math.round(x), Math.round(y)); g.scale(s, s);
+  g.fillStyle = '#b8262b'; g.beginPath(); g.moveTo(-14, -52); g.quadraticCurveTo(-26 + Math.sin(t * 3) * 3, -20, -22, 0); g.lineTo(18, 0); g.quadraticCurveTo(24, -24, 14, -52); g.fill();  // cape
+  R(-8, -18, 7, 18, '#3a3a52'); R(1, -18, 7, 18, '#3a3a52'); R(-9, -2, 8, 3, '#5a3a22'); R(1, -2, 8, 3, '#5a3a22');                          // legs, boots
+  R(-12, -50, 24, 32, '#2c4f9c'); R(-12, -24, 24, 4, '#d6b24a'); R(-3, -24, 6, 4, '#f7c418');                                           // tunic, belt
+  R(-17, -48, 6, 20, '#e8b48a'); R(11, -60, 6, 22, '#e8b48a');                                                                          // arms (right one raised)
+  // the plunger of power
+  R(13, -96, 2, 38, '#8a5a2e'); g.fillStyle = '#c0392b'; g.beginPath(); g.ellipse(14, -98, 9, 6, 0, Math.PI, 0); g.fill(); R(5, -99, 18, 2, '#8a1f1a');
+  g.strokeStyle = '#bfefff'; g.lineWidth = 1; g.beginPath();
+  for (let i = 0; i < 3; i++) { const a = t * 7 + i * 2.1; g.moveTo(14, -104); g.lineTo(14 + Math.cos(a) * 8, -110 + Math.sin(a) * 4); g.lineTo(14 + Math.cos(a) * 14, -118 + Math.sin(a * 1.3) * 6); }
+  g.stroke();
+  R(-8, -66, 16, 16, '#e8b48a'); R(-10, -70, 20, 6, '#f2c94c'); R(-12, -66, 5, 22, '#f2c94c'); R(7, -66, 5, 22, '#f2c94c');            // head, golden hair
+  R(-7, -54, 14, 7, '#e0a83a'); R(-4, -61, 2, 2, '#1a1a1a'); R(2, -61, 2, 2, '#1a1a1a'); R(-3, -56, 6, 1, '#7a3030');                  // beard, eyes, grin
+  g.restore();
+}
+// a customer review: always about Ron
+function reviewCard(stars, name, text) {
+  R(70, 40, 340, 150, '#f4f1ea'); R(70, 40, 340, 22, '#3a5a8a'); T('NEW REVIEW · MT. WASHINGTON SEWER & DRAIN', 240, 51, '#fff', 5, 'center', false);
+  const rp = artImg(stars >= 5 ? 'ron_smug' : 'ron_happy');   // the man himself, every time
+  R(80, 70, 60, 60, '#2a3346'); if (rp) g.drawImage(rp, 80, 70, 60, 60); g.strokeStyle = '#f2b01e'; g.lineWidth = 2; g.strokeRect(80, 70, 60, 60);
+  T('RON', 110, 140, '#3a5a8a', 6, 'center', false);
+  for (let i = 0; i < 5; i++) { g.fillStyle = i < stars ? '#f2b01e' : '#c9c4b8'; g.beginPath(); const cx = 218 + i * 27, cy = 82; for (let k = 0; k < 10; k++) { const r = k % 2 ? 4.5 : 10, a = -Math.PI / 2 + k * Math.PI / 5; g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); } g.fill(); }
+  wrap(`"${text}"`, 240, 7).forEach((l, i) => T(l, 272, 108 + i * 14, '#2a2a2a', 7, 'center', false));
+  T(`— ${name}`, 390, 172, '#5a5a5a', 6, 'right', false);
+}
+// the magazine cover at the end of each month
+function magazineCover(month, head) {
+  R(140, 22, 200, 236, '#0e1a2c'); const gr = g.createLinearGradient(0, 22, 0, 258); gr.addColorStop(0, '#2c4f9c'); gr.addColorStop(1, '#0e1a2c'); g.fillStyle = gr; g.fillRect(144, 26, 192, 228);
+  T('NORTH COUNTRY', 240, 40, '#f7c418', 7, 'center'); T('PIPES & PLUMBING', 240, 52, '#fff', 6, 'center');
+  T(`${month} ISSUE · $4.99`, 240, 64, '#9fb3d9', 4, 'center', false);
+  const t = performance.now() / 1000; g.strokeStyle = `rgba(191,239,255,${0.3 + 0.3 * Math.sin(t * 9)})`; g.lineWidth = 2; g.beginPath(); g.moveTo(170, 70); g.lineTo(190, 110); g.lineTo(178, 112); g.lineTo(200, 150); g.stroke();
+  // a new Ron every issue: same hair, different mood
+  const COVER_RON = ['ron_cover', 'ron_smug', 'ron_happy', 'ron_laugh', 'ron_phone', 'ron_stare', 'ron_suspicious', 'ron_shocked', 'ron_tired', 'ron_confused', 'ron_annoyed', 'ron_neutral'];
+  const mi = Math.max(0, ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'].indexOf(String(month).toUpperCase()));
+  const rc = artImg(COVER_RON[mi]) || artImg('ron_cover'); g.imageSmoothingEnabled = false;
+  if (rc) g.drawImage(rc, 165, 68, 150, 150); else drawRon(256, 218, 1.25);
+  R(144, 196, 192, 46, '#000000aa'); T(head[0], 240, 208, '#fff', 8, 'center'); T(head[1], 240, 222, '#f7c418', head[1].length > 16 ? 6 : 8, 'center');
+  T('at Mt. Washington Sewer & Drain', 240, 236, '#cfd8e8', 5, 'center', false);
+}
+
+// ---------- exteriors ----------
+function sky(sea, hour = 9) {
+  const P = DDT.seasonPal(typeof MONTH !== 'undefined' ? MONTH : (DDT.get() || {}).month || 0);
+  const gr = g.createLinearGradient(0, 0, 0, 200); gr.addColorStop(0, P.sky[0]); gr.addColorStop(1, P.sky[1]);
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  g.fillStyle = P.mtn; g.beginPath(); g.moveTo(0, 140); g.lineTo(90, 70); g.lineTo(170, 120); g.lineTo(260, 60); g.lineTo(380, 125); g.lineTo(480, 90); g.lineTo(480, 200); g.lineTo(0, 200); g.fill();
+  if (P.snow || P.name === 'stick season' || P.name === 'mud') { g.fillStyle = '#f4f7fa'; g.beginPath(); g.moveTo(245, 69); g.lineTo(260, 60); g.lineTo(276, 69); g.fill(); g.beginPath(); g.moveTo(80, 78); g.lineTo(90, 70); g.lineTo(100, 78); g.fill(); }
+  for (let x = -10, i = 0; x < W; x += 26, i++) {
+    if (!P.leaf || i % 3 === 0) { g.fillStyle = P.pine; g.beginPath(); g.moveTo(x, 196); g.lineTo(x + 13, 150 - (x * 7 % 19)); g.lineTo(x + 26, 196); g.fill(); }
+    else { g.fillStyle = P.leaf[i % P.leaf.length]; g.beginPath(); g.ellipse(x + 13, 172 - (x * 7 % 13), 14, 20, 0, 0, Math.PI * 2); g.fill(); }
+  }
+  R(0, 196, W, 74, P.ground);
+  for (let x = 0; x < W; x += 9) R(x, 198 + (x * 13 % 5), 2, 3, P.speck);
+}
+function building(kind, seed, sea) {
+  const r = srand(seed + 1), wall = pick(r, ['#e9e4d6', '#c9d6df', '#d9c7a5', '#b8c9a5', '#e2c9c0', '#a7b5c2']), roof = pick(r, ['#5a3b32', '#3a4a5a', '#4a4a4a', '#6b2e2e', '#2e4a3a']);
+  const snowRoof = sea === 'winter';
+  if (kind === 'trailer') {
+    R(130, 150, 230, 52, wall); R(130, 146, 230, 6, roof); for (let x = 150; x < 340; x += 50) R(x, 162, 26, 18, '#3a5a7a');
+    R(232, 168, 22, 34, '#7a5a3a'); R(130, 200, 230, 8, '#555'); for (let x = 140; x < 360; x += 30) R(x, 200, 3, 8, '#333');
+    if (snowRoof) R(130, 142, 230, 5, '#f4f7fa'); return;
+  }
+  if (kind === 'hotel') {
+    R(80, 70, 320, 136, wall); R(70, 60, 340, 12, roof); for (let y = 84; y < 180; y += 30) for (let x = 96; x < 390; x += 36) R(x, y, 20, 18, '#3a5a7a');
+    R(220, 166, 40, 40, '#5a3a22'); R(200, 156, 80, 8, roof); T('HOTEL', 240, 146, '#f7c418', 7, 'center'); if (snowRoof) R(70, 56, 340, 5, '#f4f7fa'); return;
+  }
+  if (kind === 'business') {
+    R(120, 100, 240, 106, wall); R(112, 94, 256, 10, roof); R(140, 140, 70, 50, '#3a5a7a'); R(270, 140, 70, 50, '#3a5a7a'); R(226, 150, 30, 56, '#5a3a22');
+    R(170, 112, 140, 18, '#10151f'); T('OPEN', 240, 121, '#7dffb0', 7, 'center'); if (snowRoof) R(112, 90, 256, 5, '#f4f7fa'); return;
+  }
+  if (kind === 'campground') {
+    for (let i = 0; i < 4; i++) { const x = 40 + i * 110; g.fillStyle = pick(r, ['#2e8a6a', '#d08a30', '#c0392b', '#2c6cd6']); g.beginPath(); g.moveTo(x, 200); g.lineTo(x + 30, 160); g.lineTo(x + 60, 200); g.fill(); }
+    R(330, 130, 110, 72, '#8a6a4a'); R(322, 124, 126, 8, roof); T('BATHHOUSE', 385, 150, '#fff', 5, 'center'); R(374, 168, 22, 34, '#4a3020'); return;
+  }
+  const camp = kind === 'camp', farm = kind === 'farm';
+  const x0 = camp ? 170 : 150, w = camp ? 150 : 190, wl = camp ? '#8a6a4a' : farm ? '#b8433a' : wall;
+  R(x0, 108, w, 98, wl); for (let y = 112; y < 206; y += 6) R(x0, y, w, 1, '#00000018');
+  g.fillStyle = roof; g.beginPath(); g.moveTo(x0 - 10, 110); g.lineTo(x0 + w / 2, 58); g.lineTo(x0 + w + 10, 110); g.fill();
+  if (snowRoof) { g.fillStyle = '#f4f7fa'; g.beginPath(); g.moveTo(x0, 104); g.lineTo(x0 + w / 2, 58); g.lineTo(x0 + w, 104); g.lineTo(x0 + w - 10, 104); g.lineTo(x0 + w / 2, 64); g.lineTo(x0 + 10, 104); g.fill(); }
+  R(x0 + 26, 130, 26, 30, '#3a5a7a'); R(x0 + w - 52, 130, 26, 30, '#3a5a7a'); R(x0 + w / 2 - 13, 148, 26, 58, '#6a2e2e'); R(x0 + w / 2 + 7, 176, 3, 3, '#d6b24a');
+  if (farm) { R(370, 120, 80, 86, '#a8382e'); g.fillStyle = '#5a2a22'; g.beginPath(); g.moveTo(364, 122); g.lineTo(410, 92); g.lineTo(456, 122); g.fill(); R(396, 160, 28, 46, '#fff'); for (let x = 20; x < 140; x += 18) R(x, 186, 2, 16, '#8a6a4a'); R(20, 190, 120, 2, '#8a6a4a'); }
+}
+// ---------- real house art: 5 shapes, siding recolored per customer, small details on top ----------
+// business + camp fronts (real art); door = where the customer stands
+const EXT_ART = {
+  business: [{ n: 'bg_diner', door: [322, 196] }, { n: 'bg_shop', door: [243, 226] }],
+  camp: [{ n: 'bg_camp2', door: [349, 212] }, { n: 'bg_camp3', door: [205, 196] }],
+};
+for (const k in EXT_ART) EXT_ART[k].forEach(a => artImg(a.n));
+const HOUSES = [{ n: 1, door: [310, 196] }, { n: 2, door: [288, 202] }, { n: 3, door: [315, 182] }, { n: 4, door: [315, 191] }, { n: 5, door: [356, 204] }];
+const SIDING = [null, '#f2e6c8', '#e8c35a', '#a8322c', '#8fa37a', '#6f8fb0', '#9a9a96', '#7a5a3e', '#5f8f8a'];   // null = leave it white
+let EXT_DOOR = { x: 260, y: 210 };   // where the customer stands, set by exterior()
+const _houseC = {};
+HOUSES.forEach(h => { artImg('bg_house' + h.n); artImg('bg_house' + h.n + '_siding'); });
+function houseArt(seed) {
+  const h = HOUSES[seed % HOUSES.length], base = artImg('bg_house' + h.n), sid = artImg('bg_house' + h.n + '_siding');
+  if (!base) return null;
+  const ci = 0, key = h.n + '_' + ci;   // siding recolor is OFF: the masks bled into clouds and window trim. The houses keep their painted colors.
+  if (_houseC[key]) return { img: _houseC[key], h };
+  if (ci && !sid) return { img: base, h };
+  const c = document.createElement('canvas'); c.width = 480; c.height = 270; const k = c.getContext('2d'); k.drawImage(base, 0, 0);
+  if (ci) {   // multiply the siding's shading by the paint color, then clip it back to the siding
+    const t = document.createElement('canvas'); t.width = 480; t.height = 270; const tk = t.getContext('2d');
+    tk.drawImage(sid, 0, 0); tk.globalCompositeOperation = 'multiply'; tk.fillStyle = SIDING[ci]; tk.fillRect(0, 0, 480, 270);
+    tk.globalCompositeOperation = 'destination-in'; tk.drawImage(sid, 0, 0); k.drawImage(t, 0, 0);
+  }
+  return { img: (_houseC[key] = c), h };
+}
+function houseDetails(seed, month, h) {
+  const r = srand(seed + 77), [dx, dy] = h.door;
+  // mailbox with the house number, out by the road
+  R(450, 214, 2, 18, '#5a3e26'); R(443, 206, 16, 9, ['#2a2a2a', '#3a5a8a', '#8a2a24', '#d9d4c8'][seed % 4]); R(457, 202, 2, 6, '#c0392b');
+  T(String(10 + seed % 190), 451, 220, '#fff', 4, 'center', false);
+  if (r() < 0.5) { R(dx + 34, dy - 46, 1, 22, '#ccc'); R(dx + 35, dy - 46, 12, 8, '#b22234'); R(dx + 35, dy - 46, 5, 4, '#3c3b6e'); for (let i = 0; i < 3; i++) R(dx + 35, dy - 45 + i * 2.5, 12, 1, '#fff'); }   // flag
+  if (r() < 0.4) { const bx = dx - 52, by = dy + 16; E(bx, by, 4, 4, '#222'); E(bx + 12, by, 4, 4, '#222'); R(bx, by - 5, 12, 2, ['#e85a8a', '#4ab0e0', '#7bd65b'][seed % 3]); R(bx + 10, by - 8, 2, 4, '#555'); }   // kid's bike
+  if (r() < 0.4) { const wx = h.n === 3 ? 140 : dx - 90; for (let j = 0; j < 3; j++) for (let i = 0; i < 6 - j; i++) E(wx + i * 5 + j * 2.5, dy + 6 - j * 4, 2.6, 2.6, i % 2 ? '#8a5a2e' : '#a8743e'); }   // woodpile
+  if (month === 11) { E(dx, dy - 22, 5, 5, '#2e6b34'); E(dx, dy - 22, 2, 2, '#1e4a24'); R(dx - 1, dy - 17, 3, 2, '#c0392b'); }   // wreath in December
+}
+function seasonOver(month) {   // until the winter/fall versions exist, dress the summer art for the season
+  const P = DDT.seasonPal(month);
+  if (P.snow) { g.fillStyle = 'rgba(150,175,205,.28)'; g.fillRect(0, 0, W, H); g.fillStyle = 'rgba(242,246,250,.82)'; g.fillRect(0, 200, W, 70); for (let x = 0; x < W; x += 7) R(x, 198 + (x * 13 % 4), 7, 3, 'rgba(242,246,250,.82)'); }
+  else if (P.name === 'mud' || P.name === 'stick season') { g.fillStyle = 'rgba(110,90,60,.30)'; g.fillRect(0, 195, W, 75); g.fillStyle = 'rgba(120,110,100,.18)'; g.fillRect(0, 0, W, 195); }
+}
+function exterior(kind, seed, month) {
+  if (kind === 'house') { const a = houseArt(seed); if (a) { g.drawImage(a.img, 0, 0); seasonOver(month); houseDetails(seed, month, a.h); EXT_DOOR = { x: a.h.door[0], y: a.h.door[1] + 10 };
+    if (DDT.seasonPal(month).snow) { const t = performance.now() / 1000; for (let i = 0; i < 50; i++) R((i * 97 + Math.sin(t + i) * 8) % W, (i * 53 + t * (8 + i % 9)) % H, 1, 1, '#fff'); } return; } }
+  if (EXT_ART[kind]) { const a = EXT_ART[kind][seed % EXT_ART[kind].length], img = artImg(a.n);
+    if (img) { g.drawImage(img, 0, 0); seasonOver(month); EXT_DOOR = { x: a.door[0], y: a.door[1] + 10 }; return; } }
+  EXT_DOOR = { x: 260, y: 210 };
+  const sea = season(month); sky(sea); building(kind, seed, sea); if (sea === 'winter') { const t = performance.now() / 1000; for (let i = 0; i < 50; i++) R((i * 97 + Math.sin(t + i) * 8) % W, (i * 53 + t * (8 + i % 9)) % H, 1, 1, '#fff'); } placeholderTag(); }
+
+// ---------- interiors ----------
+// real room art: one of several versions per room type, picked by the customer (or forced with JOB.roomArt)
+const ROOM_ART = {
+  basement: ['bg_basement1', 'bg_basement2', 'bg_basement3', 'bg_basement4', 'bg_basement5'],
+  bathroom: ['bg_bathroom1', 'bg_bathroom2', 'bg_bathroom5'],          // kids' (4) and camp (3) baths are picked per job
+  kitchen: ['bg_kitchen1', 'bg_kitchen2'],                             // the holiday kitchen (3) is December's
+  yard: ['bg_yard1', 'bg_yard2', 'bg_yard3'],
+};
+for (const k in ROOM_ART) ROOM_ART[k].forEach(artImg);
+['bg_bathroom3', 'bg_bathroom4', 'bg_kitchen3', 'bg_commkitchen'].forEach(artImg);
+const roomHasArt = kind => !!ROOM_ART[kind];
+// the right room for the right job: camp jobs get the camp bathroom, restaurants get the commercial kitchen
+function roomArtFor(job) {
+  if (job.roomArt) return job.roomArt;
+  if (job.ext === 'camp' && job.room === 'bathroom') return 'bg_bathroom3';
+  if (job.ext === 'business' && (job.room === 'kitchen' || job.room === 'basement')) return 'bg_commkitchen';
+  return null;
+}
+function interior(kind, seed, month, art) {
+  if (ROOM_ART[kind]) { const L = ROOM_ART[kind], img = artImg(art || L[seed % L.length]); if (img) { g.drawImage(img, 0, 0); return; } }
+  const r = srand(seed + 3);
+  if (kind === 'yard') { sky(season(month)); R(300, 186, 34, 12, '#7a7f86'); E(317, 190, 14, 5, '#8a8f97'); T('LID?', 317, 176, '#f7c418', 5, 'center'); placeholderTag(); return; }
+  if (kind === 'crawl') { R(0, 0, W, H, '#1a1612'); R(0, 0, W, 60, '#2a2420'); for (let x = 0; x < W; x += 30) R(x, 0, 6, 60, '#3a3028'); R(0, 150, W, 120, '#3a2a1e'); R(260, 70, 160, 8, '#555'); R(270, 78, 8, 30, '#555'); E(274, 112, 6, 3, '#4a3218'); T('DETACHED', 300, 96, '#e9665a', 5, 'center'); placeholderTag(); return; }
+  const wall = pick(r, ['#c9d6df', '#e2d9c0', '#d9c7c0', '#b8c9b5', '#e9e4d6']);
+  if (kind === 'basement') {
+    R(0, 0, W, H, '#4a4a50'); for (let y = 0; y < 172; y += 14) for (let x = (y / 14 % 2) * 20; x < W; x += 40) R(x, y, 39, 13, '#55555c');
+    R(0, 172, W, 98, '#3c3a38'); for (let i = 0; i < 8; i++) R(10 + i * 12, 46 + i * 16, 40, 4, '#6b5a40');
+    R(360, 60, 44, 112, '#b9bec6'); R(436, 20, 14, 152, '#2b2b2b'); R(450, 140, 16, 14, '#b87333'); E(240, 172, 10, 3, '#222'); T('FLOOR DRAIN', 240, 162, '#9fb3d9', 4, 'center', false);
+  } else if (kind === 'bathroom') {
+    R(0, 0, W, 172, wall); R(0, 120, W, 52, '#e8ecf2'); for (let x = 0; x < W; x += 16) R(x, 120, 1, 52, '#c9ced6'); R(0, 172, W, 98, '#9aa3ad');
+    for (let x = 0; x < W; x += 24) R(x, 172, 1, 98, '#8a939d');
+    R(270, 128, 30, 44, '#f2f2f2'); E(285, 140, 18, 8, '#fafafa'); R(276, 98, 20, 30, '#f2f2f2'); R(100, 110, 60, 50, '#f2f2f2'); R(104, 114, 52, 14, '#c9ced6'); R(114, 60, 32, 40, '#9fd0e0'); R(360, 90, 100, 82, '#e8ecf2'); R(360, 86, 100, 4, '#c9ced6');
+  } else if (kind === 'kitchen') {
+    R(0, 0, W, 172, wall); R(0, 172, W, 98, pick(r, ['#8a6a4a', '#9aa3ad', '#6a5a4a']));
+    R(40, 120, 400, 52, pick(r, ['#5a3a22', '#e9e4d6', '#2e4a5a'])); R(40, 114, 400, 8, '#d9d4ca'); R(220, 108, 50, 8, '#9aa3ad'); R(242, 92, 4, 16, '#9aa3ad');
+    R(40, 40, 140, 50, '#6a4a2a'); R(300, 40, 140, 50, '#6a4a2a'); R(196, 30, 90, 60, '#9fd0e0');
+  }
+  placeholderTag();
+}
+// storefront for food stops
+function storefront(stop) {
+  sky('summer'); R(110, 90, 260, 116, stop.color || '#5a5a62'); R(100, 84, 280, 10, '#2a2a2a');
+  R(140, 132, 70, 56, '#3a5a7a'); R(270, 132, 70, 56, '#3a5a7a'); R(224, 140, 32, 66, '#3a2a1a');
+  R(130, 100, 220, 24, '#10151f'); T(stop.name, 240, 112, stop.sign || '#fff', stop.name.length > 14 ? 6 : 8, 'center');
+  placeholderTag();
+}
+function counterRoom(stop) {
+  R(0, 0, W, H, '#2a2620'); R(0, 0, W, 160, stop.color || '#5a5a62'); R(60, 30, 360, 60, '#10151f'); T(stop.name, 240, 48, stop.sign || '#fff', 8, 'center');
+  T('MENU', 240, 70, '#9fb3d9', 6, 'center'); R(0, 140, W, 60, '#6b4a2a'); R(0, 136, W, 6, '#8a6a4a'); R(380, 112, 40, 24, '#c9ced6'); placeholderTag();
+}

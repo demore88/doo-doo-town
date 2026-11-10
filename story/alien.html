@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="../manifest.webmanifest"><meta name="theme-color" content="#2a5ab0"><link rel="icon" href="../icons/icon-192.png"><link rel="apple-touch-icon" href="../icons/apple-180.png"><meta name="mobile-web-app-capable" content="yes"><script>if ("serviceWorker" in navigator && window.top === window && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch(() => {});</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Doo Doo Town · Out of This World</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  @font-face{font-family:'Press Start 2P';src:url('../assets/PressStart2P.ttf') format('truetype');font-display:block}
+  html,body{margin:0;height:100%;background:#05070c;overflow:hidden;font-family:'Press Start 2P',monospace}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  canvas{aspect-ratio:16/9;width:min(100vw,calc(100vh*16/9));image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;display:block}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
+<script src="../js/state.js"></script>
+<script src="../js/music.js"></script>
+<script src="../js/sfx.js"></script>
+<script>
+DDT.root = '../';
+DDTMusic.play('spooky');
+// =====================================================================
+// STORY JOB: OUT OF THIS WORLD — Rod gets abducted to fix a space toilet.
+// Scenes can be opened directly for testing: alien.html?scene=window|beam|lang|toilet|cable|reveal|dropoff
+// =====================================================================
+const W = 480, H = 270, cv = document.getElementById('c');
+let g = cv.getContext('2d');
+const SCALE = 3;   // draw at 3x so text is sharp; all game coordinates stay 480x270
+g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
+const FONT = n => `${n < 6 ? n + 1 : n}px "Press Start 2P", monospace`;   // nothing smaller than 5px
+const R = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+const E = (x, y, rx, ry, c, rot = 0) => { g.fillStyle = c; g.beginPath(); g.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); g.fill(); };
+function T(s, x, y, c = '#fff', n = 8, al = 'left', sh = true) {
+  g.font = FONT(n); g.textAlign = al; g.textBaseline = 'middle';
+  if (sh) { g.fillStyle = '#000'; g.fillText(s, x + 1, y + 1); }
+  g.fillStyle = c; g.fillText(s, x, y);
+}
+function wrap(s, maxW, n = 8) {
+  g.font = FONT(n); const out = []; let line = '';
+  for (const w of s.split(' ')) { const t = line ? line + ' ' + w : w; if (g.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; }
+  if (line) out.push(line); return out;
+}
+const load = s => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = s; });
+// portraits not preloaded (rod_angry, ron_smug...) load the first time someone uses that face
+const _portBase = (() => { const e = document.querySelector('script[src$="js/state.js"]'); return e ? e.src.replace(/js\/state\.js.*$/, 'assets/') : '../assets/'; })();
+function portLoad(name) { if (!name || name in portLoad.c) return portLoad.c[name] || null; portLoad.c[name] = null; const i = new Image(); i.onload = () => { portLoad.c[name] = IMG[name] = i; }; i.src = _portBase + name + '.png'; return null; }
+portLoad.c = {};
+const IMG = {};
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+// ---------- sound (Web Audio, unlocked on first tap) ----------
+let AC = null;
+function ac() { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (e) {} return AC; }
+function tone(f, d, type = 'square', vol = 0.05, at = 0, f2 = null) {
+  const a = ac(); if (!a) return;
+  const o = a.createOscillator(), v = a.createGain(), t = a.currentTime + at;
+  o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+  v.gain.setValueAtTime(vol, t); v.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(v).connect(a.destination); o.start(t); o.stop(t + d + 0.02);
+}
+const SND = {
+  chirp(n = 3) { for (let i = 0; i < n; i++) tone(rnd(700, 1500), 0.07, 'square', 0.035, i * 0.09, rnd(500, 1800)); },
+  blip() { tone(880, 0.05, 'square', 0.03); },
+  good() { tone(660, 0.08, 'square', 0.04); tone(990, 0.12, 'square', 0.04, 0.08); },
+  bad() { tone(220, 0.25, 'sawtooth', 0.04, 0, 140); },
+  beam() { tone(90, 2.6, 'sawtooth', 0.03, 0, 260); tone(180, 2.6, 'triangle', 0.03, 0, 520); },
+  gurgle() { for (let i = 0; i < 8; i++) tone(rnd(70, 140), 0.12, 'triangle', 0.06, i * 0.1, rnd(40, 90)); },
+  flush() { tone(400, 1.2, 'sawtooth', 0.04, 0, 40); tone(1200, 0.8, 'triangle', 0.02, 0.1, 100); },
+  snag() { tone(160, 0.15, 'square', 0.05, 0, 90); },
+  ding() { tone(1320, 0.3, 'triangle', 0.05); tone(1760, 0.4, 'triangle', 0.04, 0.12); },
+};
+if (typeof DDTSfx !== 'undefined') DDTSfx.patch(SND);   // recorded sounds where we have them
+
+// ---------- input ----------
+const keys = {}, hit = {};
+addEventListener('keydown', e => { if (!keys[e.key]) hit[e.key] = true; keys[e.key] = true; if (e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault(); ac(); });
+addEventListener('keyup', e => { keys[e.key] = false; });
+const ptr = { x: 0, y: 0, down: false, clicked: false };
+function toCanvas(e) { const b = cv.getBoundingClientRect(); ptr.x = (e.clientX - b.left) / b.width * W; ptr.y = (e.clientY - b.top) / b.height * H; }
+cv.addEventListener('pointerdown', e => { toCanvas(e); ptr.down = true; ptr.clicked = true; ac(); });
+cv.addEventListener('pointermove', toCanvas);
+addEventListener('pointerup', () => { ptr.down = false; });
+const pressed = k => hit[k];
+const confirmHit = () => hit[' '] || hit['Enter'] || hit['z'] || hit['Z'];
+const inBox = (x, y, w, h) => ptr.x >= x && ptr.x <= x + w && ptr.y >= y && ptr.y <= y + h;
+
+// ---------- scene runner: every wait/line/tween can be cancelled by SKIP ----------
+let RUN = 0, pend = new Set(), tweens = [], dialog = null, game = null, view = () => {}, st = {};
+function cancellable(exec) {
+  return new Promise((res, rej) => { const h = { rej }; pend.add(h); exec(v => { if (pend.has(h)) { pend.delete(h); res(v); } }); });
+}
+function cancelAll() { pend.forEach(h => h.rej('skip')); pend.clear(); tweens = []; dialog = null; game = null; }
+const wait = ms => cancellable(res => setTimeout(res, ms));
+const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+function tween(o, k, to, ms, fn = ease) { return cancellable(res => tweens.push({ o, k, from: o[k], to, ms, t: 0, fn, res })); }
+function say(name, port, text, opts) { return cancellable(res => { dialog = { name, port, text, shown: 0, opts, sel: 0, res }; }); }
+function play(gm) { return cancellable(res => { game = gm; gm.done = v => { game = null; res(v); }; gm.init && gm.init(); }); }
+async function card(lines, ms = 2200, col = '#f7c418') { st.card = lines; st.cardCol = col; await tween(st, 'cardA', 1, 400); await wait(ms); await tween(st, 'cardA', 0, 400); }
+const fadeIn = (ms = 600) => tween(st, 'fade', 0, ms), fadeOut = (ms = 600) => tween(st, 'fade', 1, ms);
+
+const ORDER = ['window', 'beam', 'lang', 'toilet', 'cable', 'reveal', 'dropoff'];
+const NAMES = { window: 'THE WINDOW', beam: 'BEAM ME UP', lang: 'LEARN THE LINGO', toilet: 'THE SPACE TOILET', cable: 'CABLE THE HOSE', reveal: 'THE CULPRIT', dropoff: 'THE DROP-OFF' };
+let cur = 0, score = { wrong: 0, retries: 0, snags: 0 };
+async function runFrom(i) {
+  cancelAll(); const tok = ++RUN;
+  for (; i < ORDER.length; i++) {
+    cur = i; st = { fade: 1, cardA: 0 }; view = () => R(0, 0, W, H, '#000');
+    try { await SCENES[ORDER[i]](); } catch (e) { if (e !== 'skip') console.error(e); return; }
+    if (tok !== RUN) return;
+  }
+  location.href = DDT.back('index.html');
+}
+
+// ---------- characters ----------
+function rod(x, y, f = 0, s = 2, a = 1) {      // x,y = feet, center
+  if (!IMG.rod) return; g.globalAlpha = a;
+  g.drawImage(IMG.rod, f * 24, 0, 24, 40, Math.round(x - 12 * s), Math.round(y - 40 * s), 24 * s, 40 * s); g.globalAlpha = 1;
+}
+// gray alien. o: {s, wave, point:[tx,ty], tilt, blink, sad}
+function alien(x, y, o = {}) {
+  const s = o.s || 1, t = performance.now() / 1000;
+  g.save(); g.translate(x, y); g.scale(s, s);
+  // body
+  R(-7, -34, 14, 22, '#8d9a8a'); R(-6, -12, 5, 12, '#7c8879'); R(1, -12, 5, 12, '#7c8879');
+  R(-8, -34, 16, 3, '#6b7a68');
+  // arms
+  g.strokeStyle = '#8d9a8a'; g.lineWidth = 3; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(-7, -30); g.lineTo(-12, -16); g.stroke();
+  if (o.point) {
+    const [tx, ty] = o.point, ang = Math.atan2((ty - y) / s + 30, (tx - x) / s - 7);
+    g.beginPath(); g.moveTo(7, -30); g.lineTo(7 + Math.cos(ang) * 16, -30 + Math.sin(ang) * 16); g.stroke();
+    g.lineWidth = 1.5; g.beginPath(); g.moveTo(7 + Math.cos(ang) * 16, -30 + Math.sin(ang) * 16); g.lineTo(7 + Math.cos(ang) * 23, -30 + Math.sin(ang) * 23); g.stroke();
+  } else if (o.wave) {
+    const a = -1.9 + Math.sin(t * 6) * 0.35;
+    g.beginPath(); g.moveTo(7, -30); g.lineTo(7 + Math.cos(a) * 12, -30 + Math.sin(a) * 12); g.stroke();
+    g.lineWidth = 1.5; const b = a + Math.sin(t * 9) * 0.6;
+    g.beginPath(); g.moveTo(7 + Math.cos(a) * 12, -30 + Math.sin(a) * 12); g.lineTo(7 + Math.cos(a) * 12 + Math.cos(b - 0.6) * 7, -30 + Math.sin(a) * 12 + Math.sin(b - 0.6) * 7); g.stroke();
+  } else { g.beginPath(); g.moveTo(7, -30); g.lineTo(12, -16); g.stroke(); }
+  // head
+  g.translate(0, -46); g.rotate(o.tilt || 0);
+  E(0, 0, 13, 15, '#a3b19f'); E(0, 6, 8, 9, '#a3b19f'); R(-2, 13, 4, 3, '#8d9a8a');
+  const blink = o.blink || (t % 4 < 0.12);
+  if (blink) { R(-10, 1, 7, 2, '#111'); R(3, 1, 7, 2, '#111'); }
+  else { E(-6, 1, 5.5, 3.5, '#0b0b10', 0.45); E(6, 1, 5.5, 3.5, '#0b0b10', -0.45); R(-8, -1, 2, 1, '#fff'); R(4, -1, 2, 1, '#fff'); }
+  if (o.sad) R(-3, 11, 6, 1, '#556');
+  g.restore();
+}
+function alienPortrait() {
+  const c = document.createElement('canvas'); c.width = c.height = 80; const k = c.getContext('2d');
+  k.fillStyle = '#2a1f4a'; k.fillRect(0, 0, 80, 80); k.fillStyle = '#3a2d63'; for (let i = 0; i < 80; i += 8) k.fillRect(0, i, 80, 2);
+  const save = g; g = k; alien(40, 128, { s: 2.2, blink: false }); g = save; return c;
+}
+// alien words are drawn as 5x5 pixel glyphs
+const GLYPH = {
+  you:    ['10001', '01010', '00100', '01010', '10001'],
+  me:     ['01110', '10001', '10101', '10001', '01110'],
+  toilet: ['11111', '10001', '01110', '00100', '01110'],
+  broken: ['10100', '01011', '00100', '11010', '00101'],
+  fix:    ['00011', '00111', '01110', '11100', '11000'],
+  home:   ['00100', '01110', '11111', '01010', '01110'],
+  no:     ['11011', '11011', '00000', '11011', '11011'],
+};
+function glyph(id, x, y, px = 3, col = '#7dffb0') {
+  const m = GLYPH[id]; for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) if (m[r][c] === '1') R(x + c * px, y + r * px, px, px, col);
+}
+function bubble(x, y, ids, px = 3, label = null) {
+  const w = ids.length * (px * 5 + px * 3) + px * 3, h = px * 5 + px * 6 + (label ? 12 : 0);
+  R(x - w / 2, y - h, w, h, '#0d1a14'); g.strokeStyle = '#7dffb0'; g.lineWidth = 1; g.strokeRect(Math.round(x - w / 2) + 0.5, Math.round(y - h) + 0.5, Math.round(w) - 1, Math.round(h) - 1);
+  ids.forEach((id, i) => glyph(id, x - w / 2 + px * 3 + i * (px * 8), y - h + px * 3, px));
+  if (label) label.forEach((l, i) => T(l, x - w / 2 + px * 3 + i * (px * 8) + px * 2.5, y - 9, '#f7c418', 5, 'center', false));
+}
+
+// ---------- backdrops ----------
+const STARS = Array.from({ length: 70 }, () => [Math.random() * W, Math.random() * 170, Math.random()]);
+function stars(clip) { const t = performance.now() / 1000; STARS.forEach(([x, y, p]) => { if (!clip || clip(x, y)) R(x, y, 1, 1, (Math.sin(t * 2 + p * 9) > 0.6) ? '#fff' : '#8aa0d0'); }); }
+function bedroom(dawn = false) {
+  R(0, 0, W, H, dawn ? '#3a3046' : '#161c30');
+  for (let x = 0; x < W; x += 24) R(x, 0, 2, 200, dawn ? '#40354e' : '#1a2138');
+  R(0, 200, W, 70, '#2a2030'); for (let x = 0; x < W; x += 40) R(x, 200, 1, 70, '#33283b');
+  // window
+  const wx = 320, wy = 46, ww = 92, wh = 88;
+  if (dawn) { const gr = g.createLinearGradient(0, wy, 0, wy + wh); gr.addColorStop(0, '#f2a65a'); gr.addColorStop(1, '#ffd98a'); g.fillStyle = gr; g.fillRect(wx, wy, ww, wh); }
+  else { R(wx, wy, ww, wh, '#0a1030'); stars((x, y) => x > wx && x < wx + ww && y > wy && y < wy + wh); }
+  R(wx + 6, wy + wh - 22, 22, 22, '#0b1a10'); R(wx + 60, wy + wh - 30, 18, 30, '#0b1a10');
+  st.windowDraw && st.windowDraw(wx, wy, ww, wh);
+  R(wx - 4, wy - 4, ww + 8, 4, '#6b5a40'); R(wx - 4, wy + wh, ww + 8, 6, '#6b5a40'); R(wx - 4, wy, 4, wh, '#6b5a40'); R(wx + ww, wy, 4, wh, '#6b5a40');
+  R(wx + ww / 2 - 1, wy, 3, wh, '#6b5a40'); R(wx, wy + wh / 2 - 1, ww, 3, '#6b5a40');
+  R(wx - 14, wy - 8, 12, wh + 20, '#5a2e3a'); R(wx + ww + 2, wy - 8, 12, wh + 20, '#5a2e3a');
+  // door
+  R(16, 92, 44, 108, '#4a3826'); R(20, 96, 36, 100, '#5a4430'); R(50, 146, 4, 4, '#d6b24a');
+  // TV
+  const t = performance.now() / 1000, flick = dawn ? 0 : 0.5 + 0.5 * Math.sin(t * 13) * Math.sin(t * 7.3);
+  R(84, 168, 54, 32, '#2a2a2a'); R(86, 128, 50, 38, '#111'); R(90, 132, 42, 30, dawn ? '#222' : `rgb(${60 + flick * 50},${90 + flick * 60},${150 + flick * 80})`);
+  if (!dawn) { g.fillStyle = `rgba(120,160,255,${0.05 + flick * 0.05})`; g.beginPath(); g.moveTo(132, 132); g.lineTo(300, 110); g.lineTo(300, 230); g.lineTo(132, 162); g.fill(); }
+}
+function bed(front) {
+  if (!front) { R(150, 150, 8, 55, '#4a3018'); R(150, 176, 160, 24, '#5a3a1e'); R(162, 160, 40, 14, '#e8e4dc'); return; }
+  R(150, 170, 160, 24, '#2c4f8c'); R(150, 170, 160, 4, '#3d63a8'); for (let x = 160; x < 310; x += 22) R(x, 176, 10, 2, '#24427a');
+  R(302, 160, 8, 45, '#4a3018');
+}
+function shipRoom() {
+  R(0, 0, W, H, '#1e1638'); for (let x = 0; x < W; x += 40) { R(x, 0, 2, 200, '#2a1f4a'); R(x + 18, 20, 4, 4, '#4b3a80'); }
+  R(0, 200, W, 70, '#141026'); for (let x = 0; x < W; x += 30) R(x, 200, 28, 2, '#2b2350');
+  const t = performance.now() / 1000;
+  for (let x = 20; x < W; x += 60) R(x, 6, 30, 3, (Math.floor(t * 3 + x) % 3) ? '#5b49a6' : '#7dffb0');
+  // porthole with Earth
+  E(60, 72, 30, 30, '#4b3a80'); E(60, 72, 25, 25, '#05070c'); stars((x, y) => (x - 60) ** 2 + (y - 72) ** 2 < 600);
+  E(66, 78, 13, 13, '#2c6cd6'); E(62, 74, 5, 4, '#4caf50'); E(70, 82, 4, 3, '#4caf50');
+}
+function sparkPanel(x, y) {
+  R(x - 18, y - 14, 36, 28, '#2b2350'); R(x - 14, y - 10, 28, 20, '#0d0a1a');
+  g.strokeStyle = '#e9665a'; g.lineWidth = 1; g.beginPath(); g.moveTo(x - 10, y - 8); g.lineTo(x + 2, y + 2); g.lineTo(x - 4, y + 4); g.lineTo(x + 10, y + 9); g.stroke();
+  if (Math.random() < 0.25) for (let i = 0; i < 4; i++) R(x + rnd(-14, 14), y + rnd(-10, 12), 2, 2, '#f7c418');
+}
+function toiletDoor(x) { R(x - 22, 96, 44, 104, '#2b2350'); R(x - 18, 100, 36, 100, '#3a2d63'); R(x - 1, 100, 2, 100, '#1e1638'); R(x - 10, 82, 20, 12, '#0d0a1a'); R(x - 4, 85, 8, 4, '#7dffb0'); R(x - 2, 89, 4, 3, '#7dffb0'); }
+function toolBag(x, y) { R(x - 14, y - 12, 28, 12, '#c0392b'); R(x - 10, y - 16, 20, 4, '#1a1a1a'); R(x - 12, y - 8, 24, 2, '#8b2a1f'); R(x + 4, y - 22, 3, 10, '#aaa'); }
+function spaceToilet(x, y, hoseT = 0) {
+  R(x - 10, y - 30, 20, 30, '#c9ced6'); R(x - 6, y - 30, 4, 30, '#e8ecf2');
+  E(x, y - 36, 22, 9, '#e8ecf2'); E(x, y - 37, 16, 5, '#5a6378'); R(x - 22, y - 37, 44, 2, '#c9ced6');
+  R(x - 2, y - 72, 26, 26, '#c9ced6'); R(x + 2, y - 68, 18, 6, '#7dffb0');
+  // ribbed hose coming out of the bowl and coiling up
+  const tw = Math.sin(hoseT * 18) * (hoseT > 0 ? 2 : 0);
+  g.strokeStyle = '#8a93a5'; g.lineWidth = 7; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x - 14, y - 38); g.bezierCurveTo(x - 40, y - 38, x - 44, y - 80, x - 26 + tw, y - 92); g.stroke();
+  g.strokeStyle = '#a9b2c4'; g.lineWidth = 2; g.setLineDash([2, 3]);
+  g.beginPath(); g.moveTo(x - 14, y - 38); g.bezierCurveTo(x - 40, y - 38, x - 44, y - 80, x - 26 + tw, y - 92); g.stroke(); g.setLineDash([]);
+  R(x - 30 + tw, y - 100, 8, 10, '#5a6378'); R(x - 28 + tw, y - 104, 4, 5, '#7dffb0');
+}
+
+// ---------- dialog box ----------
+function drawDialog() {
+  const d = dialog; if (!d) return;
+  d.shown = Math.min(d.text.length, d.shown + 1.1);
+  R(6, 180, W - 12, 86, '#10151f'); g.strokeStyle = '#fff'; g.lineWidth = 3; g.strokeRect(7.5, 181.5, W - 15, 83);
+  const p = d.port === 'alien' ? IMG.alienP : (IMG[d.port] || portLoad(d.port));
+  R(12, 184, 80, 80, '#2a3346'); if (p) g.drawImage(p, 12, 184, 80, 80);
+  g.strokeStyle = '#f7c418'; g.lineWidth = 2; g.strokeRect(12, 184, 80, 80);
+  T(d.name, 102, 194, '#f7c418', 8);
+  const lines = wrap(d.text.slice(0, Math.floor(d.shown)), 360, 8);
+  lines.forEach((l, i) => T(l, 102, 210 + i * 13, '#fff', 8));
+  const done = d.shown >= d.text.length;
+  if (done && d.opts) {
+    const top = 210 + Math.max(1, wrap(d.text, 360, 8).length) * 13 - 2;
+    d.boxes = d.opts.map((o, i) => [100, top + i * 13, 368, 12]);
+    if (pressed('ArrowUp')) d.sel = (d.sel + d.opts.length - 1) % d.opts.length;
+    if (pressed('ArrowDown')) d.sel = (d.sel + 1) % d.opts.length;
+    d.opts.forEach((o, i) => { const [x, y, w, h] = d.boxes[i]; R(x, y, w, h, i === d.sel ? '#2c6cd6' : '#1d2638'); T((i === d.sel ? '> ' : '  ') + o, x + 4, y + 6, '#fff', 6, 'left', false); });
+  } else if (done && Math.floor(performance.now() / 400) % 2) T('▼'.replace('▼', 'v'), 462, 256, '#f7c418', 8, 'right');
+}
+function dialogInput() {
+  const d = dialog; if (!d) return false;
+  const done = d.shown >= d.text.length;
+  if (!(ptr.clicked || confirmHit())) return true;
+  if (!done) { d.shown = d.text.length; return true; }
+  if (!d.opts) { dialog = null; SND.blip(); d.res(0); return true; }
+  let pick = null;
+  if (ptr.clicked && d.boxes) d.boxes.forEach(([x, y, w, h], i) => { if (inBox(x, y, w, h)) pick = i; });
+  if (confirmHit()) pick = d.sel;
+  if (pick !== null) { dialog = null; SND.blip(); d.res(pick); }
+  return true;
+}
+
+// ---------- top buttons ----------
+const BTN = { menu: [6, 4, 70, 14], skip: [W - 96, 4, 90, 14] };
+function drawButtons() {
+  for (const [k, [x, y, w, h]] of Object.entries(BTN)) { if (k === 'skip' && !DDT.DEV) continue; R(x, y, w, h, '#10151fcc'); g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1); T(k === 'menu' ? '< MENU' : 'SKIP >>', x + w / 2, y + 7.5, '#fff', 6, 'center', false); }
+  if (DDT.DEV) T('DEV · ' + (cur + 1) + '/' + ORDER.length + ' ' + NAMES[ORDER[cur]], W / 2, 11, '#6f7fa8', 5, 'center', false);
+}
+
+// =====================================================================
+// SCENES
+// =====================================================================
+const SCENES = {};
+
+SCENES.window = async () => {
+  Object.assign(st, { rodX: 196, rodDY: 30, inBed: true, alienY: 170, wave: false, zz: true, rodF: 0, rodA: 1 });
+  st.windowDraw = (wx, wy, ww, wh) => { g.save(); g.beginPath(); g.rect(wx, wy, ww, wh); g.clip(); alien(wx + ww / 2 + 14, st.alienY + 44, { s: 1.4, wave: st.wave }); g.restore(); };
+  view = () => {
+    bedroom(); bed(false);
+    if (st.inBed) { g.save(); g.beginPath(); g.rect(0, 0, W, 172); g.clip(); rod(st.rodX, 200 + st.rodDY, st.rodF); g.restore(); }
+    bed(true);
+    if (!st.inBed) rod(st.rodX, 202, st.rodF, 2, st.rodA);
+    if (st.zz) { const t = performance.now() / 1000; for (let i = 0; i < 3; i++) { const p = (t * 0.5 + i / 3) % 1; T('z', 214 + p * 30, 150 - p * 40, `rgba(255,255,255,${1 - p})`, 6 + i * 2, 'left', false); } }
+  };
+  await fadeIn(900);
+  window.RAIN = DDTSfx.loop('rain_loop', { vol: 0.6 });
+  await card(['MARCH · 2:13 AM', "ROD'S HOUSE"], 1600);
+  await wait(800);
+  await tween(st, 'alienY', 70, 2600);
+  await wait(400); SND.chirp(2);
+  st.zz = false; st.rodDY = 30; await tween(st, 'rodDY', 0, 500);
+  await say('ROD', 'rod_confused', '...Huh?');
+  await wait(400);
+  st.wave = true; SND.chirp(4);
+  await wait(1400);
+  await say('ROD', 'rod_shocked', '...Me?');
+  SND.chirp(2); await wait(900);
+  await say('ROD', 'rod_normal', "Alright, alright. Let me get my boots on.");
+  st.inBed = false; st.rodX = 230; st.rodF = 8;
+  st.wave = false; await tween(st, 'alienY', 170, 900);
+  await tween(st, 'rodX', 60, 2200, t => t);
+  await tween(st, 'rodA', 0, 400);
+  await fadeOut(700);
+};
+
+SCENES.beam = async () => {
+  Object.assign(st, { shipY: -60, beam: 0, rodX: 134, rodY: 236, rodA: 0, rodS: 1 });
+  view = () => {
+    const gr = g.createLinearGradient(0, 0, 0, 240); gr.addColorStop(0, '#05081a'); gr.addColorStop(1, '#1a2448'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    stars(); E(420, 40, 14, 14, '#e8e4c8'); E(425, 37, 12, 12, '#05081a');
+    for (let x = -10; x < W; x += 34) { g.fillStyle = '#0a1410'; g.beginPath(); g.moveTo(x, 236); g.lineTo(x + 17, 236 - 40 - (x * 7 % 23)); g.lineTo(x + 34, 236); g.fill(); }
+    R(0, 236, W, 34, '#14231a');
+    // Rod's house + porch light
+    R(60, 160, 120, 76, '#2a2a36'); g.fillStyle = '#1c1c26'; g.beginPath(); g.moveTo(52, 162); g.lineTo(120, 120); g.lineTo(188, 162); g.fill();
+    R(120, 196, 22, 40, '#4a3826'); R(146, 186, 4, 4, '#ffd98a'); R(78, 180, 22, 18, '#0a0f1e');
+    if (IMG.van) g.drawImage(IMG.van, 0, 0, 144, 64, 320, 188, 108, 48);
+    // ship
+    const sx = 250, sy = st.shipY, t = performance.now() / 1000;
+    if (st.beam > 0) { g.fillStyle = `rgba(125,255,176,${0.18 * st.beam + 0.05 * Math.sin(t * 20) * st.beam})`; g.beginPath(); g.moveTo(sx - 14, sy + 8); g.lineTo(sx + 14, sy + 8); g.lineTo(sx + 46, 238); g.lineTo(sx - 46, 238); g.fill(); }
+    E(sx, sy, 56, 13, '#7c8698'); E(sx, sy - 9, 24, 13, '#a6d8ff'); E(sx, sy + 3, 56, 6, '#5a6378');
+    for (let i = 0; i < 7; i++) R(sx - 44 + i * 14, sy + 1, 4, 3, (Math.floor(t * 6) + i) % 3 ? '#f7c418' : '#e9665a');
+    rod(st.rodX, st.rodY, st.rodY < 230 ? 0 : 6, st.rodS, st.rodA);
+  };
+  await fadeIn(700);
+  await card(['2:14 AM'], 900);
+  await tween(st, 'shipY', 70, 2000);
+  await tween(st, 'rodA', 1, 300);
+  await tween(st, 'rodX', 250, 2000, t => t);
+  SND.beam(); await tween(st, 'beam', 1, 500);
+  await wait(400);
+  await Promise.all([tween(st, 'rodY', 92, 2200), tween(st, 'rodS', 1, 2200)]);
+  await tween(st, 'rodA', 0, 300);
+  await tween(st, 'beam', 0, 300);
+  await tween(st, 'shipY', -80, 900);
+  await fadeOut(500);
+};
+
+// ---- LEARN THE LINGO (mini-game) ----
+const WORDS = [
+  { id: 'you', label: 'YOU', at: [150, 110] },
+  { id: 'me', label: 'ME', at: [330, 150] },
+  { id: 'toilet', label: 'TOILET', at: [420, 90] },
+  { id: 'broken', label: 'BROKEN', at: [236, 72] },
+  { id: 'fix', label: 'FIX', at: [100, 170] },
+  { id: 'home', label: 'HOME', at: [60, 72] },
+];
+const LABEL = Object.fromEntries(WORDS.map(w => [w.id, w.label]));
+function picIcon(id, x, y) {   // 28x28 picture tiles
+  const cx = x + 14, cy = y + 14;
+  if (id === 'you') { if (IMG.rod) g.drawImage(IMG.rod, 0, 0, 24, 24, x + 2, y + 2, 24, 24); }
+  if (id === 'me') { g.save(); g.translate(cx, cy + 22); alien(0, 0, { s: 0.6, blink: false }); g.restore(); }
+  if (id === 'toilet') { E(cx, cy + 2, 9, 4, '#e8ecf2'); R(cx - 4, cy + 2, 8, 9, '#c9ced6'); R(cx + 2, cy - 10, 8, 10, '#c9ced6'); }
+  if (id === 'broken') { g.strokeStyle = '#e9665a'; g.lineWidth = 2; g.beginPath(); g.moveTo(x + 6, y + 4); g.lineTo(x + 16, y + 14); g.lineTo(x + 10, y + 16); g.lineTo(x + 22, y + 25); g.stroke(); R(x + 18, y + 6, 3, 3, '#f7c418'); }
+  if (id === 'fix') { R(cx - 2, cy - 4, 4, 16, '#aaa'); R(cx - 6, cy - 10, 12, 6, '#aaa'); R(cx - 2, cy - 10, 4, 3, '#1d2638'); }
+  if (id === 'home') { E(cx, cy, 11, 11, '#2c6cd6'); E(cx - 3, cy - 3, 5, 4, '#4caf50'); E(cx + 4, cy + 4, 4, 3, '#4caf50'); }
+}
+function shipLangRoom() {
+  shipRoom(); sparkPanel(236, 72); toiletDoor(420); toolBag(100, 200);
+  rod(150, 202, 0); alien(330, 202, { s: 1.4, point: st.point, tilt: st.tilt, sad: st.sad });
+  if (st.words) bubble(330, 112, st.words, 3, st.labels);
+  if (st.mark) { const [mx, my] = st.mark, b = Math.floor(performance.now() / 200) % 2 ? 20 : 18; g.strokeStyle = '#f7c418'; g.lineWidth = 2; g.strokeRect(mx - b, my - b, b * 2, b * 2); }
+}
+async function demo(list) {
+  for (const id of list) {
+    const w = WORDS.find(v => v.id === id);
+    st.point = id === 'me' ? null : w.at; st.mark = w.at; st.words = [id]; st.labels = null; SND.chirp(2);
+    await wait(1700); st.point = null; st.mark = null; st.words = null; await wait(250);
+  }
+}
+const MatchGame = {
+  init() {
+    this.gl = [...WORDS].sort(() => Math.random() - 0.5); this.pc = [...WORDS].sort(() => Math.random() - 0.5);
+    this.matched = new Set(); this.pick = null; this.pat = 3; this.cur = 0; this.flash = 0; this.again = false;
+  },
+  tile(i, row) { return [44 + i * 66, row ? 120 : 62, 40, 40]; },
+  update(dt) {
+    this.flash = Math.max(0, this.flash - dt); st.tilt = this.flash > 0 ? 0.35 * Math.sin(this.flash * 6) : 0;
+    if (pressed('ArrowRight')) this.cur = (this.cur + 1) % 12; if (pressed('ArrowLeft')) this.cur = (this.cur + 11) % 12;
+    if (pressed('ArrowDown') || pressed('ArrowUp')) this.cur = (this.cur + 6) % 12;
+    let choose = null;
+    if (ptr.clicked) for (let i = 0; i < 12; i++) { const [x, y, w, h] = this.tile(i % 6, i >= 6); if (inBox(x, y, w, h)) { choose = i; this.cur = i; } }
+    if (ptr.clicked && inBox(176, 176, 128, 16)) { this.again = true; return this.done('again'); }
+    if (confirmHit()) choose = this.cur;
+    if (choose === null) return;
+    if (choose < 6) { const w = this.gl[choose]; if (!this.matched.has(w.id)) { this.pick = w.id; SND.blip(); } return; }
+    const p = this.pc[choose - 6]; if (this.matched.has(p.id) || !this.pick) return;
+    if (p.id === this.pick) { this.matched.add(p.id); this.pick = null; SND.good(); SND.chirp(1); if (this.matched.size === 6) this.done('ok'); }
+    else { this.pat--; score.wrong++; this.flash = 1; this.pick = null; SND.bad(); if (this.pat <= 0) this.done('fail'); }
+  },
+  draw() {
+    R(24, 30, 432, 168, '#0b0e18ee'); g.strokeStyle = '#7dffb0'; g.lineWidth = 2; g.strokeRect(25, 31, 430, 166);
+    T('TRANSLATION CHART', 40, 44, '#7dffb0', 7); T('PATIENCE', 372, 44, '#fff', 5);
+    for (let i = 0; i < 3; i++) R(414 + i * 10, 40, 7, 7, i < this.pat ? '#7dffb0' : '#333');
+    T('TAP A WORD, THEN WHAT IT MEANS', 240, 112, '#9fb3d9', 5, 'center', false);
+    for (let i = 0; i < 6; i++) {
+      let [x, y, w, h] = this.tile(i, 0); const gw = this.gl[i], done = this.matched.has(gw.id);
+      R(x, y, w, h, done ? '#173a26' : gw.id === this.pick ? '#2c6cd6' : '#1d2638'); glyph(gw.id, x + 8, y + 6, 5);
+      if (done) T(gw.label, x + 20, y + h + 6, '#f7c418', 5, 'center', false);
+      if (this.cur === i) { g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(x - 1.5, y - 1.5, w + 3, h + 3); }
+      [x, y, w, h] = this.tile(i, 1); const pw = this.pc[i], pd = this.matched.has(pw.id);
+      R(x, y, w, h, pd ? '#173a26' : '#1d2638'); g.globalAlpha = pd ? 0.4 : 1; picIcon(pw.id, x + 6, y + 6); g.globalAlpha = 1;
+      if (this.cur === i + 6) { g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(x - 1.5, y - 1.5, w + 3, h + 3); }
+    }
+    R(176, 176, 128, 16, '#1d2638'); T('SHOW ME AGAIN', 240, 184, '#fff', 6, 'center', false);
+  },
+};
+SCENES.lang = async () => {
+  if (window.RAIN) RAIN.stop();   // inside the ship now
+  view = shipLangRoom; st.tilt = 0;
+  await fadeIn(700);
+  SND.chirp(5); st.words = ['me', 'no', 'you']; await wait(1400); st.words = null;
+  await say('ROD', 'rod_confused', "Buddy, I don't speak... whatever that is.");
+  await say('ROD', 'rod_normal', 'Point at stuff. I can work with pointing.');
+  for (;;) {
+    await demo(['you', 'me', 'toilet', 'broken', 'fix', 'home']);
+    const r = await play(MatchGame);
+    if (r === 'ok') break;
+    if (r === 'fail') { score.retries++; st.sad = true; SND.chirp(3); await say('ROD', 'rod_tired', 'Okay, okay. One more time. Slower.'); st.sad = false; }
+  }
+  SND.ding();
+  st.words = ['me', 'toilet', 'broken']; st.labels = ['ME', 'TOILET', 'BROKEN']; SND.chirp(3); await wait(2200);
+  await say('ROD', 'rod_normal', "Your toilet's broken?");
+  st.words = null; st.labels = null; st.tilt = 0.2; SND.chirp(6); await wait(500); st.tilt = -0.2; await wait(300); st.tilt = 0;
+  st.words = ['you', 'fix', 'toilet', 'home']; st.labels = ['YOU', 'FIX', 'TOILET', 'HOME']; SND.chirp(4); await wait(1800);
+  for (;;) {
+    const c = await say('ROD', 'rod_normal', "So you're saying...", ['"YOU FIX TOILET. THEN YOU GO HOME."', '"YOU ARE MY TOILET NOW."', '"TAKE ME TO YOUR LEADER."']);
+    if (c === 0) break;
+    score.wrong++;
+    if (c === 1) { st.words = ['no', 'no', 'no']; st.labels = null; st.tilt = 0.4; SND.bad(); await wait(1200); await say('ROD', 'rod_normal', '...Okay. Good. Not that.'); }
+    if (c === 2) { st.words = ['me']; st.labels = ['ME']; SND.chirp(2); await wait(1200); await say('ROD', 'rod_normal', "You're the leader? Of a ship with a broken toilet?"); }
+    st.tilt = 0; st.words = ['you', 'fix', 'toilet', 'home']; st.labels = ['YOU', 'FIX', 'TOILET', 'HOME'];
+  }
+  st.words = null; st.labels = null; SND.chirp(3);
+  await say('ROD', 'rod_happy', "Deal. Show me the toilet.");
+  await fadeOut(600);
+};
+
+SCENES.toilet = async () => {
+  Object.assign(st, { rodX: 150, rodF: 6, hoseT: 0, alienTilt: 0 });
+  view = () => { shipRoom(); spaceToilet(300, 202, st.hoseT); rod(st.rodX, 202, st.rodF); alien(410, 202, { s: 1.4, point: st.point, tilt: st.alienTilt }); if (st.words) bubble(410, 112, st.words, 3); };
+  await fadeIn(600);
+  st.point = [300, 160]; SND.chirp(2); await wait(1200); st.point = null;
+  await tween(st, 'rodX', 228, 1200, t => t); st.rodF = 0;
+  await say('ROD', 'rod_normal', '...Where does the hose go?');
+  st.hoseT = 0.01; SND.chirp(1); tone(300, 0.15, 'square', 0.03, 0, 900); await wait(700); st.hoseT = 0;
+  st.rodF = 6; await wait(500); st.rodF = 0; await wait(400); st.rodF = 6; await wait(400); st.rodF = 0;
+  await say('ROD', 'rod_shocked', '...Oh. OH.');
+  await say('ROD', 'rod_gross', "So THAT'S what the probe is.");
+  st.alienTilt = 0.15; SND.chirp(2); await wait(900); st.alienTilt = 0;
+  await say('ROD', 'rod_stare', "Every abduction story on Earth... and it's a toilet.");
+  st.point = [312, 128]; SND.chirp(1); await wait(500); SND.gurgle(); st.hoseT = 0.01; await wait(1100); st.hoseT = 0; st.point = null;
+  await say('ROD', 'rod_normal', "Yep. That's a clog. Where's your cleanout?");
+  await fadeOut(600);
+};
+
+// ---- CABLE THE HOSE (mini-game) ----
+const LEN = 2300, SPD = 70, HX = 130;
+const yc = x => 128 + 42 * Math.sin(x / 150) + 18 * Math.sin(x / 57 + 1);
+const hw = x => Math.max(26, 32 + 7 * Math.sin(x / 95));
+const CableGame = {
+  init() {
+    this.d = 0; this.y = yc(HX); this.snags = 0; this.stall = 0; this.trail = []; this.t = 0; this.junk = []; this.max = 6; this.hitT = 0; this.ready = 2;
+    for (let x = 420, s = 1; x < LEN - 140; x += rnd(150, 230), s = -s) this.junk.push({ x, off: s * 0.5, r: 6, kind: Math.floor(rnd(0, 3)) });
+  },
+  update(dt) {
+    this.t += dt; if (this.ready > 0) { if (ptr.clicked || confirmHit()) this.ready = 0; return; }   // instructions stay up until you're ready
+    this.stall = Math.max(0, this.stall - dt); this.hitT = Math.max(0, this.hitT - dt);
+    const v = this.stall > 0 ? 0 : SPD; this.d = Math.min(LEN, this.d + v * dt);
+    const wx = this.d + HX, rate = 120;
+    let dy = 0; if (keys.ArrowUp || keys.w || keys.W) dy -= 1; if (keys.ArrowDown || keys.s || keys.S) dy += 1;
+    if (ptr.down && !dy) { const diff = ptr.y - this.y; dy = Math.abs(diff) < 2 ? 0 : Math.sign(diff); }
+    this.y += dy * rate * dt;
+    this.trail.push([wx, this.y]); if (this.trail.length > 400) this.trail.shift();
+    const c = yc(wx), w = hw(wx);
+    let snag = Math.abs(this.y - c) > w - 5;
+    for (const j of this.junk) if (!j.hit && Math.abs(j.x - wx) < j.r + 4 && Math.abs(yc(j.x) + j.off * hw(j.x) - this.y) < j.r + 4) { j.hit = true; snag = true; }
+    if (snag && this.hitT <= 0) { this.snags++; score.snags++; this.stall = 0.6; this.hitT = 1.0; SND.snag(); }
+    if (Math.abs(this.y - c) > w - 4) this.y = c + Math.sign(this.y - c) * (w - 6);
+    if (this.snags >= this.max) return this.done('kink');
+    if (this.d >= LEN) { SND.ding(); this.done('ok'); }
+  },
+  draw() {
+    R(0, 0, W, H, '#120d24');
+    for (let x = 0; x < W; x += 40) R(x, 0, 2, H, '#181232');
+    for (let sx = 0; sx < W; sx += 2) {
+      const wx = this.d + sx, c = yc(wx), w = hw(wx);
+      R(sx, c - w - 5, 2, 5, '#8a93a5'); R(sx, c + w, 2, 5, '#8a93a5');
+      R(sx, c - w, 2, w * 2, '#241c3e');
+      if (Math.floor(wx / 14) % 2 === 0) { R(sx, c - w - 5, 2, 2, '#a9b2c4'); R(sx, c + w + 3, 2, 2, '#a9b2c4'); }
+    }
+    const gx = LEN + HX - this.d + 20;
+    if (gx < W + 40) { for (let i = 0; i < 9; i++) E(gx + (i % 3) * 7, yc(LEN + HX + 20) - 12 + i * 3, 9, 7, i % 2 ? '#5a3a1c' : '#6b4423'); T('CLOG', gx + 8, yc(LEN + HX + 20) - 30, '#f7c418', 6, 'center'); }
+    for (const j of this.junk) {
+      const sx = j.x - this.d, y = yc(j.x) + j.off * hw(j.x); if (sx < -10 || sx > W + 10) continue;
+      if (j.kind === 0) E(sx, y, j.r + 1, j.r, j.hit ? '#3c5a3c' : '#7dffb0');
+      if (j.kind === 1) { R(sx - 6, y - 4, 12, 8, j.hit ? '#555' : '#c0c8d8'); R(sx - 3, y - 2, 6, 4, '#2c6cd6'); }
+      if (j.kind === 2) { E(sx, y, 6, 6, j.hit ? '#555' : '#e9665a'); R(sx - 1, y - 9, 2, 4, '#e9665a'); }
+    }
+    g.strokeStyle = '#d0d0d0'; g.lineWidth = 3; g.beginPath(); let first = true;
+    for (const [x, y] of this.trail) { const sx = x - this.d; if (sx < -4) continue; if (first) { g.moveTo(sx, y); first = false; } else g.lineTo(sx, y); }
+    g.stroke();
+    const sp = this.t * (this.stall > 0 ? 2 : 24);
+    R(HX - 2, this.y - 5, 10, 10, this.hitT > 0 && Math.floor(this.t * 16) % 2 ? '#e9665a' : '#f7c418');
+    R(HX + 8, this.y - 3 + Math.round(Math.sin(sp) * 2), 4, 6, '#fff');
+    R(0, 0, W, 22, '#10151fdd');
+    T('CABLE THE HOSE', 8, 11, '#f7c418', 7);
+    R(140, 7, 200, 8, '#2c3326'); R(140, 7, 200 * this.d / LEN, 8, '#7bd65b');
+    T('SNAGS', 360, 11, '#fff', 6); for (let i = 0; i < this.max; i++) R(404 + i * 11, 6, 8, 9, i < this.snags ? '#e9665a' : '#333');
+    if (this.ready > 0) { R(120, 96, 240, 70, '#10151fee'); T('STEER THE CABLE TO THE CLOG', 240, 114, '#f7c418', 7, 'center'); T('UP / DOWN  ·  OR HOLD WHERE YOU WANT IT', 240, 134, '#fff', 5, 'center'); T("DON'T SNAG THE WALLS OR THE JUNK", 240, 150, '#fff', 5, 'center'); if (Math.floor(this.t * 2.5) % 2) T('TAP TO START', 240, 176, '#f7c418', 7, 'center'); }
+  },
+};
+SCENES.cable = async () => {
+  view = () => {};
+  await fadeIn(300);
+  for (;;) {
+    const r = await play(CableGame);
+    if (r === 'ok') break;
+    score.retries++; view = () => R(0, 0, W, H, '#120d24');
+    await say('ROD', 'rod_normal', 'Kinked it. Pull it back and feed it again.');
+    view = () => {};
+  }
+  await fadeOut(500);
+};
+
+SCENES.reveal = async () => {
+  Object.assign(st, { cableUp: 0, holo: 0, rodF: 0, happy: false });
+  view = () => {
+    shipRoom(); spaceToilet(300, 202, 0);
+    rod(228, 202, st.rodF);
+    if (st.cableUp > 0) {
+      const tx = 244, ty = 120 - st.cableUp * 20;
+      g.strokeStyle = '#d0d0d0'; g.lineWidth = 2; g.beginPath(); g.moveTo(240, 160); g.lineTo(tx, ty + 10); g.stroke();
+      R(tx - 3, ty, 7, 16, '#f2f0ea'); R(tx - 3, ty, 7, 2, '#d8d4c8'); g.strokeStyle = '#d8d4c8'; g.lineWidth = 1; g.beginPath(); g.moveTo(tx, ty + 16); g.quadraticCurveTo(tx + 6, ty + 26, tx + 2, ty + 34); g.stroke();
+    }
+    alien(410, 202, { s: 1.4, sad: st.sad, tilt: st.tilt, wave: st.happy });
+    if (st.holo > 0) {
+      const t = performance.now() / 1000, a = st.holo * (0.55 + 0.15 * Math.sin(t * 30));
+      g.globalAlpha = a; g.fillStyle = '#6fd3ff';
+      E(380, 92, 8, 9, '#6fd3ff'); for (let i = 0; i < 5; i++) E(372 + i * 4, 82, 3, 3, '#bfefff');
+      g.beginPath(); g.moveTo(370, 102); g.lineTo(390, 102); g.lineTo(396, 140); g.lineTo(364, 140); g.fill();
+      for (let y = 80; y < 142; y += 3) R(360, y, 40, 1, 'rgba(0,0,0,.35)');
+      g.globalAlpha = 1; T('LAST GUEST', 380, 150, '#6fd3ff', 5, 'center', false);
+    }
+  };
+  await fadeIn(500);
+  await say('ROD', 'rod_normal', 'Got something. Coming back...');
+  await tween(st, 'cableUp', 1, 1400);
+  await wait(500);
+  await say('ROD', 'rod_gross', '...Somebody flushed a tampon.');
+  st.holo = 0.01; SND.chirp(2); await tween(st, 'holo', 1, 500);
+  st.sad = true; st.tilt = 0.25; await wait(1600);
+  await say('ROD', 'rod_laugh', "Yeah. It's always the last guest.");
+  await tween(st, 'holo', 0, 400); st.sad = false; st.tilt = 0;
+  DDTSfx.play('flush_big'); await wait(1200); st.happy = true; SND.chirp(6);
+  await say('ROD', 'rod_happy', 'There she goes. Tell your friends: only flush the three P\'s. Pee, poo, and paper.');
+  await say('ROD', 'rod_happy', 'Even in space.');
+  await fadeOut(700);
+};
+
+SCENES.dropoff = async () => {
+  Object.assign(st, { rodDY: -140, beam: 0, inBed: true });
+  view = () => {
+    bedroom(true); bed(false);
+    if (st.beam > 0) { g.fillStyle = `rgba(125,255,176,${0.2 * st.beam})`; g.fillRect(170, 0, 56, 200); }
+    g.save(); g.beginPath(); g.rect(0, 0, W, 172); g.clip(); rod(196, 200 + st.rodDY, 0); g.restore();
+    bed(true);
+  };
+  await fadeIn(700);
+  await card(['6:58 AM'], 900);
+  SND.beam(); await tween(st, 'beam', 1, 300);
+  await tween(st, 'rodDY', 0, 1600);
+  await tween(st, 'beam', 0, 400);
+  await wait(800);
+  tone(880, 0.1, 'square', 0.04); tone(880, 0.1, 'square', 0.04, 0.25); tone(880, 0.1, 'square', 0.04, 0.5);
+  await wait(900);
+  await fadeOut(500);
+  view = () => { R(0, 0, W, H, '#0e1118'); };
+  await fadeIn(300);
+  await card(['7:41 AM · THE VAN'], 900);
+  await say('MATT', 'matt_suspicious', "You're late. And you look like you saw a ghost.");
+  await say('ROD', 'rod_stare', '...');
+  await say('ROD', 'rod_stare', "Don't ask.");
+  await say('MATT', 'matt_normal', '...Why do you smell like ozone?');
+  view = () => {
+    R(0, 0, W, H, '#0e1118');
+    R(110, 40, 260, 170, '#10151f'); g.strokeStyle = '#f7c418'; g.lineWidth = 3; g.strokeRect(111.5, 41.5, 257, 167);
+    T('STORY JOB COMPLETE', 240, 62, '#f7c418', 9, 'center');
+    T('OUT OF THIS WORLD', 240, 82, '#fff', 7, 'center');
+    T('NEW TOOL: GRAVITY AUGER', 240, 112, '#7dffb0', 7, 'center');
+    T('+ REPUTATION (GALACTIC)', 240, 130, '#7dffb0', 7, 'center');
+    T(`WRONG WORDS ${score.wrong}  ·  SNAGS ${score.snags}`, 240, 152, '#9fb3d9', 5, 'center');
+    T(DDT.inCampaign() ? 'TAP TO CONTINUE' : 'TAP TO RETURN TO MENU', 240, 186, '#fff', 6, 'center');
+  };
+  SND.ding();
+  if (DDT.inCampaign()) DDT.apply({ rep: 5, money: 0, stamina: -30, item: { gravityauger: 1 }, time: 60, note: 'Abducted. Fixed a space toilet. Do not ask Rod about it.' });
+  await cancellable(res => { st.waitTap = res; });
+};
+
+// =====================================================================
+// main loop
+// =====================================================================
+let last = performance.now(), started = false;
+function frame(now) {
+  g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  for (const tw of tweens.slice()) {
+    tw.t += dt * 1000; const p = Math.min(1, tw.t / tw.ms); tw.o[tw.k] = tw.from + (tw.to - tw.from) * tw.fn(p);
+    if (p >= 1) { tweens.splice(tweens.indexOf(tw), 1); tw.res(); }
+  }
+  // buttons first
+  if (started && ptr.clicked && inBox(...BTN.menu)) { location.href = DDT.root + (DDT.inCampaign() ? 'play.html' : 'index.html'); return; }
+  if (started && DDT.DEV && ptr.clicked && inBox(...BTN.skip)) { ptr.clicked = false; runFrom(cur + 1); }
+  if (!started) {
+    R(0, 0, W, H, '#05070c'); stars();
+    T('STORY JOB', 240, 90, '#9fb3d9', 8, 'center'); T('OUT OF THIS WORLD', 240, 116, '#f7c418', 16, 'center');
+    if (Math.floor(now / 500) % 2) T('TAP TO START', 240, 170, '#fff', 8, 'center');
+    if (ptr.clicked || confirmHit()) { started = true; ac(); const q = new URLSearchParams(location.search).get('scene'); runFrom(Math.max(0, ORDER.indexOf(q))); }
+  } else {
+    view();
+    if (game) { const gm = game; gm.update(dt); gm.draw(); }   // update may finish the game and clear it
+    else if (!dialogInput() && st.waitTap && (ptr.clicked || confirmHit())) { const f = st.waitTap; st.waitTap = null; f(); }
+    drawDialog();
+    if (st.cardA > 0) { g.globalAlpha = st.cardA; const CL = st.card.flatMap(l => wrap(String(l), 450, 9)); R(0, 80, W, 34 + (CL.length - 1) * 16, '#000000cc'); CL.forEach((l, i) => T(l, 240, 98 + i * 16, st.cardCol, 9, 'center')); g.globalAlpha = 1; }
+    if (st.fade > 0) { g.globalAlpha = st.fade; R(0, 0, W, H, '#000'); g.globalAlpha = 1; }
+    drawButtons();
+  }
+  ptr.clicked = false; for (const k in hit) delete hit[k];
+  requestAnimationFrame(frame);
+}
+Promise.all([load('../assets/rod_dance.png'), load('../assets/van_left.png'), load('../assets/rod_normal.png'), load('../assets/rod_happy.png'),
+  load('../assets/matt_normal.png'), load('../assets/matt_suspicious.png'), document.fonts.load(FONT(8)).catch(() => {})])
+  .then(([rd, van, rn, rh, mn, ms]) => {
+    Object.assign(IMG, { rod: rd, van, rod_normal: rn, rod_happy: rh, matt_normal: mn, matt_suspicious: ms });
+    IMG.alienP = alienPortrait();
+    // in the campaign you already tapped to get here: skip the title card
+    if (DDT.inCampaign() && !started) { started = true; runFrom(Math.max(0, ORDER.indexOf(DDT.param('scene')))); }
+    requestAnimationFrame(frame);
+  });
+</script>
+</body>
+</html>

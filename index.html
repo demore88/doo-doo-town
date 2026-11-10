@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="./manifest.webmanifest"><meta name="theme-color" content="#2a5ab0"><link rel="icon" href="./icons/icon-192.png"><link rel="apple-touch-icon" href="./icons/apple-180.png"><meta name="mobile-web-app-capable" content="yes"><script>if ("serviceWorker" in navigator && window.top === window && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(() => {});</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Doo Doo Town the Game!</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  @font-face{font-family:'Press Start 2P';src:url('assets/PressStart2P.ttf') format('truetype');font-display:block}
+  html,body{margin:0;height:100%;background:#0e1118;overflow:hidden;font-family:'Press Start 2P',monospace;color:#fff}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  #stage{position:relative;aspect-ratio:16/9;width:min(100vw,calc(100vh*16/9))}
+  canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+  #ui{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;pointer-events:none}
+  .pre{margin-top:2.2%;font-size:clamp(7px,1.3vw,14px);color:#fff;text-align:center;background:#10151fd9;padding:.55em .9em;border:2px solid #f7c418;
+    text-shadow:2px 2px 0 #000}
+  .title{margin-top:1.4%;text-align:center;line-height:1.2;font-size:clamp(16px,4.2vw,46px);color:#f7c418;
+    text-shadow:0.08em 0.08em 0 #2c6cd6,0.16em 0.16em 0 #10151f;letter-spacing:.04em}
+  .sub{margin-top:1%;font-size:clamp(7px,1.3vw,14px);color:#fff;text-align:center;background:#10151fd9;padding:.55em .9em;
+    text-shadow:2px 2px 0 #000}
+  #press{margin-top:3%;font-size:clamp(8px,1.8vw,18px);color:#fff;background:#10151fd9;padding:.6em 1em;text-shadow:2px 2px 0 #000;animation:blink 1s steps(2) infinite;pointer-events:auto;cursor:pointer}
+  @keyframes blink{50%{opacity:0}}
+  #press{position:absolute;top:2%;left:1.5%;margin:0;font-size:clamp(6px,1vw,11px);white-space:nowrap;display:none;border:2px solid #fff}
+  #menu{position:absolute;left:3%;top:43%;display:flex;flex-direction:column;gap:clamp(4px,1vw,10px);pointer-events:auto}
+  .btn{font:inherit;font-size:clamp(7px,1.25vw,14px);background:#10151fcc;color:#fff;border:3px solid #f7c418;padding:.6em 1.2em;cursor:pointer;
+    box-shadow:4px 4px 0 #10151f;text-align:center;min-width:12em}
+  #watch{position:absolute;top:2%;right:9.5%;font:inherit;font-size:clamp(6px,1vw,11px);background:#10151fcc;color:#fff;border:2px solid #fff;padding:.5em .7em;cursor:pointer;pointer-events:auto}
+  body.watching #ui, body.watching #press{display:none !important}
+  .btn:hover,.btn:focus-visible{background:#2c6cd6;outline:none}
+  .btn.sel{background:#2c6cd6}
+  #panel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(70%,640px);background:#10151fee;border:3px solid #f7c418;
+    box-shadow:6px 6px 0 #000;padding:2.2%;font-size:clamp(7px,1.15vw,12px);line-height:1.9;display:none;pointer-events:auto}
+  #panel h3{margin:0 0 .8em;color:#f7c418;font-size:1.3em}
+  #panel .btn{margin-top:1em;min-width:auto}
+  #toast{position:absolute;left:50%;bottom:17%;transform:translateX(-50%);background:#10151fee;border:3px solid #f7c418;padding:.8em 1.2em;
+    font-size:clamp(7px,1.2vw,13px);display:none;text-align:center;white-space:nowrap}
+  #footer{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:clamp(7px,1.35vw,15px);color:#fff;background:#10151fe6;
+    border-top:3px solid #f7c418;padding:.7em 0;text-shadow:2px 2px 0 #000;letter-spacing:.03em}
+  #footer b{color:#f7c418;font-weight:normal}
+  #sound{position:absolute;top:2%;right:1.5%;font:inherit;font-size:clamp(6px,1vw,11px);background:#10151fcc;color:#fff;border:2px solid #fff;padding:.5em .7em;cursor:pointer;pointer-events:auto}
+
+  /* ---------- opening call cutscene ---------- */
+  #cut{position:absolute;inset:0;background:#0b0e15f2;display:none;pointer-events:auto;font-size:clamp(7px,1.25vw,14px)}
+  #cut.on{display:block}
+  #vanbg{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;display:none}
+  body.vancall #vanbg{display:block} body.vancall #cut{background:#0b0e1555} body.vancall #footer{display:none} body.vancall.ringing #card{display:none}
+  /* incoming-call screen (campaign) */
+  /* the Poop Phone: a beat-up Samsung S23 */
+  #callui .phonebody{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-3deg);height:88%;aspect-ratio:9/19.5;background:#0d0d10;border-radius:12%/5.5%;border:clamp(4px,.7vw,8px) solid #2b2b31;box-shadow:0 0 0 2px #6a6a72 inset,0 12px 30px #000c}
+  #callui .screen{position:absolute;inset:2.5%;border-radius:10%/4.6%;background:linear-gradient(170deg,#24476e,#0f1a2c 60%,#0a0f19);overflow:hidden}
+  #callui .cam{position:absolute;top:3%;left:50%;width:4.5%;aspect-ratio:1;border-radius:50%;background:#000;box-shadow:0 0 0 2px #222;transform:translateX(-50%)}
+  #callui .screen .sbar{position:absolute;top:2.5%;left:7%;right:7%;display:flex;justify-content:space-between;font-size:.62em;color:#cfd8e8}
+  #callui .screen .cid{position:absolute;top:13%;left:0;right:0;font-size:.75em;line-height:1.9}
+  #callui .screen .cid b{display:block;font-size:1.25em;line-height:1.4;padding:0 6%}
+  #callui .screen .avatar{position:absolute;top:42%;left:50%;transform:translateX(-50%);width:30%;aspect-ratio:1;border-radius:50%;background:#3a4a64;display:grid;place-items:center;font-size:2.4em;color:#cfd8e8}
+  #callui .screen .btns{position:absolute;bottom:7%;left:0;right:0;display:flex;justify-content:center;gap:16%}
+  #callui .vm{position:absolute;inset:0;display:none;text-align:center}
+  #callui .vmt{position:absolute;top:10%;left:0;right:0;font-size:1.05em;color:#fff}
+  #callui .vmn{position:absolute;top:17%;left:0;right:0;font-size:.7em;color:#f7c418}
+  #callui .vmi{position:absolute;top:27%;left:8%;right:8%;background:#ffffff14;border:1px solid #ffffff33;border-radius:.6em;padding:.8em .4em;font-size:.68em;line-height:1.9;color:#cfd8e8}
+  #callui .vmi b{color:#fff;font-weight:normal;font-size:1.15em} #callui .vmi span{color:#9fb3d9}
+  #callui #vmplay{position:absolute;bottom:15%;left:50%;transform:translateX(-50%);background:#2fbf5b;animation:pulse 1.1s infinite}
+  #callui .vml{position:absolute;bottom:9%;left:0;right:0;font-size:.7em;color:#cfd8e8}
+  #callui .crack{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke:#ffffffaa;stroke-width:.6;pointer-events:none}
+  #callui .dirt{position:absolute;inset:0;pointer-events:none;background:
+    radial-gradient(14% 6% at 22% 30%,#6b4a2a99,transparent 70%),radial-gradient(10% 4% at 78% 64%,#5a3a1c88,transparent 70%),
+    radial-gradient(18% 7% at 40% 88%,#7a5a3088,transparent 70%),radial-gradient(8% 4% at 85% 18%,#6b4a2a77,transparent 70%),
+    radial-gradient(30% 10% at 60% 45%,#ffffff10,transparent 70%)}
+
+  #callui{position:absolute;inset:0;display:none;text-align:center;color:#fff}
+  #callui .cid{position:absolute;top:30%;left:0;right:0;font-size:1.1em;line-height:2;text-shadow:2px 2px 0 #000}
+  #callui .cid b{display:block;font-size:1.6em;color:#fff;font-weight:normal}
+  #callui .cid small{color:#9fb3d9}
+  #callui .btns{position:absolute;bottom:20%;left:0;right:0;display:flex;justify-content:center;gap:22%}
+  #callui .cb{display:flex;flex-direction:column;align-items:center;gap:.6em;font-size:.8em;color:#cfd8e8}
+  #callui button{width:clamp(34px,5.5vw,62px);height:clamp(34px,5.5vw,62px);border-radius:50%;border:none;cursor:pointer;display:grid;place-items:center;box-shadow:0 4px 0 #0006}
+  #callui button svg{width:50%;height:50%;fill:#fff}
+  #callui #decline{background:#e5383b} #callui #decline svg{transform:rotate(135deg)}
+  #callui #accept{background:#2fbf5b;animation:pulse 1.1s infinite}
+  #callui .up{width:clamp(14px,2vw,22px);fill:#2fbf5b;animation:bob 1s ease-in-out infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 #2fbf5baa}70%{box-shadow:0 0 0 18px #2fbf5b00}100%{box-shadow:0 0 0 0 #2fbf5b00}}
+  @keyframes bob{50%{transform:translateY(-6px)}}
+  #callui .nag{position:absolute;bottom:4%;left:50%;transform:translateX(-50%);width:min(80%,640px);display:none;align-items:center;gap:1em;background:#10151f;border:3px solid #fff;padding:.6em;text-align:left;font-size:.95em;line-height:1.6}
+  #callui .nag img{width:clamp(40px,7vw,72px);image-rendering:pixelated;border:2px solid #f7c418}
+  #cut .next.big{right:auto;left:50%;transform:translateX(-50%);bottom:24%;font-size:1.5em;padding:.8em 1.4em;border-color:#f7c418;color:#f7c418;animation:blink 1s steps(2) infinite}
+  body.cutting #ui, body.cutting #watch, body.cutting #press{visibility:hidden}
+  #cut .card{position:absolute;top:8%;left:50%;transform:translateX(-50%);color:#f7c418;font-size:1.25em;text-align:center;line-height:1.8}
+  #cut .row{position:absolute;left:5%;right:5%;bottom:18%;display:flex;gap:3%;align-items:flex-end}
+  #cut .port{width:22%;aspect-ratio:1;background:#2a3346;border:4px solid #f7c418;box-shadow:6px 6px 0 #000;image-rendering:pixelated;flex:none;position:relative}
+  #cut .port img{width:100%;height:100%;image-rendering:pixelated;display:block}
+  #cut .name{position:absolute;bottom:-1.9em;left:0;right:0;text-align:center;color:#f7c418}
+  #cut .box{flex:1;background:#10151f;border:4px solid #fff;box-shadow:6px 6px 0 #000;padding:3% 3.5%;min-height:7.5em;line-height:2;position:relative}
+  #cut .who{color:#f7c418;margin-bottom:.6em}
+  #cut .aside{color:#9fb3d9}
+  #cut .phone{position:absolute;top:30%;left:50%;transform:translateX(-50%);text-align:center;color:#fff;font-size:1.6em;line-height:1.8;display:none}
+  #cut .phone.ring{animation:shake .12s infinite}
+  @keyframes shake{0%{transform:translateX(-52%) rotate(-3deg)}50%{transform:translateX(-48%) rotate(3deg)}}
+  #cut .bars{display:flex;gap:4px;align-items:flex-end;height:1.6em;margin-top:.6em}
+  #cut .bars i{width:6px;background:#7bd65b;height:20%;display:block}
+  #cut .ctl{position:absolute;right:2%;top:2.5%;display:flex;gap:8px}
+  #cut .ctl button,#cut .next{font:inherit;font-size:.85em;background:#10151fcc;color:#fff;border:2px solid #fff;padding:.5em .8em;cursor:pointer}
+  #cut .port.matt{position:absolute;right:5%;top:21%;width:14%;border-width:3px;display:none}
+  #cut .port.matt img.flip{transform:scaleX(-1)}
+  #cut .opts{display:flex;flex-direction:column;gap:.6em;margin-top:1em}
+  #cut .opt{font:inherit;font-size:.95em;text-align:left;background:#1d2638;color:#fff;border:2px solid #f7c418;padding:.6em .9em;cursor:pointer}
+  #cut .opt:hover,#cut .opt:focus-visible{background:#2c6cd6;outline:none}
+  #road{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;display:none;pointer-events:auto;touch-action:none}
+  #cut .next{position:absolute;left:50%;transform:translateX(-50%);bottom:6%;font-size:1.2em;padding:.7em 1.2em;border-color:#f7c418;color:#f7c418;display:none;animation:blink 1.2s steps(2) infinite}
+  #panel{max-height:82%;overflow:auto}
+  .btn.dev{border-style:dashed;border-color:#9fb3d9;color:#9fb3d9}
+  #panel .scn{display:block;width:100%;margin:.4em 0;text-align:left;font-size:.95em;padding:.5em .8em;min-width:0}
+  #panel .grp{color:#f7c418;margin-top:.8em}
+  body.saver #ui, body.saver #press, body.saver #footer, body.saver #sound, body.saver #watch, body.saver #toast, body.saver #panel{display:none !important}
+  body.saver{cursor:none}
+  #saverhint{position:absolute;bottom:3%;left:50%;transform:translateX(-50%);font-size:clamp(6px,1vw,11px);color:#fff;background:#10151fcc;padding:.6em 1em;display:none;pointer-events:none;text-shadow:2px 2px 0 #000}
+  body.saver #saverhint{display:block;animation:hintfade 3.5s forwards}
+  @keyframes hintfade{0%,70%{opacity:1}100%{opacity:0}}
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+  <canvas id="c" width="480" height="270"></canvas>
+  <div id="ui">
+    <div class="pre">MT. WASHINGTON SEWER AND DRAIN presents:</div>
+    <div class="title">DOO DOO TOWN<br>THE GAME!</div>
+    <div class="sub">Created by Matthew Demore</div>
+    <div id="menu">
+      <button class="btn" data-a="continue" id="contbtn" style="display:none">CONTINUE</button>
+      <button class="btn" data-a="new">NEW GAME</button>
+      <button class="btn" data-a="arcade">MINI-GAMES</button>
+      <button class="btn" data-a="how">HOW TO PLAY</button>
+      <button class="btn" data-a="credits">CREDITS</button>
+      <button class="btn dev" data-a="scenes">CUTSCENES (DEV)</button>
+    </div>
+  </div>
+  <button id="sound">♪ ON</button>
+  <button id="watch">SCREENSAVER</button>
+  <div id="press">♪ TAP ANYWHERE FOR SOUND</div>
+  <div id="panel"></div>
+  <div id="toast"></div>
+  <canvas id="vanbg" width="1440" height="810"></canvas>
+  <div id="cut">
+    <div class="ctl"><button id="skip">SKIP ▸▸</button></div>
+    <div class="card" id="card"></div>
+    <div class="phone" id="phone">☎<br>RING... RING...</div>
+    <div class="row" id="row" style="display:none">
+      <div class="port"><img id="rodimg" src="assets/rod_phone.png" alt="Rod"><div class="name" id="rodname">ROD</div></div>
+      <div class="box"><div class="who" id="who"></div><div id="line"></div><div class="bars" id="bars"></div><div class="opts" id="opts"></div></div>
+    </div>
+    <div class="port matt" id="mattport"><img id="mattimg" src="assets/matt_normal.png" alt="Matt"><div class="name">MATT</div></div>
+    <button class="next" id="next">BACK TO MENU</button>
+    <div id="callui">
+     <div class="phonebody"><div class="screen">
+      <div class="sbar"><span>POOP PHONE</span><span>12%</span></div>
+      <div class="cid"><small>INCOMING CALL</small><b id="cidname">UNKNOWN CALLER</b><span id="cidtown">RANDOLPH, NH</span></div>
+      <div class="btns">
+        <div class="cb"><button id="decline" aria-label="Decline"><svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></button>DECLINE</div>
+        <div class="cb"><button id="accept" aria-label="Answer"><svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></button><svg class="up" viewBox="0 0 24 24"><path d="M12 4l7 8h-5v8h-4v-8H5z"/></svg>ANSWER</div>
+      </div>
+      <div class="avatar">?</div>
+      <div class="vm" id="vm"><div class="vmt">VOICEMAIL</div><div class="vmn">1 NEW MESSAGE</div>
+        <div class="vmi"><b>UNKNOWN CALLER</b><br>Randolph, NH<br><span>7:38 AM · 0:24</span></div>
+        <button id="vmplay" aria-label="Play voicemail"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button><div class="vml">PLAY</div></div>
+      <svg class="crack" viewBox="0 0 100 200" preserveAspectRatio="none"><polyline points="72,0 64,22 70,30 58,48 63,55 50,78" /><polyline points="64,22 80,34 94,31" /><polyline points="58,48 44,52 36,64" /></svg>
+      <div class="dirt"></div>
+     </div><div class="cam"></div></div>
+      <div class="nag" id="nag"><img src="assets/matt_suspicious.png" alt="Matt"><div><span style="color:#f7c418">MATT</span><br><span id="nagline"></span></div></div>
+    </div>
+  </div>
+  <canvas id="road" width="1440" height="810"></canvas>
+  <div id="saverhint">TAP OR PRESS ANY KEY TO EXIT SCREENSAVER</div>
+  <div id="footer">WE KEEP NH FLOWING &nbsp;·&nbsp; <b>603-356-6555</b> &nbsp;·&nbsp; <b>603-752-2145</b></div>
+</div></div>
+
+<audio id="music" src="assets/doo_doo_town.mp3" loop preload="auto"></audio>
+<audio id="call" src="assets/call_fluffernutter.mp3" preload="auto"></audio>
+<script src="js/state.js"></script>
+<script src="js/sfx.js"></script>
+<script src="js/drive3d.js"></script>
+<script src="js/music.js"></script>
+<script>
+const W = 480, H = 270, LOOP_W = 6688;           // strip loop width at 270px tall
+const cv = document.getElementById('c'), g = cv.getContext('2d');
+g.imageSmoothingEnabled = false;
+const load = s => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = s; });
+const music = document.getElementById('music');
+let soundOn = true, started = false;
+
+// ---------- scene ----------
+const VAN_X = 186, VAN_Y = 188;                  // van in the correct (right-hand) lane, heading left
+const SPEED = 46;                                // px/s the world scrolls by
+const START = LOOP_W - 600;                      // open on the Berlin sign
+const BEAT = 60 / 100;                          // 100 BPM: one dance step per beat
+// sheet frames: 0 idle, 1 L arm up, 2 R arm up, 3 both up, 4 kick L, 5 kick R, 6 face right, 7 back, 8 face left
+const SPIN = [8, 7, 6, 0];                       // left -> back -> right -> front, in quarter beats
+const ROUTINE = [1, 2, 4, 5, 'spin', 3, 4, 5];   // 8-count
+let strip, van, rod, matt, vanTop;
+const puffs = [];
+const mod = (a, n) => ((a % n) + n) % n;
+
+function pose(t, shift) {
+  const b = Math.floor(t / BEAT) + shift, step = ROUTINE[mod(b, ROUTINE.length)];
+  const within = mod(t, BEAT) / BEAT;
+  if (step === 'spin') return { f: SPIN[Math.min(3, Math.floor(within * 4))], hop: 0 };
+  const hop = (step >= 3 && within < 0.4) ? -3 : (within < 0.25 ? -1 : 0);
+  return { f: step, hop };
+}
+
+function draw(t) {
+  const off = mod(START - t * SPEED, LOOP_W);
+  g.drawImage(strip, -Math.floor(off), 0);
+  if (LOOP_W - off < W) g.drawImage(strip, Math.floor(LOOP_W - off), 0);
+
+  // exhaust out the back (right side), trailing behind
+  if (Math.random() < 0.25) puffs.push({ x: VAN_X + 140, y: VAN_Y + 50, r: 2, a: 0.7 });
+  for (const p of puffs) { p.x += 0.9; p.y -= 0.15; p.r += 0.05; p.a -= 0.012; }
+  while (puffs.length && puffs[0].a <= 0) puffs.shift();
+  for (const p of puffs) { g.fillStyle = `rgba(190,190,195,${Math.max(0, p.a)})`; g.fillRect(Math.round(p.x), Math.round(p.y), Math.ceil(p.r), Math.ceil(p.r)); }
+
+  const wheel = Math.floor(t * 14) % Math.max(1, Math.floor(van.width / 144));   // the wheels spin on the title screen
+  const bounce = (Math.floor(t * 6) % 5 === 0) ? -1 : 0;
+  g.drawImage(van, wheel * 144, 0, 144, 64, VAN_X, VAN_Y + bounce, 144, 64);
+
+  // Rod up front over the driver's seat, Matt behind him; Matt runs 4 counts behind so one spins while the other kicks
+  const roof = VAN_Y + bounce + 6 - 39;
+  const dt = (!music.paused && music.currentTime > 0) ? music.currentTime : t;   // lock to the song while it plays
+  const r = pose(dt, 0), m = pose(dt, -4);
+  g.drawImage(rod, r.f * 24, 0, 24, 40, VAN_X + 46, roof + r.hop, 24, 40);
+  g.drawImage(matt, m.f * 24, 0, 24, 40, VAN_X + 90, roof + m.hop, 24, 40);
+}
+
+function loop(ms) { draw(ms / 1000); requestAnimationFrame(loop); }
+
+// ---------- menu ----------
+const $ = s => document.querySelector(s);
+const panel = $('#panel'), toast = $('#toast');
+function showPanel(html) {
+  panel.innerHTML = html + '<div style="text-align:center"><button class="btn" id="back">BACK</button></div>';
+  panel.style.display = 'block'; $('#back').onclick = hidePanel; $('#back').focus();
+}
+function hidePanel() { panel.style.display = 'none'; const b = document.querySelector('#menu .btn'); b && b.focus(); }
+function say(msg) { toast.textContent = msg; toast.style.display = 'block'; clearTimeout(say.t); say.t = setTimeout(() => toast.style.display = 'none', 2600); }
+
+// music: try to autoplay; if the browser blocks it, start on the first tap/click/key anywhere
+function playMusic() {
+  if (!soundOn) return Promise.resolve(false);
+  return music.play().then(() => { started = true; $('#press').style.display = 'none'; return true; })
+                     .catch(() => { $('#press').style.display = 'block'; return false; });
+}
+const IS_EMBED = /[?&](call|drive)=/.test(location.search);   // part of the campaign: no title music
+function start() { if (!started && !cutLive && !IS_EMBED) playMusic(); }
+['pointerdown', 'keydown', 'touchstart'].forEach(ev => document.addEventListener(ev, e => {
+  if (e.target.closest && e.target.closest('#sound')) return;
+  start();
+}, { capture: true }));
+if (!IS_EMBED) playMusic();
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && panel.style.display === 'block') hidePanel();
+  if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && panel.style.display !== 'block') {
+    const bs = [...document.querySelectorAll('#menu .btn')], i = bs.indexOf(document.activeElement);
+    bs[(i + (e.key === 'ArrowDown' ? 1 : bs.length - 1)) % bs.length].focus(); e.preventDefault();
+  }
+});
+
+document.querySelectorAll('#menu .btn').forEach(b => b.onclick = () => {
+  const a = b.dataset.a;
+  if (a === 'new') {   // two taps when a save exists, so nobody wipes their year by accident
+    const bn = document.querySelector('[data-a="new"]');
+    if (DDT.load() && !bn.dataset.armed) { bn.dataset.armed = 1; bn.textContent = 'TAP AGAIN: START OVER'; setTimeout(() => { delete bn.dataset.armed; bn.textContent = 'NEW GAME'; }, 3000); return; }
+    location.href = 'play.html?new=1'; return;
+  }
+  if (a === 'continue') { location.href = 'play.html'; return; }
+  if (a === 'arcade') { location.href = 'arcade/index.html'; return; }
+  if (a === 'how') showPanel(`<h3>HOW TO PLAY</h3>
+    Run the truck for a full year of real North Country calls.<br>
+    ▸ Pick breakfast, stock up at Fernko's, and get to every job on time.<br>
+    ▸ Dodge the bad drivers. Late = lost reputation.<br>
+    ▸ Find the clog, pick the right gear, and don't get splashed.<br>
+    ▸ Keep your health and stamina up. Bring spare pants.`);
+  if (a === 'scenes') {
+    showPanel(`<h3>CUTSCENES · DEV ONLY</h3>
+      <div style="color:#9fb3d9">Remove before release.</div>
+      <div class="grp">JANUARY · FLUFFERNUTTER</div>
+      <button class="btn scn" id="sc-call">1. THE PHONE CALL</button>
+      <button class="btn scn" id="sc-drive">2. DRIVE TO RANDOLPH (TRAFFIC RUN)</button>
+      ${[['arrive','23 BOULDER LANE'],['gear','GEAR UP'],['basement','THE BASEMENT'],['wade','WADE IN (GAME)'],['cable','FEED THE CABLE (GAME)'],['culprit','THE CULPRIT'],['payday','PAYDAY']]
+        .map(([k, n], i) => `<button class="btn scn" onclick="location.href='story/fluffernutter.html?scene=${k}'">${i + 3}. ${n}</button>`).join('')}
+      <div class="grp">BREAKFAST STOP · CORE SHOT</div>
+      ${[['arrive','PULL IN'],['order','ORDER UP'],['leave','BACK ON THE ROAD']]
+        .map(([k, n], i) => `<button class="btn scn" onclick="location.href='story/coffee.html?scene=${k}'">${i + 1}. ${n}</button>`).join('')}
+      <div class="grp">STORY JOB · OUT OF THIS WORLD</div>
+      ${[['window','THE WINDOW'],['beam','BEAM ME UP'],['lang','LEARN THE LINGO (GAME)'],['toilet','THE SPACE TOILET'],['cable','CABLE THE HOSE (GAME)'],['reveal','THE CULPRIT'],['dropoff','THE DROP-OFF']]
+        .map(([k, n], i) => `<button class="btn scn" onclick="location.href='story/alien.html?scene=${k}'">${i + 1}. ${n}</button>`).join('')}`);
+    $('#sc-call').onclick = () => { hidePanel(); intro(); };
+    $('#sc-drive').onclick = () => { hidePanel(); devDrive(); };
+    return;
+  }
+  if (a === 'credits') showPanel(`<h3>CREDITS</h3>
+    Starring <span style="color:#f7c418">ROD</span> and <span style="color:#f7c418">MATT</span><br>
+    Created by Matthew Demore<br>Music: "Doo Doo Town" by Matthew Demore<br>
+    Based on real calls. Names withheld to protect the guilty.<br>
+    Sound effects from <a href="https://www.zapsplat.com" target="_blank" style="color:#9fd0e0">zapsplat.com</a><br><br>
+    Mt. Washington Sewer &amp; Drain Cleaning<br>603-356-6555 · 603-752-2145`);
+});
+
+
+// ---------- opening: the Fluffernutter call ----------
+const CUES = [   // [seconds into the message, text]
+  [0.0,  'Hello?'],
+  [1.6,  'This is Grant Morrison...'],
+  [3.6,  'M. O. R. R. I. S. O. N.'],
+  [7.2,  '...and I live at 23 Boulder Lane in Randolph, New Hampshire.'],
+  [12.9, 'Dear god...'],
+  [13.8, "Dear god... it's everywhere."],
+  [15.4, "Please, I don't know what to do!"],
+  [17.5, "Please, I don't know what to do! I can't find Fluffernutter."],
+  [19.25, 'FLUFFERNUTTER!'],
+  [20.8, 'FLUFFERNUTTER! Where are you, kitty kitty!'],
+  [23.8, 'Help me, Mount Washington Sewer and Drain!'],
+];
+const call = document.getElementById('call');
+let cutTimers = [], ringCtx = null, typing = null, barsTimer = null, cutLive = false;
+const later = (ms, f) => cutTimers.push(setTimeout(f, ms));
+
+function type(el, html, speed = 28) {
+  clearInterval(typing);
+  const plain = html.replace(/<[^>]+>/g, '\u0000');            // keep tags whole while typing
+  const prev = el.dataset.full || '';
+  let i = html.startsWith(prev) ? prev.replace(/<[^>]+>/g, '').length : 0;   // keep going if the line just grows
+  el.dataset.full = html; if (!i) el.innerHTML = '';
+  typing = setInterval(() => {
+    i++; let out = '', n = 0;
+    for (const part of html.split(/(<[^>]+>)/)) {
+      if (part.startsWith('<')) { out += part; continue; }
+      if (n >= i) break; out += part.slice(0, i - n); n += part.length;
+    }
+    el.innerHTML = out;
+    if (i >= plain.length) clearInterval(typing);
+  }, speed);
+}
+
+function ring(times) {           // old-school phone ring: 440 + 480 Hz
+  try {
+    ringCtx = ringCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = ringCtx.currentTime + 0.05;
+    for (let k = 0; k < times; k++) for (const f of [440, 480]) {
+      const o = ringCtx.createOscillator(), g2 = ringCtx.createGain();
+      o.type = 'square'; o.frequency.value = f; g2.gain.value = 0;
+      o.connect(g2).connect(ringCtx.destination);
+      const s = t0 + k * 2.2;
+      for (let q = 0; q < 16; q++) { g2.gain.setValueAtTime(q % 2 ? 0 : 0.035, s + q * 0.06); }
+      g2.gain.setValueAtTime(0, s + 1.0);
+      o.start(s); o.stop(s + 1.05);
+    }
+  } catch (e) {}
+}
+
+function bars(on) {
+  const b = $('#bars'); clearInterval(barsTimer);
+  if (!on) { b.innerHTML = ''; return; }
+  b.innerHTML = '<i></i>'.repeat(14);
+  barsTimer = setInterval(() => b.querySelectorAll('i').forEach(i => i.style.height = (call.paused ? 10 : 15 + Math.random() * 85) + '%'), 90);
+}
+
+let VOICEMAIL = false;   // Day 1 in the campaign: Grant left a voicemail
+function intro() {
+  cutLive = true; hidePanel();
+  music.pause();
+  const cut = $('#cut'); cut.classList.add('on'); document.body.classList.add('cutting');
+  $('#row').style.display = 'none'; $('#next').style.display = 'none'; $('#phone').style.display = 'none';
+  $('#mattport').style.display = 'none'; $('#mattimg').src = 'assets/matt_normal.png'; $('#mattimg').classList.remove('flip');
+  $('#skip').style.display = DDT.DEV ? '' : 'none'; $('#opts').innerHTML = ''; $('#rodname').textContent = 'ROD'; $('#road').style.display = 'none';
+  $('#card').innerHTML = 'JANUARY · DAY 1<br>7:42 AM · BERLIN, NH';
+  if (!VOICEMAIL) later(1800, () => { $('#phone').style.display = 'block'; $('#phone').classList.add('ring'); ring(2); });
+  later(VOICEMAIL ? 300 : 6200, () => {
+    $('#phone').style.display = 'none'; $('#phone').classList.remove('ring');
+    $('#row').style.display = 'flex'; $('#rodimg').src = 'assets/rod_phone.png';
+    $('#mattport').style.display = 'block';
+    $('#who').textContent = VOICEMAIL ? 'VOICEMAIL · UNKNOWN CALLER · RANDOLPH, NH' : '☎ INCOMING CALL · RANDOLPH, NH';
+    $('#line').innerHTML = ''; bars(true);
+    call.currentTime = 0; call.play().catch(() => {});
+    CUES.forEach(([t, txt]) => later(t * 1000, () => type($('#line'), txt)));
+    later(19750, () => { $('#mattimg').src = 'assets/matt_stare.png'; $('#mattimg').classList.add('flip'); });   // FLUFFERNUTTER! -> Matt side-eyes Rod
+  });
+}
+call.addEventListener('ended', () => { if (cutLive) rodReplies(); });
+
+function rodReplies() {
+  bars(false);
+  $('#rodimg').src = 'assets/rod_happy.png';
+  $('#who').textContent = 'ROD';
+  type($('#line'), VOICEMAIL ? "Calling him back... Grant? Rod, Mt. Washington Sewer and Drain. We're on our way!" : "We're on our way!", 45);
+  later(1600, () => { $('#next').textContent = 'HIT THE ROAD ▸'; $('#next').onclick = EMBED_CALL ? () => { location.href = DDT.back('play.html'); } : startDrive; $('#next').style.display = 'block'; $('#next').focus(); });
+}
+
+function endIntro() {
+  cutLive = false; cutTimers.forEach(clearTimeout); cutTimers = []; clearInterval(typing); bars(false);
+  call.pause(); $('#road').style.display = 'none'; music.volume = 1; $('#cut').classList.remove('on'); document.body.classList.remove('cutting');
+  say('TO BE CONTINUED... THE VAN IS WARMING UP.');
+  if (soundOn) playMusic();
+}
+$('#skip').onclick = () => {
+  if (typeof EMBED_CALL !== 'undefined' && EMBED_CALL) { location.href = DDT.back('play.html'); return; }   // in the campaign, SKIP just ends the call and gets back on the road
+  if ($('#next').style.display === 'block') return endIntro();
+  cutTimers.forEach(clearTimeout); cutTimers = []; call.pause();
+  $('#phone').style.display = 'none'; $('#row').style.display = 'flex'; $('#rodimg').src = 'assets/rod_phone.png';
+  $('#mattport').style.display = 'block'; $('#mattimg').src = 'assets/matt_stare.png'; $('#mattimg').classList.add('flip');
+  rodReplies();
+};
+
+function devDrive() {   // jump straight to the drive, for testing
+  cutLive = true; music.pause();
+  $('#cut').classList.add('on'); document.body.classList.add('cutting');
+  $('#phone').style.display = 'none'; $('#opts').innerHTML = ''; $('#road').style.display = 'none';
+  startDrive();
+}
+
+// ---------- dialog helper ----------
+function speak(name, img, text, opts) {
+  return new Promise(res => {
+    $('#row').style.display = 'flex'; $('#mattport').style.display = 'none'; bars(false);
+    $('#rodimg').src = img; $('#rodname').textContent = name; $('#who').textContent = name;
+    $('#line').dataset.full = ''; type($('#line'), text);
+    const o = $('#opts'); o.innerHTML = '';
+    (opts || ['CONTINUE ▸']).forEach((t, i) => {
+      const b = document.createElement('button'); b.className = 'opt'; b.textContent = t;
+      b.onclick = () => { o.innerHTML = ''; res(i); }; o.appendChild(b);
+    });
+    o.firstChild.focus();
+  });
+}
+const clock = m => DDT.clock(420 + m);   // m = minutes after 7:00 AM
+// the drive's result in one glance (on time or late, any fender benders), then on to the job: tap or wait
+function arrivalCard(arrive, late, crashes, to, lost) {
+  $('#row').style.display = 'none'; $('#opts').innerHTML = '';
+  $('#card').innerHTML = `${clock(arrive)} · ${to}<br><span style="color:${late || lost ? '#e9665a' : '#7dffb0'}">${lost === 'rival' ? 'THE CLOG KINGS GOT THE JOB · -REP' : lost === 'late' ? `${late} MIN LATE · THEY CALLED SOMEONE ELSE` : late ? `${late} MIN LATE · -REP` : DDT.param('rival') === '1' ? 'BEAT THE CLOG KINGS! · +REP' : 'ON TIME · +REP'}</span>${crashes ? `<br><span style="color:#e9a05a">${crashes} CRASH${crashes > 1 ? 'ES' : ''} · -$${15 * crashes}</span>` : ''}`;
+  return new Promise(res => { const go = () => { removeEventListener('pointerdown', go); removeEventListener('keydown', go); res(); }; setTimeout(go, 2400); setTimeout(() => { addEventListener('pointerdown', go); addEventListener('keydown', go); }, 500); });
+}
+
+// ---------- drive to Randolph ----------
+const DRIVE = [ { spd: 100, rate: 1.6, base: 40 }, { spd: 135, rate: 1.15, base: 30 }, { spd: 175, rate: 0.85, base: 22 } ];
+let LEAVE = 45, DUE = 75;   // minutes after 7:00 -> leave 7:45, due 8:15
+
+async function startDrive() {
+  $('#next').style.display = 'none'; $('#skip').style.display = 'none'; $('#mattport').style.display = 'none';
+  $('#card').innerHTML = '7:45 AM · LEAVING BERLIN<br>DUE IN RANDOLPH BY 8:15';
+  const drv0 = ((DDT.get() || {}).today || {}).lead === 'matt' ? 'MATT' : 'ROD';
+  const c = await speak(drv0, `assets/${drv0.toLowerCase()}_normal.png`,
+    "Route 2 to Randolph. How do you want to drive it?",
+    ['TAKE IT SLOW AND STEADY', 'DRIVE LIKE NORMAL', 'FOOT ON THE GAS']);
+  if (soundOn) { music.volume = 0.55; music.play().catch(() => {}); }
+  DDTSfx.play('engine_start', { vol: 0.7 }); window.DRV = DDTSfx.loop('van_drive_loop');
+  const r = await drive3d(c, { leave: LEAVE, due: DUE, from: typeof from !== 'undefined' ? from : 'BERLIN', to: typeof to !== 'undefined' ? to : 'RANDOLPH', route: typeof route !== 'undefined' ? route : 'Route 2', clock });
+  DRV.stop(); music.pause(); music.volume = 1;
+  const arrive = r.mins;
+  $('#card').innerHTML = `${clock(arrive)} · RANDOLPH, NH<br>23 BOULDER LANE`;
+  await arrivalCard(arrive, Math.max(0, arrive - DUE), r.crashes, 'RANDOLPH');
+  location.href = `story/fluffernutter.html?arrive=${arrive}`;
+}
+
+function traffic(choice) {
+  const SEA = DDT.seasonPal((DDT.get() || {}).month || 0);
+  const FALL_DRIVE = SEA.name === 'early fall' || SEA.name === 'fall';   // foliage season: leaf peepers
+  return new Promise(res => {
+    const P = DRIVE[choice], rc = $('#road'), r = rc.getContext('2d'); r.setTransform(3, 0, 0, 3, 0, 0); r.imageSmoothingEnabled = false;
+    rc.style.display = 'block';
+    const LX = [176, 240, 304], PY = 200, READY = 1.8, DUR = 36, TOTAL = P.spd * DUR;
+    const COLS = ['#c0392b', '#2e86de', '#e5e5e5', '#27ae60', '#7f8c8d', '#8e44ad', '#d35400', '#222'];
+    const SAME = 0.55;                                   // traffic in our direction moves at 55% of our cruising speed
+    let lane = 1, x = LX[1], cars = [], critters = [], spawn = 0.4, crashes = 0, penalty = 0, inv = 0, t0 = null, last = 0,
+        scroll = 0, shake = 0, msg = '', msgT = 0, done = false, spd = P.spd, dist = 0, play = 0, braking = false, keyBrake = false, touchBrake = false, gassing = false, keyGas = false, touchGas = false;
+    const move = d => { if (!done) lane = Math.max(0, Math.min(2, lane + d)); };
+    const kd = e => { const k = e.key.toLowerCase();
+      if (k === 'arrowleft' || k === 'a') { e.preventDefault(); move(-1); }
+      if (k === 'arrowright' || k === 'd') { e.preventDefault(); move(1); }
+      if (k === 'arrowdown' || k === 's' || k === ' ') { e.preventDefault(); keyBrake = true; }
+      if (k === 'arrowup' || k === 'w') { e.preventDefault(); keyGas = true; } };
+    const ku = e => { const k = e.key.toLowerCase(); if (k === 'arrowdown' || k === 's' || k === ' ') keyBrake = false; if (k === 'arrowup' || k === 'w') keyGas = false; };
+    addEventListener('keydown', kd); addEventListener('keyup', ku);
+    rc.onpointerdown = e => { const b = rc.getBoundingClientRect();
+      if (e.clientY - b.top > b.height * 0.66 && e.clientX - b.left < b.width * 0.34) { touchGas = true; try { rc.setPointerCapture(e.pointerId); } catch (_) {} return; }
+      if (e.clientY - b.top > b.height * 0.66 && e.clientX - b.left > b.width * 0.66) { touchBrake = true; try { rc.setPointerCapture(e.pointerId); } catch (_) {} return; }
+      move(e.clientX - b.left < b.width / 2 ? -1 : 1); };
+    rc.onpointerup = rc.onpointercancel = () => { touchBrake = false; touchGas = false; };
+    const say2 = t => { msg = t; msgT = 1.4; };
+    const abs = rel => P.spd * (1 - rel);               // a car's ground speed from its old "screen speed" factor
+    const free = (l, y0, y1, me) => !cars.some(c => c !== me && c.y > y0 && c.y < y1 && (Math.abs(c.lx - l) < 0.7 || Math.abs(c.to - l) < 0.7));
+    function spawnCar() {
+      const k = Math.random(), mine = 1 + (Math.random() < .5 ? 1 : 0);
+      const pulling = cars.some(c => c.kind === 'pull' && c.y < 110) || critters.some(c => c.y < 120);
+      const ok = l => free(l, -100, 80) && free(3 - l, -85, 70) && !pulling;
+      let c = null;
+      if (k < 0.3 && ok(mine)) c = { kind: 'slow', l: mine, to: mine, v: abs(SAME) };
+      else if (k < 0.56 && ok(mine)) c = { kind: 'cut', l: mine, to: mine, v: abs(SAME), blinker: Math.random() < .5, cut: false, blink: 0 };
+      else if (k < 0.78 && free(0, -90, 70)) c = { kind: 'on', l: 0, to: 0, v: abs(1.9), drift: Math.random() < .25 };
+      else if (k < 0.88 && free(2, -160, 200) && !pulling) c = { kind: 'pull', l: 2.85, to: 2, v: 0, pulled: false };
+      else if (k >= 0.88 && !pulling && !critters.length && !cars.some(c => c.y < 40)) { spawnCritter(); return; }
+      if (!c) return;
+      c.y = -40; c.lx = c.l; c.col = COLS[Math.floor(Math.random() * COLS.length)]; cars.push(c);
+    }
+    function spawnCritter() {
+      const kind = FALL_DRIVE && Math.random() < .5 ? 'peeper' : ['moose', 'deer', 'turkeys'][Math.floor(Math.random() * 3)], fromLeft = Math.random() < .5;
+      const vx = { moose: 46, deer: 120, turkeys: 34, peeper: 30 }[kind] * (fromLeft ? 1 : -1);
+      const birds = kind === 'turkeys' ? [0, 1, 2, 3].map(i => ({ dx: -i * 13 * Math.sign(vx), dy: (i % 2) * 9 - 4 })) : [{ dx: 0, dy: 0 }];
+      critters.push({ kind, x: kind === 'moose' ? (fromLeft ? 132 : 348) : (fromLeft ? 120 : 360), y: -40, vx, birds, warned: false, hit: false, snap: 0, snapped: false });
+    }
+    const PEN = { moose: 10, deer: 6, turkeys: 3, peeper: 5 };
+    function car(cx, cy, col, flip, bl, br, stop) {
+      r.fillStyle = '#111'; r.fillRect(cx - 12, cy - 20, 24, 40);
+      r.fillStyle = col; r.fillRect(cx - 11, cy - 19, 22, 38);
+      const f = flip ? 1 : -1;
+      r.fillStyle = '#2b3a48'; r.fillRect(cx - 9, cy + f * 9 - 3, 18, 6); r.fillRect(cx - 9, cy - f * 12 - 2, 18, 4);
+      r.fillStyle = 'rgba(255,255,255,.18)'; r.fillRect(cx - 8, cy - 4, 16, 8);
+      r.fillStyle = flip ? '#fff3b0' : (stop ? '#ff3b2f' : '#c0392b'); r.fillRect(cx - 10, cy + 17, 4, stop ? 3 : 2); r.fillRect(cx + 6, cy + 17, 4, stop ? 3 : 2);
+      if (stop && !flip) { r.fillStyle = 'rgba(255,60,40,.3)'; r.fillRect(cx - 13, cy + 20, 26, 6); }
+      r.fillStyle = '#f39c12'; if (bl) r.fillRect(cx - 12, cy + 15, 3, 4); if (br) r.fillRect(cx + 9, cy + 15, 3, 4);
+    }
+    function critter(c, t) {
+      const step = Math.floor(t * (c.kind === 'deer' ? 14 : 6)) % 2, face = Math.sign(c.vx);
+      for (const b of c.birds) {
+        const cx = Math.round(c.x + b.dx), cy = Math.round(c.y + b.dy);
+        if (c.kind === 'moose') {
+          r.fillStyle = '#1c120b'; r.fillRect(cx - 17, cy - 9, 34, 18);
+          r.fillStyle = '#5a3a22'; r.fillRect(cx - 16, cy - 8, 32, 16);
+          r.fillStyle = '#4a2f1b'; r.fillRect(cx - 12 + (step ? 2 : 0), cy - 12, 4, 4); r.fillRect(cx + 6 - (step ? 2 : 0), cy - 12, 4, 4);
+          r.fillRect(cx - 12 + (step ? 0 : 2), cy + 8, 4, 4); r.fillRect(cx + 6 - (step ? 0 : 2), cy + 8, 4, 4);
+          const hx = cx + face * 20; r.fillStyle = '#5a3a22'; r.fillRect(hx - 5, cy - 4, 10, 8);
+          r.fillStyle = '#d9c8a0'; r.fillRect(hx - 7, cy - 11, 14, 4); r.fillRect(hx - 9, cy - 13, 3, 3); r.fillRect(hx + 6, cy - 13, 3, 3);
+          r.fillRect(hx - 7, cy + 7, 14, 4); r.fillRect(hx - 9, cy + 10, 3, 3); r.fillRect(hx + 6, cy + 10, 3, 3);
+        } else if (c.kind === 'peeper') {   // a leaf peeper, wandering into the road with a camera
+          r.fillStyle = '#1a1414'; r.fillRect(cx - 6, cy - 6, 12, 12);
+          r.fillStyle = ['#e85a8a', '#4ab0e0', '#f2c94c'][Math.abs(Math.round(c.vx)) % 3]; r.fillRect(cx - 5, cy - 5, 10, 10);
+          r.fillStyle = '#e8b48a'; r.fillRect(cx - 3, cy - 3, 6, 6); r.fillStyle = '#c9b48a'; r.fillRect(cx - 4, cy - 5, 8, 2);
+          r.fillStyle = '#222'; r.fillRect(cx + face * 6 - 2, cy - 2, 5, 4);
+          if (c.snap > 0 && Math.floor(t * 10) % 3 === 0) { r.fillStyle = 'rgba(255,255,255,.9)'; r.fillRect(cx + face * 8 - 4, cy - 6, 8, 8); }
+          r.fillStyle = '#333'; r.fillRect(cx - 4 + (step ? 2 : 0), cy + 6, 2, 3); r.fillRect(cx + 2 - (step ? 2 : 0), cy + 6, 2, 3);
+        } else if (c.kind === 'deer') {
+          r.fillStyle = '#1c120b'; r.fillRect(cx - 11, cy - 6, 22, 12);
+          r.fillStyle = '#b88a55'; r.fillRect(cx - 10, cy - 5, 20, 10);
+          r.fillStyle = '#fff'; r.fillRect(cx - face * 10 - 1, cy - 2, 3, 4);
+          r.fillStyle = '#8a6440'; r.fillRect(cx + face * 13 - 3, cy - 3, 7, 6);
+          r.fillRect(cx - 8 + (step ? 3 : 0), cy - 8, 2, 3); r.fillRect(cx + 6 - (step ? 3 : 0), cy + 5, 2, 3);
+        } else {
+          r.fillStyle = '#1a1414'; r.fillRect(cx - 4, cy - 4, 8, 8);
+          r.fillStyle = '#3a2a22'; r.fillRect(cx - 3, cy - 3, 6, 6);
+          r.fillStyle = '#8a5a30'; r.fillRect(cx - face * 6 - 1, cy - 5, 3, 10);
+          r.fillStyle = '#c0392b'; r.fillRect(cx + face * 4, cy - 1 + (step ? 1 : 0), 2, 2);
+        }
+      }
+    }
+    function pine(px, py) {
+      r.fillStyle = '#5b3b23'; r.fillRect(px - 1, py + 8, 3, 5);
+      r.fillStyle = SEA.pine; for (let i = 0; i < 9; i++) r.fillRect(px - i * .9, py - 10 + i * 2, i * 1.8 + 1, 2);
+      if (SEA.snow) { r.fillStyle = '#fff'; r.fillRect(px - 1, py - 10, 2, 2); r.fillRect(px - 5, py - 2, 3, 1); r.fillRect(px + 3, py + 2, 3, 1); }
+    }
+    function tree(px, py, i) {   // maples and birches: leaves change with the season, bare in winter, mud and stick season
+      r.fillStyle = i % 4 === 0 ? '#e8e4dc' : '#5b3b23'; r.fillRect(px - 1, py - 2, 3, 15);
+      if (SEA.leaf) { const c = SEA.leaf[i % SEA.leaf.length]; r.fillStyle = c; r.fillRect(px - 7, py - 12, 14, 10); r.fillRect(px - 5, py - 15, 10, 3); r.fillRect(px - 9, py - 9, 18, 5);
+        r.fillStyle = 'rgba(0,0,0,.12)'; r.fillRect(px - 7, py - 4, 14, 2); }
+      else { r.fillStyle = '#4a3828'; r.fillRect(px - 6, py - 10, 5, 1); r.fillRect(px + 2, py - 8, 5, 1); r.fillRect(px - 4, py - 14, 1, 5); r.fillRect(px + 3, py - 13, 1, 5);
+        if (SEA.snow) { r.fillStyle = '#fff'; r.fillRect(px - 6, py - 11, 4, 1); r.fillRect(px + 3, py - 9, 3, 1); } }
+    }
+    function frame(ms) {
+      if (done) return;
+      if (t0 === null) { t0 = ms; last = ms; }
+      const dt = Math.min(.05, (ms - last) / 1000); last = ms;
+      const t = (ms - t0) / 1000, live = t > READY;
+      braking = live && (keyBrake || touchBrake); gassing = live && !braking && (keyGas || touchGas);   // GAS: get there sooner, but traffic comes at you faster
+      spd += ((braking ? P.spd * 0.3 : gassing ? P.spd * 1.5 : P.spd) - spd) * Math.min(1, dt * (braking ? 3.5 : gassing ? 1.2 : 1.6));
+      if (window.DRV && DRV.src) DRV.src.playbackRate.value = 0.75 + 0.35 * spd / P.spd;   // engine follows the gas pedal
+      x += (LX[lane] - x) * Math.min(1, dt * 12);
+      scroll += spd * dt;
+      if (live) { play += dt; dist += spd * dt; }
+      if (live && dist < TOTAL - P.spd * 1.5) { spawn -= dt * spd / P.spd; if (spawn <= 0) { spawn = P.rate * (0.6 + Math.random() * 0.7); spawnCar(); } }
+      const moose = critters.filter(m => (m.kind === 'moose' || m.kind === 'peeper') && !m.hit && m.x > 140 && m.x < 340);
+      for (const c of cars) {
+        const cx = 176 + c.lx * 64, onc = c.kind === 'on';
+        const inPath = m => Math.abs(m.x - cx) < 34 || Math.abs(m.x + m.vx * 1.2 - cx) < 30 && Math.sign(cx - m.x) === Math.sign(m.vx);
+        const blocked = moose.some(m => inPath(m) && (onc ? (m.y - c.y > 34 && m.y - c.y < 180) : (c.y - m.y > 34 && c.y - m.y < 180)));
+        if (FALL_DRIVE && !onc && !c.hit && !c.peep && !c.peeped && c.y > 10 && c.y < 140 && Math.random() < dt * 0.12) { c.peep = 1.6; c.peeped = true; say2('LEAF PEEPER! BRAKES!'); }
+        if (c.peep > 0) { c.peep -= dt; c.stopping = c.peep > 0; }
+        else if (blocked && !c.stopping) { c.stopping = true; if (!onc) say2('BRAKE LIGHTS!'); }
+        if (!c.peep && !blocked && c.stopping && !moose.some(m => Math.abs(m.x - cx) < 40)) c.stopping = false;
+        if (c.stopping) c.v += (0 - c.v) * Math.min(1, dt * 7);
+        else if (!c.hit && c.kind !== 'pull') c.v += ((onc ? abs(1.9) : abs(SAME)) - c.v) * Math.min(1, dt * 0.8);
+        c.y += (spd - c.v) * dt;
+        if (c.kind === 'cut' && !c.cut && c.y > 30 && c.y < 100 && Math.random() < dt * 3) {
+          const to = c.l === 1 ? 2 : 1;
+          if (free(to, c.y - 85, c.y + 85, c)) { c.to = to; c.cut = true; c.blink = c.blinker ? 0.6 : 0.3; if (!c.blinker) say2('NO BLINKER!'); }
+        }
+        if (c.kind === 'pull' && !c.pulled && c.y > 35 && c.y < 80 && free(2, c.y - 130, c.y + 150, c) && free(1, c.y - 120, c.y + 160, c)) { c.pulled = true; say2('PULLING OUT!'); }
+        if (c.kind === 'pull' && c.pulled) c.v += (abs(SAME) - c.v) * Math.min(1, dt * 1.5);
+        if (c.kind === 'on' && c.drift && !c.drifting && c.y > 20 && c.y < 60 && free(1, c.y - 70, c.y + 140, c) && free(2, c.y - 110, c.y + 170, c)) { c.drifting = true; say2('OVER THE LINE!'); }
+        if (c.kind === 'on') c.lx += ((c.drifting && c.y < 150 ? 0.4 : 0) - c.lx) * Math.min(1, dt * 4);
+        if (c.blink > 0) c.blink -= dt;
+        else if ((c.cut || c.pulled) && !c.hit) { c.lx += (c.to - c.lx) * Math.min(1, dt * 4); if (Math.abs(c.to - c.lx) < .03) { c.lx = c.to; c.l = c.to; } }
+        if (c.hit) c.lx += (3.2 - c.lx) * dt;
+      }
+      cars = cars.filter(c => c.y < 320 && c.y > -120);
+      for (const c of critters) {
+        c.y += spd * dt;                                   // animals stand on the ground: braking slows them down on screen
+        if (c.kind === 'peeper' && !c.snapped && c.x > 190 && c.x < 290) { c.snapped = true; c.snap = 1.4; }   // stops in the road for the perfect shot
+        if (c.snap > 0) c.snap -= dt; else if (c.y > -20) c.x += c.vx * dt;
+        if (!c.warned && c.y > -15) { c.warned = true; say2({ moose: 'MOOSE!', deer: 'DEER!', turkeys: 'TURKEYS!', peeper: 'LEAF PEEPER IN THE ROAD!' }[c.kind]); }
+      }
+      critters = critters.filter(c => c.y < 330);
+      inv = Math.max(0, inv - dt); msgT = Math.max(0, msgT - dt);
+      for (const c of cars) {
+        const cx = 176 + c.lx * 64;
+        if (live && !c.hit && inv <= 0 && Math.abs(cx - x) < 22 && Math.abs(c.y - PY) < 44) {
+          crashes++; penalty += 6; inv = 1.4; shake = .35; c.hit = true; if (window.DDTSfx) DDTSfx.play('horn_angry'); say2('BONK!  +6 MIN');
+        }
+      }
+      for (const c of critters) {
+        if (!live || c.hit || inv > 0) continue;
+        const hw = { moose: 20, deer: 14, turkeys: 6, peeper: 8 }[c.kind], hh = { moose: 12, deer: 8, turkeys: 6, peeper: 8 }[c.kind];
+        if (c.birds.some(b => Math.abs(c.x + b.dx - x) < 14 + hw && Math.abs(c.y + b.dy - PY) < 30 + hh)) {
+          c.hit = true; inv = 1.4; shake = c.kind === 'moose' ? .6 : .3; penalty += PEN[c.kind]; crashes++; if (window.DDTSfx) DDTSfx.play('horn');
+          if (c.kind === 'peeper') { c.snap = 0; c.vx *= 3; } else c.vx *= 2.5;   // the peeper dives back to the shoulder
+          say2({ moose: 'HIT THE MOOSE! +10 MIN', deer: 'OH DEER. +6 MIN', turkeys: 'FEATHERS! +3 MIN', peeper: 'SLAMMED THE BRAKES! +5 MIN' }[c.kind]);
+        }
+      }
+      draw(t);
+      if (dist >= TOTAL) { done = true; removeEventListener('keydown', kd); removeEventListener('keyup', ku); rc.onpointerdown = rc.onpointerup = null;
+        const mins = Math.round(LEAVE + (play / DUR) * P.base + penalty);
+        setTimeout(() => { rc.style.display = 'none'; res({ crashes, mins }); }, 500); return; }
+      requestAnimationFrame(frame);
+    }
+    function draw(t) {
+      r.save(); if (shake > 0) { shake -= .016; r.translate((Math.random() - .5) * 6, (Math.random() - .5) * 6); }
+      r.fillStyle = SEA.ground; r.fillRect(-10, -10, 500, 290);
+      r.fillStyle = SEA.speck; for (let i = 0; i < 40; i++) { r.fillRect((i * 53) % 130, (i * 37 + scroll * .9) % 290 - 10, 6, 2); r.fillRect(350 + (i * 41) % 125, (i * 29 + scroll * .9) % 290 - 10, 6, 2); }
+      for (let i = 0; i < 14; i++) { const yy = ((i * 61 + scroll) % 330) - 30, y2 = ((i * 53 + scroll) % 330) - 30;
+        (i % 3 ? tree : pine)(16 + (i * 37) % 108, yy, i); (i % 3 === 1 ? pine : tree)(362 + (i * 29) % 105, y2, i + 7); }
+      r.fillStyle = '#3a3c40'; r.fillRect(144, -10, 192, 290);
+      r.fillStyle = '#f4f7f9'; for (let y = -20; y < 290; y += 12) { const o = ((y + scroll) % 12); r.fillRect(138 + (y % 24 ? 2 : 0), y + o, 8, 10); r.fillRect(334 - (y % 24 ? 2 : 0), y + o, 8, 10); }
+      r.fillStyle = '#f2c12e'; r.fillRect(205, -10, 2, 290); r.fillRect(209, -10, 2, 290);
+      r.fillStyle = '#ddd'; for (let y = -40; y < 290; y += 40) r.fillRect(271, y + (scroll % 40), 2, 20);
+      for (const c of cars) {
+        if (c.kind === 'pull' && !c.pulled) { r.fillStyle = '#4a4c50'; r.fillRect(336, c.y - 24, 50, 48); }
+        const on = c.blink > 0 && Math.floor(t * 8) % 2;
+        const wob = (c.cut && c.blink > 0 && !c.blinker) ? Math.sin(t * 60) * 1.5 : 0;
+        car(176 + c.lx * 64 + wob, c.y, c.col, c.kind === 'on', on && c.to < c.l, on && c.to > c.l, c.stopping);
+      }
+      for (const c of critters) critter(c, t);
+      if (!(inv > 0 && Math.floor(t * 10) % 2)) {
+        r.drawImage(vanTop, Math.round(x - 14), PY - 30);
+        if (braking) { r.fillStyle = '#ff3b2f'; r.fillRect(Math.round(x - 10), PY + 28, 6, 3); r.fillRect(Math.round(x + 4), PY + 28, 6, 3);
+          r.fillStyle = 'rgba(255,60,40,.25)'; r.fillRect(Math.round(x - 14), PY + 31, 28, 6); }
+      }
+      r.restore();
+      const mins = Math.round(LEAVE + Math.min(play / DUR, 2) * P.base + penalty);
+      r.fillStyle = 'rgba(16,21,31,.92)'; r.fillRect(0, 0, 480, 20);
+      r.font = '8px "Press Start 2P", monospace'; r.textBaseline = 'middle';
+      r.fillStyle = mins > DUE ? '#e9665a' : '#fff'; r.fillText(clock(mins), 6, 10);
+      r.fillStyle = '#f7c418'; r.fillText('DUE ' + clock(DUE).replace(/ ?[AP]M/, ''), 82, 10);
+      r.fillStyle = '#fff'; r.fillText('BERLIN', 168, 10); r.fillText('RANDOLPH', 404, 10);
+      r.fillStyle = '#2c3326'; r.fillRect(222, 7, 176, 6);
+      const prog = Math.min(1, dist / TOTAL);
+      r.fillStyle = '#7bd65b'; r.fillRect(222, 7, 176 * prog, 6); r.fillStyle = '#f7c418'; r.fillRect(220 + 176 * prog, 5, 4, 10);
+      // brake pad (touch area) hint along the bottom
+      r.fillStyle = braking ? 'rgba(233,102,90,.55)' : 'rgba(16,21,31,.45)'; r.fillRect(380, 222, 92, 22);
+      r.fillStyle = '#fff'; r.textAlign = 'center'; r.fillText(braking ? 'BRAKING' : '▼ BRAKE', 426, 233); r.textAlign = 'left';
+      r.fillStyle = gassing ? 'rgba(123,214,91,.55)' : 'rgba(16,21,31,.45)'; r.fillRect(8, 222, 92, 22);
+      r.fillStyle = '#fff'; r.textAlign = 'center'; r.fillText(gassing ? 'GAS!' : '▲ GAS', 54, 233); r.textAlign = 'left';
+      if (gassing) { r.fillStyle = 'rgba(255,255,255,.35)'; for (let i = 0; i < 8; i++) { const sx = 150 + ((i * 53) % 180), sy = ((scroll * 2 + i * 37) % 270); r.fillRect(sx, sy, 1, 14); } }
+      if (t < READY) {
+        r.fillStyle = 'rgba(16,21,31,.88)'; r.fillRect(126, 92, 228, 76);
+        r.fillStyle = '#f7c418'; r.textAlign = 'center'; r.fillText('ROUTE 2 WEST', 240, 108);
+        r.fillStyle = '#fff'; r.fillText('◀ ▶ CHANGE LANES', 240, 130); r.fillText('▲ GAS   ▼ BRAKE', 240, 150); r.textAlign = 'left';
+      }
+      if (msgT > 0) { r.textAlign = 'center'; r.font = '10px "Press Start 2P", monospace'; r.fillStyle = '#000'; r.fillText(msg, 241, 61); r.fillStyle = '#f7c418'; r.fillText(msg, 240, 60); r.textAlign = 'left'; }
+      if (crashes) { r.font = '8px "Press Start 2P", monospace'; r.fillStyle = '#e9665a'; r.textAlign = 'right'; r.fillText('CRASHES ' + crashes, 474, 30); r.textAlign = 'left'; }
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
+// screensaver: hide every bit of UI; music keeps playing, crew keeps dancing, road keeps looping
+function saver(on) {
+  hidePanel(); document.body.classList.toggle('saver', on);
+  if (on) { playMusic(); try { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {} saver.since = performance.now(); }
+  else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+}
+$('#watch').onclick = e => { e.stopPropagation(); saver(true); };
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, e => {
+  if (!document.body.classList.contains('saver') || performance.now() - saver.since < 600) return;
+  e.stopPropagation(); e.preventDefault(); saver(false);
+}, { capture: true }));
+document.addEventListener('keydown', e => { if ((e.key === 's' || e.key === 'S') && !document.body.classList.contains('saver') && !cutLive) saver(true); });
+$('#sound').onclick = e => {
+  e.stopPropagation(); soundOn = !soundOn;
+  $('#sound').textContent = soundOn ? '♪ ON' : '♪ OFF';
+  if (soundOn) playMusic(); else { music.pause(); $('#press').style.display = 'none'; }
+};
+document.addEventListener('visibilitychange', () => { if (document.hidden) music.pause(); else if (soundOn && started) music.play().catch(() => {}); });
+
+// ---------- the call happens inside the van (same view as the campaign's windshield) ----------
+function vanBackground() {
+  document.body.classList.add('vancall');
+  const cv = $('#vanbg'), k = cv.getContext('2d'); k.setTransform(3, 0, 0, 3, 0, 0); k.imageSmoothingEnabled = false;
+  const im = {}; ['van_pov', 'rod_dance', 'matt_dance'].forEach(n => { const i = new Image(); i.onload = () => im[n] = i; i.src = `assets/${n}.png`; });
+  const R = (x, y, w, h, c) => { k.fillStyle = c; k.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+  const HZ = 104;
+  (function draw(ms) {
+    const t = ms / 1000;
+    const gr = k.createLinearGradient(0, 0, 0, HZ); gr.addColorStop(0, '#8fa8c0'); gr.addColorStop(1, '#dfe7ee'); k.fillStyle = gr; k.fillRect(0, 0, 480, HZ + 2);
+    k.fillStyle = '#8a9db0'; k.beginPath(); k.moveTo(0, HZ); k.lineTo(70, 74); k.lineTo(150, 94); k.lineTo(250, 62); k.lineTo(360, 92); k.lineTo(480, 70); k.lineTo(480, HZ + 2); k.lineTo(0, HZ + 2); k.fill();
+    R(0, HZ, 480, 270 - HZ, '#eef2f6');
+    k.fillStyle = '#3a3a3e'; k.beginPath(); k.moveTo(232, HZ); k.lineTo(248, HZ); k.lineTo(520, 270); k.lineTo(-40, 270); k.fill();
+    for (let i = 0; i < 6; i++) { const p = ((t * 0.9 + i / 6) % 1), y = HZ + p * p * 170, w = 1 + p * 6, h = 2 + p * 18; R(240 - w / 2, y, w, h, '#f7c418'); }
+    for (let i = 0; i < 10; i++) { const side = i % 2 ? 1 : -1, p = ((t * 0.35 + i / 10) % 1), y = HZ - 2 + p * p * 160, s = 0.3 + p * 3, x = 240 + side * (24 + p * p * 300);
+      k.fillStyle = '#2f4a3a'; k.beginPath(); k.moveTo(x - 7 * s, y); k.lineTo(x, y - 24 * s); k.lineTo(x + 7 * s, y); k.fill(); R(x - s, y, 2 * s, 4 * s, '#4a3020'); }
+    if (im.van_pov) k.drawImage(im.van_pov, 0, 0);
+    if (im.rod_dance) k.drawImage(im.rod_dance, 7 * 24, 0, 24, 40, 128 - 120, 560 - 400, 240, 400);
+    if (im.matt_dance) k.drawImage(im.matt_dance, 7 * 24, 0, 24, 40, 352 - 120, 552 - 400, 240, 400);
+    if (document.body.classList.contains('vancall')) requestAnimationFrame(draw);
+  })(performance.now());
+}
+
+// dev-only: the CUTSCENES list
+if (!DDT.DEV) { const b = document.querySelector('[data-a="scenes"]'); if (b) b.style.display = 'none'; }
+
+// ---------- campaign embeds ----------
+if (DDT.load()) { const s = DDT.load(); $('#contbtn').style.display = ''; $('#contbtn').textContent = `CONTINUE · ${(s.month < 12 ? ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][s.month] : 'DONE')}`; }
+// index.html?call=fluffer&ret=...   plays the Fluffernutter phone call, then hands back
+// index.html?drive=1&from=&to=&route=&leave=&due=&ret=   plays the traffic run (minutes after 7:00), then hands back
+const EMBED_CALL = DDT.param('call'), EMBED_DRIVE = DDT.param('drive');
+async function embedDrive() {
+  LEAVE = +DDT.param('leave') || 45; DUE = +DDT.param('due') || 75;
+  const from = DDT.param('from') || 'BERLIN', to = DDT.param('to') || 'RANDOLPH', route = DDT.param('route') || 'Route 2';
+  cutLive = true; music.pause(); started = true;
+  $('#cut').classList.add('on'); document.body.classList.add('cutting');
+  $('#phone').style.display = 'none'; $('#opts').innerHTML = ''; $('#road').style.display = 'none';
+  $('#next').style.display = 'none'; $('#skip').style.display = 'none'; $('#mattport').style.display = 'none';
+  $('#card').innerHTML = `${clock(LEAVE)} · LEAVING ${from}<br>DUE IN ${to} BY ${clock(DUE)}`;
+  const drv = ((DDT.get() || {}).today || {}).lead === 'matt' ? 'MATT' : 'ROD';   // whoever's driving asks
+  const pre = DDT.param('mode');   // already picked in the van (DRIVE menu): skip the question
+  const c = pre !== null && pre !== '' ? Math.max(0, Math.min(2, +pre)) : await speak(drv, `assets/${drv.toLowerCase()}_normal.png`, `${route} to ${to[0] + to.slice(1).toLowerCase()}. How do you want to drive it?`,
+    ['TAKE IT SLOW AND STEADY', 'DRIVE LIKE NORMAL', 'FOOT ON THE GAS']);
+  if (soundOn) DDTMusic.radioOn('van');   // the van radio keeps playing the same song it was on
+  DDTSfx.play('engine_start', { vol: 0.7 }); window.DRV = DDTSfx.loop('van_drive_loop');
+  const r = await drive3d(c, { leave: LEAVE, due: DUE, from: typeof from !== 'undefined' ? from : 'BERLIN', to: typeof to !== 'undefined' ? to : 'RANDOLPH', route: typeof route !== 'undefined' ? route : 'Route 2', clock, rival: DDT.param('rival') === '1' });
+  DRV.stop(); DDTMusic.radio.pause(); DDTMusic.save();
+  const arrive = r.mins, late = Math.max(0, arrive - DUE);
+  // lose the job: the Clog Kings beat you there, or you were so late they called someone else
+  const lost = r.rivalWon ? 'rival' : late > 45 ? 'late' : '';
+  DDT.apply({ rep: lost ? -2 : late ? -Math.min(3, 1 + Math.floor(late / 15)) : (DDT.param('rival') === '1' ? 2 : 1), money: -15 * r.crashes });
+  const s = DDT.get(); if (s.today) { s.today.time = 420 + arrive; s.today.late = late; s.today.crashes = r.crashes; s.today.lost = lost; DDT.save(s); }
+  await arrivalCard(arrive, late, r.crashes, to, lost);   // no chit-chat after the drive: one quick card, straight to the job
+  location.href = DDT.back('play.html').replace('ARRIVE', arrive);
+}
+if (EMBED_CALL || EMBED_DRIVE) {
+  document.body.classList.add('embed');
+  const go = e => { if (e) { e.preventDefault(); e.stopPropagation(); } document.removeEventListener('pointerdown', go, true); document.removeEventListener('keydown', go, true);
+    if (e && e.type) document.removeEventListener('keydown', go, true);
+    $('#next').style.display = 'none'; $('#next').classList.remove('big'); $('#phone').classList.remove('ring'); if (EMBED_DRIVE) embedDrive(); else intro(); };
+  // Never show the title menu here: open straight onto the dark cutscene layer, so it reads as part of the day.
+  // (One tap is still needed so the browser lets the phone call / music play.)
+  const s0 = DDT.get(), mon = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'][Math.min(11, s0.month || 0)];
+  $('#ui').style.display = 'none'; music.autoplay = false;
+  $('#cut').classList.add('on'); document.body.classList.add('cutting');
+  $('#skip').style.display = 'none'; $('#row').style.display = 'none'; $('#mattport').style.display = 'none';
+  if (EMBED_DRIVE) {
+    $('#phone').style.display = 'none';
+    $('#card').innerHTML = `${(DDT.param('from') || 'BERLIN')} → ${(DDT.param('to') || 'RANDOLPH')}<br>DUE BY ${clock(+DDT.param('due') || 75)}`;
+  } else {
+    $('#card').innerHTML = `${mon} · DAY 1<br>7:42 AM · BERLIN, NH`;
+    $('#phone').style.display = 'none';
+    vanBackground();
+  }
+  if (EMBED_DRIVE) {
+    addEventListener('load', () => go());   // you just picked who leads: straight onto the road
+  } else {
+    // Day 1 is a voicemail: they just came out of the notch, where there's never any signal.
+    VOICEMAIL = true;
+    (async () => {
+      await speak('ROD', 'assets/rod_normal.png', "We just got out of the notch. Everyone always calls while we're in the notch.");
+      await speak('ROD', 'assets/rod_phone.png', "Let's check the phone for voicemails.");
+      $('#row').style.display = 'none'; document.body.classList.add('ringing');
+      $('#callui').style.display = 'block'; $('#vm').style.display = 'block'; DDTSfx.play('vm_ping');
+      for (const el of document.querySelectorAll('#callui .cid, #callui .avatar, #callui .btns')) el.style.display = 'none';
+    })();
+    $('#vmplay').onclick = () => { DDTSfx.play('ui_tap'); $('#callui').style.display = 'none'; document.body.classList.remove('ringing'); go(); };
+    document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && $('#vm').style.display === 'block' && $('#callui').style.display === 'block') $('#vmplay').onclick(); });
+  }
+}
+
+Promise.all([load('assets/menu_strip.png'), load('assets/van_left.png'), load('assets/rod_dance.png'), load('assets/matt_dance.png'), load('assets/van_top.png')])
+  .then(([s, v, r, m, vt]) => { strip = s; van = v; rod = r; matt = m; vanTop = vt; requestAnimationFrame(loop); });
+
+// Continue prompts: tap anywhere on the scene (or SPACE / ENTER) instead of hunting for the little button.
+(() => {
+  const nextUp = () => { const n = $('#next'); return n && getComputedStyle(n).display !== 'none' && document.body.classList.contains('cutting') && !$('#opts').children.length; };
+  const oneOpt = () => document.body.classList.contains('cutting') && $('#opts').children.length === 1 ? $('#opts').firstChild : null;   // a lone CONTINUE: tap anywhere too
+  document.addEventListener('pointerup', e => { if (e.target.closest('button, a, input, #pad, #road')) return; if (nextUp()) $('#next').click(); else if (oneOpt()) oneOpt().click(); });
+  document.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && nextUp() && document.activeElement !== $('#next')) { e.preventDefault(); $('#next').click(); } });
+})();
+</script>
+</body>
+</html>

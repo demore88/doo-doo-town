@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="../manifest.webmanifest"><meta name="theme-color" content="#2a5ab0"><link rel="icon" href="../icons/icon-192.png"><link rel="apple-touch-icon" href="../icons/apple-180.png"><meta name="mobile-web-app-capable" content="yes"><script>if ("serviceWorker" in navigator && window.top === window && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch(() => {});</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Doo Doo Town · The Fluffernutter Call</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  @font-face{font-family:'Press Start 2P';src:url('../assets/PressStart2P.ttf') format('truetype');font-display:block}
+  html,body{margin:0;height:100%;background:#05070c;overflow:hidden;font-family:'Press Start 2P',monospace}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  canvas{aspect-ratio:16/9;width:min(100vw,calc(100vh*16/9));image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;display:block}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
+<script src="../js/state.js"></script>
+<script src="../js/music.js"></script>
+<script src="../js/sfx.js"></script>
+<script src="../js/calls.js"></script>
+<script src="../js/placeholders.js"></script>
+<script>
+DDT.root = '../';
+DDTMusic.play('job');
+// =====================================================================
+// JOB: THE FLUFFERNUTTER CALL — 23 Boulder Lane, Randolph. Scenes: fluffernutter.html?scene=arrive|gear|basement|wade|cable|culprit|payday
+// =====================================================================
+const W = 480, H = 270, cv = document.getElementById('c');
+let g = cv.getContext('2d');
+const SCALE = 3;   // draw at 3x so text is sharp; all game coordinates stay 480x270
+g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
+const FONT = n => `${n < 6 ? n + 1 : n}px "Press Start 2P", monospace`;   // nothing smaller than 5px
+const R = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+const E = (x, y, rx, ry, c, rot = 0) => { g.fillStyle = c; g.beginPath(); g.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); g.fill(); };
+function T(s, x, y, c = '#fff', n = 8, al = 'left', sh = true) {
+  g.font = FONT(n); g.textAlign = al; g.textBaseline = 'middle';
+  if (sh) { g.fillStyle = '#000'; g.fillText(s, x + 1, y + 1); }
+  g.fillStyle = c; g.fillText(s, x, y);
+}
+function wrap(s, maxW, n = 8) {
+  g.font = FONT(n); const out = []; let line = '';
+  for (const w of s.split(' ')) { const t = line ? line + ' ' + w : w; if (g.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; }
+  if (line) out.push(line); return out;
+}
+const load = s => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = s; });
+// portraits not preloaded (rod_angry, ron_smug...) load the first time someone uses that face
+const _portBase = (() => { const e = document.querySelector('script[src$="js/state.js"]'); return e ? e.src.replace(/js\/state\.js.*$/, 'assets/') : '../assets/'; })();
+function portLoad(name) { if (!name || name in portLoad.c) return portLoad.c[name] || null; portLoad.c[name] = null; const i = new Image(); i.onload = () => { portLoad.c[name] = IMG[name] = i; }; i.src = _portBase + name + '.png'; return null; }
+portLoad.c = {};
+const IMG = {};
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+// ---------- sound (Web Audio, unlocked on first tap) ----------
+let AC = null;
+function ac() { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (e) {} return AC; }
+function tone(f, d, type = 'square', vol = 0.05, at = 0, f2 = null) {
+  const a = ac(); if (!a) return;
+  const o = a.createOscillator(), v = a.createGain(), t = a.currentTime + at;
+  o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+  v.gain.setValueAtTime(vol, t); v.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(v).connect(a.destination); o.start(t); o.stop(t + d + 0.02);
+}
+const SND = {
+  chirp(n = 3) { for (let i = 0; i < n; i++) tone(rnd(700, 1500), 0.07, 'square', 0.035, i * 0.09, rnd(500, 1800)); },
+  blip() { tone(880, 0.05, 'square', 0.03); },
+  good() { tone(660, 0.08, 'square', 0.04); tone(990, 0.12, 'square', 0.04, 0.08); },
+  bad() { tone(220, 0.25, 'sawtooth', 0.04, 0, 140); },
+  beam() { tone(90, 2.6, 'sawtooth', 0.03, 0, 260); tone(180, 2.6, 'triangle', 0.03, 0, 520); },
+  gurgle() { for (let i = 0; i < 8; i++) tone(rnd(70, 140), 0.12, 'triangle', 0.06, i * 0.1, rnd(40, 90)); },
+  flush() { tone(400, 1.2, 'sawtooth', 0.04, 0, 40); tone(1200, 0.8, 'triangle', 0.02, 0.1, 100); },
+  snag() { tone(160, 0.15, 'square', 0.05, 0, 90); },
+  ding() { tone(1320, 0.3, 'triangle', 0.05); tone(1760, 0.4, 'triangle', 0.04, 0.12); },
+};
+if (typeof DDTSfx !== 'undefined') DDTSfx.patch(SND);   // recorded sounds where we have them
+
+// ---------- input ----------
+const keys = {}, hit = {};
+addEventListener('keydown', e => { if (!keys[e.key]) hit[e.key] = true; keys[e.key] = true; if (e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault(); ac(); });
+addEventListener('keyup', e => { keys[e.key] = false; });
+const ptr = { x: 0, y: 0, down: false, clicked: false };
+function toCanvas(e) { const b = cv.getBoundingClientRect(); ptr.x = (e.clientX - b.left) / b.width * W; ptr.y = (e.clientY - b.top) / b.height * H; }
+cv.addEventListener('pointerdown', e => { toCanvas(e); ptr.down = true; ptr.clicked = true; ac(); });
+cv.addEventListener('pointermove', toCanvas);
+addEventListener('pointerup', () => { ptr.down = false; });
+const pressed = k => hit[k];
+const confirmHit = () => hit[' '] || hit['Enter'] || hit['z'] || hit['Z'];
+const inBox = (x, y, w, h) => ptr.x >= x && ptr.x <= x + w && ptr.y >= y && ptr.y <= y + h;
+
+// ---------- scene runner: every wait/line/tween can be cancelled by SKIP ----------
+let RUN = 0, pend = new Set(), tweens = [], dialog = null, game = null, view = () => {}, st = {};
+function cancellable(exec) {
+  return new Promise((res, rej) => { const h = { rej }; pend.add(h); exec(v => { if (pend.has(h)) { pend.delete(h); res(v); } }); });
+}
+function cancelAll() { pend.forEach(h => h.rej('skip')); pend.clear(); tweens = []; dialog = null; game = null; }
+const wait = ms => cancellable(res => setTimeout(res, ms));
+const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+function tween(o, k, to, ms, fn = ease) { return cancellable(res => tweens.push({ o, k, from: o[k], to, ms, t: 0, fn, res })); }
+function say(name, port, text, opts) { return cancellable(res => { dialog = { name, port, text, shown: 0, opts, sel: 0, res }; }); }
+function play(gm) { return cancellable(res => { game = gm; gm.done = v => { game = null; res(v); }; gm.init && gm.init(); }); }
+async function card(lines, ms = 2200, col = '#f7c418') { st.card = lines; st.cardCol = col; await tween(st, 'cardA', 1, 400); await wait(ms); await tween(st, 'cardA', 0, 400); }
+const fadeIn = (ms = 600) => tween(st, 'fade', 0, ms), fadeOut = (ms = 600) => tween(st, 'fade', 1, ms);
+
+const ORDER = ['arrive', 'gear', 'basement', 'wade', 'cable', 'culprit', 'payday'];
+const NAMES = { arrive: '23 BOULDER LANE', gear: 'GEAR UP', basement: 'THE BASEMENT', wade: 'WADE IN (GAME)', cable: 'FEED THE CABLE (GAME)', culprit: 'THE CULPRIT', payday: 'PAYDAY' };
+let cur = 0, score = { wrong: 0, retries: 0, snags: 0 };
+async function runFrom(i) {
+  cancelAll(); const tok = ++RUN;
+  for (; i < ORDER.length; i++) {
+    cur = i; st = { fade: 1, cardA: 0 }; view = () => R(0, 0, W, H, '#000');
+    try { await SCENES[ORDER[i]](); } catch (e) { if (e !== 'skip') console.error(e); return; }
+    if (tok !== RUN) return;
+  }
+  location.href = DDT.back('index.html');
+}
+
+// ---------- characters ----------
+function rod(x, y, f = 0, s = 2, a = 1) {      // x,y = feet, center
+  if (!IMG.rod) return; g.globalAlpha = a;
+  g.drawImage(IMG.rod, f * 24, 0, 24, 40, Math.round(x - 12 * s), Math.round(y - 40 * s), 24 * s, 40 * s); g.globalAlpha = 1;
+}
+// gray alien. o: {s, wave, point:[tx,ty], tilt, blink, sad}
+function alien(x, y, o = {}) {
+  const s = o.s || 1, t = performance.now() / 1000;
+  g.save(); g.translate(x, y); g.scale(s, s);
+  // body
+  R(-7, -34, 14, 22, '#8d9a8a'); R(-6, -12, 5, 12, '#7c8879'); R(1, -12, 5, 12, '#7c8879');
+  R(-8, -34, 16, 3, '#6b7a68');
+  // arms
+  g.strokeStyle = '#8d9a8a'; g.lineWidth = 3; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(-7, -30); g.lineTo(-12, -16); g.stroke();
+  if (o.point) {
+    const [tx, ty] = o.point, ang = Math.atan2((ty - y) / s + 30, (tx - x) / s - 7);
+    g.beginPath(); g.moveTo(7, -30); g.lineTo(7 + Math.cos(ang) * 16, -30 + Math.sin(ang) * 16); g.stroke();
+    g.lineWidth = 1.5; g.beginPath(); g.moveTo(7 + Math.cos(ang) * 16, -30 + Math.sin(ang) * 16); g.lineTo(7 + Math.cos(ang) * 23, -30 + Math.sin(ang) * 23); g.stroke();
+  } else if (o.wave) {
+    const a = -1.9 + Math.sin(t * 6) * 0.35;
+    g.beginPath(); g.moveTo(7, -30); g.lineTo(7 + Math.cos(a) * 12, -30 + Math.sin(a) * 12); g.stroke();
+    g.lineWidth = 1.5; const b = a + Math.sin(t * 9) * 0.6;
+    g.beginPath(); g.moveTo(7 + Math.cos(a) * 12, -30 + Math.sin(a) * 12); g.lineTo(7 + Math.cos(a) * 12 + Math.cos(b - 0.6) * 7, -30 + Math.sin(a) * 12 + Math.sin(b - 0.6) * 7); g.stroke();
+  } else { g.beginPath(); g.moveTo(7, -30); g.lineTo(12, -16); g.stroke(); }
+  // head
+  g.translate(0, -46); g.rotate(o.tilt || 0);
+  E(0, 0, 13, 15, '#a3b19f'); E(0, 6, 8, 9, '#a3b19f'); R(-2, 13, 4, 3, '#8d9a8a');
+  const blink = o.blink || (t % 4 < 0.12);
+  if (blink) { R(-10, 1, 7, 2, '#111'); R(3, 1, 7, 2, '#111'); }
+  else { E(-6, 1, 5.5, 3.5, '#0b0b10', 0.45); E(6, 1, 5.5, 3.5, '#0b0b10', -0.45); R(-8, -1, 2, 1, '#fff'); R(4, -1, 2, 1, '#fff'); }
+  if (o.sad) R(-3, 11, 6, 1, '#556');
+  g.restore();
+}
+function alienPortrait() {
+  const c = document.createElement('canvas'); c.width = c.height = 80; const k = c.getContext('2d');
+  k.fillStyle = '#2a1f4a'; k.fillRect(0, 0, 80, 80); k.fillStyle = '#3a2d63'; for (let i = 0; i < 80; i += 8) k.fillRect(0, i, 80, 2);
+  const save = g; g = k; alien(40, 128, { s: 2.2, blink: false }); g = save; return c;
+}
+// alien words are drawn as 5x5 pixel glyphs
+const GLYPH = {
+  you:    ['10001', '01010', '00100', '01010', '10001'],
+  me:     ['01110', '10001', '10101', '10001', '01110'],
+  toilet: ['11111', '10001', '01110', '00100', '01110'],
+  broken: ['10100', '01011', '00100', '11010', '00101'],
+  fix:    ['00011', '00111', '01110', '11100', '11000'],
+  home:   ['00100', '01110', '11111', '01010', '01110'],
+  no:     ['11011', '11011', '00000', '11011', '11011'],
+};
+function glyph(id, x, y, px = 3, col = '#7dffb0') {
+  const m = GLYPH[id]; for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) if (m[r][c] === '1') R(x + c * px, y + r * px, px, px, col);
+}
+function bubble(x, y, ids, px = 3, label = null) {
+  const w = ids.length * (px * 5 + px * 3) + px * 3, h = px * 5 + px * 6 + (label ? 12 : 0);
+  R(x - w / 2, y - h, w, h, '#0d1a14'); g.strokeStyle = '#7dffb0'; g.lineWidth = 1; g.strokeRect(Math.round(x - w / 2) + 0.5, Math.round(y - h) + 0.5, Math.round(w) - 1, Math.round(h) - 1);
+  ids.forEach((id, i) => glyph(id, x - w / 2 + px * 3 + i * (px * 8), y - h + px * 3, px));
+  if (label) label.forEach((l, i) => T(l, x - w / 2 + px * 3 + i * (px * 8) + px * 2.5, y - 9, '#f7c418', 5, 'center', false));
+}
+
+// ---------- backdrops ----------
+const STARS = Array.from({ length: 70 }, () => [Math.random() * W, Math.random() * 170, Math.random()]);
+function stars(clip) { const t = performance.now() / 1000; STARS.forEach(([x, y, p]) => { if (!clip || clip(x, y)) R(x, y, 1, 1, (Math.sin(t * 2 + p * 9) > 0.6) ? '#fff' : '#8aa0d0'); }); }
+function bedroom(dawn = false) {
+  R(0, 0, W, H, dawn ? '#3a3046' : '#161c30');
+  for (let x = 0; x < W; x += 24) R(x, 0, 2, 200, dawn ? '#40354e' : '#1a2138');
+  R(0, 200, W, 70, '#2a2030'); for (let x = 0; x < W; x += 40) R(x, 200, 1, 70, '#33283b');
+  // window
+  const wx = 320, wy = 46, ww = 92, wh = 88;
+  if (dawn) { const gr = g.createLinearGradient(0, wy, 0, wy + wh); gr.addColorStop(0, '#f2a65a'); gr.addColorStop(1, '#ffd98a'); g.fillStyle = gr; g.fillRect(wx, wy, ww, wh); }
+  else { R(wx, wy, ww, wh, '#0a1030'); stars((x, y) => x > wx && x < wx + ww && y > wy && y < wy + wh); }
+  R(wx + 6, wy + wh - 22, 22, 22, '#0b1a10'); R(wx + 60, wy + wh - 30, 18, 30, '#0b1a10');
+  st.windowDraw && st.windowDraw(wx, wy, ww, wh);
+  R(wx - 4, wy - 4, ww + 8, 4, '#6b5a40'); R(wx - 4, wy + wh, ww + 8, 6, '#6b5a40'); R(wx - 4, wy, 4, wh, '#6b5a40'); R(wx + ww, wy, 4, wh, '#6b5a40');
+  R(wx + ww / 2 - 1, wy, 3, wh, '#6b5a40'); R(wx, wy + wh / 2 - 1, ww, 3, '#6b5a40');
+  R(wx - 14, wy - 8, 12, wh + 20, '#5a2e3a'); R(wx + ww + 2, wy - 8, 12, wh + 20, '#5a2e3a');
+  // door
+  R(16, 92, 44, 108, '#4a3826'); R(20, 96, 36, 100, '#5a4430'); R(50, 146, 4, 4, '#d6b24a');
+  // TV
+  const t = performance.now() / 1000, flick = dawn ? 0 : 0.5 + 0.5 * Math.sin(t * 13) * Math.sin(t * 7.3);
+  R(84, 168, 54, 32, '#2a2a2a'); R(86, 128, 50, 38, '#111'); R(90, 132, 42, 30, dawn ? '#222' : `rgb(${60 + flick * 50},${90 + flick * 60},${150 + flick * 80})`);
+  if (!dawn) { g.fillStyle = `rgba(120,160,255,${0.05 + flick * 0.05})`; g.beginPath(); g.moveTo(132, 132); g.lineTo(300, 110); g.lineTo(300, 230); g.lineTo(132, 162); g.fill(); }
+}
+function bed(front) {
+  if (!front) { R(150, 150, 8, 55, '#4a3018'); R(150, 176, 160, 24, '#5a3a1e'); R(162, 160, 40, 14, '#e8e4dc'); return; }
+  R(150, 170, 160, 24, '#2c4f8c'); R(150, 170, 160, 4, '#3d63a8'); for (let x = 160; x < 310; x += 22) R(x, 176, 10, 2, '#24427a');
+  R(302, 160, 8, 45, '#4a3018');
+}
+function shipRoom() {
+  R(0, 0, W, H, '#1e1638'); for (let x = 0; x < W; x += 40) { R(x, 0, 2, 200, '#2a1f4a'); R(x + 18, 20, 4, 4, '#4b3a80'); }
+  R(0, 200, W, 70, '#141026'); for (let x = 0; x < W; x += 30) R(x, 200, 28, 2, '#2b2350');
+  const t = performance.now() / 1000;
+  for (let x = 20; x < W; x += 60) R(x, 6, 30, 3, (Math.floor(t * 3 + x) % 3) ? '#5b49a6' : '#7dffb0');
+  // porthole with Earth
+  E(60, 72, 30, 30, '#4b3a80'); E(60, 72, 25, 25, '#05070c'); stars((x, y) => (x - 60) ** 2 + (y - 72) ** 2 < 600);
+  E(66, 78, 13, 13, '#2c6cd6'); E(62, 74, 5, 4, '#4caf50'); E(70, 82, 4, 3, '#4caf50');
+}
+function sparkPanel(x, y) {
+  R(x - 18, y - 14, 36, 28, '#2b2350'); R(x - 14, y - 10, 28, 20, '#0d0a1a');
+  g.strokeStyle = '#e9665a'; g.lineWidth = 1; g.beginPath(); g.moveTo(x - 10, y - 8); g.lineTo(x + 2, y + 2); g.lineTo(x - 4, y + 4); g.lineTo(x + 10, y + 9); g.stroke();
+  if (Math.random() < 0.25) for (let i = 0; i < 4; i++) R(x + rnd(-14, 14), y + rnd(-10, 12), 2, 2, '#f7c418');
+}
+function toiletDoor(x) { R(x - 22, 96, 44, 104, '#2b2350'); R(x - 18, 100, 36, 100, '#3a2d63'); R(x - 1, 100, 2, 100, '#1e1638'); R(x - 10, 82, 20, 12, '#0d0a1a'); R(x - 4, 85, 8, 4, '#7dffb0'); R(x - 2, 89, 4, 3, '#7dffb0'); }
+function toolBag(x, y) { R(x - 14, y - 12, 28, 12, '#c0392b'); R(x - 10, y - 16, 20, 4, '#1a1a1a'); R(x - 12, y - 8, 24, 2, '#8b2a1f'); R(x + 4, y - 22, 3, 10, '#aaa'); }
+function spaceToilet(x, y, hoseT = 0) {
+  R(x - 10, y - 30, 20, 30, '#c9ced6'); R(x - 6, y - 30, 4, 30, '#e8ecf2');
+  E(x, y - 36, 22, 9, '#e8ecf2'); E(x, y - 37, 16, 5, '#5a6378'); R(x - 22, y - 37, 44, 2, '#c9ced6');
+  R(x - 2, y - 72, 26, 26, '#c9ced6'); R(x + 2, y - 68, 18, 6, '#7dffb0');
+  // ribbed hose coming out of the bowl and coiling up
+  const tw = Math.sin(hoseT * 18) * (hoseT > 0 ? 2 : 0);
+  g.strokeStyle = '#8a93a5'; g.lineWidth = 7; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x - 14, y - 38); g.bezierCurveTo(x - 40, y - 38, x - 44, y - 80, x - 26 + tw, y - 92); g.stroke();
+  g.strokeStyle = '#a9b2c4'; g.lineWidth = 2; g.setLineDash([2, 3]);
+  g.beginPath(); g.moveTo(x - 14, y - 38); g.bezierCurveTo(x - 40, y - 38, x - 44, y - 80, x - 26 + tw, y - 92); g.stroke(); g.setLineDash([]);
+  R(x - 30 + tw, y - 100, 8, 10, '#5a6378'); R(x - 28 + tw, y - 104, 4, 5, '#7dffb0');
+}
+
+// ---------- dialog box ----------
+function drawDialog() {
+  const d = dialog; if (!d) return;
+  d.shown = Math.min(d.text.length, d.shown + 1.1);
+  const Y = st.dialogTop ? -158 : 0;   // dialog can sit at the top so the crew stays visible
+  g.save(); g.translate(0, Y);
+  R(6, 180, W - 12, 86, '#10151f'); g.strokeStyle = '#fff'; g.lineWidth = 3; g.strokeRect(7.5, 181.5, W - 15, 83);
+  const p = d.port === 'alien' ? IMG.alienP : (IMG[d.port] || portLoad(d.port));
+  R(12, 184, 80, 80, '#2a3346'); if (p) g.drawImage(p, 12, 184, 80, 80);
+  g.strokeStyle = '#f7c418'; g.lineWidth = 2; g.strokeRect(12, 184, 80, 80);
+  T(d.name, 102, 194, '#f7c418', 8);
+  const lines = wrap(d.text.slice(0, Math.floor(d.shown)), 360, 8);
+  lines.forEach((l, i) => T(l, 102, 210 + i * 13, '#fff', 8));
+  const done = d.shown >= d.text.length;
+  if (done && d.opts) {
+    const top = 210 + Math.max(1, wrap(d.text, 360, 8).length) * 13 - 2;
+    d.boxes = d.opts.map((o, i) => [100, top + i * 13 + Y, 368, 12]);
+    if (pressed('ArrowUp')) d.sel = (d.sel + d.opts.length - 1) % d.opts.length;
+    if (pressed('ArrowDown')) d.sel = (d.sel + 1) % d.opts.length;
+    d.opts.forEach((o, i) => { const [x, yy, w, h] = d.boxes[i], y = yy - Y; R(x, y, w, h, i === d.sel ? '#2c6cd6' : '#1d2638'); T((i === d.sel ? '> ' : '  ') + o, x + 4, y + 6, '#fff', 6, 'left', false); });
+  } else if (done && Math.floor(performance.now() / 400) % 2) T('▼'.replace('▼', 'v'), 462, 256, '#f7c418', 8, 'right');
+  g.restore();
+}
+function dialogInput() {
+  const d = dialog; if (!d) return false;
+  const done = d.shown >= d.text.length;
+  if (!(ptr.clicked || confirmHit())) return true;
+  if (!done) { d.shown = d.text.length; return true; }
+  if (!d.opts) { dialog = null; SND.blip(); d.res(0); return true; }
+  let pick = null;
+  if (ptr.clicked && d.boxes) d.boxes.forEach(([x, y, w, h], i) => { if (inBox(x, y, w, h)) pick = i; });
+  if (confirmHit()) pick = d.sel;
+  if (pick !== null) { dialog = null; SND.blip(); d.res(pick); }
+  return true;
+}
+
+// ---------- top buttons ----------
+const BTN = { menu: [6, 4, 70, 14], skip: [W - 96, 4, 90, 14] };
+function drawButtons() {
+  for (const [k, [x, y, w, h]] of Object.entries(BTN)) { if (k === 'skip' && !DDT.DEV) continue; R(x, y, w, h, '#10151fcc'); g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1); T(k === 'menu' ? '< MENU' : 'SKIP >>', x + w / 2, y + 7.5, '#fff', 6, 'center', false); }
+  if (DDT.DEV) T('DEV · ' + (cur + 1) + '/' + ORDER.length + ' ' + NAMES[ORDER[cur]], W / 2, 11, '#6f7fa8', 5, 'center', false);
+}
+
+// =====================================================================
+// SCENES
+// =====================================================================
+
+// ---------- THE FLUFFERNUTTER CALL ----------
+function matt(x, y, f = 0, s = 2, a = 1) {
+  if (!IMG.matt) return; g.globalAlpha = a;
+  g.drawImage(IMG.matt, f * 24, 0, 24, 40, Math.round(x - 12 * s), Math.round(y - 40 * s), 24 * s, 40 * s); g.globalAlpha = 1;
+}
+function van(x, y) { if (IMG.van) { const f = IMG.van.width >= 432 ? Math.floor(Math.abs(x) / 3) % 3 : 0; g.drawImage(IMG.van, f * 144, 0, 144, 64, Math.round(x), Math.round(y - 64), 144, 64); } }   // wheels turn as the van moves
+const RES = { health: 0, rep: 0, pay: 0, gear: null, splashes: 0, kinks: 0, cat: false };
+
+// Grant: a little guy in a maroon bathrobe and slippers
+function grant(x, y, s = 1, panic = false) {
+  const t = performance.now() / 1000, j = panic ? Math.round(Math.sin(t * 20)) : 0;
+  g.save(); g.translate(Math.round(x + j), Math.round(y)); g.scale(s, s);
+  R(-7, -26, 14, 22, '#7a2834'); R(-2, -26, 4, 8, '#f0ece2'); R(-7, -14, 14, 2, '#5c1c28');
+  R(-6, -4, 5, 4, '#e8bA96'.toLowerCase()); R(1, -4, 5, 4, '#e8ba96'); R(-7, -1, 6, 2, '#8a5a3a'); R(1, -1, 6, 2, '#8a5a3a');
+  if (panic) { R(-11, -34 + j * 2, 4, 9, '#7a2834'); R(7, -34 - j * 2, 4, 9, '#7a2834'); R(-11, -37 + j * 2, 4, 3, '#e8ba96'); R(7, -37 - j * 2, 4, 3, '#e8ba96'); }
+  else { R(-10, -24, 3, 12, '#7a2834'); R(7, -24, 3, 12, '#7a2834'); }
+  R(-5, -38, 10, 12, '#e8ba96'); R(-7, -36, 3, 6, '#e1e1dc'); R(4, -36, 3, 6, '#e1e1dc'); R(-4, -39, 8, 2, '#d6aa8a');
+  R(-4, -34, 3, 2, '#222'); R(1, -34, 3, 2, '#222'); if (panic) R(-1, -30, 3, 3, '#46141a');
+  g.restore();
+}
+// Fluffernutter: a chunky orange cat
+function cat(x, y, s = 1, look = 0) {
+  const t = performance.now() / 1000;
+  g.save(); g.translate(Math.round(x), Math.round(y)); g.scale(s, s);
+  g.strokeStyle = '#d9822b'; g.lineWidth = 3; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(-8, -4); g.quadraticCurveTo(-16, -6 + Math.sin(t * 3) * 3, -13, -14); g.stroke();
+  E(0, -5, 10, 6, '#e8923a'); R(-6, -8, 2, 6, '#c96f22'); R(0, -9, 2, 6, '#c96f22');
+  E(8 + look, -11, 6, 5, '#e8923a');
+  g.fillStyle = '#e8923a'; g.beginPath(); g.moveTo(3 + look, -14); g.lineTo(5 + look, -19); g.lineTo(7 + look, -14); g.fill();
+  g.beginPath(); g.moveTo(9 + look, -14); g.lineTo(12 + look, -19); g.lineTo(13 + look, -13); g.fill();
+  const bl = t % 3 < 0.12; R(6 + look, -12, 1, bl ? 1 : 2, '#1a1a1a'); R(10 + look, -12, 1, bl ? 1 : 2, '#1a1a1a'); R(8 + look, -10, 2, 1, '#f2a2a2');
+  g.restore();
+}
+function meow() { tone(700, 0.25, 'triangle', 0.04, 0, 1000); tone(1000, 0.3, 'triangle', 0.03, 0.22, 600); }
+function splash() { DDTSfx.play('splash'); }
+
+// ---------- 23 Boulder Lane (January, Randolph) ----------
+const SNOW = Array.from({ length: 60 }, () => [Math.random() * W, Math.random() * H, rnd(8, 20)]);
+function snowfall() { const t = performance.now() / 1000; SNOW.forEach(([x, y, v]) => R((x + Math.sin(t + y) * 6) % W, (y + t * v) % H, 1, 1, '#fff')); }
+function farmhouse() {
+  if (typeof houseArt === 'function' && houseArt(16)) { exterior('house', 16, 0); return; }   // the red farmhouse (real art), dressed for January
+  const gr = g.createLinearGradient(0, 0, 0, 200); gr.addColorStop(0, '#9fb6cc'); gr.addColorStop(1, '#dfe7ee'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#8a9db0'; g.beginPath(); g.moveTo(0, 140); g.lineTo(90, 70); g.lineTo(170, 120); g.lineTo(260, 60); g.lineTo(380, 125); g.lineTo(480, 90); g.lineTo(480, 200); g.lineTo(0, 200); g.fill();
+  g.fillStyle = '#eef3f7'; g.beginPath(); g.moveTo(240, 74); g.lineTo(260, 60); g.lineTo(282, 72); g.lineTo(268, 70); g.lineTo(256, 76); g.fill();
+  for (let x = -10; x < W; x += 26) { g.fillStyle = '#2f4a3a'; g.beginPath(); g.moveTo(x, 196); g.lineTo(x + 13, 150 - (x * 7 % 19)); g.lineTo(x + 26, 196); g.fill(); }
+  R(0, 196, W, 74, '#f4f7fa'); for (let x = 0; x < W; x += 9) R(x, 196 + (x * 13 % 5), 6, 1, '#dbe3ea');
+  // house
+  R(150, 108, 190, 98, '#e9e4d6'); for (let y = 112; y < 206; y += 6) R(150, y, 190, 1, '#cfc8b6');
+  g.fillStyle = '#5a3b32'; g.beginPath(); g.moveTo(140, 110); g.lineTo(245, 58); g.lineTo(350, 110); g.fill();
+  g.fillStyle = '#f4f7fa'; g.beginPath(); g.moveTo(150, 104); g.lineTo(245, 58); g.lineTo(340, 104); g.lineTo(330, 104); g.lineTo(245, 64); g.lineTo(160, 104); g.fill();
+  R(286, 68, 12, 26, '#8a4a3a'); R(284, 66, 16, 4, '#f4f7fa');
+  R(176, 130, 26, 30, '#3a5a7a'); R(188, 130, 2, 30, '#e9e4d6'); R(176, 144, 26, 2, '#e9e4d6'); R(290, 130, 26, 30, '#3a5a7a'); R(302, 130, 2, 30, '#e9e4d6'); R(290, 144, 26, 2, '#e9e4d6');
+  R(232, 148, 26, 58, '#7a2e2e'); R(252, 176, 3, 3, '#d6b24a'); R(222, 144, 46, 4, '#5a3b32'); R(222, 206, 46, 4, '#9a9a9a');
+  // basement window, a little too brown...
+  R(194, 192, 20, 10, '#4a3218'); R(200, 194, 3, 3, '#6b4423');
+  // mailbox
+  R(390, 172, 4, 30, '#5a3b32'); R(380, 162, 24, 12, '#2a2a2a'); T('23', 392, 168, '#fff', 5, 'center', false);
+}
+function basementBG() {
+  const art = artImg('bg_basement3');   // real basement: water heater on the right, cleanout on the stack in the corner
+  if (art) { WATER = 186; g.drawImage(art, 0, 0);   // sewage sits just over the cleanout cap
+    if (!LINE_CLEAR && Math.floor(performance.now() / 600) % 2) { const ax = 446, ay = 176; g.fillStyle = '#f7c418'; R(ax - 2, ay - 12, 4, 8, '#f7c418'); g.beginPath(); g.moveTo(ax - 6, ay - 4); g.lineTo(ax + 6, ay - 4); g.lineTo(ax, ay + 3); g.fill(); }   // slow-blinking arrow at the cleanout
+    return; }
+  R(0, 0, W, H, '#4a4a50');
+  for (let y = 0; y < 172; y += 14) for (let x = (y / 14 % 2) * 20; x < W; x += 40) { R(x, y, 39, 13, '#55555c'); }
+  R(0, 0, W, 10, '#2e2a26'); for (let x = 0; x < W; x += 36) R(x, 0, 8, 22, '#3a332c');
+  R(0, 172, W, 98, '#3c3a38');
+  // stairs on the left
+  for (let i = 0; i < 8; i++) R(10 + i * 12, 46 + i * 16, 40, 4, '#6b5a40');
+  g.strokeStyle = '#6b5a40'; g.lineWidth = 3; g.beginPath(); g.moveTo(14, 36); g.lineTo(110, 172); g.stroke();
+  // shelves with junk
+  R(150, 60, 70, 3, '#6b5a40'); R(150, 96, 70, 3, '#6b5a40'); R(156, 46, 12, 14, '#c0392b'); R(172, 50, 18, 10, '#bfa77a'); R(196, 82, 16, 14, '#2c6cd6'); R(160, 86, 22, 10, '#7a7a7a');
+  // water heater + cleanout + main stack
+  R(360, 60, 44, 112, '#b9bec6'); R(364, 60, 6, 112, '#d4d8de'); R(360, 56, 44, 6, '#8a8f97'); R(378, 30, 8, 26, '#8a8f97'); R(368, 124, 10, 8, '#e9665a');
+  R(436, 20, 14, 152, '#2b2b2b'); R(450, 140, 16, 14, '#b87333'); R(458, 144, 10, 6, '#d08a40'); T('CLEANOUT', 450, 134, '#f7c418', 4, 'center', false);
+  R(250, 20, 2, 30, '#222'); E(251, 52, 6, 4, '#ffe9a8');
+}
+let WATER = 150, LINE_CLEAR = false;   // once the line is open, the cleanout arrow goes away
+// what the flood leaves on the slab: turds (a few with corn), soggy toilet paper, and the guilty bag of litter
+const MESS = (() => { let a = 7; const r = () => (a = (a * 9301 + 49297) % 233280) / 233280; const out = [];
+  for (let i = 0; i < 22; i++) out.push({ k: r() < 0.68 ? 'turd' : 'tp', x: 16 + r() * 410, y: 214 + r() * 50, s: 0.8 + r() * 0.6, corn: r() < 0.35, rot: r() * 3 });
+  return out.sort((p, q) => p.y - q.y); })();
+function floorMess() {
+  for (const m of MESS) {
+    if (m.k === 'turd') { const w = 9 * m.s, h = 4 * m.s;
+      E(m.x, m.y, w, h, '#5a3a1a'); E(m.x - w * 0.35, m.y - h * 0.5, w * 0.55, h * 0.8, '#6b4423'); E(m.x + w * 0.3, m.y - h * 0.3, w * 0.4, h * 0.6, '#4a2e14'); R(m.x - w * 0.4, m.y - h * 0.8, w * 0.3, 1, '#8a5a30');
+      if (m.corn) for (let j = 0; j < 3; j++) R(m.x - w * 0.5 + j * w * 0.4 + (m.rot % 1) * 2, m.y - h * 0.4 + (j % 2), 2, 2, '#f2c12e'); }
+    else { const w = 13 * m.s; R(m.x - w / 2, m.y - 3, w, 6, '#e8e4d8'); R(m.x - w / 2 + 2, m.y - 4, w * 0.5, 2, '#f4f1ea'); R(m.x - w / 2 + 1, m.y - 2, w * 0.4, 2, '#8a6a3e'); R(m.x + w / 4, m.y, 2, 2, '#d0c8b4'); }
+  }
+  // the bag of SHITTY LITTER, standing on the washer lid (the flat part in front of the dials, y 138)
+  const bx = 114, bb = 138, bw = 38, bh = 36, bt = bb - bh;
+  R(bx - bw / 2, bt, bw, bh, '#d9a03a'); R(bx - bw / 2, bt, bw, 4, '#b07a22'); R(bx - bw / 2, bb - 2, bw, 2, '#9a6a1a');   // the bag, its folded top, a shadow line where it sits
+  R(bx - bw / 2 + 3, bt + 9, bw - 6, 16, '#f4efe6');
+  T('SHITTY', bx, bt + 13, '#7a3a1a', 4, 'center', false); T('LITTER', bx, bt + 20, '#7a3a1a', 4, 'center', false);
+  R(bx - 8, bb - 6, 16, 2, '#7a3a1a');   // a little cat on the label (well, a stripe)
+  for (let i = 0; i < 4; i++) R(bx + bw / 2 + 1 + i * 3, bb - 2, 2, 2, '#bdb6a6');   // spilled litter on the lid
+}
+const BSMT_ART = () => !!artImg('bg_basement3');
+const FY = () => (BSMT_ART() ? 228 : 176);   // feet on the slab, level with where the stack goes into the concrete
+const CATX = () => (artImg('bg_basement3') ? 336 : 382), CATY = () => (artImg('bg_basement3') ? 96 : 56);   // Fluffernutter's perch: on top of the water heater
+const FLOATERS = Array.from({ length: 12 }, (_, i) => ({ x: i * 40 + rnd(0, 30), y: rnd(4, 24), v: rnd(3, 11) * (Math.random() < 0.5 ? 1 : 0.6), b: rnd(1.5, 3), w: rnd(3, 5) }));
+function sewage(x0 = 0, x1 = W, top = WATER) {
+  const t = performance.now() / 1000;
+  g.fillStyle = 'rgba(91,68,38,.88)'; g.fillRect(x0, top, x1 - x0, H - top);
+  for (let x = x0; x < x1; x += 6) R(x, top + Math.round(Math.sin(t * 3 + x / 14) * 1.5), 4, 1, '#7a5a30');
+  for (const f of FLOATERS) { const x = (f.x + t * f.v) % (x1 - x0 + 20) + x0 - 10, y = top + f.y + Math.sin(t * f.b + f.x) * 1.5; E(x, y, f.w, 2, '#4a3218'); R(x - f.w + 2, y - 2, 2, 1, '#6b4a26'); }
+}
+
+const SCENES = {};
+SCENES.arrive = async () => {
+  Object.assign(st, { vanX: -170, crew: false, rx: 54, mx: 80, gr: false, mBehind: true, rBehind: false });
+  view = () => {
+    farmhouse();
+    if (st.crew && st.mBehind) matt(st.mx, 228, st.mf || 6, 1.6);   // out the far side, behind the van
+    if (st.crew && st.rBehind) rod(st.rx, 228, 8, 1.6);   // Rod's door: far side, up front
+    van(st.vanX, 236);
+    if (st.gr) grant(artImg('bg_house2') ? EXT_DOOR.x : 245, artImg('bg_house2') ? EXT_DOOR.y : 208, 1.6, st.panic);
+    if (st.crew) { if (!st.mBehind) matt(st.mx, 238, st.mf || 6, 1.6); if (!st.rBehind) rod(st.rx, 238, st.rf || 6, 1.6); }
+    snowfall();
+  };
+  await fadeIn(600);
+  await card([clockStr(), '23 BOULDER LANE · RANDOLPH'], 1500);
+  DDTSfx.play('van_arrive'); await tween(st, 'vanX', 20, 2000, t => 1 - Math.pow(1 - t, 3));
+  st.crew = true; await wait(300);
+  st.mf = 6; await Promise.all([tween(st, 'mx', 180, 900, t => t), tween(st, 'rx', 54, 700, t => t)]); st.mBehind = false; st.rBehind = false; st.mf = 0; st.rf = 0; await wait(200);
+  st.gr = true; st.panic = true; tone(300, 0.1, 'square', 0.04); tone(300, 0.1, 'square', 0.04, 0.15);
+  await say('GRANT', 'grant_panic', `OH THANK GOD. ${wrongName()}! You're here. It's in the basement. It's... it's EVERYWHERE.`);
+  await say('ROD', 'rod_annoyed', '...Rod.');
+  st.mf = 8; await say('MATT', 'matt_stare', '...How many boats are in this race?');
+  await say('GRANT', 'grant_panic', 'The floor drain started burping and then it just... kept... coming.');
+  await say('ROD', 'rod_normal', "Main line's backed up. Any idea where the cat is?");
+  await say('GRANT', 'grant_panic', "No! He was down there when it started! FLUFFERNUTTER!");
+  meow(); await wait(900);
+  await say('MATT', 'matt_suspicious', '...Did you hear that?');
+  await say('ROD', 'rod_normal', 'Get your boots on. We\'re going in.');
+  await fadeOut(500);
+};
+
+SCENES.gear = async () => {
+  view = () => { R(0, 0, W, H, '#10151f'); van(168, 170); R(0, 170, W, 100, '#1b2233'); };
+  await fadeIn(300);
+  // no shopping here: you wear what you own. Boots and waders come from Fernko's. If you don't have them, you don't have them.
+  const inv = (DDT.get() || {}).inv || {};
+  const c = inv.waders ? 1 : inv.muckboots ? 0 : 2;
+  await say('MATT', 'matt_normal', 'The water looks about shin deep. What have we got for boots?');
+  RES.gear = c;
+  if (c === 0) await say('ROD', 'rod_normal', 'Muck boots. Gloves. Tuck your pants in.');
+  if (c === 1) await say('MATT', 'matt_happy', "Full waders. I'm not taking chances in a stranger's basement.");
+  if (c === 2) { await say('ROD', 'rod_tired', "Work boots. We never bought the muck boots."); await say('MATT', 'matt_tired', "Fernko's. Tomorrow. First thing."); RES.health -= 15; }
+  await say('ROD', 'rod_normal', "And gloves. Always gloves.");
+  await fadeOut(400);
+};
+
+let AMB = [];   // basement ambience: drips + bubbling sewage
+function ambience(on) { AMB.forEach(h => h.stop()); AMB = on ? [DDTSfx.loop('drips_loop'), DDTSfx.loop('bubbles_loop')] : []; }
+SCENES.basement = async () => {
+  ambience(true);
+  Object.assign(st, { rx: 70, ry: 100, mx: 50, my: 80, catA: 0, look: 0, dialogTop: true });   // talk at the top: the boys stand on the slab
+  view = () => {
+    basementBG();
+    cat(CATX(), CATY(), 1.2, st.look); g.globalAlpha = 1;
+    rod(st.rx, FY(), 0, 2); matt(st.mx, FY() - 4, 0, 2);
+    sewage();
+  };
+  await fadeIn(500);
+  await card(['THE BASEMENT'], 900, '#e9b24a');
+  await say('MATT', 'matt_shocked', 'Oh. Oh no. Oh, that is EVERYWHERE.');
+  await say('ROD', 'rod_normal', "Floor drain's the low point. Main backed up and came out here.");
+  await say('ROD', 'rod_normal', "Cleanout's on the stack, back right corner. Under all that.");
+  await say('MATT', 'matt_tired', "...Of course it is.");
+  await fadeOut(400);
+};
+
+// ---- WADE IN: step only when your balance is steady ----
+const WadeGame = {
+  // ROD leads: steady. Bigger green, slower needle, 8 steps.  MATT leads: quick. Faster needle, but big strides: 5 steps.
+  init() {
+    const s = DDT.get(); this.lead = (s.today && s.today.lead) || 'rod';
+    this.x = 90; this.step = 0; this.need = this.lead === 'matt' ? 5 : 8; this.t = 0; this.p = 0;
+    this.spd = this.lead === 'matt' ? 1.55 : 1.15; this.inc = this.lead === 'matt' ? 0.1 : 0.06;
+    this.slip = 0; this.splashes = 0; this.anim = 0; this.ready = 1.6; this.flash = 0;
+  },
+  zone() { return [0.24, 0.30, 0.18][RES.gear ?? 0] + (this.lead === 'rod' ? 0.06 : 0) - this.step * 0.006; },   // better boots (and Rod), wider green
+  update(dt) {
+    this.t += dt; this.flash = Math.max(0, this.flash - dt); this.anim = Math.max(0, this.anim - dt);
+    if (this.ready > 0) { if (ptr.clicked || confirmHit()) this.ready = 0; return; }   // instructions stay up until you're ready
+    if (this.slip > 0) { this.slip -= dt; return; }
+    this.p = Math.sin(this.t * this.spd * Math.PI);           // needle swings -1..1
+    if (ptr.clicked || confirmHit() || pressed('ArrowRight')) {
+      if (Math.abs(this.p) < this.zone()) { this.step++; this.anim = 0.35; SND.blip(); tone(140, 0.15, 'triangle', 0.05, 0, 90); this.spd += this.inc; if (this.step >= this.need) this.done('ok'); }
+      else { this.splashes++; RES.splashes++; this.slip = 0.9; this.flash = 0.9; splash(); RES.health -= RES.gear === 1 ? 2 : RES.gear === 2 ? 6 : 4; }
+    }
+  },
+  draw() {
+    basementBG(); cat(CATX(), CATY(), 1.2, 0);
+    const mx = 90 + ((artImg('bg_basement3') ? 400 : 330) - 90) * (this.step / this.need) - (this.anim > 0 ? 10 * this.anim : 0);
+    const sl = this.slip > 0 ? Math.sin(this.slip * 18) * 4 : 0, waderIsRod = this.lead === 'rod';
+    if (waderIsRod) matt(60, FY() - 4, 0, 2); else rod(60, FY(), 0, 2);
+    g.save(); g.translate(mx, FY()); g.rotate(sl * 0.04); if (waderIsRod) rod(0, 0, 6, 2); else matt(0, 0, 6, 2); g.restore();
+    sewage();
+    if (this.flash > 0) { for (let i = 0; i < 10; i++) E(mx + rnd(-26, 26), WATER - rnd(0, 30) * this.flash, 3, 2, '#6b4423'); T('SPLOOSH!', mx, WATER - 50, '#e9b24a', 10, 'center'); }
+    // balance meter
+    R(140, 26, 200, 26, '#10151fdd'); T('BALANCE', 240, 34, '#fff', 5, 'center', false);
+    const z = this.zone(); R(240 - z * 90, 40, z * 180, 8, '#2e8a3a'); R(150, 40, 180, 8, 'rgba(255,255,255,.08)');
+    R(240 + this.p * 90 - 1, 37, 3, 14, '#f7c418');
+    T(`STEPS ${this.step}/${this.need}`, 470, 30, '#fff', 6, 'right');
+    T(`SPLASHES ${this.splashes}`, 470, 44, this.splashes ? '#e9665a' : '#9fb3d9', 6, 'right');
+    if (this.ready > 0) { R(60, 100, 360, 80, '#10151fee'); T('WADE TO THE CLEANOUT', 240, 116, '#f7c418', 7, 'center'); T('TAP / SPACE WHEN THE NEEDLE IS IN THE GREEN', 240, 132, '#fff', 5, 'center'); T(this.lead === 'rod' ? 'ROD LEADS: STEADY. BIG GREEN, SLOW NEEDLE.' : 'MATT LEADS: FAST NEEDLE, BUT BIG STRIDES.', 240, 146, '#9fb3d9', 5, 'center'); if (Math.floor(this.t * 2.5) % 2) T('TAP TO START', 240, 162, '#f7c418', 7, 'center'); }
+  },
+};
+SCENES.wade = async () => {
+  if (!AMB.length) ambience(true);
+  view = () => {};
+  await fadeIn(200);
+  await play(WadeGame);
+  if (WadeGame.lead === 'rod') { await say('ROD', WadeGame.splashes ? 'rod_normal' : 'rod_happy', WadeGame.splashes ? "Nobody saw that." : 'Slow and steady. That is how it is done.'); await fadeOut(300); return; }
+  if (WadeGame.splashes === 0) await say('MATT', 'matt_happy', 'Not a drop over the top. Graceful.');
+  else if (RES.gear === 2) await say('MATT', 'matt_tired', "It's in my socks. It's in my SOCKS, Rod.");
+  else await say('MATT', 'matt_tired', 'I felt that splash in my soul.');
+  await fadeOut(300);
+};
+
+// ---- FEED THE CABLE: hold to feed, ease off before the torque kinks it ----
+const CableFeed = {
+  init() { this.d = 0; this.tq = 0; this.kinks = 0; this.max = 3; this.t = 0; this.ready = 2; this.flash = 0; this.hold = false; this.clog = [0.55, 0.82]; },
+  update(dt) {
+    this.t += dt; this.flash = Math.max(0, this.flash - dt);
+    if (this.ready > 0) { if (ptr.clicked || confirmHit()) this.ready = 0; return; }   // instructions stay up until you're ready
+    this.hold = ptr.down || keys[' '] || keys.Enter || keys.ArrowRight || keys.z || keys.Z;
+    const inClog = this.d > this.clog[0] && this.d < this.clog[1];
+    if (this.hold) {
+      this.d = Math.min(1, this.d + dt * (inClog ? 0.05 : 0.16));
+      this.tq += dt * (inClog ? 0.85 : 0.18);
+    } else this.tq = Math.max(0, this.tq - dt * 0.9);
+    if (this.hold && !this.drill) this.drill = DDTSfx.loop('drill_loop', { rate: inClog ? 0.8 : 1 });
+    if (!this.hold && this.drill) { this.drill.stop(); this.drill = null; }
+    if (this.tq >= 1) { this.kinks++; RES.kinks++; this.tq = 0; this.d = Math.max(0, this.d - 0.08); this.flash = 1; SND.bad(); SND.snag(); if (this.drill) { this.drill.stop(); this.drill = null; } if (this.kinks >= this.max) return this.done('kink'); }
+    if (this.d >= 1) { if (this.drill) { this.drill.stop(); this.drill = null; } SND.ding(); SND.gurgle(); this.done('ok'); }
+  },
+  draw() {
+    R(0, 0, W, H, '#2a2622');
+    R(0, 0, W, 70, '#3c3a38'); T('UNDER THE BASEMENT FLOOR', 240, 14, '#9fb3d9', 6, 'center');
+    // machine
+    R(20, 40, 60, 40, '#c0392b'); E(50, 60, 16, 16, '#7a2018'); E(50, 60, 6, 6, '#333'); T('MACHINE', 50, 32, '#fff', 4, 'center', false);
+    // pipe cutaway
+    const py = 150; R(70, py - 22, 400, 44, '#55504a'); R(70, py - 18, 400, 36, '#1a1612');
+    const cx0 = 70 + 400 * this.clog[0], cx1 = 70 + 400 * this.clog[1];
+    for (let x = cx0; x < cx1; x += 6) E(x + 3, py + Math.sin(x) * 6, 5, 8 - (this.d > (x - 70) / 400 ? 6 : 0), '#d8d0b8');
+    T('CLOG', (cx0 + cx1) / 2, py - 32, '#f7c418', 6, 'center');
+    const hx = 70 + 400 * this.d, sp = this.t * (this.hold ? 30 : 2);
+    g.strokeStyle = '#c8c8c8'; g.lineWidth = 3; g.beginPath(); g.moveTo(80, 60); g.quadraticCurveTo(70, py, 90, py); g.lineTo(hx, py); g.stroke();
+    R(hx - 2, py - 5 + Math.round(Math.sin(sp) * 2), 8, 10, '#f7c418');
+    // torque gauge
+    R(140, 210, 200, 18, '#10151f'); const tc = this.tq > 0.75 ? '#e9665a' : this.tq > 0.5 ? '#f7c418' : '#7bd65b';
+    R(142, 212, 196 * this.tq, 14, tc); R(142 + 196 * 0.75, 212, 2, 14, '#fff'); T('TORQUE', 240, 236, '#fff', 6, 'center');
+    T(`KINKS ${this.kinks}/${this.max}`, 470, 220, this.kinks ? '#e9665a' : '#9fb3d9', 6, 'right');
+    R(20, 210, 100, 18, '#10151f'); R(22, 212, 96 * this.d, 14, '#2c6cd6'); T('DISTANCE', 70, 236, '#fff', 6, 'center');
+    if (this.flash > 0) T('KINKED IT!', 240, 110, '#e9665a', 12, 'center');
+    if (this.ready > 0) { R(90, 86, 300, 64, '#10151fee'); T('FEED THE CABLE TO THE CLOG', 240, 102, '#f7c418', 7, 'center'); T('HOLD TAP / SPACE TO FEED', 240, 120, '#fff', 5, 'center'); T('LET GO BEFORE TORQUE HITS THE RED', 240, 134, '#fff', 5, 'center'); if (Math.floor(this.t * 2.5) % 2) T('TAP TO START', 240, 166, '#f7c418', 7, 'center'); }
+  },
+};
+SCENES.cable = async () => {
+  st.dialogTop = true;
+  view = () => { basementBG(); sewage(); };
+  await fadeIn(300);
+  await say('ROD', 'rod_normal', "Cap's off. Matt, bring the machine. I'll feed, you watch the torque.");
+  view = () => {};
+  for (;;) {
+    const r = await play(CableFeed);
+    if (r === 'ok') break;
+    view = () => R(0, 0, W, H, '#2a2622');
+    await say('ROD', 'rod_annoyed', "Easy. Let the cable do the work. Again.");
+    view = () => {};
+  }
+  Object.assign(st, { water: WATER });
+  view = () => { basementBG(); cat(CATX(), CATY(), 1.2, 0); rod(380, FY(), 0, 2); matt(320, FY(), 8, 2); sewage(0, W, st.water); };
+  await say('MATT', 'matt_shocked', "It's going down! It's GOING DOWN!");
+  DDTSfx.play('drain'); LINE_CLEAR = true; await tween(st, 'water', BSMT_ART() ? 236 : 178, 2600);
+  await fadeOut(400);
+};
+
+SCENES.culprit = async () => {
+  LINE_CLEAR = true;
+  ambience(false);
+  Object.assign(st, { look: 0, catY: CATY(), grant: false, dialogTop: true, jump: 0, down: 0, walk: 0 });
+  view = () => {
+    basementBG(); if (BSMT_ART()) floorMess(); else { R(0, 172, W, 98, '#4a3c2c'); for (let i = 0; i < 18; i++) E(150 + (i * 37 % 200), 174 + (i * 11 % 8), 4, 2, '#5b4426'); }   // what the water left behind
+    const dy = FY() - 176; rod(300, FY(), 0, 2); matt(240, FY(), (st.jump || 0) >= 1 && !(st.down > 0) ? 9 : 0, 2);   // frame 9: elbows bent, holding the cat R(316, 122 + dy, 10, 8, '#cfc5ae'); R(318, 118 + dy, 6, 4, '#b9ae95');
+    if (st.grant) { const gx = BSMT_ART() ? st.gx : 92;
+      if (BSMT_ART() && st.squish) { E(gx + 6, 229, 10, 3, '#4a2e14'); E(gx - 8, 230, 6, 2, '#5a3a1a'); E(gx + 14, 230, 4, 2, '#5a3a1a'); }   // the turd he found
+      grant(gx, BSMT_ART() ? 226 + Math.abs(Math.sin(st.gx / 6)) * (st.walking ? 2 : 0) : 126, 1.6, false);
+      if (st.squishT > 0) T('*SQUISH*', gx, 150, '#e9b24a', 8, 'center'); }
+    { // the cat: on the water heater, mid-leap, or in Matt's arms (Matt stands at x 240)
+      const hx = 241, hy = FY() - 32, j = st.jump || 0;   // sits on Matt's folded forearms
+      let cx = j ? CATX() + (hx - CATX()) * j : CATX(), cy = j ? st.catY + (hy - st.catY) * j - Math.sin(j * Math.PI) * 40 : st.catY;
+      const dn = st.down || 0, wk = st.walk || 0, floorY = FY(), gx = 176;
+      if (dn > 0) { const fx = hx - 14; cx = hx + (fx - hx) * dn; cy = hy + (floorY - hy) * dn - Math.sin(dn * Math.PI) * 14; }   // hops down out of Matt's arms
+      if (wk > 0) { cx = (hx - 14) + (gx - (hx - 14)) * wk; cy = floorY - Math.abs(Math.sin(wk * 18)) * 1.5; }                     // and trots over to Grant
+      cat(cx, cy + (st.pet ? Math.round(Math.sin(performance.now() / 90)) : 0), 1.2, j >= 1 ? -6 : st.look);
+      if (st.purr) T('purr purr', cx, cy - 26, '#f2c12e', 5, 'center');
+      if (st.smear) { g.fillStyle = 'rgba(90,58,26,.9)'; R(cx - 9, cy - 9, 12, 2, '#5a3a1a'); R(cx - 4, cy - 7, 8, 2, '#6b4423'); R(cx + 5, cy - 14, 4, 2, '#5a3a1a'); }   // gloves, meet cat
+      if (st.pet) T('*pet pet*', cx, cy - 26, '#e8822a', 5, 'center');   // the petting happens with the gloves he's already holding him with (no third arm)
+    }
+  };
+  await fadeIn(400);
+  await say('ROD', 'rod_gross', 'Here\'s your clog. Big gray clumps. Like wet cement.');
+  // Grant comes down to see, walks in from the left... and finds one
+  st.gx = -30; st.walking = true; st.grant = true; await tween(st, 'gx', 150, 1700, t => t); st.walking = false;
+  st.squish = 1; st.squishT = 1; DDTSfx.play('squish'); await wait(700); st.squishT = 0;
+  await say('GRANT', 'grant_normal', '...I just stepped in something.');
+  await say('MATT', 'matt_stare', 'Yep.');
+  await say('GRANT', 'grant_normal', "Is that... the kitty litter? It says FLUSHABLE right on the bag!");
+  await say('ROD', 'rod_annoyed', "So do a lot of things. Kitty litter goes in the trash. Every time.");
+  await say('MATT', 'matt_stare', 'Flushable just means it fits down the hole.');
+  st.dialogTop = false; meow(); st.look = -4; await wait(700);   // dialog drops to the bottom so you can look up at the water heater
+  await say('MATT', 'matt_shocked', '...Up there. On the water heater.');
+  RES.cat = true;
+  await say('GRANT', 'grant_happy', 'FLUFFERNUTTER!');
+  meow(); await tween(st, 'catY', CATY() - 6, 200); await tween(st, 'catY', CATY(), 200);
+  await say('ROD', 'rod_happy', "Smart cat. Highest, driest spot in the house.");
+  await say('MATT', 'matt_suspicious', 'Smarter than whoever bought the flushable litter.');
+  // Fluffernutter decides Matt is safe, and jumps
+  st.dialogTop = true; meow(); await tween(st, 'jump', 1, 650, t => t);   // dialog back up top so you can see Matt holding him
+  await say('MATT', 'matt_happy', "Whoa! Hey, buddy. You're okay. You're okay.");
+  st.pet = true; await wait(600);
+  await say('ROD', 'rod_shocked', 'WAIT! Matt, your gloves...');
+  await wait(500); st.pet = false; st.smear = true;
+  await say('ROD', 'rod_tired', "...Oh. Too late. It's a brown cat now.");
+  await say('MATT', 'matt_stare', "He's still orange, Rod. Just a little brown...");
+  meow(); await tween(st, 'down', 1, 450, t => t); await tween(st, 'walk', 1, 1500, t => t);
+  st.purr = true; await wait(1200);
+  await say('GRANT', 'grant_happy', "FLUFFERNUTTER! ...Why is he brown?");
+  st.purr = false;
+  await say('MATT', 'matt_suspicious', "Uh, that's the way we found him... right, Rod?");
+  await fadeOut(500);
+};
+
+SCENES.payday = async () => {
+  const late = st.late;
+  RES.pay = 450; RES.rep += 2 + (RES.splashes === 0 ? 1 : 0) + (RES.kinks === 0 ? 1 : 0);
+  view = () => {
+    R(0, 0, W, H, '#0e1118');
+    R(100, 30, 280, 200, '#10151f'); g.strokeStyle = '#f7c418'; g.lineWidth = 3; g.strokeRect(101.5, 31.5, 277, 197);
+    T('JOB COMPLETE', 240, 50, '#f7c418', 10, 'center');
+    T('THE FLUFFERNUTTER CALL', 240, 70, '#fff', 6, 'center');
+    const rows = [
+      [`MAIN LINE CLEARED`, '#7dffb0'], [`FLUFFERNUTTER FOUND`, '#7dffb0'],
+      [`+$${RES.pay}`, '#7dffb0'], [`+${RES.rep} REPUTATION`, '#7dffb0'],
+      [RES.health ? `${RES.health} HEALTH (${RES.gear === 2 ? 'WET SOCKS' : 'SPLASHES'})` : 'CLEAN AND DRY', RES.health ? '#e9665a' : '#7dffb0'],
+      [`SPLASHES ${RES.splashes} · KINKS ${RES.kinks}`, '#9fb3d9'],
+    ];
+    rows.forEach(([t, c], i) => T(t, 240, 96 + i * 16, c, 6, 'center'));
+    T('PRO TIP: KITTY LITTER GOES IN THE TRASH.', 240, 196, '#f7c418', 5, 'center');
+    T(DDT.inCampaign() ? 'TAP TO CONTINUE' : 'TAP TO RETURN TO MENU', 240, 214, '#fff', 6, 'center');
+  };
+  await fadeIn(400);
+  SND.ding();
+  if (DDT.inCampaign()) DDT.apply({ money: RES.pay, rep: RES.rep, health: RES.health, stamina: -20, time: 90, note: 'Fluffernutter found. Kitty litter is not flushable.' });
+  await cancellable(res => { st.waitTap = res; });
+  view = () => { R(0, 0, W, H, '#0e1118'); reviewCard(5, 'GRANT M., RANDOLPH', 'RON saved my basement AND found Fluffernutter. Ron is a hero. The other two were also there.'); };
+  SND.blip(); await wait(700);
+  await say('MATT', 'matt_stare', '...Who is Ron?');
+  await say('ROD', 'rod_stare', 'Nobody knows, Matt. Nobody knows.');
+};
+function clockStr() {
+  const m = +new URLSearchParams(location.search).get('arrive') || 72, h = 7 + Math.floor(m / 60);
+  return `${h}:${String(m % 60).padStart(2, '0')} AM`;
+}
+
+// =====================================================================
+// main loop
+// =====================================================================
+let last = performance.now(), started = false;
+function frame(now) {
+  g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  for (const tw of tweens.slice()) {
+    tw.t += dt * 1000; const p = Math.min(1, tw.t / tw.ms); tw.o[tw.k] = tw.from + (tw.to - tw.from) * tw.fn(p);
+    if (p >= 1) { tweens.splice(tweens.indexOf(tw), 1); tw.res(); }
+  }
+  // buttons first
+  if (started && ptr.clicked && inBox(...BTN.menu)) { location.href = DDT.root + (DDT.inCampaign() ? 'play.html' : 'index.html'); return; }
+  if (started && DDT.DEV && ptr.clicked && inBox(...BTN.skip)) { ptr.clicked = false; runFrom(cur + 1); }
+  if (!started) {
+    R(0, 0, W, H, '#05070c'); stars();
+    T('JANUARY · CALL 1', 240, 90, '#9fb3d9', 8, 'center'); T('THE FLUFFERNUTTER CALL', 240, 116, '#f7c418', 12, 'center');
+    if (Math.floor(now / 500) % 2) T('TAP TO START', 240, 170, '#fff', 8, 'center');
+    if (ptr.clicked || confirmHit()) { started = true; ac(); const q = new URLSearchParams(location.search).get('scene'); runFrom(Math.max(0, ORDER.indexOf(q))); }
+  } else {
+    view();
+    if (game) { const gm = game; gm.update(dt); gm.draw(); }   // update may finish the game and clear it
+    else if (!dialogInput() && st.waitTap && (ptr.clicked || confirmHit())) { const f = st.waitTap; st.waitTap = null; f(); }
+    drawDialog();
+    if (st.cardA > 0) { g.globalAlpha = st.cardA; const CL = st.card.flatMap(l => wrap(String(l), 450, 9)); R(0, 80, W, 34 + (CL.length - 1) * 16, '#000000cc'); CL.forEach((l, i) => T(l, 240, 98 + i * 16, st.cardCol, 9, 'center')); g.globalAlpha = 1; }
+    if (st.fade > 0) { g.globalAlpha = st.fade; R(0, 0, W, H, '#000'); g.globalAlpha = 1; }
+    drawButtons();
+  }
+  ptr.clicked = false; for (const k in hit) delete hit[k];
+  requestAnimationFrame(frame);
+}
+const ASSETS = { rod: 'rod_dance', van: 'van_left', matt: 'matt_dance', rod_normal: 'rod_normal', rod_happy: 'rod_happy',
+  matt_normal: 'matt_normal', matt_suspicious: 'matt_suspicious', matt_stare: 'matt_stare', matt_tired: 'matt_tired', matt_shocked: 'matt_shocked', matt_happy: 'matt_happy',
+  grant_panic: 'grant_panic', grant_happy: 'grant_happy', grant_normal: 'grant_normal' };
+Promise.all([...Object.entries(ASSETS).map(([k, f]) => load(`../assets/${f}.png`).then(im => IMG[k] = im)), document.fonts.load(FONT(8)).catch(() => {})])
+  .then(() => {
+    IMG.alienP = alienPortrait();
+    // in the campaign you already tapped to get here: skip the title card
+    if (DDT.inCampaign() && !started) { started = true; runFrom(Math.max(0, ORDER.indexOf(DDT.param('scene')))); }
+    requestAnimationFrame(frame);
+  });
+</script>
+</body>
+</html>
