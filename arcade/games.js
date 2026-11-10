@@ -1755,8 +1755,8 @@ GAMES.push({
       if (!(B.inv > 0 && Math.floor(t * 14) % 2)) { if (im) { const h = 62 * sq, w = h * im.width / im.height * (sq < 1 ? 1 / sq : 1); g.save(); g.translate(x, 0); if (B.vx > 0) g.scale(-1, 1); g.drawImage(im, -w / 2, B.y - h, w, h); g.restore(); } else { R(x - 24, B.y - 40 * sq, 48, 40 * sq, '#8a6a2a'); } }
       for (const o of s.globs || []) { if (SI('grease_3')) g.drawImage(SI('grease_3'), o.x - cam - 6, o.y - 4, 12, 7); else C(o.x - cam, o.y, 3, '#d9b04a'); }
       for (let i = 0; i < 3; i++) C(W / 2 - 14 + i * 14, 70, 4, i < B.hp ? '#e9665a' : 'rgba(255,255,255,.25)'); }   // boss health
-    if (!s.won || s.flush < 0.8) srRon(s.p.x - cam, s.p.y, s.p.skid ? -s.p.face : s.p.face, t * (1 + Math.abs(s.p.vx) / 140), Math.abs(s.p.vx) > 10 && s.p.on, s.inv > 0, s.big,
-      s.won ? 13 + Math.floor(t * 2) % 2 : s.inv > 1.2 ? 11 : !s.p.on ? (s.p.vy < 0 ? 6 : 7) : Math.abs(s.p.vx) > 130 ? 4 + Math.floor(t * 10) % 2 : Math.abs(s.p.vx) > 10 ? 1 + Math.floor(t * 9) % 3 : (s.big && Math.floor(t) % 4 === 0 ? 10 : 0));
+    if (!s.won || s.flush < 0.8) srRon(s.p.x - cam, s.p.y, s.p.face, t * (1 + Math.abs(s.p.vx) / 140), Math.abs(s.p.vx) > 10 && s.p.on, s.inv > 0, s.big,
+      s.won ? (s.flush < 1.4 ? 15 : 16) : s.inv > 1.2 ? 12 : !s.p.on ? (s.p.vy < 0 ? 7 : 8) : s.p.skid ? 14 : Math.abs(s.p.vx) > 130 ? 5 + Math.floor(t * 10) % 2 : Math.abs(s.p.vx) > 10 ? 1 + Math.floor(t * 9) % 4 : (s.big && Math.floor(t) % 4 === 0 ? 11 : 0));   // 0 idle, 1-4 walk, 5-6 run, 7 jump, 8 fall, 9 crouch, 10 swing, 11 powered, 12 hurt, 13 dazed, 14 skid, 15 victory, 16 thumbs up, 17 wave
     s.texts.forEach(o => T(o.txt, o.x - cam, o.y, '#fff', 6, 'center'));
     g.restore();
     HUD(s, 'SUPER RON', s.time);
