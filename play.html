@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794279441"></script>
-<script src="js/calls.js?v=1794279441"></script>
-<script src="js/placeholders.js?v=1794279441"></script>
-<script src="js/music.js?v=1794279441"></script>
-<script src="js/sfx.js?v=1794279441"></script>
+<script src="js/state.js?v=1794279891"></script>
+<script src="js/calls.js?v=1794279891"></script>
+<script src="js/placeholders.js?v=1794279891"></script>
+<script src="js/music.js?v=1794279891"></script>
+<script src="js/sfx.js?v=1794279891"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -760,14 +760,15 @@ const BoardUI = {
     rr(px + 5, py + 5, pw - 10, ph - 6, 10, '#0f1a2c');
     E(px + pw / 2, py + 11, 2.5, 2.5, '#000');
     T('VOICEMAIL', px + 12, py + 22, '#f7c418', 6, 'left', false); T(`${rows.length} NEW`, px + pw - 12, py + 22, '#9fb3d9', 4, 'right', false);
-    T(`DAY ${(s.day || 0) + 1}/${DAYS_PER_MONTH} · CALL ${(s.jobsToday || 0) + 1}/${CALLS_PER_DAY}${(s.jobsToday || 0) < LUNCH_AFTER ? ' · LUNCH AFTER ' + LUNCH_AFTER : ''}`, px + pw / 2, py + 32, '#6f7fa8', 4, 'center', false);
+    const here = (s.today && s.today.from) || s.lastTown || 'BERLIN';
+    T(`YOU'RE IN ${here}  ·  CALL ${(s.jobsToday || 0) + 1}/${CALLS_PER_DAY}`, px + pw / 2, py + 32, '#7dffb0', 4, 'center', false);
     g.save(); g.beginPath(); g.rect(px + 5, VM_TOP, pw - 10, VM_VIEW); g.clip();
     rows.forEach((r, i) => {
       const y = VM_TOP + i * VM_ROW - this.scroll; if (y > VM_TOP + VM_VIEW || y + VM_ROW < VM_TOP) return;
       const c = r.c, sel = i === this.cur, locked = c.gate && !s.inv[c.gate], story = isStory(c);
       R(px + 7, y + 1, pw - 14, VM_ROW - 3, sel ? '#2c6cd6' : locked ? '#2a1d22' : '#1d2638'); if (story) R(px + 7, y + 1, 3, VM_ROW - 3, '#f7c418');
       E(px + 22, y + 15, 9, 9, '#3a4a64'); T((c.cust ? c.cust.name : '?')[0], px + 22, y + 16, '#cfd8e8', 7, 'center', false);
-      T(c.cust ? c.cust.name : 'UNKNOWN', px + 36, y + 10, '#fff', 5, 'left', false); T(c.town, px + 36, y + 20, '#9fb3d9', 4, 'left', false);
+      T(c.cust ? c.cust.name : 'UNKNOWN', px + 36, y + 10, '#fff', 5, 'left', false); T(c.town === here ? c.town + ' · NO DRIVE' : c.town, px + 36, y + 20, c.town === here ? '#7dffb0' : '#9fb3d9', 4, 'left', false);
       T(GAME_NAME[c.game] || '', px + pw - 12, y + 10, '#7dffb0', 4, 'right', false);
       if (locked) T(`NEEDS ${SHOP.find(q => q.id === c.gate).name}`, px + pw - 12, y + 20, '#e9665a', 4, 'right', false);
       else if (story) T('STORY JOB', px + pw - 12, y + 20, '#f7c418', 4, 'right', false);

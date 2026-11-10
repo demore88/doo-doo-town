@@ -112,9 +112,15 @@ function drive3d(choice, opts) {
   const PINE = art(32, 64, (k, P) => { P(14, 52, 4, 12, '#4a3020'); for (let i = 0; i < 12; i++) P(16 - i * 1.2, 4 + i * 4, i * 2.4 + 1, 4, i % 2 ? SEA.pine : '#24452c'); if (SNOW) for (let i = 1; i < 12; i += 3) P(16 - i * 1.2, 4 + i * 4, i * 1.4, 1, '#fff'); });
   const MAPLE = (c1, c2) => art(40, 56, (k, P) => { P(18, 30, 5, 26, '#4a3020');
     if (SEA.leaf) { P(4, 6, 32, 22, c1); P(8, 2, 24, 6, c1); P(0, 14, 40, 10, c2); P(10, 24, 20, 6, c2); }
-    else { P(6, 14, 14, 2, '#4a3020'); P(22, 10, 14, 2, '#4a3020'); P(12, 4, 2, 12, '#4a3020'); P(28, 2, 2, 10, '#4a3020'); if (SNOW) { P(6, 13, 12, 1, '#fff'); P(22, 9, 12, 1, '#fff'); } } });
+    else {   // bare tree: every branch grows out of the trunk (no floating sticks)
+      P(18, 10, 5, 22, '#4a3020');
+      k.strokeStyle = '#4a3020'; k.lineCap = 'round';
+      for (const [x0, y0, x1, y1, w] of [[20, 26, 6, 12, 3], [21, 22, 34, 8, 3], [20, 16, 12, 2, 2], [21, 14, 28, 2, 2], [9, 15, 4, 8, 1.5], [31, 11, 37, 6, 1.5], [14, 7, 10, 2, 1], [25, 6, 31, 1, 1]]) { k.lineWidth = w; k.beginPath(); k.moveTo(x0, y0); k.lineTo(x1, y1); k.stroke(); }
+      if (SNOW) { k.strokeStyle = '#fff'; k.lineWidth = 1; k.beginPath(); k.moveTo(8, 13); k.lineTo(19, 24); k.moveTo(22, 20); k.lineTo(33, 9); k.stroke(); } } });
   const MAPLES = SEA.leaf ? SEA.leaf.map((c, i) => MAPLE(c, SEA.leaf[(i + 1) % SEA.leaf.length])) : [MAPLE('#000', '#000')];
-  const BIRCH = art(24, 60, (k, P) => { P(10, 10, 4, 50, '#eeeae0'); for (let y = 14; y < 58; y += 7) P(10, y, 3, 1, '#222'); if (SEA.leaf) { P(2, 2, 20, 16, SEA.leaf[0]); P(0, 8, 24, 8, SEA.leaf[SEA.leaf.length - 1]); } });
+  const BIRCH = art(24, 60, (k, P) => { P(11, 14, 3, 46, '#eeeae0'); for (let y = 20; y < 58; y += 8) P(11, y, 2, 1, '#333');
+    k.strokeStyle = '#6a5a4a'; k.lineWidth = 1; k.beginPath(); for (const [x0, y0, x1, y1] of [[12, 22, 4, 12], [13, 18, 21, 8], [12, 30, 5, 22], [13, 28, 20, 20], [12, 14, 9, 4], [13, 14, 16, 3]]) { k.moveTo(x0, y0); k.lineTo(x1, y1); } k.stroke();
+    if (SEA.leaf) { P(2, 2, 20, 18, SEA.leaf[0]); P(0, 9, 24, 9, SEA.leaf[SEA.leaf.length - 1]); } });
   const BANK = art(96, 22, (k, P) => {   // a plowed snowbank: lumpy mound, lit from above, gray-blue in the shadow, a little road grit at the base
     for (let x = 0; x < 96; x++) { const h = 9 + 5 * Math.sin(x * 0.11) + 3 * Math.sin(x * 0.37 + 1) + 2 * Math.sin(x * 0.9), top = 22 - h;
       P(x, top, 1, h, '#dfe6ee'); P(x, top, 1, 2, '#ffffff'); P(x, 22 - h * 0.35, 1, h * 0.35, '#c4cfdb'); if (x % 7 === 0) P(x, 20, 2, 2, '#8a8f94'); } });
@@ -157,10 +163,10 @@ function drive3d(choice, opts) {
   for (let n = 20; n < N - 20; n++) {
     const L = LEGS_HERE[segs[n].leg] || LEGS_HERE[0], sc = L.scene, wet = sc.includes('river') || sc.includes('lake');
     const treeSide = () => wet ? -1 : (Math.random() < .5 ? -1 : 1);                  // water is on the right, so the woods crowd the left
-    const dense = sc.includes('notch') ? 2 : sc.includes('town') ? 6 : 3;               // the notch is wall-to-wall woods
+    const dense = sc.includes('notch') ? 4 : sc.includes('town') ? 10 : 6;               // the notch is wall-to-wall woods
     if (n % dense === 0) { const side = treeSide(), d = sc.includes('notch') ? rnd(1.35, 2.2) : rnd(1.4, 3.2);
-      const pick = Math.random(); put(n, pick < (sc.includes('notch') ? .8 : .5) ? PINE : pick < .85 ? MAPLES[n % MAPLES.length] : BIRCH, side * d, rnd(0.9, 1.4) * (sc.includes('notch') ? 1.3 : 1)); }
-    if (n % 7 === 0) put(n, PINE, treeSide() * rnd(3.5, 6), rnd(1.2, 1.8));
+      const pick = Math.random(); put(n, pick < (sc.includes('notch') ? .8 : .55) ? PINE : pick < .93 ? MAPLES[n % MAPLES.length] : BIRCH, side * d, rnd(0.9, 1.4) * (sc.includes('notch') ? 1.3 : 1)); }
+    if (n % 16 === 0) put(n, PINE, treeSide() * rnd(3.5, 6), rnd(1.2, 1.8));
     if (sc.includes('town') && n % 9 === 0) put(n, HOUSES_ART[n % HOUSES_ART.length], (n % 18 ? -1 : 1) * rnd(2.5, 3.4), rnd(0.9, 1.15));
     if (sc.includes('mill') && n % 60 === 0) put(n, STACK, 4.2, 2.4);
     if (SNOW && n % 2 === 0) { put(n, BANK, -1.53 - (n % 6) * 0.02, 0.62); put(n, BANK, 1.53 + (n % 6) * 0.02, 0.62); }   // banks sit on the shoulder, off the travel lanes
@@ -397,14 +403,14 @@ function drive3d(choice, opts) {
         const rum = w => w * 0.08, lane = w => w * 0.022;
         if (sg.river || sg.lake) { const wc = SNOW ? (sg.dark ? '#6f8ea8' : '#7f9db6') : (sg.dark ? '#3f6f9c' : '#4a7ab0');   // the river (or lake) off to the right
           poly(p1.sx + p1.sw * (sg.lake ? 3.4 : 2.6), p1.sy, p1.sw * (sg.lake ? 1.4 : 0.7), p2.sx + p2.sw * (sg.lake ? 3.4 : 2.6), p2.sy, p2.sw * (sg.lake ? 1.4 : 0.7), wc); }
-        poly(p1.sx, p1.sy, p1.sw * 1.16, p2.sx, p2.sy, p2.sw * 1.16, SNOW ? (sg.dark ? '#8f8a84' : '#99948d') : (sg.dark ? '#7a6346' : '#836b4c'));   // dirt (or slushy sand) shoulder
-        poly(p1.sx, p1.sy, p1.sw, p2.sx, p2.sy, p2.sw, sg.dark ? '#4a4c52' : '#53565c');                                                                // asphalt
+        poly(p1.sx, p1.sy, p1.sw * 1.16, p2.sx, p2.sy, p2.sw * 1.16, SNOW ? '#95908a' : '#7f674a');   // dirt (or slushy sand) shoulder, one solid color
+        poly(p1.sx, p1.sy, p1.sw, p2.sx, p2.sy, p2.sw, '#4f5258');   /* asphalt: one solid color */                                                                // asphalt
         for (const e of [-1, 1]) poly(p1.sx + e * p1.sw * 0.95, p1.sy, Math.max(0.5, p1.sw * 0.012), p2.sx + e * p2.sw * 0.95, p2.sy, Math.max(0.5, p2.sw * 0.012), '#e8eaec');   // solid white edge line
         // (snow lives on the shoulder now, so the white edge line stays readable)
         { const yx = w => -w / 3;   // double yellow: oncoming lane on the left
           poly(p1.sx + yx(p1.sw) - lane(p1.sw) * 1.4, p1.sy, lane(p1.sw) * 0.6, p2.sx + yx(p2.sw) - lane(p2.sw) * 1.4, p2.sy, lane(p2.sw) * 0.6, '#f2c12e');
           poly(p1.sx + yx(p1.sw) + lane(p1.sw) * 1.4, p1.sy, lane(p1.sw) * 0.6, p2.sx + yx(p2.sw) + lane(p2.sw) * 1.4, p2.sy, lane(p2.sw) * 0.6, '#f2c12e');
-          if (!sg.dark) poly(p1.sx + p1.sw / 3, p1.sy, lane(p1.sw) * 0.8, p2.sx + p2.sw / 3, p2.sy, lane(p2.sw) * 0.8, '#eef0f2'); }   // dashed white between our two lanes
+          if (Math.floor(sg.i / 3) % 4 === 0) poly(p1.sx + p1.sw / 3, p1.sy, lane(p1.sw) * 0.8, p2.sx + p2.sw / 3, p2.sy, lane(p2.sw) * 0.8, '#eef0f2'); }   // dashed white between our two lanes: short dash, long gap
         maxy = p1.sy;
       }
       // sprites, cars, critters back to front
@@ -412,7 +418,7 @@ function drive3d(choice, opts) {
         const wpx = img.width * sc * sw / 160, hpx = img.height * sc * sw / 160, X = sx + sw * off - wpx / 2, Y = sy - hpx;
         if (wpx < 1 || Y > H) return;
         if (rot) { r.save(); r.translate(X + wpx / 2, Y + hpx / 2); r.rotate(rot); r.drawImage(img, -wpx / 2, -hpx / 2, wpx, hpx); r.restore(); return { X, Y, w: wpx, h: hpx }; }
-        const ch = clip != null ? Math.max(0, Y + hpx - clip) : 0; if (ch >= hpx) return;
+        const ch = clip != null ? Math.max(0, Y + hpx - clip) : 0; if (ch >= hpx || (ch > hpx * 0.45 && !rot)) return;
         const srcH = img.height * (1 - ch / hpx);
         r.drawImage(img, 0, 0, img.width, srcH, Math.round(X), Math.round(Y), Math.round(wpx), Math.round(hpx - ch));
         return { X, Y, w: wpx, h: hpx - ch };
