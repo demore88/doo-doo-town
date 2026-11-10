@@ -997,7 +997,7 @@ GAMES.push({
       else { R(c.x - 9, y - 7, 18, 13, '#c9a36a'); R(c.x - 9, y - 7, 18, 3, '#e8e4d8'); for (let k = 0; k < 4; k++) R(c.x - 7 + k * 4, y - 2, 2, 7, '#8a6a3a'); } }
     const py = this.yAt(s, s.f, s.x) - s.jy, dirF = Math.sign(s.fl[s.f].b - s.fl[s.f].a);
     if (s.cans.some(c => c.f === s.f && (s.x - c.x) * dirF > 0 && (s.x - c.x) * dirF < 120) && Math.floor(s.t * 8) % 2) T('!', s.x - dirF * 18, py - 50, '#e9665a', 10, 'center');
-    if (s.inv <= 0 || Math.floor(s.t * 10) % 2) { SPR(s.hero || 'matt', WALK(s.hero || 'matt', s.t, s.facing > 0 ? 6 : 8), s.x, py, s.facing < 0 && !!IMG[(s.hero || 'matt') + '_more'], 1.4); if (!SPI('jetter', s.x - 15 * s.facing, py - 10, 0.42, s.facing < 0)) { R(s.x - 12 * s.facing - 7, py - 22, 14, 12, '#e8822a'); R(s.x - 12 * s.facing - 5, py - 26, 10, 4, '#333'); } }   // carrying the jetter
+    if (s.inv <= 0 || Math.floor(s.t * 10) % 2) { SPR(s.hero || 'matt', WALK(s.hero || 'matt', s.t, s.facing > 0 ? 6 : 8), s.x, py, s.facing < 0 && !!IMG[(s.hero || 'matt') + '_more'], 0.9); if (!SPI('jetter', s.x - 10 * s.facing, py - 7, 0.28, s.facing < 0)) { R(s.x - 12 * s.facing - 7, py - 22, 14, 12, '#e8822a'); R(s.x - 12 * s.facing - 5, py - 26, 10, 4, '#333'); } }   // carrying the jetter
     DRAWFX(s); HUD(s, 'STAIRS OF DEATH', null); PANTS(s, W - 6 - s.pantsMax * 14, 20); T(`FLIGHT ${s.f + 1}/4`, 6, 24, '#fff', 6);
   },
 });
