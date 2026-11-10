@@ -818,7 +818,7 @@ GAMES.push({
     R(0, 0, W, H, '#a9cfe6'); R(0, 200, W, 70, '#5a8a41'); R(0, 196, W, 6, '#4a7a35');
     const cam = s.x - 120;
     R(-cam - 40, 90, 60, 110, '#b88660');
-    if (IMG.van) g.drawImage(IMG.van, 0, 0, IMG.van.width / 3, IMG.van.height, Math.round(s.LEN - cam + 10), 138, 144, 64);
+    if (IMG.van) g.drawImage(IMG.van, 0, 0, 432, IMG.van.height, Math.round(s.LEN - cam + 10), 202 - IMG.van.height / 3, 144, IMG.van.height / 3);
     for (const o of s.obs) { const x = o.d - cam; R(x - 14, 192, 28, 6, '#2f6f2a'); if (!o.done) R(x - 1, 170, 2, 10, '#f7c418'); }
     const hy = s.hop > 0 ? -Math.sin((1 - s.hop / 0.45) * Math.PI) * 14 : 0;
     SPR(s.hero || 'matt', 6, 120, 198 + hy);

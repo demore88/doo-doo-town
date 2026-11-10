@@ -17,9 +17,9 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794284330"></script>
-<script src="../js/music.js?v=1794284330"></script>
-<script src="../js/sfx.js?v=1794284330"></script>
+<script src="../js/state.js?v=1794284796"></script>
+<script src="../js/music.js?v=1794284796"></script>
+<script src="../js/sfx.js?v=1794284796"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -317,7 +317,7 @@ function matt(x, y, f = 0, s = 2, a = 1) {
   g.drawImage(IMG.matt, f * 24, 0, 24, 40, Math.round(x - 12 * s), Math.round(y - 40 * s), 24 * s, 40 * s); g.globalAlpha = 1;
 }
 function cup(x, y) { R(x, y, 4, 6, '#f2f0ea'); R(x - 1, y - 1, 6, 2, '#5a3a1c'); R(x, y + 2, 4, 2, '#c0392b'); }
-function van(x, y) { if (IMG.van) { const K = IMG.van.width / 432, f = Math.floor(Math.abs(x) / 3) % 3; g.drawImage(IMG.van, f * 144 * K, 0, 144 * K, 64 * K, Math.round(x), Math.round(y - 64), 144, 64); } }   // wheels turn as the van moves
+function van(x, y) { if (IMG.van) { const N = Math.max(1, Math.round(IMG.van.width / 432)), f = Math.floor(Math.abs(x) / 5) % N, vh = IMG.van.height / 3; g.drawImage(IMG.van, f * 432, 0, 432, IMG.van.height, Math.round(x), Math.round(y - vh), 144, vh); } }   // wheels turn as the van moves
 function steam(x, y) { const t = performance.now() / 1000; for (let i = 0; i < 3; i++) { const p = (t * 0.6 + i / 3) % 1; R(x + Math.sin(t * 3 + i) * 2, y - p * 10, 1, 2, `rgba(255,255,255,${0.7 * (1 - p)})`); } }
 const bell = () => { tone(1568, 0.5, 'triangle', 0.05); tone(2093, 0.6, 'triangle', 0.035, 0.07); };
 const DOOR_X = 337;
