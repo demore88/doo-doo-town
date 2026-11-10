@@ -91,9 +91,9 @@
   <div class="scr" id="result"><div class="box" id="resbox"></div></div>
 </div></div>
 <audio id="music" src="../assets/doo_doo_town.mp3" loop preload="auto"></audio>
-<script src="../js/state.js?v=1794282567"></script>
-<script src="../js/sfx.js?v=1794282567"></script>
-<script src="games.js?v=1794282567"></script>
+<script src="../js/state.js?v=1794283442"></script>
+<script src="../js/sfx.js?v=1794283442"></script>
+<script src="games.js?v=1794283442"></script>
 <script>
 const cv = document.getElementById('c'); g = cv.getContext('2d'); const SCALE = 3; g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
 const $ = s => document.querySelector(s);
@@ -244,7 +244,9 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && pha
 
 // ---------- boot ----------
 const load = (k, src) => new Promise(r => { const i = new Image(); i.onload = () => { IMG[k] = i; r(); }; i.onerror = r; i.src = src; });
-Promise.all([load('matt', '../assets/matt_dance.png'), load('rod', '../assets/rod_dance.png'), load('van', '../assets/van_left.png'),
+const loadMG = () => fetch('../assets/mg/sizes.json').then(r => r.json()).then(o => Promise.all(Object.keys(o).map(n => load('mg_' + n, '../assets/mg/' + n + '.png')))).catch(() => {});
+const capped = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);   // art helps, but never holds up the game
+Promise.all([capped(loadMG(), 2500), load('matt', '../assets/matt_dance.png'), load('rod', '../assets/rod_dance.png'), load('van', '../assets/van_left.png'),
   document.fonts ? document.fonts.load('8px "Press Start 2P"').catch(() => {}) : 0]).then(() => {
     buildGrid(); requestAnimationFrame(frame);
     if (EMBED) { const i = GAMES.findIndex(x => x.id === EMBED); if (i >= 0) { openIntro(i); if (store.get('seen_' + EMBED)) start(); }   /* played it before: skip the how-to, straight to READY */
