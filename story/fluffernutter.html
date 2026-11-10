@@ -16,11 +16,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794272541"></script>
-<script src="../js/music.js?v=1794272541"></script>
-<script src="../js/sfx.js?v=1794272541"></script>
-<script src="../js/calls.js?v=1794272541"></script>
-<script src="../js/placeholders.js?v=1794272541"></script>
+<script src="../js/state.js?v=1794272639"></script>
+<script src="../js/music.js?v=1794272639"></script>
+<script src="../js/sfx.js?v=1794272639"></script>
+<script src="../js/calls.js?v=1794272639"></script>
+<script src="../js/placeholders.js?v=1794272639"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');
@@ -46,7 +46,7 @@ function wrap(s, maxW, n = 8) {
 }
 const load = s => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = s; });
 // portraits not preloaded (rod_angry, ron_smug...) load the first time someone uses that face
-const _portBase = (() => { const e = document.querySelector('script[src$="js/state.js"]'); return e ? e.src.replace(/js\/state\.js.*$/, 'assets/') : '../assets/'; })();
+const _portBase = (() => { const e = document.querySelector('script[src*="js/state.js"]'); return e ? e.src.replace(/js\/state\.js.*$/, 'assets/') : '../assets/'; })();
 function portLoad(name) { if (!name || name in portLoad.c) return portLoad.c[name] || null; portLoad.c[name] = null; const i = new Image(); i.onload = () => { portLoad.c[name] = IMG[name] = i; }; i.src = _portBase + name + '.png'; return null; }
 portLoad.c = {};
 const IMG = {};

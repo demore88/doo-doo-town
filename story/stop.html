@@ -16,11 +16,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794272541"></script>
-<script src="../js/calls.js?v=1794272541"></script>
-<script src="../js/placeholders.js?v=1794272541"></script>
-<script src="../js/music.js?v=1794272541"></script>
-<script src="../js/sfx.js?v=1794272541"></script>
+<script src="../js/state.js?v=1794272639"></script>
+<script src="../js/calls.js?v=1794272639"></script>
+<script src="../js/placeholders.js?v=1794272639"></script>
+<script src="../js/music.js?v=1794272639"></script>
+<script src="../js/sfx.js?v=1794272639"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -46,9 +46,11 @@ function wrap(s, maxW, n = 8) {
 }
 const load = s => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = s; });
 // portraits not preloaded (rod_angry, ron_smug...) load the first time someone uses that face
-const _portBase = (() => { const e = document.querySelector('script[src$="js/state.js"]'); return e ? e.src.replace(/js\/state\.js.*$/, 'assets/') : '../assets/'; })();
+const _portBase = (() => { const e = document.querySelector('script[src*="js/state.js"]'); return e ? e.src.replace(/js\/state\.js.*$/, 'assets/') : '../assets/'; })();
 function portLoad(name) { if (!name || name in portLoad.c) return portLoad.c[name] || null; portLoad.c[name] = null; const i = new Image(); i.onload = () => { portLoad.c[name] = IMG[name] = i; }; i.src = _portBase + name + '.png'; return null; }
 portLoad.c = {};
+const PORT_WARM = ["dookies_barista", "grant_happy", "grant_normal", "grant_panic", "kevin_laugh", "kevin_normal", "matt_happy", "matt_normal", "matt_shocked", "matt_stare", "matt_suspicious", "matt_tired", "rod_angry", "rod_annoyed", "rod_confused", "rod_gross", "rod_happy", "rod_laugh", "rod_normal", "rod_panic", "rod_phone", "rod_sad", "rod_shocked", "rod_smug", "rod_stare", "rod_suspicious", "rod_tight", "rod_tight_stare", "rod_tired", "ron_angry", "ron_annoyed", "ron_confused", "ron_cover", "ron_gross", "ron_happy", "ron_laugh", "ron_neutral", "ron_panic", "ron_phone", "ron_sad", "ron_shocked", "ron_smug", "ron_stare", "ron_suspicious", "ron_tired"];   // every face loads up front, so nobody's portrait pops in late
+PORT_WARM.forEach(n => portLoad(n));
 const IMG = {};
 const rnd = (a, b) => a + Math.random() * (b - a);
 
