@@ -1577,7 +1577,7 @@ GAMES.push({
     s.cam = 0; s.hearts = s.heartsMax = [4, 3, 2][s.diff]; s.time = [130, 110, 95][s.diff]; s.inv = 0; s.hits = 0; s.got = 0; s.total = L.plungers.length;
     s.plg = L.plungers.map(([c, r]) => ({ x: c * SR_TILE + 8, y: r * SR_TILE + 8, got: false }));
     s.bonked = new Set(); s.pops = [];
-    s.foes = [...L.grease.map(c => ({ k: 'g', x: c * SR_TILE, y: SR_GROUND * SR_TILE, vx: -26, vy: 0, dead: 0 })),
+    s.foes = [...L.grease.filter(c => c < L.len - 23).map(c => ({ k: 'g', x: c * SR_TILE, y: SR_GROUND * SR_TILE, vx: -26, vy: 0, dead: 0 })),
               ...L.wipes.map(c => ({ k: 'w', x: c * SR_TILE, y: 150, y0: 150, vx: -18, dead: 0, ph: c }))];
     s.said = {}; s.bub = null; s.check = { x: 40, y: SR_GROUND * SR_TILE }; s.won = false; s.flush = 0;
     SR_BROKE = new Set(); s.big = false; s.items = []; s.debris = []; s.bumps = []; s.score = 0; s.combo = 0; s.runT = 0; s.texts = [];
@@ -1588,7 +1588,7 @@ GAMES.push({
     s.t += dt; const p = s.p, L = SR_LEVEL;
     if (s.bub) { s.bub.t -= dt; if (s.bub.t <= 0) s.bub = null; }
     if (s.won) { s.flush += dt; if (s.flush > 2.2) s.end = { win: true, stars: stars3(s.hits === 0 && s.got >= s.total * 0.6, s.hits <= 1), line: `${s.got}/${s.total} golden plungers. "This isn't how drains work."` }; return; }
-    s.time -= dt; s.inv = Math.max(0, s.inv - dt);
+    if (!s.boss) s.time -= dt; s.inv = Math.max(0, s.inv - dt);   // the clock stops for the boss fight
     if (s.time <= 0) { s.end = { win: false, stars: 0, line: 'Out of time. Ron is late. Ron is never late. (Ron is late.)' }; return; }
     // run + jump
     let dir = (I.R ? 1 : 0) - (I.L ? 1 : 0);
@@ -1651,6 +1651,31 @@ GAMES.push({
     s.debris.forEach(d => { d.vy += 900 * dt; d.x += d.vx * dt; d.y += d.vy * dt; d.t -= dt; }); s.debris = s.debris.filter(d => d.t > 0);
     s.bumps.forEach(b => b.t -= dt); s.bumps = s.bumps.filter(b => b.t > 0);
     s.texts.forEach(o => { o.t -= dt; o.y -= 24 * dt; }); s.texts = s.texts.filter(o => o.t > 0);
+    // ---------- THE FATBERG: the boss, guarding the golden toilet ----------
+    const AR0 = (L.len - 22) * SR_TILE, AR1 = (L.len - 9) * SR_TILE;   // the arena
+    if (!s.boss && !s.bossDone && p.x > AR0 + 40) { s.boss = { x: AR1 - 30, vx: -40, hp: 3, inv: 0, t: 0, spit: 2, hop: 0, vy: 0, y: SR_GROUND * SR_TILE, roar: 1.2 }; s.globs = []; SFX('gurgle'); s.quip('boss', "That's a FATBERG. Every wipe anybody ever flushed. Stomp it, Ron."); }
+    if (s.boss) { const B = s.boss; B.t += dt; B.inv = Math.max(0, B.inv - dt);
+      p.x = clamp(p.x, AR0 + 8, AR1 + 40);   // no leaving mid-fight
+      if (B.hp > 0) {
+        if (B.roar > 0) B.roar -= dt;
+        else { B.x += B.vx * dt * (B.hp === 1 ? 1.8 : B.hp === 2 ? 1.35 : 1); if (B.x < AR0 + 40 || B.x > AR1 - 10) B.vx = -B.vx;
+          B.spit -= dt; if (B.spit <= 0) { B.spit = [2.2, 1.6, 1.1][3 - B.hp] || 1.1; const dir = Math.sign(p.x - B.x) || -1; s.globs.push({ x: B.x + dir * 16, y: B.y - 26, vx: dir * (90 + Math.random() * 60), vy: -220 }); B.mouth = 0.35; SFX('splash', { vol: 0.4 }); }
+          if (B.hop <= 0 && Math.random() < dt * (B.hp === 1 ? 0.5 : 0.25)) { B.vy = -260; B.hop = 1; }
+          if (B.hop) { B.vy += 900 * dt; B.y += B.vy * dt; if (B.y >= SR_GROUND * SR_TILE) { B.y = SR_GROUND * SR_TILE; B.hop = 0; B.vy = 0; s.shake = 0.3; } } }
+        B.mouth = Math.max(0, (B.mouth || 0) - dt);
+        // stomp it on the head, or get hurt touching it
+        const top = B.y - 40;
+        if (Math.abs(p.x - B.x) < 24 && p.y > top - 2 && p.y - 22 < B.y) {
+          if (p.vy > 40 && p.y - top < 12 && B.inv <= 0) { B.hp--; B.inv = 1.0; B.roar = 0.6; p.vy = -380; s.airJump = true; s.score += 1000; s.shake = 0.4; SFX('squish'); s.texts.push({ x: B.x, y: top - 10, txt: '1000', t: 0.9 });
+            if (B.hp <= 0) { B.dead = 0; SFX('flush_big'); s.quip('bossdown', "You flattened a fatberg with your BOOTS. ...I'll allow it."); } }
+          else if (s.inv <= 0 && B.inv <= 0) { hurt(s, false); p.vx = (p.x < B.x ? -1 : 1) * 160; }
+        }
+      } else { B.dead += dt; if (B.dead > 1.6) { s.bossDone = true; s.boss = null; s.score += 5000; } }
+      for (const o of s.globs) { o.vy += 700 * dt; o.x += o.vx * dt; o.y += o.vy * dt; if (o.y > SR_GROUND * SR_TILE) o.dead = true;
+        if (!o.dead && s.inv <= 0 && Math.abs(o.x - p.x) < 8 && o.y > p.y - 22 && o.y < p.y) { o.dead = true; hurt(s, false); } }
+      if (s.globs) s.globs = s.globs.filter(o => !o.dead);
+    }
+    if (!s.bossDone && p.x > AR1 + 40) p.x = AR1 + 40;   // the toilet is behind the Fatberg
     // the golden toilet
     if (p.x > (L.len - 8) * SR_TILE && !s.won) { s.won = true; SFX('flush_big'); s.quip('end', "This isn't how drains work. What IS this?"); s.bub = { txt: "This isn't how drains work. What IS this?", t: 9 }; }
     s.cam = clamp(p.x - 180, 0, L.len * SR_TILE - W);
@@ -1717,6 +1742,10 @@ GAMES.push({
     const tx = (L.len - 6) * SR_TILE - cam; if (tx < W + 40 && SI('toilet_0')) { const fr = !s.won ? 0 : s.flush < 0.5 ? 1 : s.flush < 1.4 ? 2 : 3, im = SI('toilet_' + fr), h = 52, w = h * im.width / im.height; g.drawImage(im, tx + 13 - w / 2, 240 - h, w, h); }
     else if (tx < W + 40) { R(tx, 212, 26, 28, '#f2c94c'); g.fillStyle = '#f7d96a'; g.beginPath(); g.ellipse(tx + 13, 212, 18, 7, 0, 0, Math.PI * 2); g.fill(); R(tx + 14, 180, 18, 26, '#f2c94c'); T('FLUSH', tx + 13, 172, '#f7c418', 5, 'center');
       if (s.won) { for (let i = 0; i < 8; i++) { const a = s.flush * 6 + i; C(tx + 13 + Math.cos(a) * 14 * (1 - s.flush / 2.2), 210 + Math.sin(a) * 5, 2, '#9fd0e0'); } } }
+    if (s.boss) { const B = s.boss, x = B.x - cam, fr = B.hp <= 0 ? 3 : B.inv > 0 ? 3 : B.mouth > 0 ? 2 : B.roar > 0 ? 1 : 0, im = SI('fat_' + fr), sq = B.hp <= 0 ? Math.max(0.05, 1 - B.dead / 1.4) : 1;
+      if (!(B.inv > 0 && Math.floor(t * 14) % 2)) { if (im) { const w = 64, h = w * im.height / im.width * sq; g.save(); g.translate(x, 0); if (B.vx > 0) g.scale(-1, 1); g.drawImage(im, -w / 2, B.y - h, w, h); g.restore(); } else { R(x - 24, B.y - 40 * sq, 48, 40 * sq, '#8a6a2a'); } }
+      for (const o of s.globs || []) { if (SI('grease_3')) g.drawImage(SI('grease_3'), o.x - cam - 6, o.y - 4, 12, 7); else C(o.x - cam, o.y, 3, '#d9b04a'); }
+      for (let i = 0; i < 3; i++) C(W / 2 - 14 + i * 14, 70, 4, i < B.hp ? '#e9665a' : 'rgba(255,255,255,.25)'); }   // boss health
     if (!s.won || s.flush < 0.8) srRon(s.p.x - cam, s.p.y, s.p.skid ? -s.p.face : s.p.face, t * (1 + Math.abs(s.p.vx) / 140), Math.abs(s.p.vx) > 10 && s.p.on, s.inv > 0, s.big,
       s.won ? 13 + Math.floor(t * 2) % 2 : s.inv > 1.2 ? 11 : !s.p.on ? (s.p.vy < 0 ? 6 : 7) : Math.abs(s.p.vx) > 130 ? 4 + Math.floor(t * 10) % 2 : Math.abs(s.p.vx) > 10 ? 1 + Math.floor(t * 9) % 3 : (s.big && Math.floor(t) % 4 === 0 ? 10 : 0));
     s.texts.forEach(o => T(o.txt, o.x - cam, o.y, '#fff', 6, 'center'));
@@ -1725,6 +1754,7 @@ GAMES.push({
     for (let i = 0; i < s.heartsMax; i++) { const on = i < s.hearts; C(130 + i * 12, 8, 3, on ? '#e9665a' : '#444'); C(135 + i * 12, 8, 3, on ? '#e9665a' : '#444'); g.fillStyle = on ? '#e9665a' : '#444'; g.beginPath(); g.moveTo(127 + i * 12, 9); g.lineTo(132.5 + i * 12, 15); g.lineTo(138 + i * 12, 9); g.fill(); }
     R(305, 3, 2, 10, '#c98a1e'); R(301, 2, 10, 4, '#f2c94c'); T(`${s.got}/${s.total}`, 314, 8, '#f2c94c', 6);   // golden plunger count
     T(String(s.score).padStart(6, '0'), W - 8, 22, '#fff', 6, 'right');
+    if (s.boss) T('FATBERG', 240, 22, '#e9665a', 6, 'center');
     // Rod's running commentary
     if (s.bub) { const lines = []; let ln = ''; for (const w of s.bub.txt.split(' ')) { if ((ln + ' ' + w).length > 34) { lines.push(ln); ln = w; } else ln = ln ? ln + ' ' + w : w; } lines.push(ln);
       const h = 18 + lines.length * 10; R(8, 22, 300, h, 'rgba(16,21,31,.92)'); g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(8.5, 22.5, 299, h - 1);
