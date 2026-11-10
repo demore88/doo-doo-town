@@ -13,7 +13,8 @@ function drive3d(choice, opts) {
   const FALL = SEA.name === 'early fall' || SEA.name === 'fall', SNOW = SEA.snow;
   const W = 480, H = 270, HORIZON = 96;
   const rc = document.getElementById('road'), r = rc.getContext('2d');
-  r.setTransform(3, 0, 0, 3, 0, 0); r.imageSmoothingEnabled = false; rc.style.display = 'block';
+  const RS = 2;   // render at 2x (960x540) instead of 3x: less than half the pixels to paint each frame, same pixel-art look
+  rc.width = 480 * RS; rc.height = 270 * RS; r.setTransform(RS, 0, 0, RS, 0, 0); r.imageSmoothingEnabled = false; rc.style.display = 'block';
 
   // ---------- tuning ----------
   const SEG = 200, ROADW = 1100, LANES = 2, DRAW = 140, CAMH = 900, DEPTH = 0.84, STEP = 1 / 60;
@@ -376,8 +377,8 @@ function drive3d(choice, opts) {
       r.save();
       if (shake > 0) r.translate((Math.random() - .5) * 6 * shake * 2, (Math.random() - .5) * 4 * shake * 2);
       // sky
-      const gr = r.createLinearGradient(0, 0, 0, HORIZON + 10); gr.addColorStop(0, SEA.sky[0]); gr.addColorStop(1, SEA.sky[1]);
-      r.fillStyle = gr; r.fillRect(-10, -10, W + 20, HORIZON + 30);
+      if (!draw.sky) { draw.sky = r.createLinearGradient(0, 0, 0, HORIZON + 10); draw.sky.addColorStop(0, SEA.sky[0]); draw.sky.addColorStop(1, SEA.sky[1]); }
+      r.fillStyle = draw.sky; r.fillRect(-10, -10, W + 20, HORIZON + 30);
       const mx = ((skyX % 480) + 480) % 480; r.drawImage(MTN, -mx, HORIZON - 70); r.drawImage(MTN, 480 - mx, HORIZON - 70); r.drawImage(MTN, -480 - mx, HORIZON - 70);
       r.fillStyle = SEA.ground; r.fillRect(-10, HORIZON + 8, W + 20, H);
       // road, far to near clipped
