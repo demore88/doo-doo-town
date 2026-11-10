@@ -1538,7 +1538,7 @@ GAMES.push({
       g.save(); g.translate(pn.x, pn.y - 5); g.rotate(pn.spin); R(-7, -3, 14, 6, '#2b2d31'); R(-6, -2, 12, 2, '#55595f'); R(6, -1, 9, 2, '#1a1a1a'); g.restore(); }
     for (const l of s.loot) { if (l.kind === 'soap') { R(l.x - 6, l.y - 6, 12, 6, '#9fd1ff'); R(l.x - 4, l.y - 8, 8, 2, '#fff'); } else { R(l.x - 4, l.y - 10, 8, 10, '#f4f1ea'); R(l.x - 4, l.y - 6, 8, 3, '#8a5a2e'); } }
     for (const f of s.foes) { if (f.st !== 'walk') continue; const bob = Math.sin(s.t * 10 + f.x) * 1.5;
-      { const k = f.kind === 'wipe' ? 'wipe_' : 'grease_', im = MG('sr_' + k + (Math.floor(s.t * (f.kind === 'wipe' ? 4 : 2.5) + f.x) % 6));
+      { const k = f.kind === 'wipe' ? 'wipe_' : 'grease_', im = MG('sr_' + k + (Math.floor(s.t * (f.kind === 'wipe' ? 3 : 1.4) + f.x * 0.01) % 6));
         if (im) { const h = f.kind === 'wipe' ? 20 : 16, w = h * im.width / im.height; g.save(); g.translate(f.x, 0); if (f.vx > 0 && f.kind !== 'wipe') g.scale(-1, 1); if (f.angry) g.filter = 'saturate(1.6) hue-rotate(-20deg)';
           g.drawImage(im, -w / 2, f.kind === 'wipe' ? f.y - h - 4 + bob : f.y - h + 1, w, h); g.restore(); continue; } }
       if (f.kind === 'wipe') { R(f.x - 9, f.y - 20 + bob, 18, 16, '#f4f4f2'); R(f.x - 7, f.y - 18 + bob, 14, 2, '#d9d4c8'); R(f.x - 4, f.y - 14 + bob, 2, 3, f.angry ? '#e9665a' : '#222'); R(f.x + 2, f.y - 14 + bob, 2, 3, f.angry ? '#e9665a' : '#222'); }
@@ -1702,7 +1702,7 @@ GAMES.push({
     }
     if (!s.bossDone && p.x > AR1 - 6) { p.x = AR1 - 6; p.vx = Math.min(0, p.vx); }   // the toilet is behind the Fatberg: beat him first
     // the golden toilet
-    if (s.bossDone && p.x > (L.len - 8) * SR_TILE && !s.won) { s.won = true; SFX('flush_big'); s.quip('end', "This isn't how drains work. What IS this?"); s.bub = { txt: "This isn't how drains work. What IS this?", t: 9, face: 'confused' }; }
+    if (s.bossDone && p.x > (L.len - 4) * SR_TILE && !s.won) { s.won = true; SFX('flush_big'); s.quip('end', "This isn't how drains work. What IS this?"); s.bub = { txt: "This isn't how drains work. What IS this?", t: 9, face: 'confused' }; }
     s.cam = clamp(p.x - 180, 0, L.len * SR_TILE - W);
     s.pops.forEach(o => { o.t -= dt; o.y -= 30 * dt; }); s.pops = s.pops.filter(o => o.t > 0);
     function hurt(s, fell) {
@@ -1772,7 +1772,7 @@ GAMES.push({
     s.pops.forEach(o => { if (SI('plunger')) { g.drawImage(SI('plunger'), o.x - cam - 6, o.y - 10, 13, 16); return; } R(o.x - cam - 1, o.y - 4, 2, 9, '#c98a1e'); R(o.x - cam - 4, o.y - 6, 8, 3, '#f2c94c'); });
     for (const f of s.foes) {
       const x = f.x - cam; if (x < -20 || x > W + 20) continue;
-      if (SI('grease_0')) { const k = f.k === 'g' ? 'grease_' : 'wipe_', n8 = !!SI(k + '7'), fr = f.dead ? (n8 ? 7 : 3) : Math.floor(t * (n8 ? (f.k === 'g' ? 2.5 : 4) : 3) + f.x) % (n8 ? 6 : 2), im = SI(k + fr), h = f.k === 'g' ? 22 : 26, w = h * im.width / im.height;   // 6-frame waddle / float cycles
+      if (SI('grease_0')) { const k = f.k === 'g' ? 'grease_' : 'wipe_', n8 = !!SI(k + '7'), fr = f.dead ? (n8 ? 7 : 3) : Math.floor(t * (n8 ? (f.k === 'g' ? 1.4 : 3) : 2) + f.x * 0.01) % (n8 ? 6 : 2)   /* each pose holds a moment before the next */, im = SI(k + fr), h = f.k === 'g' ? 22 : 26, w = h * im.width / im.height;   // 6-frame waddle / float cycles
         if (f.dead && f.dead > 0.5) continue; g.globalAlpha = f.dead ? Math.max(0, 1 - f.dead / 0.5) : 1; g.save(); g.translate(x, 0); if (f.vx > 0) g.scale(-1, 1);
         g.drawImage(im, -w / 2, f.k === 'g' ? f.y - h : f.y - h / 2, w, h); g.restore(); g.globalAlpha = 1; continue; }
       if (f.dead) { if (f.dead < 0.4) { g.globalAlpha = 1 - f.dead / 0.4; R(x - 9, f.y - 3, 18, 3, f.k === 'g' ? '#c9a24a' : '#f2f0ea'); g.globalAlpha = 1; } continue; }
@@ -1780,7 +1780,7 @@ GAMES.push({
       else { g.fillStyle = '#f2f0ea'; g.beginPath(); g.moveTo(x - 9, f.y + 9); g.lineTo(x - 9, f.y - 4); g.quadraticCurveTo(x, f.y - 14, x + 9, f.y - 4); g.lineTo(x + 9, f.y + 9); for (let k = 0; k < 4; k++) g.lineTo(x + 9 - k * 6 - 3, f.y + 5 + (k % 2) * 4); g.fill(); R(x - 4, f.y - 3, 2, 3, '#222'); R(x + 2, f.y - 3, 2, 3, '#222'); R(x - 6, f.y + 2, 12, 1, '#c9d6df'); }
     }
     // the golden toilet
-    const tx = (L.len - 6) * SR_TILE - cam; if (tx < W + 40 && SI('toilet_0')) { const fr = !s.won ? 0 : s.flush < 0.5 ? 1 : s.flush < 1.4 ? 2 : 3, im = SI('toilet_' + fr), h = 52, w = h * im.width / im.height; g.drawImage(im, tx + 13 - w / 2, 240 - h, w, h); }
+    const tx = (L.len - 3) * SR_TILE - cam; /* the golden toilet sits near the far edge, leaving room to move */ if (tx < W + 40 && SI('toilet_0')) { const fr = !s.won ? 0 : s.flush < 0.5 ? 1 : s.flush < 1.4 ? 2 : 3, im = SI('toilet_' + fr), h = 52, w = h * im.width / im.height; g.drawImage(im, tx + 13 - w / 2, 240 - h, w, h); }
     else if (tx < W + 40) { R(tx, 212, 26, 28, '#f2c94c'); g.fillStyle = '#f7d96a'; g.beginPath(); g.ellipse(tx + 13, 212, 18, 7, 0, 0, Math.PI * 2); g.fill(); R(tx + 14, 180, 18, 26, '#f2c94c'); T('FLUSH', tx + 13, 172, '#f7c418', 5, 'center');
       if (s.won) { for (let i = 0; i < 8; i++) { const a = s.flush * 6 + i; C(tx + 13 + Math.cos(a) * 14 * (1 - s.flush / 2.2), 210 + Math.sin(a) * 5, 2, '#9fd0e0'); } } }
     if (s.boss) { const B = s.boss, x = B.x - cam, n8 = !!SI('fat_7'), fr = n8 ? (B.hp <= 0 ? (B.dead < 0.4 ? 6 : 7) : B.inv > 0.6 ? 6 : B.mouth > 0 ? 5 : B.roar > 0 ? 4 : B.hop ? 3 : (B.roar <= 0 ? 2 + Math.floor(t * 2.5) % 2 : Math.floor(t * 1.5) % 2)) : (B.hp <= 0 ? 3 : B.inv > 0 ? 3 : B.mouth > 0 ? 2 : B.roar > 0 ? 1 : 0), im = SI('fat_' + fr), sq = n8 ? 1 : B.hp <= 0 ? Math.max(0.05, 1 - B.dead / 1.4) : 1;
