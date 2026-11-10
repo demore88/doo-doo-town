@@ -18,10 +18,11 @@ function BAR(x, y, w, h, f, c, label) {
   R(x - 1, y - 1, w + 2, h + 2, '#000'); R(x, y, w, h, '#2c3326'); R(x, y, w * Math.max(0, Math.min(1, f)), h, c);
   if (label) T(label, x, y - 6, '#fff', 6);
 }
-function SPR(who, frame, cx, feetY, flip) {           // crew sheets: 24x40 frames. 0 front, 6 right, 7 back, 8 left
-  const im = IMG[who]; if (!im) { R(cx - 8, feetY - 36, 16, 36, who === 'rod' ? '#22325e' : '#2a3d78'); return; }
-  if (flip) { g.save(); g.translate(Math.round(cx), 0); g.scale(-1, 1); g.drawImage(im, frame * 24, 0, 24, 40, -12, Math.round(feetY - 40), 24, 40); g.restore(); }
-  else g.drawImage(im, frame * 24, 0, 24, 40, Math.round(cx - 12), Math.round(feetY - 40), 24, 40);
+function SPR(who, frame, cx, feetY, flip, sc) {       // crew sheets: 24x40 frames. 0 front, 6 right, 7 back, 8 left. sc: scale to match a drawn room
+  sc = sc || 1; const w = 24 * sc, h = 40 * sc;
+  const im = IMG[who]; if (!im) { R(cx - 8 * sc, feetY - 36 * sc, 16 * sc, 36 * sc, who === 'rod' ? '#22325e' : '#2a3d78'); return; }
+  if (flip) { g.save(); g.translate(Math.round(cx), 0); g.scale(-1, 1); g.drawImage(im, frame * 24, 0, 24, 40, Math.round(-w / 2), Math.round(feetY - h), w, h); g.restore(); }
+  else g.drawImage(im, frame * 24, 0, 24, 40, Math.round(cx - w / 2), Math.round(feetY - h), w, h);
 }
 function HUD(s, title, timeLeft) {
   R(0, 0, W, 16, 'rgba(16,21,31,.92)');
@@ -548,18 +549,21 @@ GAMES.push({
     else if (s.t >= s.TIME) s.end = { win: false, stars: 0, line: 'Too slow. The cap is still on.' };
   },
   draw(s) {
-    R(0, 0, W, H, '#3d3a35'); R(0, 214, W, 56, '#6f6a62');
+    const room = BGI('bg_laundry'), FY = room ? 232 : 214, CX = room ? 390 : 386, CY = room ? 157 : 163;
+    if (room) { T('FRESH AIR', 34, 58, '#7bd65b', 6, 'center'); }
+    else { R(0, 0, W, H, '#3d3a35'); R(0, 214, W, 56, '#6f6a62');
     R(14, 110, 40, 104, '#2b2016'); R(18, 114, 32, 100, '#cfe8f5');                  // open door
     T('FRESH', 34, 92, '#7bd65b', 6, 'center'); T('AIR', 34, 101, '#7bd65b', 6, 'center');
-    R(388, 150, 70, 26, '#d6d6d6'); R(380, 156, 14, 14, '#bbb');
-    g.save(); g.translate(386, 163); g.rotate(s.turns * Math.PI / 2 / 4); R(-6, -6, 12, 12, '#999'); R(-2, -6, 4, 12, '#666'); g.restore();
+    R(388, 150, 70, 26, '#d6d6d6'); R(380, 156, 14, 14, '#bbb'); }
+    g.save(); g.translate(CX, CY); g.rotate(s.turns * Math.PI / 2 / 4); R(-6, -6, 12, 12, '#999'); R(-2, -6, 4, 12, '#666'); g.restore();
     if (s.turns) { g.fillStyle = 'rgba(140,180,80,' + (0.16 + 0.3 * s.turns / s.NEED) + ')'; g.fillRect(s.cloudX, 40, W - s.cloudX, 176);
       for (let i = 0; i < 8; i++) C(s.cloudX + ((i * 47 + s.t * 20) % (W - s.cloudX)), 80 + (i * 29) % 120, 10 + i % 3 * 4, 'rgba(160,200,90,.25)'); }
     const fr = s.stun > 0 ? 7 : (s.px > 300 ? 6 : 0);
-    SPR(s.hero || 'matt', fr, s.px, 214);
-    if (s.hold) T('(holding breath)', s.px, 160, '#9fd1ff', 6, 'center');
-    if (s.stun > 0) T('*GAG*', s.px, 160, '#e9665a', 8, 'center');
-    if (s.px > 350 && s.stun <= 0) T(s.stuck ? 'HOLD SPACE!' : 'SPACE = TURN', s.px, 132, '#f7c418', 6, 'center');
+    const MS = room ? 3.4 : 1, top = FY - 40 * MS;   // a 6-ft guy next to a 7-ft door
+    SPR(s.hero || 'matt', fr, s.px, FY, false, MS);
+    if (s.hold) T('(holding breath)', s.px, Math.min(160, top - 8), '#9fd1ff', 6, 'center');
+    if (s.stun > 0) T('*GAG*', s.px, Math.min(160, top - 8), '#e9665a', 8, 'center');
+    if (s.px > 350 && s.stun <= 0) T(s.stuck ? 'HOLD SPACE!' : 'SPACE = TURN', s.px, Math.min(132, top - 18), '#f7c418', 6, 'center');
     if (s.stuck && s.crank > 0) BAR(350, 140, 60, 5, s.crank / (0.7 / HERO(s).grip), '#f7c418', '');
     DRAWFX(s);
     HUD(s, 'FISHY PISSY', s.TIME - s.t);
@@ -779,7 +783,7 @@ GAMES.push({
     else if (s.t >= s.TIME) s.end = { win: false, stars: 0, line: 'Still packed solid.' };
   },
   draw(s) {
-    R(0, 0, W, H, '#2b2a26'); R(0, 90, W, 70, '#5d6168'); R(0, 100, W, 50, '#1e1d1a');
+    if (!BGI('bg_utility')) R(0, 0, W, H, '#2b2a26'); R(0, 90, W, 70, '#5d6168'); R(0, 100, W, 50, '#1e1d1a');
     const rem = 1 - s.prog / 100;
     R(260, 98, 140 * rem + 6, 54, '#cfc3a6'); for (let i = 0; i < 30 * rem; i++) R(262 + (i * 37) % (140 * rem + 1), 100 + (i * 17) % 50, 3, 3, '#a89c80');
     for (let i = 0; i < 6 * rem; i++) SPC('beads', 272 + (i * 53) % (130 * rem + 1), 110 + (i * 23) % 36, 0.5);
@@ -818,9 +822,10 @@ GAMES.push({
     else if (s.t >= s.TIME) s.end = { win: false, stars: 0, line: 'Rod: "Today, please."' };
   },
   draw(s) {
-    R(0, 0, W, H, '#a9cfe6'); R(0, 200, W, 70, '#5a8a41'); R(0, 196, W, 6, '#4a7a35');
-    const cam = s.x - 120;
-    R(-cam - 40, 90, 60, 110, '#b88660');
+    const cam = s.x - 120, lawn = MG('bg_lawn');
+    if (lawn) { const ox = -(((cam % W) + W) % W); R(0, 0, W, H, '#5fb83a'); g.drawImage(lawn, ox, -7, W, H); g.drawImage(lawn, ox + W, -7, W, H); }   // scrolls with you; grass line at 200
+    else { R(0, 0, W, H, '#a9cfe6'); R(0, 200, W, 70, '#5a8a41'); R(0, 196, W, 6, '#4a7a35');
+    R(-cam - 40, 90, 60, 110, '#b88660'); }
     if (IMG.van) g.drawImage(IMG.van, 0, 0, 432, IMG.van.height, Math.round(s.LEN - cam + 10), 202 - IMG.van.height / 3, 144, IMG.van.height / 3);
     for (const o of s.obs) { const x = o.d - cam; R(x - 14, 192, 28, 6, '#2f6f2a'); if (!o.done) R(x - 1, 170, 2, 10, '#f7c418'); }
     const hy = s.hop > 0 ? -Math.sin((1 - s.hop / 0.45) * Math.PI) * 14 : 0;
@@ -845,7 +850,8 @@ GAMES.push({
   act: 'HOP', phone: 'hold left or right of you to walk, tap HOP to jump.', dpad: 'lr',
   init(s) {
     // four flights, zig-zagging down. each: x from a→b, y from ya→yb
-    s.fl = []; for (let i = 0; i < 4; i++) { const r = i % 2 === 0; s.fl.push({ a: r ? 40 : 440, b: r ? 440 : 40, ya: 72 + i * 48, yb: 72 + i * 48 + 18 }); }
+    const bg = !!MG('bg_stairs'), y0 = bg ? 110 : 72, dy = bg ? 42 : 48;   // with the basement art: the first flight leaves from the landing by the door
+    s.fl = []; for (let i = 0; i < 4; i++) { const r = i % 2 === 0; s.fl.push({ a: r ? 40 : 440, b: r ? 440 : 40, ya: y0 + i * dy, yb: y0 + i * dy + 18 }); }
     s.f = 0; s.x = 40; s.jump = 0; s.jy = 0; s.pantsMax = s.pants = [5, 4, 3][s.diff]; s.inv = 0; s.hits = 0; s.cans = []; s.next = 1.5; s.score = 0; s.facing = 1;
     s.holes = []; for (let i = 0; i < 4; i++) { const n = [1, 2, 2][s.diff] + (i > 1 ? 1 : 0); for (let j = 0; j < n; j++) s.holes.push({ f: i, u: 0.25 + (j + s.rnd() * 0.6) / (n + 0.4) * 0.6 }); }
     s.JUMP = 0.62 * Math.sqrt(HERO(s).steady);
@@ -886,8 +892,9 @@ GAMES.push({
     if (s.pants <= 0) s.end = { win: false, stars: 0, line: `Down the stairs the fast way. The jetter is fine. ${s.hero === 'rod' ? 'Rod' : 'Matt'} is not.` };
   },
   draw(s) {
-    R(0, 0, W, H, '#2a2420'); for (let i = 0; i < 9; i++) R(0, 20 + i * 30, W, 1, '#332c27');   // basement wall
-    R(0, H - 14, W, 14, '#4a4f55');                                                                // the floor at the bottom
+    const cellar = BGI('bg_stairs');
+    if (!cellar) { R(0, 0, W, H, '#2a2420'); for (let i = 0; i < 9; i++) R(0, 20 + i * 30, W, 1, '#332c27');   // basement wall
+    R(0, H - 14, W, 14, '#4a4f55'); }                                                              // the floor at the bottom
     for (let i = 0; i < 4; i++) {
       const F = s.fl[i], n = 20;
       for (let k = 0; k < n; k++) { const u = k / n, x = lerp(F.a, F.b, u), y = lerp(F.ya, F.yb, u), w = (F.b - F.a) / n;
@@ -898,13 +905,13 @@ GAMES.push({
       for (let k = 0; k < n; k += 2) { const x = lerp(F.a, F.b, k / n), y = lerp(F.ya, F.yb, k / n); R(x - 1, y - 16, 2, 16, '#5a3c22'); R(Math.min(x, x + (F.b - F.a) / n * 2), y - 17, Math.abs(F.b - F.a) / n * 2 + 1, 2, '#6b4a2e'); }   // railing posts + handrail
     }
     // the customer up top, watching
-    R(14, 24, 24, 48, '#1a1410'); R(16, 26, 20, 46, '#e8c878'); R(16, 26, 20, 3, '#fff2c0');   // the door at the top, light spilling out
+    if (!cellar) { R(14, 24, 24, 48, '#1a1410'); R(16, 26, 20, 46, '#e8c878'); R(16, 26, 20, 3, '#fff2c0'); }   // the door at the top, light spilling out
     for (const c of s.cans) { const y = this.yAt(s, c.f, c.x) - 6 - Math.sin((c.bounce || 0) * 10) * 6;
       if (c.k === 'can') { R(c.x - 6, y - 6, 12, 12, '#bfc4cc'); R(c.x - 6, y - 6 + (Math.floor(c.spin) % 3) * 4, 12, 3, '#6aa0e0'); }
       else { R(c.x - 9, y - 7, 18, 13, '#c9a36a'); R(c.x - 9, y - 7, 18, 3, '#e8e4d8'); for (let k = 0; k < 4; k++) R(c.x - 7 + k * 4, y - 2, 2, 7, '#8a6a3a'); } }
     const py = this.yAt(s, s.f, s.x) - s.jy, dirF = Math.sign(s.fl[s.f].b - s.fl[s.f].a);
     if (s.cans.some(c => c.f === s.f && (s.x - c.x) * dirF > 0 && (s.x - c.x) * dirF < 120) && Math.floor(s.t * 8) % 2) T('!', s.x - dirF * 18, py - 50, '#e9665a', 10, 'center');
-    if (s.inv <= 0 || Math.floor(s.t * 10) % 2) { SPR(s.hero || 'matt', s.facing > 0 ? 6 : 8, s.x, py, false); if (!SPI('jetter', s.x - 15 * s.facing, py - 10, 0.42, s.facing < 0)) { R(s.x - 12 * s.facing - 7, py - 22, 14, 12, '#e8822a'); R(s.x - 12 * s.facing - 5, py - 26, 10, 4, '#333'); } }   // carrying the jetter
+    if (s.inv <= 0 || Math.floor(s.t * 10) % 2) { SPR(s.hero || 'matt', s.facing > 0 ? 6 : 8, s.x, py, false, cellar ? 1.4 : 1); if (!SPI('jetter', s.x - 15 * s.facing, py - 10, 0.42, s.facing < 0)) { R(s.x - 12 * s.facing - 7, py - 22, 14, 12, '#e8822a'); R(s.x - 12 * s.facing - 5, py - 26, 10, 4, '#333'); } }   // carrying the jetter
     DRAWFX(s); HUD(s, 'STAIRS OF DEATH', null); PANTS(s, W - 6 - s.pantsMax * 14, 20); T(`FLIGHT ${s.f + 1}/4`, 6, 24, '#fff', 6);
   },
 });
