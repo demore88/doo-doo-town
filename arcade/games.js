@@ -1601,8 +1601,9 @@ GAMES.push({
     if (I.ptr.down && dir === 0) dir = I.ptr.x < W * 0.33 ? -1 : I.ptr.x > W * 0.66 ? 1 : 0;
     s.runT = dir && p.on && Math.sign(p.vx) === dir ? s.runT + dt : (p.on ? 0 : s.runT);          // keep running to build up speed
     const top = s.runT > 0.7 ? 168 : 112, skid = dir && Math.sign(p.vx) === -dir && Math.abs(p.vx) > 30;
-    const acc = skid ? 1700 : p.on ? 520 : 380; p.vx += dir * acc * dt; if (!dir && p.on) p.vx *= Math.pow(0.004, dt);
-    p.vx = clamp(p.vx, -top, top); if (dir) p.face = dir; p.skid = skid && p.on;
+    if (skid) { p.vx = dir * 40; s.runT = 0; }   // turning around is instant: no sliding
+    const acc = p.on ? 620 : 420; p.vx += dir * acc * dt; if (!dir && p.on) p.vx *= Math.pow(0.00002, dt);   // and he stops when you let go
+    p.vx = clamp(p.vx, -top, top); if (dir) p.face = dir; p.skid = false;
     const jumpHeld = I.A || I.U || (I.ptr.down && I.ptr.x >= W * 0.33 && I.ptr.x <= W * 0.66);
     if ((I.Ap || I.Up || (I.ptr.clicked && I.ptr.x >= W * 0.33 && I.ptr.x <= W * 0.66)) && (p.on || s.airJump)) { if (!p.on) s.airJump = false; p.vy = -305 - Math.abs(p.vx) * 0.32; p.on = false; SFX('ui_tap', { vol: 0.3 }); }   // a running jump goes higher
     if (!jumpHeld && p.vy < -110) p.vy = -110;                       // short hop if you let go
@@ -1661,7 +1662,7 @@ GAMES.push({
     const AR0 = (L.len - 22) * SR_TILE, AR1 = (L.len - 9) * SR_TILE;   // the arena
     if (!s.boss && !s.bossDone && p.x > AR0 + 40) { s.boss = { x: AR1 - 30, vx: -40, hp: 3, inv: 0, t: 0, spit: 2, hop: 0, vy: 0, y: SR_GROUND * SR_TILE, roar: 1.2 }; s.globs = []; SFX('gurgle'); s.quip('boss', "That's a FATBERG. Every wipe anybody ever flushed. Stomp it, Ron."); }
     if (s.boss) { const B = s.boss; B.t += dt; B.inv = Math.max(0, B.inv - dt);
-      p.x = clamp(p.x, AR0 + 8, AR1 + 40);   // no leaving mid-fight
+      p.x = clamp(p.x, AR0 + 8, AR1 - 6);   // no leaving mid-fight, and no jumping past him
       if (B.hp > 0) {
         if (B.roar > 0) B.roar -= dt;
         else { B.x += B.vx * dt * (B.hp === 1 ? 1.8 : B.hp === 2 ? 1.35 : 1); if (B.x < AR0 + 40 || B.x > AR1 - 10) B.vx = -B.vx;
@@ -1681,9 +1682,9 @@ GAMES.push({
         if (!o.dead && s.inv <= 0 && Math.abs(o.x - p.x) < 8 && o.y > p.y - 22 && o.y < p.y) { o.dead = true; hurt(s, false); } }
       if (s.globs) s.globs = s.globs.filter(o => !o.dead);
     }
-    if (!s.bossDone && p.x > AR1 + 40) p.x = AR1 + 40;   // the toilet is behind the Fatberg
+    if (!s.bossDone && p.x > AR1 - 6) { p.x = AR1 - 6; p.vx = Math.min(0, p.vx); }   // the toilet is behind the Fatberg: beat him first
     // the golden toilet
-    if (p.x > (L.len - 8) * SR_TILE && !s.won) { s.won = true; SFX('flush_big'); s.quip('end', "This isn't how drains work. What IS this?"); s.bub = { txt: "This isn't how drains work. What IS this?", t: 9, face: 'confused' }; }
+    if (s.bossDone && p.x > (L.len - 8) * SR_TILE && !s.won) { s.won = true; SFX('flush_big'); s.quip('end', "This isn't how drains work. What IS this?"); s.bub = { txt: "This isn't how drains work. What IS this?", t: 9, face: 'confused' }; }
     s.cam = clamp(p.x - 180, 0, L.len * SR_TILE - W);
     s.pops.forEach(o => { o.t -= dt; o.y -= 30 * dt; }); s.pops = s.pops.filter(o => o.t > 0);
     function hurt(s, fell) {
@@ -1753,7 +1754,7 @@ GAMES.push({
     s.pops.forEach(o => { if (SI('plunger')) { g.drawImage(SI('plunger'), o.x - cam - 6, o.y - 10, 13, 16); return; } R(o.x - cam - 1, o.y - 4, 2, 9, '#c98a1e'); R(o.x - cam - 4, o.y - 6, 8, 3, '#f2c94c'); });
     for (const f of s.foes) {
       const x = f.x - cam; if (x < -20 || x > W + 20) continue;
-      if (SI('grease_0')) { const k = f.k === 'g' ? 'grease_' : 'wipe_', n8 = !!SI(k + '7'), fr = f.dead ? (n8 ? 7 : 3) : Math.floor(t * (n8 ? 5 : 3) + f.x) % (n8 ? 6 : 2), im = SI(k + fr), h = f.k === 'g' ? 22 : 26, w = h * im.width / im.height;   // 6-frame waddle / float cycles
+      if (SI('grease_0')) { const k = f.k === 'g' ? 'grease_' : 'wipe_', n8 = !!SI(k + '7'), fr = f.dead ? (n8 ? 7 : 3) : Math.floor(t * (n8 ? (f.k === 'g' ? 2.5 : 4) : 3) + f.x) % (n8 ? 6 : 2), im = SI(k + fr), h = f.k === 'g' ? 22 : 26, w = h * im.width / im.height;   // 6-frame waddle / float cycles
         if (f.dead && f.dead > 0.5) continue; g.globalAlpha = f.dead ? Math.max(0, 1 - f.dead / 0.5) : 1; g.save(); g.translate(x, 0); if (f.vx > 0) g.scale(-1, 1);
         g.drawImage(im, -w / 2, f.k === 'g' ? f.y - h : f.y - h / 2, w, h); g.restore(); g.globalAlpha = 1; continue; }
       if (f.dead) { if (f.dead < 0.4) { g.globalAlpha = 1 - f.dead / 0.4; R(x - 9, f.y - 3, 18, 3, f.k === 'g' ? '#c9a24a' : '#f2f0ea'); g.globalAlpha = 1; } continue; }
