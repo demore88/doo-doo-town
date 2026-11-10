@@ -14,6 +14,33 @@
 </style>
 </head>
 <body>
+<script>
+// ---------- the van radio, owned by this outer page so it plays straight through every screen change ----------
+window.DDT_RADIO = (() => {
+  const TR = [['doo_doo_town_rock.mp3', 'DOO DOO TOWN ROCK'], ["that_cloggin_sound.mp3", "THAT CLOGGIN' SOUND"], ['brown_friday.mp3', 'BROWN FRIDAY'], ['the_brown_note.mp3', 'THE BROWN NOTE'], ['nightmares.mp3', 'NIGHTMARES']];
+  const a = new Audio(); a.preload = 'auto'; a.volume = 0.5;
+  let muted0 = false; try { muted0 = localStorage.getItem('ddt_mute') === '1'; } catch (e) {}
+  const st = { idx: -1, on: false, muted: muted0, onTrack: null };
+  let fadeT = null;
+  const tell = () => { try { st.onTrack && st.onTrack(TR[st.idx][1]); } catch (e) {} };
+  function load(i) { st.idx = ((i % TR.length) + TR.length) % TR.length; a.src = 'assets/music/' + TR[st.idx][0]; tell(); }
+  const go = () => { a.muted = st.muted; if (st.on && !st.muted) a.play().catch(() => {}); };
+  a.addEventListener('ended', () => { const pool = TR.map((_, i) => i).filter(i => i !== st.idx && (i !== 4 || st.idx === 4)); load(pool[Math.floor(Math.random() * pool.length)]); go(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) a.pause(); else go(); });
+  return {
+    audio: a, st,
+    on(start) { clearInterval(fadeT); a.volume = 0.5; st.on = true; if (st.idx < 0) load(start); go(); },   // picks up exactly where it paused
+    fade(ms = 700) { clearInterval(fadeT); if (!st.on) return; st.on = false; const v0 = a.volume, t0 = performance.now();
+      fadeT = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / ms); a.volume = v0 * (1 - k); if (k >= 1) { clearInterval(fadeT); a.pause(); a.volume = 0.5; } }, 30); },
+    pause() { clearInterval(fadeT); st.on = false; a.pause(); a.volume = 0.5; },
+    spooky() { st.on = true; load(4); go(); },
+    reset() { this.pause(); st.idx = -1; },
+    nudge() { if (st.on && !st.muted && a.paused) a.play().catch(() => {}); },
+    toggleMute() { st.muted = !st.muted; try { localStorage.setItem('ddt_mute', st.muted ? '1' : '0'); } catch (e) {} go(); if (st.muted) a.muted = true; return st.muted; },
+    name() { return st.idx >= 0 ? TR[st.idx][1] : ''; },
+  };
+})();
+</script>
 <!-- On phones the whole game runs inside this one frame, so full screen stays on while the game moves between screens. -->
 <iframe id="f" allow="autoplay; fullscreen"></iframe>
 <button id="max" aria-label="Full screen"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></svg></button>
@@ -27,7 +54,8 @@
     d.requestFullscreen({ navigationUI: 'hide' }).then(() => { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); }).catch(() => {});
   };
   b.onclick = () => { ddtFS(); f.focus(); };
-  const upd = () => { b.style.display = document.fullscreenElement ? 'none' : 'flex'; };
+  const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const upd = () => { b.style.display = !TOUCH || document.fullscreenElement ? 'none' : 'flex'; };
   document.addEventListener('fullscreenchange', upd); upd();
   f.addEventListener('load', () => { try { document.title = f.contentDocument.title; } catch (e) {} f.focus(); });
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});

@@ -15,6 +15,10 @@ const DDTMusic = (() => {
     { file: 'nightmares.mp3', name: 'NIGHTMARES' },
   ];
   const START = { van: 0, job: 3, stop: 1, spooky: 4 };   // where a fresh radio starts, by kind of scene
+  // When the game runs inside app.html, the radio lives in that outer page, so it never stops or skips
+  // between screens. It only pauses when the crew gets out, and picks up right where it left off.
+  const HOST = (() => { try { return window.top !== window && window.parent.DDT_RADIO ? window.parent.DDT_RADIO : null; } catch (e) { return null; } })();
+  if (HOST && /[?&]new=1/.test(location.search)) HOST.reset();
   const radio = new Audio(); radio.preload = 'auto'; radio.volume = 0.5;
   let rIdx = -1, rOn = false;
   if (/[?&]new=1/.test(location.search)) { try { sessionStorage.removeItem('ddt_radio'); } catch (e) {} }   // New Game: the radio starts over from the first song
@@ -125,7 +129,19 @@ const DDTMusic = (() => {
     b.addEventListener('pointerdown', e => e.stopPropagation());
     label(); document.body.appendChild(b);
   }
+  if (HOST) {
+    HOST.st.onTrack = nowPlaying;
+    addEventListener('keydown', e => { if ((e.key === 'm' || e.key === 'M') && !e.repeat) HOST.toggleMute(); });
+    ['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, () => HOST.nudge(), { capture: true }));
+    return {
+      play(name) { if (name === 'spooky') HOST.spooky(); else HOST.on(START[name] || 0); },
+      stop() { HOST.pause(); }, fadeOut(ms) { HOST.fade(ms); }, radioOn(kind) { HOST.on(START[kind] || 0); },
+      handoff() {}, save() {}, toggleMute() { return HOST.toggleMute(); }, nowName() { return HOST.name(); },
+      radio: HOST.audio, tracks: TRACKS, get muted() { return HOST.st.muted; },
+    };
+  }
   return {
+    handoff() { radio.pause(); rSave(); },
     play(name) {
       song = null; wanted = null; clearInterval(timer);
       if (name === 'spooky') { rOn = true; rLoad(4, 0); radio.muted = muted; if (!muted) radio.play().catch(() => {}); }   // the alien night gets Nightmares
