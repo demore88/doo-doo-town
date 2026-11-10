@@ -1261,8 +1261,7 @@ GAMES.push({
       g.strokeStyle = '#26231f'; g.lineWidth = 4; g.stroke();
       if (cam) T(cam, (P[0] + P[P.length - 2]) / 2, (P[1] + P[P.length - 1]) / 2 - 9, cam === 'CLEAR' ? '#27ae60' : '#c0392b', 5, 'center');
     }
-    // water running down from the last fixture you tested
-    if (s.anim) { const f = s.fix.find(f => f.id === s.anim.id), res = s.res[f.id], pts = [];
+    if (false && s.anim) { const f = s.fix.find(f => f.id === s.anim.id), res = s.res[f.id], pts = [];   // no water drawn in the pipes: you read the clog from the fixture results, not by watching where the water stops
       const stopAt = res === 'back' ? f.path.indexOf(s.full) : f.path.length, p = Math.min(1, s.anim.t / 1.0) * (stopAt + 1);
       g.strokeStyle = res === 'slow' ? 'rgba(95,155,192,.5)' : '#5f9bc0'; g.lineWidth = 3;
       for (let i = 0; i < Math.min(p, f.path.length); i++) { const P = s.seg[f.path[i]], u = Math.min(1, p - i), n = P.length / 2 - 1, upto = u * n;
