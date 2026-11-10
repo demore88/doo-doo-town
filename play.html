@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794274747"></script>
-<script src="js/calls.js?v=1794274747"></script>
-<script src="js/placeholders.js?v=1794274747"></script>
-<script src="js/music.js?v=1794274747"></script>
-<script src="js/sfx.js?v=1794274747"></script>
+<script src="js/state.js?v=1794274923"></script>
+<script src="js/calls.js?v=1794274923"></script>
+<script src="js/placeholders.js?v=1794274923"></script>
+<script src="js/music.js?v=1794274923"></script>
+<script src="js/sfx.js?v=1794274923"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -130,7 +130,7 @@ async function runFrom(i) {
     try { await SCENES[ORDER[i]](); } catch (e) { if (e !== 'skip') console.error(e); return; }
     if (tok !== RUN) return;
   }
-  location.href = DDT.back('index.html');
+  DDT.nav(DDT.back('index.html'));
 }
 
 // ---------- characters ----------
@@ -345,7 +345,7 @@ function ronBillboard() {
   T('CALL RON!', x + w * 0.66, y + 42 * sc, '#10151f', Math.max(4, Math.round(6 * sc)), 'center', false);
   T('RON', x + w / 2, y + 5 * sc, '#fff', Math.max(3, Math.round(4 * sc)), 'center', false);
 }
-const go = url => { location.href = url; return cancellable(() => {}); };
+const go = url => { DDT.nav(url); return cancellable(() => {}); };
 const RET = 'ret=' + encodeURIComponent('play.html');
 
 // ---------- HUD ----------
@@ -1033,7 +1033,7 @@ async function yearEnd() {
   await fadeIn(600); SND.ding();
   await cancellable(res => { st.waitTap = res; });
   await shareCard(DDT.get());
-  location.href = 'index.html';
+  DDT.nav('index.html');
 }
 
 // ---------- the year-end share card: a square picture people can post ----------
@@ -1102,7 +1102,7 @@ function frame(now) {
     if (p >= 1) { tweens.splice(tweens.indexOf(tw), 1); tw.res(); }
   }
   // buttons first
-  if (started && ptr.clicked && inBox(...BTN.menu)) { location.href = DDT.root + (DDT.inCampaign() ? 'play.html' : 'index.html'); return; }
+  if (started && ptr.clicked && inBox(...BTN.menu)) { DDT.nav(DDT.root + (DDT.inCampaign() ? 'play.html' : 'index.html')); return; }
   if (started && DDT.DEV && ptr.clicked && inBox(...BTN.skip)) { ptr.clicked = false; runFrom(cur + 1); }
   if (!started) {
     R(0, 0, W, H, '#05070c'); stars();

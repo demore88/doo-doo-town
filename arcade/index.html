@@ -80,9 +80,9 @@
   <div class="scr" id="result"><div class="box" id="resbox"></div></div>
 </div></div>
 <audio id="music" src="../assets/doo_doo_town.mp3" loop preload="auto"></audio>
-<script src="../js/state.js?v=1794274747"></script>
-<script src="../js/sfx.js?v=1794274747"></script>
-<script src="games.js?v=1794274747"></script>
+<script src="../js/state.js?v=1794274923"></script>
+<script src="../js/sfx.js?v=1794274923"></script>
+<script src="games.js?v=1794274923"></script>
 <script>
 const cv = document.getElementById('c'); g = cv.getContext('2d'); const SCALE = 3; g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
 const $ = s => document.querySelector(s);
@@ -120,7 +120,7 @@ document.querySelectorAll('#pad button').forEach(b => {
 let coarse = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 let padOn = coarse;
 addEventListener('touchstart', () => { if (!coarse) { coarse = true; padOn = true; showPad(); } }, { passive: true });
-$('#home').onclick = () => { location.href = EMBED ? DDT.back('play.html') : '../index.html'; };
+$('#home').onclick = () => { DDT.nav(EMBED ? DDT.back('play.html') : '../index.html'); };
 $('#padbtn').onclick = () => { padOn = !padOn; showPad(); };
 function showPad() {
   const G = cur != null ? GAMES[cur] : null;
@@ -201,7 +201,7 @@ function finish() {
   if (EMBED) {
     store.set('mg', { id: G.id, win: !!e.win, stars: e.win ? e.stars : 0, at: Date.now() });
     $('#resbox .row').innerHTML = '<button class="btn" id="cont">CONTINUE &gt;</button>';
-    $('#cont').onclick = () => { location.href = DDT.back('play.html'); }; $('#cont').focus();
+    $('#cont').onclick = () => { DDT.nav(DDT.back('play.html')); }; $('#cont').focus();
   }
 }
 

@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794274747"></script>
-<script src="../js/calls.js?v=1794274747"></script>
-<script src="../js/placeholders.js?v=1794274747"></script>
-<script src="../js/music.js?v=1794274747"></script>
-<script src="../js/sfx.js?v=1794274747"></script>
+<script src="../js/state.js?v=1794274923"></script>
+<script src="../js/calls.js?v=1794274923"></script>
+<script src="../js/placeholders.js?v=1794274923"></script>
+<script src="../js/music.js?v=1794274923"></script>
+<script src="../js/sfx.js?v=1794274923"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -130,7 +130,7 @@ async function runFrom(i) {
     try { await SCENES[ORDER[i]](); } catch (e) { if (e !== 'skip') console.error(e); return; }
     if (tok !== RUN) return;
   }
-  location.href = DDT.back('index.html');
+  DDT.nav(DDT.back('index.html'));
 }
 
 // ---------- characters ----------
@@ -409,7 +409,7 @@ SCENES.work = async () => {
   view = () => R(0, 0, W, H, '#000');
   try { localStorage.removeItem('ddt_mg'); } catch (e) {}
   const back = `story/job.html?id=${JOB.id}&scene=after&ret=${encodeURIComponent(hubRet())}`;
-  location.href = `../arcade/index.html?play=${JOB.game}&diff=${d}&job=${encodeURIComponent(JOB.title)}&lead=${(SAVE.today && SAVE.today.lead) || 'rod'}&room=${JOB.room || ''}&cam=${SAVE.inv && SAVE.inv.camera ? 1 : 0}&boots=${SAVE.inv && (SAVE.inv.waders || SAVE.inv.muckboots) ? 1 : 0}&item=${({ 'false-teeth': 'teeth', vape: 'vape', 'lost-camera-toy': 'ring', 'claw-keys': 'keys' })[JOB.id] || ''}&ret=${encodeURIComponent(back)}`;
+  DDT.nav(`../arcade/index.html?play=${JOB.game}&diff=${d}&job=${encodeURIComponent(JOB.title)}&lead=${(SAVE.today && SAVE.today.lead) || 'rod'}&room=${JOB.room || ''}&cam=${SAVE.inv && SAVE.inv.camera ? 1 : 0}&boots=${SAVE.inv && (SAVE.inv.waders || SAVE.inv.muckboots) ? 1 : 0}&item=${({ 'false-teeth': 'teeth', vape: 'vape', 'lost-camera-toy': 'ring', 'claw-keys': 'keys' })[JOB.id] || ''}&ret=${encodeURIComponent(back)}`);
   await cancellable(() => {});
 };
 
@@ -428,7 +428,7 @@ SCENES.after = async () => {
     const pick = await say('CUST', 'cust', tries ? "...Again?" : "So is it fixed or not?", opts);
     if (tries < 2 && pick === 0) {
       JS.retries = tries + 1; saveJS(); if (DDT.inCampaign()) DDT.apply({ time: 30, stamina: -15 });
-      await fadeOut(300); location.href = `job.html?id=${JOB.id}&scene=work&ret=${encodeURIComponent(hubRet())}`; await cancellable(() => {});
+      await fadeOut(300); DDT.nav(`job.html?id=${JOB.id}&scene=work&ret=${encodeURIComponent(hubRet())}`); await cancellable(() => {});
     }
     JS.notFixed = true; saveJS();
     await say('CUST', 'cust', "So I'm paying you to leave my house broken?");
@@ -491,7 +491,7 @@ function frame(now) {
     if (p >= 1) { tweens.splice(tweens.indexOf(tw), 1); tw.res(); }
   }
   // buttons first
-  if (started && ptr.clicked && inBox(...BTN.menu)) { location.href = DDT.root + (DDT.inCampaign() ? 'play.html' : 'index.html'); return; }
+  if (started && ptr.clicked && inBox(...BTN.menu)) { DDT.nav(DDT.root + (DDT.inCampaign() ? 'play.html' : 'index.html')); return; }
   if (started && DDT.DEV && ptr.clicked && inBox(...BTN.skip)) { ptr.clicked = false; runFrom(cur + 1); }
   if (!started) {
     R(0, 0, W, H, '#05070c'); stars();

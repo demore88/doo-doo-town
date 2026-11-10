@@ -180,10 +180,10 @@
 
 <audio id="music" src="assets/doo_doo_town.mp3" loop preload="auto"></audio>
 <audio id="call" src="assets/call_fluffernutter.mp3" preload="auto"></audio>
-<script src="js/state.js?v=1794274747"></script>
-<script src="js/sfx.js?v=1794274747"></script>
-<script src="js/drive3d.js?v=1794274747"></script>
-<script src="js/music.js?v=1794274747"></script>
+<script src="js/state.js?v=1794274923"></script>
+<script src="js/sfx.js?v=1794274923"></script>
+<script src="js/drive3d.js?v=1794274923"></script>
+<script src="js/music.js?v=1794274923"></script>
 <script>
 const W = 480, H = 270, LOOP_W = 6688;           // strip loop width at 270px tall
 const cv = document.getElementById('c'), g = cv.getContext('2d');
@@ -273,10 +273,10 @@ document.querySelectorAll('#menu .btn').forEach(b => b.onclick = () => {
   if (a === 'new') {   // two taps when a save exists, so nobody wipes their year by accident
     const bn = document.querySelector('[data-a="new"]');
     if (DDT.load() && !bn.dataset.armed) { bn.dataset.armed = 1; bn.textContent = 'TAP AGAIN: START OVER'; setTimeout(() => { delete bn.dataset.armed; bn.textContent = 'NEW GAME'; }, 3000); return; }
-    location.href = 'play.html?new=1'; return;
+    DDT.nav('play.html?new=1'); return;
   }
-  if (a === 'continue') { location.href = 'play.html'; return; }
-  if (a === 'arcade') { location.href = 'arcade/index.html'; return; }
+  if (a === 'continue') { DDT.nav('play.html'); return; }
+  if (a === 'arcade') { DDT.nav('arcade/index.html'); return; }
   if (a === 'how') showPanel(`<h3>HOW TO PLAY</h3>
     Run the truck for a full year of real North Country calls.<br>
     ▸ Pick breakfast, stock up at Fernko's, and get to every job on time.<br>
@@ -396,7 +396,7 @@ function rodReplies() {
   $('#rodimg').src = 'assets/rod_happy.png';
   $('#who').textContent = 'ROD';
   type($('#line'), VOICEMAIL ? "Calling him back... Grant? Rod, Mt. Washington Sewer and Drain. We're on our way!" : "We're on our way!", 45);
-  later(1600, () => { $('#next').textContent = 'HIT THE ROAD ▸'; $('#next').onclick = EMBED_CALL ? () => { location.href = DDT.back('play.html'); } : startDrive; $('#next').style.display = 'block'; $('#next').focus(); });
+  later(1600, () => { $('#next').textContent = 'HIT THE ROAD ▸'; $('#next').onclick = EMBED_CALL ? () => { DDT.nav(DDT.back('play.html')); } : startDrive; $('#next').style.display = 'block'; $('#next').focus(); });
 }
 
 function endIntro() {
@@ -406,7 +406,7 @@ function endIntro() {
   if (soundOn) playMusic();
 }
 $('#skip').onclick = () => {
-  if (typeof EMBED_CALL !== 'undefined' && EMBED_CALL) { location.href = DDT.back('play.html'); return; }   // in the campaign, SKIP just ends the call and gets back on the road
+  if (typeof EMBED_CALL !== 'undefined' && EMBED_CALL) { DDT.nav(DDT.back('play.html')); return; }   // in the campaign, SKIP just ends the call and gets back on the road
   if ($('#next').style.display === 'block') return endIntro();
   cutTimers.forEach(clearTimeout); cutTimers = []; call.pause();
   $('#phone').style.display = 'none'; $('#row').style.display = 'flex'; $('#rodimg').src = 'assets/rod_phone.png';
@@ -461,7 +461,7 @@ async function startDrive() {
   const arrive = r.mins;
   $('#card').innerHTML = `${clock(arrive)} · RANDOLPH, NH<br>23 BOULDER LANE`;
   await arrivalCard(arrive, Math.max(0, arrive - DUE), r.crashes, 'RANDOLPH');
-  location.href = `story/fluffernutter.html?arrive=${arrive}`;
+  DDT.nav(`story/fluffernutter.html?arrive=${arrive}`);
 }
 
 function traffic(choice) {
@@ -754,7 +754,7 @@ async function embedDrive() {
   DDT.apply({ rep: lost ? -2 : late ? -Math.min(3, 1 + Math.floor(late / 15)) : (DDT.param('rival') === '1' ? 2 : 1), money: -15 * r.crashes });
   const s = DDT.get(); if (s.today) { s.today.time = 420 + arrive; s.today.late = late; s.today.crashes = r.crashes; s.today.lost = lost; DDT.save(s); }
   await arrivalCard(arrive, late, r.crashes, to, lost);   // no chit-chat after the drive: one quick card, straight to the job
-  location.href = DDT.back('play.html').replace('ARRIVE', arrive);
+  DDT.nav(DDT.back('play.html').replace('ARRIVE', arrive));
 }
 if (EMBED_CALL || EMBED_DRIVE) {
   document.body.classList.add('embed');

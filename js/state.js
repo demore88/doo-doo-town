@@ -30,7 +30,15 @@ const DDT = {
   param(k) { return new URLSearchParams(location.search).get(k); },
   // where should this page go when it's done?
   back(fallback = 'index.html') { return this.root + (this.param('ret') || fallback); },
-  go(url) { location.href = this.root + url; },
+  go(url) { this.nav(this.root + url); },
+  // Change screens only once every finger is off the glass. Leaving a page mid-touch confuses Android Chrome:
+  // the next page then ignores single taps until a second finger comes down.
+  fingers: 0,
+  nav(url) {
+    const go = () => { location.href = url; };
+    if (!this.fingers) return go();
+    const t0 = Date.now(), iv = setInterval(() => { if (!this.fingers || Date.now() - t0 > 4000) { clearInterval(iv); setTimeout(go, 60); } }, 40);
+  },
   inCampaign() { return !!this.param('ret'); },
   clock(min) { const h = Math.floor(min / 60), m = min % 60, hh = ((h + 11) % 12) + 1; return `${hh}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; },
 };
@@ -78,3 +86,6 @@ DDT.DEV = true;
   };
   if (document.body) add(); else document.addEventListener('DOMContentLoaded', add);
 })();
+
+// count fingers on the screen (for DDT.nav)
+['touchstart', 'touchend', 'touchcancel'].forEach(ev => addEventListener(ev, e => { DDT.fingers = e.touches.length; }, { capture: true, passive: true }));
