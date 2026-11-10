@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794274520"></script>
-<script src="../js/calls.js?v=1794274520"></script>
-<script src="../js/placeholders.js?v=1794274520"></script>
-<script src="../js/music.js?v=1794274520"></script>
-<script src="../js/sfx.js?v=1794274520"></script>
+<script src="../js/state.js?v=1794274706"></script>
+<script src="../js/calls.js?v=1794274706"></script>
+<script src="../js/placeholders.js?v=1794274706"></script>
+<script src="../js/music.js?v=1794274706"></script>
+<script src="../js/sfx.js?v=1794274706"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -504,8 +504,8 @@ function frame(now) {
     if (st.fade > 0) { g.globalAlpha = st.fade; R(0, 0, W, H, '#000'); g.globalAlpha = 1; }
     { const nowT = performance.now(); while (smear.length && nowT - smear[0].t > 900) smear.shift();
       for (const m of smear) { const a = 0.85 * (1 - (nowT - m.t) / 900);
-        if (m.dot) { g.globalAlpha = a; E(m.x, m.y, 7, 5, '#5a3a1e'); E(m.x - 2, m.y - 1, 4, 3, '#7a5230'); E(m.x + 5, m.y + 3, 2, 1.5, '#5a3a1e'); E(m.x - 6, m.y + 2, 1.5, 1.2, '#5a3a1e'); }
-        else { g.globalAlpha = a; g.strokeStyle = '#5a3a1e'; g.lineWidth = 6; g.lineCap = 'round'; g.beginPath(); g.moveTo(m.px, m.py); g.lineTo(m.x, m.y); g.stroke(); } }
+        if (m.dot) { g.globalAlpha = a; E(m.x, m.y, 16, 11, '#5a3a1e'); E(m.x - 4, m.y - 3, 9, 6, '#7a5230'); E(m.x + 3, m.y + 4, 6, 3, '#4a2e16'); E(m.x + 15, m.y + 7, 4, 3, '#5a3a1e'); E(m.x - 16, m.y + 5, 3.5, 2.5, '#5a3a1e'); E(m.x + 9, m.y - 11, 2.5, 2, '#5a3a1e'); E(m.x - 10, m.y - 10, 2, 1.5, '#5a3a1e'); E(m.x - 6, m.y - 5, 3, 1.5, '#9a7040'); }
+        else { g.globalAlpha = a; g.strokeStyle = '#5a3a1e'; g.lineWidth = 13; g.lineCap = 'round'; g.beginPath(); g.moveTo(m.px, m.py); g.lineTo(m.x, m.y); g.stroke(); } }
       g.globalAlpha = 1; }
     drawButtons();
   }
