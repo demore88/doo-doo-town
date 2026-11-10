@@ -156,7 +156,8 @@ function drive3d(choice, opts) {
   const MTN_IMG = DI(`mtn_${SK}`);
   const CAR_B = [...Array(12).keys()].map(i => DI(`car_back_${i}`)), CAR_F = [...Array(12).keys()].map(i => DI(`car_front_${i}`));
   const LOG_B = DI('logtruck_back'), LOG_F = DI('logtruck_front');
-  const DSPLAT = DI('deer_splat');   // the deer, face on the windshield (6 frames, sliding down)
+  const DSPLAT = DI('deer_splat');
+  const FEATH = DI('feathers');   // the turkey family, all at once (6 frames, 2x sheet)   // the deer, face on the windshield (6 frames, sliding down)
   const ANIM = { moose: [DI('moose_0'), DI('moose_1')], deer: [DI('deer_0'), DI('deer_1')], turkeys: [DI('turkey_0'), DI('turkey_1')] };
   const artReady = () => DL.every(i => i.failed || (i.complete && i.naturalWidth > 0));
   const flipC = new Map(), flipped = img => { if (!img.width) return img; let c = flipC.get(img); if (!c) { c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const k = c.getContext('2d'); k.scale(-1, 1); k.drawImage(img, -img.width, 0); flipC.set(img, c); } return c; };
@@ -271,7 +272,7 @@ function drive3d(choice, opts) {
   rc.onpointerup = rc.onpointercancel = rc.onlostpointercapture = e => { pts.delete(e.pointerId); retouch(); };
   addEventListener('pointerup', e => { if (pts.delete(e.pointerId)) retouch(); }); addEventListener('blur', () => { pts.clear(); retouch(); });
   const say = (m, s = 1.4) => { msg = m; msgT = s; };
-  if (typeof DDT !== 'undefined' && DDT.DEV) window.__deer = (d = 1) => critters.push({ kind: 'deer', seg: 0, off: 0, dir: d, hit: true, fly: 0.001, flyDir: d });   // dev: test the windshield deer
+  if (typeof DDT !== 'undefined' && DDT.DEV) window.__turk = () => critters.push({ kind: 'turkeys', seg: 0, off: 0, dir: 1, hit: true, fly: 0.001, flyDir: 1 }); window.__deer = (d = 1) => critters.push({ kind: 'deer', seg: 0, off: 0, dir: d, hit: true, fly: 0.001, flyDir: d });   // dev: test the windshield deer
   const sfx = (n, o) => { if (window.DDTSfx) DDTSfx.play(n, o); };
   // ---------- the windshield: cracks that stick around (and grow with every hit), bugs, mud, and now and then some weather ----------
   let glass = 0; try { glass = (DDT.get() || {}).glass || 0; } catch (e) {}
@@ -525,7 +526,12 @@ function drive3d(choice, opts) {
           r.restore();
         }
       }
-      for (const cr of critters) if (cr.kind !== 'deer' && cr.fly > 0 && cr.fly < 1.3) {
+      for (const cr of critters) if (cr.kind === 'turkeys' && cr.fly > 0 && cr.fly < 1.4 && FEATH.complete && FEATH.naturalWidth) {   // FEATHERS: the whole family explodes off the grille
+        const fi = Math.min(5, Math.floor(cr.fly / 0.22)), fw = FEATH.width / 6, fh = FEATH.height, dw = fw / 2, dh = fh / 2;   // 1:1 on the 2x canvas
+        const cx = W / 2 + steer * 6 + cr.flyDir * 10, by = H - 26 + Math.min(20, cr.fly * 30);   // drifting down a little as it fades
+        r.save(); r.globalAlpha = cr.fly > 1.1 ? Math.max(0, 1 - (cr.fly - 1.1) / 0.3) : 1; r.drawImage(FEATH, fi * fw, 0, fw, fh, Math.round(cx - dw / 2), Math.round(by - dh), dw, dh); r.restore();
+      }
+      for (const cr of critters) if (cr.kind !== 'deer' && !(cr.kind === 'turkeys' && FEATH.complete && FEATH.naturalWidth) && cr.fly > 0 && cr.fly < 1.3) {
         const k = cr.fly / 1.3, img = CIMG[cr.kind], sc = (cr.kind === 'deer' ? 2.4 : 2) * (1.4 - k * 0.9);
         const fx = W / 2 + cr.flyDir * (20 + 140 * k), fy = H - 60 - Math.sin(k * Math.PI) * 170 + k * 20;
         r.save(); r.translate(fx, fy); r.rotate(cr.flyDir * k * 9); r.drawImage(img, -img.width * sc / 2, -img.height * sc / 2, img.width * sc, img.height * sc); r.restore();
