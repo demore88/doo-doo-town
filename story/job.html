@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794275046"></script>
-<script src="../js/calls.js?v=1794275046"></script>
-<script src="../js/placeholders.js?v=1794275046"></script>
-<script src="../js/music.js?v=1794275046"></script>
-<script src="../js/sfx.js?v=1794275046"></script>
+<script src="../js/state.js?v=1794275548"></script>
+<script src="../js/calls.js?v=1794275548"></script>
+<script src="../js/placeholders.js?v=1794275548"></script>
+<script src="../js/music.js?v=1794275548"></script>
+<script src="../js/sfx.js?v=1794275548"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -89,13 +89,14 @@ function toCanvas(e) { toCanvasXY(e.clientX, e.clientY); }
 // Phones: listen to touch AND pointer events and take whichever arrives first. Some phones drop the first
 // pointer events after a page change; touch events still come through, so a tap always registers.
 let lastDown = 0;
-function pDown(cx, cy) { const n = performance.now(); if (n - lastDown < 250 && ptr.down) return; lastDown = n; toCanvasXY(cx, cy); ptr.down = true; ptr.clicked = true; ptr.released = false; ac(); smear.push({ x: ptr.x, y: ptr.y, t: n, dot: true }); }
+const fp = (x, y, t) => ({ x, y, t, dot: true, rot: Math.random() * Math.PI, sc: 0.8 + Math.random() * 0.5, sk: 0.6 + Math.random() * 0.25, seed: Math.random() * 1000 });
+function pDown(cx, cy) { const n = performance.now(); if (n - lastDown < 250 && ptr.down) return; lastDown = n; toCanvasXY(cx, cy); ptr.down = true; ptr.clicked = true; ptr.released = false; ac(); smear.push(fp(ptr.x, ptr.y, n)); }
 function pMove(cx, cy) { toCanvasXY(cx, cy); if (ptr.down) { const l = smear[smear.length - 1]; if (!l || Math.hypot(l.x - ptr.x, l.y - ptr.y) > 2) smear.push({ x: ptr.x, y: ptr.y, t: performance.now(), px: l ? l.x : ptr.x, py: l ? l.y : ptr.y }); } }
 function pUp() { if (ptr.down) ptr.released = true; ptr.down = false; }
 let touchId = null;   // only the first finger draws a streak; extra fingers just smudge where they land
 cv.addEventListener('touchstart', e => { e.preventDefault(); const t = e.changedTouches[0];
   if (touchId === null || ![...e.touches].some(q => q.identifier === touchId)) { touchId = t.identifier; pDown(t.clientX, t.clientY); }
-  else { const b = cv.getBoundingClientRect(); smear.push({ x: (t.clientX - b.left) / b.width * W, y: (t.clientY - b.top) / b.height * H, t: performance.now(), dot: true }); } }, { passive: false });
+  else { const b = cv.getBoundingClientRect(); smear.push(fp((t.clientX - b.left) / b.width * W, (t.clientY - b.top) / b.height * H, performance.now())); } }, { passive: false });
 cv.addEventListener('touchmove', e => { e.preventDefault(); const t = [...e.changedTouches].find(q => q.identifier === touchId); if (t) pMove(t.clientX, t.clientY); }, { passive: false });
 cv.addEventListener('touchend', e => { e.preventDefault(); if ([...e.changedTouches].some(q => q.identifier === touchId)) { touchId = null; pUp(); } }, { passive: false });
 cv.addEventListener('touchcancel', () => { touchId = null; pUp(); });
@@ -277,8 +278,10 @@ function drawDialog() {
 function dialogInput() {
   const d = dialog; if (!d) return false;
   const done = d.shown >= d.text.length;
+  if (done && d.opts && !d.optT) d.optT = performance.now();
   if (!(ptr.clicked || confirmHit())) return true;
-  if (!done) { d.shown = d.text.length; return true; }
+  if (!done) { d.shown = d.text.length; d.optT = performance.now(); return true; }
+  if (d.opts && performance.now() - d.optT < 650) return true;   // choices ignore taps for a moment, so a quick double-tap can't answer for you
   if (!d.opts) { dialog = null; SND.blip(); d.res(0); return true; }
   let pick = null;
   if (ptr.clicked && d.boxes) d.boxes.forEach(([x, y, w, h], i) => { if (ptr.y >= y - 1 && ptr.y <= y + h + 1) pick = i; });   // the whole width of the line counts
@@ -507,7 +510,17 @@ function frame(now) {
     if (st.fade > 0) { g.globalAlpha = st.fade; R(0, 0, W, H, '#000'); g.globalAlpha = 1; }
     { const nowT = performance.now(); while (smear.length && nowT - smear[0].t > 900) smear.shift();
       for (const m of smear) { const a = 0.85 * (1 - (nowT - m.t) / 900);
-        if (m.dot) { g.globalAlpha = a; E(m.x, m.y, 16, 11, '#5a3a1e'); E(m.x - 4, m.y - 3, 9, 6, '#7a5230'); E(m.x + 3, m.y + 4, 6, 3, '#4a2e16'); E(m.x + 15, m.y + 7, 4, 3, '#5a3a1e'); E(m.x - 16, m.y + 5, 3.5, 2.5, '#5a3a1e'); E(m.x + 9, m.y - 11, 2.5, 2, '#5a3a1e'); E(m.x - 10, m.y - 10, 2, 1.5, '#5a3a1e'); E(m.x - 6, m.y - 5, 3, 1.5, '#9a7040'); }
+        if (m.dot) {   // a brown fingerprint: smeared pad, swirly ridges, a few flecks. Every one is a little different.
+          let r = m.seed; const rn = () => ((r = (r * 9301 + 49297) % 233280) / 233280);
+          g.save(); g.translate(m.x, m.y); g.rotate(m.rot); g.scale(m.sc, m.sc);
+          g.globalAlpha = a * 0.55; E(0, 0, 13, 13 * m.sk + 4, '#6b4a2a');
+          g.globalAlpha = a; g.strokeStyle = '#3e2712'; g.lineWidth = 1.6; g.lineCap = 'round';
+          const cx = (rn() - 0.5) * 3, cy = (rn() - 0.5) * 3;
+          for (let k = 0; k < 6; k++) { const rx = 2.5 + k * 2.1, ry = rx * (m.sk + 0.25), a0 = rn() * 6.28, sweep = 3.6 + rn() * 2.2;
+            g.beginPath(); g.ellipse(cx, cy + k * 0.6, rx, ry, 0, a0, a0 + sweep); g.stroke(); }
+          g.fillStyle = '#4a2e16'; for (let k = 0; k < 4; k++) { const ang = rn() * 6.28, d = 15 + rn() * 7; E(Math.cos(ang) * d, Math.sin(ang) * d, 1 + rn() * 2, 0.8 + rn() * 1.5, '#4a2e16'); }
+          g.restore();
+        }
         else { g.globalAlpha = a; g.strokeStyle = '#5a3a1e'; g.lineWidth = 13; g.lineCap = 'round'; g.beginPath(); g.moveTo(m.px, m.py); g.lineTo(m.x, m.y); g.stroke(); } }
       g.globalAlpha = 1; }
     drawButtons();
