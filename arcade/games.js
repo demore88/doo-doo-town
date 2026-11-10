@@ -1579,7 +1579,7 @@ GAMES.push({
   init(s) {
     const L = SR_LEVEL;
     s.p = { x: 40, y: SR_GROUND * SR_TILE, vx: 0, vy: 0, on: true, face: 1 };
-    s.cam = 0; s.hearts = s.heartsMax = [4, 3, 2][s.diff]; s.time = [130, 110, 95][s.diff]; s.inv = 0; s.hits = 0; s.got = 0; s.total = L.plungers.length;
+    s.cam = 0; s.hearts = s.heartsMax = [4, 3, 2][s.diff]; s.time = [130, 110, 95][s.diff]; s.inv = 0; s.hits = 0; s.got = 0; s.total = L.plungers.length + L.blocks.filter((_, i) => i % 4 !== 1).length;   // the ones floating, plus the ones hiding in toolboxes (every 4th box has an espresso instead)
     s.plg = L.plungers.map(([c, r]) => ({ x: c * SR_TILE + 8, y: r * SR_TILE + 8, got: false }));
     s.bonked = new Set(); s.pops = [];
     s.foes = [...L.grease.filter(c => c < L.len - 23).map(c => ({ k: 'g', x: c * SR_TILE, y: SR_GROUND * SR_TILE, vx: -26, vy: 0, dead: 0 })),
