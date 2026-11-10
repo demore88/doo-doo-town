@@ -1581,7 +1581,8 @@ GAMES.push({
               ...L.wipes.map(c => ({ k: 'w', x: c * SR_TILE, y: 150, y0: 150, vx: -18, dead: 0, ph: c }))];
     s.said = {}; s.bub = null; s.check = { x: 40, y: SR_GROUND * SR_TILE }; s.won = false; s.flush = 0;
     SR_BROKE = new Set(); s.big = false; s.items = []; s.debris = []; s.bumps = []; s.score = 0; s.combo = 0; s.runT = 0; s.texts = [];
-    s.quip = (k, txt) => { if (s.said[k]) return; s.said[k] = 1; s.bub = { txt, t: 3.2 }; };
+    const FACE = { start: 'stare', pipe: 'annoyed', box: 'annoyed', plunger: 'confused', g: 'gross', w: 'gross', hitg: 'smug', hitw: 'laugh', pit: 'shocked', end: 'confused', espresso: 'happy', smash: 'shocked', bump: 'smug', shrink: 'tired', boss: 'panic', bossdown: 'happy' };
+    s.quip = (k, txt) => { if (s.said[k]) return; s.said[k] = 1; s.bub = { txt, t: 3.2, face: FACE[k] || 'normal' }; };   // Rod's face matches what he's saying
     s.quip('start', "Ron has his own game now? ...Sure.");
   },
   update(s, dt, I) {
@@ -1677,7 +1678,7 @@ GAMES.push({
     }
     if (!s.bossDone && p.x > AR1 + 40) p.x = AR1 + 40;   // the toilet is behind the Fatberg
     // the golden toilet
-    if (p.x > (L.len - 8) * SR_TILE && !s.won) { s.won = true; SFX('flush_big'); s.quip('end', "This isn't how drains work. What IS this?"); s.bub = { txt: "This isn't how drains work. What IS this?", t: 9 }; }
+    if (p.x > (L.len - 8) * SR_TILE && !s.won) { s.won = true; SFX('flush_big'); s.quip('end', "This isn't how drains work. What IS this?"); s.bub = { txt: "This isn't how drains work. What IS this?", t: 9, face: 'confused' }; }
     s.cam = clamp(p.x - 180, 0, L.len * SR_TILE - W);
     s.pops.forEach(o => { o.t -= dt; o.y -= 30 * dt; }); s.pops = s.pops.filter(o => o.t > 0);
     function hurt(s, fell) {
@@ -1759,7 +1760,8 @@ GAMES.push({
     // Rod's running commentary
     if (s.bub) { const lines = []; let ln = ''; for (const w of s.bub.txt.split(' ')) { if ((ln + ' ' + w).length > 34) { lines.push(ln); ln = w; } else ln = ln ? ln + ' ' + w : w; } lines.push(ln);
       const h = 18 + lines.length * 10; R(8, 22, 300, h, 'rgba(16,21,31,.92)'); g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(8.5, 22.5, 299, h - 1);
-      if (IMG.rod_port) { R(10, 24, 28, 28, '#2a3346'); g.imageSmoothingEnabled = true; g.drawImage(IMG.rod_port, 11, 25, 26, 26); g.imageSmoothingEnabled = false; g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(10.5, 24.5, 27, 27); } else SPR('rod', 0, 24, 22 + h - 2); T('ROD:', 42, 30, '#f7c418', 6); lines.forEach((l, i) => T(l, 42, 42 + i * 10, '#fff', 6)); }
+      const face = IMG['rodf_' + (s.bub.face || 'normal')] || IMG.rod_port;
+      if (face) { R(10, 24, 28, 28, '#2a3346'); g.imageSmoothingEnabled = true; g.drawImage(face, 11, 25, 26, 26); g.imageSmoothingEnabled = false; g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(10.5, 24.5, 27, 27); } else SPR('rod', 0, 24, 22 + h - 2); T('ROD:', 42, 30, '#f7c418', 6); lines.forEach((l, i) => T(l, 42, 42 + i * 10, '#fff', 6)); }
   },
 });
 
