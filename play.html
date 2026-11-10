@@ -16,11 +16,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794273268"></script>
-<script src="js/calls.js?v=1794273268"></script>
-<script src="js/placeholders.js?v=1794273268"></script>
-<script src="js/music.js?v=1794273268"></script>
-<script src="js/sfx.js?v=1794273268"></script>
+<script src="js/state.js?v=1794273410"></script>
+<script src="js/calls.js?v=1794273410"></script>
+<script src="js/placeholders.js?v=1794273410"></script>
+<script src="js/music.js?v=1794273410"></script>
+<script src="js/sfx.js?v=1794273410"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -83,7 +83,8 @@ addEventListener('keydown', e => { if (!keys[e.key]) hit[e.key] = true; keys[e.k
 addEventListener('keyup', e => { keys[e.key] = false; });
 const ptr = { x: 0, y: 0, down: false, clicked: false };
 function toCanvas(e) { const b = cv.getBoundingClientRect(); ptr.x = (e.clientX - b.left) / b.width * W; ptr.y = (e.clientY - b.top) / b.height * H; }
-cv.addEventListener('pointerdown', e => { toCanvas(e); ptr.down = true; ptr.clicked = true; ac(); });
+cv.addEventListener('pointerdown', e => { toCanvas(e); ptr.down = true; ptr.clicked = true; ac(); if (DDT.DEV) tapMark = { x: ptr.x, y: ptr.y, t: performance.now() }; });
+let tapMark = null;
 cv.addEventListener('pointermove', toCanvas);
 addEventListener('pointerup', () => { ptr.down = false; });
 const pressed = k => hit[k];
@@ -265,7 +266,7 @@ function dialogInput() {
   if (!done) { d.shown = d.text.length; return true; }
   if (!d.opts) { dialog = null; SND.blip(); d.res(0); return true; }
   let pick = null;
-  if (ptr.clicked && d.boxes) d.boxes.forEach(([x, y, w, h], i) => { if (inBox(x, y, w, h)) pick = i; });
+  if (ptr.clicked && d.boxes) d.boxes.forEach(([x, y, w, h], i) => { if (ptr.y >= y - 1 && ptr.y <= y + h + 1) pick = i; });   // the whole width of the line counts
   if (confirmHit()) pick = d.sel;
   if (pick !== null) { dialog = null; SND.blip(); d.res(pick); }
   return true;
@@ -405,25 +406,25 @@ function backdrop() { vanPOV(); hud(); }
 const ListUI = {
   open(title, rows, sub, def) { this.title = title; this.rows = rows; this.sub = sub; this.cur = def ?? rows.findIndex(r => !r.off); return this; },
   init() {},
-  box(i) { return [64, 58 + i * 18, 352, 16]; },
+  box(i) { return [40, 56 + i * (this.rows.length > 6 ? 20 : 24), 400, this.rows.length > 6 ? 18 : 22]; },   // big rows
   update() {
     const n = this.rows.length;
     if (pressed('ArrowDown')) do this.cur = (this.cur + 1) % n; while (this.rows[this.cur].off);
     if (pressed('ArrowUp')) do this.cur = (this.cur + n - 1) % n; while (this.rows[this.cur].off);
     let pickI = null;
-    if (ptr.clicked) this.rows.forEach((r, i) => { if (inBox(...this.box(i)) && !r.off) pickI = i; });
+    if (ptr.clicked) this.rows.forEach((r, i) => { const [, y, , h] = this.box(i); if (ptr.y >= y - 1 && ptr.y <= y + h + 1 && !r.off) pickI = i; });   // anywhere across the row's line
     if (confirmHit()) pickI = this.cur;
     if (pickI !== null) { SND.blip(); this.done(pickI); }
   },
   draw() {
-    const h = 16 + this.rows.length * 18 + (this.sub ? 10 : 2);   // projected on the windshield
-    R(56, 44, 368, h, 'rgba(150,215,255,.2)'); g.strokeStyle = 'rgba(190,235,255,.7)'; g.lineWidth = 1; g.strokeRect(56.5, 44.5, 367, h - 1);
-    T(this.title, 240, 51, '#f7c418', 7, 'center'); if (this.sub) T(this.sub, 240, 58 + this.rows.length * 18 + 4, '#ffffff', 5, 'center');
+    const step = this.rows.length > 6 ? 20 : 24, h = 16 + this.rows.length * step + (this.sub ? 10 : 2);   // projected on the windshield
+    R(32, 44, 416, h, 'rgba(150,215,255,.2)'); g.strokeStyle = 'rgba(190,235,255,.7)'; g.lineWidth = 1; g.strokeRect(32.5, 44.5, 415, h - 1);
+    T(this.title, 240, 51, '#f7c418', 7, 'center'); if (this.sub) T(this.sub, 240, 58 + this.rows.length * step + 2, '#ffffff', 5, 'center');
     this.rows.forEach((r, i) => {
       const [x, y, w, hh] = this.box(i);
       R(x, y, w, hh, r.off ? 'rgba(20,25,35,.75)' : i === this.cur ? 'rgba(44,108,214,1)' : 'rgba(16,21,31,.97)');   // solid enough to read easily (25% less see-through)
-      T(r.label, x + 6, y + 8, r.off ? '#667' : '#fff', 6, 'left', false);
-      if (r.sub) T(r.sub, x + w - 6, y + 8, r.off ? '#556' : '#b9c9e6', 4, 'right', false);
+      T(r.label, x + 6, y + hh / 2, r.off ? '#667' : '#fff', 6, 'left', false);
+      if (r.sub) T(r.sub, x + w - 6, y + hh / 2, r.off ? '#556' : '#b9c9e6', 4, 'right', false);
     });
     // (the crew is already drawn by the van view underneath: menus always sit on top)
   },
@@ -1067,6 +1068,7 @@ function frame(now) {
     drawDialog();
     if (st.cardA > 0) { g.globalAlpha = st.cardA; const CL = st.card.flatMap(l => wrap(String(l), 420, 9)); R(0, 80, W, 34 + (CL.length - 1) * 16, '#000000cc'); CL.forEach((l, i) => T(l, 240, 98 + i * 16, st.cardCol, 9, 'center')); g.globalAlpha = 1; }
     if (st.fade > 0) { g.globalAlpha = st.fade; R(0, 0, W, H, '#000'); g.globalAlpha = 1; }
+    if (tapMark && performance.now() - tapMark.t < 600) { g.strokeStyle = '#f7c418'; g.lineWidth = 1.5; g.beginPath(); g.arc(tapMark.x, tapMark.y, 6 + (performance.now() - tapMark.t) / 60, 0, 7); g.stroke(); }
     drawButtons();
   }
   ptr.clicked = false; for (const k in hit) delete hit[k];

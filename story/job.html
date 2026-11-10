@@ -16,11 +16,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794273268"></script>
-<script src="../js/calls.js?v=1794273268"></script>
-<script src="../js/placeholders.js?v=1794273268"></script>
-<script src="../js/music.js?v=1794273268"></script>
-<script src="../js/sfx.js?v=1794273268"></script>
+<script src="../js/state.js?v=1794273410"></script>
+<script src="../js/calls.js?v=1794273410"></script>
+<script src="../js/placeholders.js?v=1794273410"></script>
+<script src="../js/music.js?v=1794273410"></script>
+<script src="../js/sfx.js?v=1794273410"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -83,7 +83,8 @@ addEventListener('keydown', e => { if (!keys[e.key]) hit[e.key] = true; keys[e.k
 addEventListener('keyup', e => { keys[e.key] = false; });
 const ptr = { x: 0, y: 0, down: false, clicked: false };
 function toCanvas(e) { const b = cv.getBoundingClientRect(); ptr.x = (e.clientX - b.left) / b.width * W; ptr.y = (e.clientY - b.top) / b.height * H; }
-cv.addEventListener('pointerdown', e => { toCanvas(e); ptr.down = true; ptr.clicked = true; ac(); });
+cv.addEventListener('pointerdown', e => { toCanvas(e); ptr.down = true; ptr.clicked = true; ac(); if (DDT.DEV) tapMark = { x: ptr.x, y: ptr.y, t: performance.now() }; });
+let tapMark = null;
 cv.addEventListener('pointermove', toCanvas);
 addEventListener('pointerup', () => { ptr.down = false; });
 const pressed = k => hit[k];
@@ -265,7 +266,7 @@ function dialogInput() {
   if (!done) { d.shown = d.text.length; return true; }
   if (!d.opts) { dialog = null; SND.blip(); d.res(0); return true; }
   let pick = null;
-  if (ptr.clicked && d.boxes) d.boxes.forEach(([x, y, w, h], i) => { if (inBox(x, y, w, h)) pick = i; });
+  if (ptr.clicked && d.boxes) d.boxes.forEach(([x, y, w, h], i) => { if (ptr.y >= y - 1 && ptr.y <= y + h + 1) pick = i; });   // the whole width of the line counts
   if (confirmHit()) pick = d.sel;
   if (pick !== null) { dialog = null; SND.blip(); d.res(pick); }
   return true;
@@ -489,6 +490,7 @@ function frame(now) {
     drawDialog();
     if (st.cardA > 0) { g.globalAlpha = st.cardA; const CL = st.card.flatMap(l => wrap(String(l), 420, 9)); R(0, 80, W, 34 + (CL.length - 1) * 16, '#000000cc'); CL.forEach((l, i) => T(l, 240, 98 + i * 16, st.cardCol, 9, 'center')); g.globalAlpha = 1; }
     if (st.fade > 0) { g.globalAlpha = st.fade; R(0, 0, W, H, '#000'); g.globalAlpha = 1; }
+    if (tapMark && performance.now() - tapMark.t < 600) { g.strokeStyle = '#f7c418'; g.lineWidth = 1.5; g.beginPath(); g.arc(tapMark.x, tapMark.y, 6 + (performance.now() - tapMark.t) / 60, 0, 7); g.stroke(); }
     drawButtons();
   }
   ptr.clicked = false; for (const k in hit) delete hit[k];
