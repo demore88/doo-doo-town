@@ -1665,44 +1665,57 @@ GAMES.push({
   },
   draw(s) {
     const L = SR_LEVEL, cam = Math.round(s.cam), t = s.t;
-    const gr = g.createLinearGradient(0, 0, 0, 240); gr.addColorStop(0, '#5aa8f0'); gr.addColorStop(1, '#bfe6ff'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    const BG = MG('sr_bg'), SI = n => MG('sr_' + n);
+    if (BG) { const ox = -((cam * 0.3) % W); g.drawImage(BG, ox, -20, W, H); g.drawImage(BG, ox + W, -20, W, H); }   // the White Mountains, scrolling slowly
+    else { const gr = g.createLinearGradient(0, 0, 0, 240); gr.addColorStop(0, '#5aa8f0'); gr.addColorStop(1, '#bfe6ff'); g.fillStyle = gr; g.fillRect(0, 0, W, H); }
     g.save(); g.translate(0, -34);   // the whole level sits higher, so your thumbs on the bottom don't cover Ron
-    for (let i = 0; i < 6; i++) { const x = ((i * 190 - cam * 0.3) % 1140 + 1140) % 1140 - 100; C(x, 60 + (i % 3) * 18, 12, '#fff'); C(x + 14, 56 + (i % 3) * 18, 15, '#fff'); C(x + 30, 60 + (i % 3) * 18, 11, '#fff'); }
-    for (let i = 0; i < 8; i++) { const x = ((i * 160 - cam * 0.55) % 1280 + 1280) % 1280 - 120; g.fillStyle = i % 2 ? '#3f8f4a' : '#4fa357'; g.beginPath(); g.ellipse(x, 242, 70, 40 + (i % 3) * 12, 0, Math.PI, 0); g.fill(); }
+    if (!BG) for (let i = 0; i < 6; i++) { const x = ((i * 190 - cam * 0.3) % 1140 + 1140) % 1140 - 100; C(x, 60 + (i % 3) * 18, 12, '#fff'); C(x + 14, 56 + (i % 3) * 18, 15, '#fff'); C(x + 30, 60 + (i % 3) * 18, 11, '#fff'); }
+    if (!BG) for (let i = 0; i < 8; i++) { const x = ((i * 160 - cam * 0.55) % 1280 + 1280) % 1280 - 120; g.fillStyle = i % 2 ? '#3f8f4a' : '#4fa357'; g.beginPath(); g.ellipse(x, 242, 70, 40 + (i % 3) * 12, 0, Math.PI, 0); g.fill(); }
     const c0 = Math.floor(cam / SR_TILE), c1 = c0 + Math.ceil(W / SR_TILE) + 1;
     for (let c = c0; c <= c1; c++) {
       const x = c * SR_TILE - cam;
+      if (srSolid(c, SR_GROUND) && SI('grass')) { const l = !srSolid(c - 1, SR_GROUND), rr = !srSolid(c + 1, SR_GROUND);
+        g.drawImage(l ? SI('edgeL') : rr ? SI('edgeR') : SI('grass'), x, 238, 16, 18); for (let y = 256; y < 304; y += 16) g.drawImage(SI('dirt'), x, y, 16, 16); continue; }
       if (srSolid(c, SR_GROUND)) { R(x, 240, 16, 64, '#8a5a32'); R(x, 240, 16, 4, '#5fb848'); R(x + 3, 250, 3, 3, '#6b4423'); R(x + 10, 260, 3, 3, '#6b4423'); }
     }
     for (const [px, h] of L.pipes) {                                   // white PVC "pipes" (they're cleanouts, Ron)
       const x = px * SR_TILE - cam, top = (SR_GROUND - h) * SR_TILE; if (x < -40 || x > W + 10) continue;
+      if (SI('pipetop')) { for (let y = top + 16; y < SR_GROUND * SR_TILE; y += 16) g.drawImage(SI('pipemid'), x, y, 32, 16); g.drawImage(SI('pipetop'), x, top, 32, 18); continue; }
       R(x + 2, top + 6, 28, h * SR_TILE - 6, '#e8ecef'); R(x + 4, top + 6, 5, h * SR_TILE - 6, '#ffffff'); R(x + 24, top + 6, 5, h * SR_TILE - 6, '#c9ced6');
       R(x, top, 32, 8, '#f2f4f6'); R(x, top + 7, 32, 2, '#aab1ba'); T('4"', x + 16, top + 20, '#7a8a9a', 5, 'center');
     }
     for (const [bx, by] of L.bricks) {                                // cinder blocks (break them when you're big)
       const k = bx + ',' + by; if (SR_BROKE && SR_BROKE.has(k)) continue; const x = bx * SR_TILE - cam, y = by * SR_TILE - (s.bumps.some(b => b.k === k) ? 3 : 0); if (x < -16 || x > W) continue;
+      if (SI('cinder')) { g.drawImage(SI('cinder'), x, y, 16, 16); continue; }
       R(x, y, 16, 16, '#9a958c'); R(x, y, 16, 1, '#c4bfb4'); R(x, y + 7, 16, 2, '#6f6a62'); R(x + 7, y, 2, 7, '#6f6a62'); R(x + 3, y + 9, 2, 7, '#6f6a62'); R(x + 11, y + 9, 2, 7, '#6f6a62'); R(x + 2, y + 2, 4, 4, '#7d786f'); R(x + 10, y + 2, 4, 4, '#7d786f');
     }
     s.debris.forEach(d => R(d.x - cam - 3, d.y - 3, 6, 6, '#8a857c'));
-    for (const it of s.items) { const x = it.x - cam; R(x - 5, it.y - 10, 10, 10, '#f4f4f2'); R(x - 4, it.y - 9, 8, 3, '#5a3a1c'); R(x + 5, it.y - 8, 3, 5, '#f4f4f2'); R(x - 6, it.y - 1, 12, 1, '#c9c4b8');   // espresso cup
+    if (SI('espresso')) for (const it of s.items) { g.drawImage(SI('espresso'), it.x - cam - 8, it.y - 15, 16, 15); it.drawn = 1; }
+    for (const it of s.items) { if (it.drawn) { it.drawn = 0; continue; } const x = it.x - cam; R(x - 5, it.y - 10, 10, 10, '#f4f4f2'); R(x - 4, it.y - 9, 8, 3, '#5a3a1c'); R(x + 5, it.y - 8, 3, 5, '#f4f4f2'); R(x - 6, it.y - 1, 12, 1, '#c9c4b8');   // espresso cup
       for (let i = 0; i < 2; i++) R(x - 2 + i * 4, it.y - 14 - Math.abs(Math.sin(t * 6 + i)) * 3, 1, 3, '#ffffffaa'); }
     for (const [bx, by] of L.blocks) {                                // toolboxes
       const x = bx * SR_TILE - cam, y = by * SR_TILE - (s.bumps.some(b => b.k === bx + ',' + by) ? 3 : 0), used = s.bonked.has(bx + ',' + by); if (x < -16 || x > W) continue;
+      if (SI('toolbox')) { g.drawImage(SI(used ? 'toolbox_open' : 'toolbox'), x - 1, y + 1, 18, 15); continue; }
       R(x, y, 16, 16, used ? '#7a4a40' : '#c0392b'); R(x, y + 6, 16, 2, '#8b2a1f'); R(x + 5, y + 2, 6, 2, '#222'); if (!used) R(x + 7, y + 9, 2, 3, '#f7c418');
     }
     for (const q of s.plg) if (!q.got) {                              // golden plungers (spinning)
       const x = q.x - cam; if (x < -10 || x > W + 10) continue; const w = Math.abs(Math.cos(t * 4 + q.x)) * 5 + 1;
+      if (SI('plunger')) { const im = SI('plunger'), sw = Math.max(2, 13 * Math.abs(Math.cos(t * 4 + q.x))); g.drawImage(im, x - sw / 2, q.y - 12, sw, 16); continue; }
       R(x - 1, q.y - 4, 2, 10, '#c98a1e'); g.fillStyle = '#f2c94c'; g.beginPath(); g.ellipse(x, q.y - 5, w, 4, 0, Math.PI, 0); g.fill();
     }
-    s.pops.forEach(o => { R(o.x - cam - 1, o.y - 4, 2, 9, '#c98a1e'); R(o.x - cam - 4, o.y - 6, 8, 3, '#f2c94c'); });
+    s.pops.forEach(o => { if (SI('plunger')) { g.drawImage(SI('plunger'), o.x - cam - 6, o.y - 10, 13, 16); return; } R(o.x - cam - 1, o.y - 4, 2, 9, '#c98a1e'); R(o.x - cam - 4, o.y - 6, 8, 3, '#f2c94c'); });
     for (const f of s.foes) {
       const x = f.x - cam; if (x < -20 || x > W + 20) continue;
+      if (SI('grease_0')) { const k = f.k === 'g' ? 'grease_' : 'wipe_', fr = f.dead ? 3 : Math.floor(t * 4 + f.x) % 2, im = SI(k + fr), w = f.k === 'g' ? 26 : 22, h = w * im.height / im.width;
+        if (f.dead && f.dead > 0.5) continue; g.globalAlpha = f.dead ? Math.max(0, 1 - f.dead / 0.5) : 1; g.save(); g.translate(x, 0); if (f.vx > 0) g.scale(-1, 1);
+        g.drawImage(im, -w / 2, f.k === 'g' ? f.y - h : f.y - h / 2, w, h); g.restore(); g.globalAlpha = 1; continue; }
       if (f.dead) { if (f.dead < 0.4) { g.globalAlpha = 1 - f.dead / 0.4; R(x - 9, f.y - 3, 18, 3, f.k === 'g' ? '#c9a24a' : '#f2f0ea'); g.globalAlpha = 1; } continue; }
       if (f.k === 'g') { g.fillStyle = '#d9b04a'; g.beginPath(); g.ellipse(x, f.y - 5, 9, 6 + Math.sin(t * 8) * 0.8, 0, 0, Math.PI * 2); g.fill(); R(x - 4, f.y - 8, 2, 2, '#222'); R(x + 2, f.y - 8, 2, 2, '#222'); R(x - 6, f.y - 11, 3, 2, '#f4dc8a'); }
       else { g.fillStyle = '#f2f0ea'; g.beginPath(); g.moveTo(x - 9, f.y + 9); g.lineTo(x - 9, f.y - 4); g.quadraticCurveTo(x, f.y - 14, x + 9, f.y - 4); g.lineTo(x + 9, f.y + 9); for (let k = 0; k < 4; k++) g.lineTo(x + 9 - k * 6 - 3, f.y + 5 + (k % 2) * 4); g.fill(); R(x - 4, f.y - 3, 2, 3, '#222'); R(x + 2, f.y - 3, 2, 3, '#222'); R(x - 6, f.y + 2, 12, 1, '#c9d6df'); }
     }
     // the golden toilet
-    const tx = (L.len - 6) * SR_TILE - cam; if (tx < W + 40) { R(tx, 212, 26, 28, '#f2c94c'); g.fillStyle = '#f7d96a'; g.beginPath(); g.ellipse(tx + 13, 212, 18, 7, 0, 0, Math.PI * 2); g.fill(); R(tx + 14, 180, 18, 26, '#f2c94c'); T('FLUSH', tx + 13, 172, '#f7c418', 5, 'center');
+    const tx = (L.len - 6) * SR_TILE - cam; if (tx < W + 40 && SI('toilet_0')) { const fr = !s.won ? 0 : s.flush < 0.5 ? 1 : s.flush < 1.4 ? 2 : 3, im = SI('toilet_' + fr), h = 52, w = h * im.width / im.height; g.drawImage(im, tx + 13 - w / 2, 240 - h, w, h); }
+    else if (tx < W + 40) { R(tx, 212, 26, 28, '#f2c94c'); g.fillStyle = '#f7d96a'; g.beginPath(); g.ellipse(tx + 13, 212, 18, 7, 0, 0, Math.PI * 2); g.fill(); R(tx + 14, 180, 18, 26, '#f2c94c'); T('FLUSH', tx + 13, 172, '#f7c418', 5, 'center');
       if (s.won) { for (let i = 0; i < 8; i++) { const a = s.flush * 6 + i; C(tx + 13 + Math.cos(a) * 14 * (1 - s.flush / 2.2), 210 + Math.sin(a) * 5, 2, '#9fd0e0'); } } }
     if (!s.won || s.flush < 0.8) srRon(s.p.x - cam, s.p.y, s.p.skid ? -s.p.face : s.p.face, t * (1 + Math.abs(s.p.vx) / 140), Math.abs(s.p.vx) > 10 && s.p.on, s.inv > 0, s.big,
       s.won ? 13 + Math.floor(t * 2) % 2 : s.inv > 1.2 ? 11 : !s.p.on ? (s.p.vy < 0 ? 6 : 7) : Math.abs(s.p.vx) > 130 ? 4 + Math.floor(t * 10) % 2 : Math.abs(s.p.vx) > 10 ? 1 + Math.floor(t * 9) % 3 : (s.big && Math.floor(t) % 4 === 0 ? 10 : 0));
