@@ -1453,16 +1453,16 @@ GAMES.push({
 // 20. GREASE BOBBLE — a Bubble Bobble homage. Blow jetter bubbles to trap grease blobs, then pop them.
 GAMES.push({
   id: 'bubble', name: 'GREASE BOBBLE', tag: 'Grease traps · fatbergs · the restaurant line',
-  how: ['Grease blobs are loose in the trap room. Blow a jetter bubble (SPACE) to trap one.', 'Run into a trapped blob to POP it. Wait too long and it breaks out, angrier.', 'Jump with ▲. You can jump up through ledges.', 'Pop them all. Touch a loose blob and you lose a clean pair of pants.'],
+  how: ['Grease blobs are loose in the trap room. Blow a jetter bubble (SPACE) to trap one.', 'Run into a trapped blob to POP it. Wait too long and it breaks out, angrier.', 'Jump with ▲. You can jump up through ledges.', 'Dodge the hot grease dripping from the hood vents and the frying pans flying off the line. Pop them all. Touch a loose blob and you lose a clean pair of pants.'],
   ctl: '◀ ▶ RUN  ·  ▲ JUMP  ·  SPACE = BUBBLE',
   act: 'BUBBLE',
   init(s) {
     s.TIME = 70; s.px = 60; s.py = 250; s.vx = 0; s.vy = 0; s.on = true; s.face = 1; s.pantsMax = s.pants = [5, 4, 3][s.diff]; s.inv = 1.5; s.cd = 0; s.pops = 0; s.combo = 0; s.comboT = 0;
     s.plat = [{ x: 0, y: 250, w: 480 }, { x: 40, y: 196, w: 150 }, { x: 290, y: 196, w: 150 }, { x: 140, y: 140, w: 200 }, { x: 20, y: 84, w: 130 }, { x: 330, y: 84, w: 130 }];
-    const spots = [[100, 196], [360, 196], [240, 140], [80, 84], [400, 84], [300, 250], [200, 196]];
-    s.foes = []; const n = [4, 5, 7][s.diff];
+    const spots = [[100, 196], [360, 196], [240, 140], [80, 84], [400, 84], [300, 250], [200, 196], [420, 250], [160, 140], [60, 250]];
+    s.foes = []; const n = [7, 9, 11][s.diff];   // a crowded trap room
     for (let i = 0; i < n; i++) { const [x, y] = spots[i % spots.length]; s.foes.push({ x: x + (s.rnd() - .5) * 20, y, vx: (s.rnd() < .5 ? -1 : 1) * (28 + 10 * s.diff), vy: 0, st: 'walk', t: 0, angry: false, kind: i % 3 === 2 ? 'wipe' : 'grease' }); }
-    s.bubs = []; s.loot = [];
+    s.bubs = []; s.loot = []; s.drips = []; s.pans = []; s.vents = [70, 170, 310, 410]; s.nextDrip = 2; s.nextPan = 5;
   },
   ground(s, x, yPrev, y) { for (const p of s.plat) if (x > p.x - 4 && x < p.x + p.w + 4 && yPrev <= p.y && y >= p.y) return p.y; return null; },
   update(s, dt, I) {
@@ -1477,7 +1477,7 @@ GAMES.push({
     s.on = false; if (s.vy >= 0) { const gy = this.ground(s, s.px, py0, s.py); if (gy != null) { s.py = gy; s.vy = 0; s.on = true; } }
     if (s.py > 250) { s.py = 250; s.vy = 0; s.on = true; }
     // blow a bubble
-    if ((I.Ap || (I.ptr.clicked && I.ptr.y >= s.py - 30 && Math.abs(I.ptr.x - s.px) < 40)) && s.cd <= 0) { s.cd = 0.35; s.bubs.push({ x: s.px + s.face * 12, y: s.py - 18, vx: s.face * 260, vy: 0, t: 0, foe: null }); SFX('bubble', { vol: 0.6 }); }
+    if ((I.Ap || (I.ptr.clicked && I.ptr.y >= s.py - 30 && Math.abs(I.ptr.x - s.px) < 40)) && s.cd <= 0) { s.cd = 0.35; s.bubs.push({ x: s.px + s.face * 10, y: s.py - 12, vx: s.face * 260, vy: 0, t: 0, foe: null }); SFX('bubble', { vol: 0.6 }); }
     for (const b of s.bubs) {
       b.t += dt;
       if (!b.foe) { b.vx *= Math.pow(0.06, dt); if (Math.abs(b.vx) < 30) b.vy = -22; }
@@ -1485,7 +1485,7 @@ GAMES.push({
       b.x = clamp(b.x + b.vx * dt, 14, W - 14); b.y = Math.max(28, b.y + b.vy * dt);
       if (!b.foe) for (const f of s.foes) if (f.st !== 'trapped' && f.st !== 'gone' && Math.abs(f.x - b.x) < 16 && Math.abs(f.y - 10 - b.y) < 16 && b.t < 1.6) { b.foe = f; f.st = 'trapped'; b.t = 0; POP(s, b.x, b.y - 16, 'GOTCHA!', '#9fd1ff'); break; }
       // touch a trapped blob to pop it
-      if (b.foe && Math.abs(b.x - s.px) < 16 && Math.abs(b.y - (s.py - 16)) < 22) {
+      if (b.foe && Math.abs(b.x - s.px) < 16 && Math.abs(b.y - (s.py - 10)) < 20) {
         b.dead = true; b.foe.st = 'gone'; s.pops++; s.combo++; s.comboT = 1.2;
         const pts = 100 * s.combo; POP(s, b.x, b.y - 10, s.combo > 1 ? `x${s.combo} COMBO!` : '+100', '#f7c418');
         PUFF(s, b.x, b.y, b.foe.kind === 'wipe' ? '#f4f4f2' : '#c9a640', 16, 110); SFX('splash', { vol: 0.6 });
@@ -1508,11 +1508,21 @@ GAMES.push({
         if (f.x < 14 || f.x > W - 14) { f.vx *= -1; f.x = clamp(f.x, 14, W - 14); }
         if (f.vy === 0 && s.rnd() < dt * 0.4) f.vy = -300;
       }
-      if (s.inv <= 0 && Math.abs(f.x - s.px) < 13 && Math.abs((f.y - 8) - (s.py - 16)) < 18) { s.pants--; s.inv = 2.0; s.shake = 0.3; s.vx = (s.px < f.x ? -1 : 1) * 220; s.vy = -200; s.on = false; PUFF(s, s.px, s.py - 16, '#6b4423', 12); POP(s, s.px, s.py - 40, 'SPLAT!', '#e9665a'); SFX('squish'); }
+      if (s.inv <= 0 && Math.abs(f.x - s.px) < 11 && Math.abs((f.y - 8) - (s.py - 10)) < 14) { s.pants--; s.inv = 2.0; s.shake = 0.3; s.vx = (s.px < f.x ? -1 : 1) * 220; s.vy = -200; s.on = false; PUFF(s, s.px, s.py - 16, '#6b4423', 12); POP(s, s.px, s.py - 40, 'SPLAT!', '#e9665a'); SFX('squish'); }
     }
     for (const l of s.loot) { l.vy += 400 * dt; const y0 = l.y; l.y += l.vy * dt; const gy = this.ground(s, l.x, y0, l.y); if (l.vy > 0 && gy != null) { l.y = gy; l.vy = 0; }
       if (!l.got && Math.abs(l.x - s.px) < 14 && Math.abs(l.y - s.py) < 20) { l.got = true; POP(s, l.x, l.y - 20, l.kind === 'soap' ? 'SOAP!' : 'COFFEE!', '#7bd65b'); } }
     s.loot = s.loot.filter(l => !l.got);
+    // hazards: hot grease drips from the hood vents (a warning wobble first), and frying pans skid across a ledge
+    s.nextDrip -= dt; if (s.nextDrip <= 0) { s.nextDrip = (1.4 - s.diff * 0.25) * (0.6 + s.rnd()); s.drips.push({ x: s.vents[Math.floor(s.rnd() * s.vents.length)] + (s.rnd() - .5) * 20, y: 30, vy: 0, warn: 0.8 }); }
+    for (const d of s.drips) { if (d.warn > 0) { d.warn -= dt; continue; } d.vy += 600 * dt; d.y += d.vy * dt;
+      if (s.inv <= 0 && Math.abs(d.x - s.px) < 7 && d.y > s.py - 24 && d.y < s.py) { d.y = 999; s.pants--; s.inv = 1.6; s.shake = 0.25; PUFF(s, s.px, s.py - 18, '#d9a23a', 10); POP(s, s.px, s.py - 30, 'HOT GREASE!', '#e9665a'); SFX('splash', { vol: 0.5 }); }
+      const gy = s.plat.find(p => d.x > p.x && d.x < p.x + p.w && d.y >= p.y && d.y - d.vy * dt < p.y); if (gy && d.y < 900) { d.y = 999; PUFF(s, d.x, gy.y, '#d9a23a', 5, 40); } }
+    s.drips = s.drips.filter(d => d.y < H);
+    s.nextPan -= dt; if (s.nextPan <= 0) { s.nextPan = (5 - s.diff) * (0.7 + s.rnd() * 0.6); const p = s.plat[Math.floor(s.rnd() * s.plat.length)], dir = s.rnd() < .5 ? 1 : -1; s.pans.push({ x: dir > 0 ? p.x - 10 : p.x + p.w + 10, y: p.y, vx: dir * (120 + s.diff * 30), spin: 0, warn: 0.9, lane: p }); }
+    for (const pn of s.pans) { if (pn.warn > 0) { pn.warn -= dt; continue; } pn.x += pn.vx * dt; pn.spin += dt * 14;
+      if (s.inv <= 0 && Math.abs(pn.x - s.px) < 11 && Math.abs(pn.y - s.py) < 6) { pn.x = 9999; s.pants--; s.inv = 1.6; s.shake = 0.35; s.vy = -220; s.on = false; POP(s, s.px, s.py - 30, 'CLANG!', '#e9665a'); SFX('clog', { vol: 0.6 }); } }
+    s.pans = s.pans.filter(pn => pn.x > -40 && pn.x < W + 40);
     const left = s.foes.filter(f => f.st !== 'gone').length;
     if (s.pants <= 0) s.end = { win: false, stars: 0, line: 'Out of clean pants. The grease wins.' };
     else if (!left) s.end = { win: true, stars: stars3(s.pants === s.pantsMax && s.t < 40, s.pants >= s.pantsMax - 1), line: `Trap room cleared in ${Math.round(s.t)}s.` };
@@ -1520,14 +1530,22 @@ GAMES.push({
   },
   draw(s) {
     if (BGI('bg_kitchen')) R(0, 0, W, H, 'rgba(8,12,20,.55)'); else { R(0, 0, W, H, '#14202c'); for (let y = 16; y < H; y += 16) for (let x = (y / 16 % 2) * 16; x < W; x += 32) R(x, y, 30, 14, '#182634'); }
-    for (const p of s.plat) { R(p.x, p.y, p.w, 6, '#6e7177'); R(p.x, p.y + 6, p.w, 3, '#4a4c52'); for (let x = p.x; x < p.x + p.w; x += 16) R(x, p.y, 1, 6, '#888'); }
+    for (const vx of s.vents) { R(vx - 16, 18, 32, 8, '#5a5e66'); for (let i = 0; i < 4; i++) R(vx - 13 + i * 7, 20, 4, 4, '#2a2c30'); }   // hood vents overhead
+    for (const p of s.plat) { if (p.y === 250) { R(p.x, p.y, p.w, 20, '#3a3d42'); for (let x = p.x; x < p.x + p.w; x += 24) R(x, p.y, 22, 3, '#4e525a'); continue; }   // the tile floor
+      R(p.x, p.y, p.w, 7, '#b9bec6'); R(p.x, p.y, p.w, 2, '#e4e7ec'); R(p.x, p.y + 7, p.w, 2, '#6e737b'); R(p.x + 6, p.y + 9, 3, 10, '#6e737b'); R(p.x + p.w - 9, p.y + 9, 3, 10, '#6e737b'); }   // stainless steel shelves
+    for (const d of s.drips) { if (d.warn > 0) { const w = Math.sin(s.t * 30) * 1; C(d.x + w, 28, 3, '#e8b440'); } else { C(d.x, d.y, 3, '#e8b440'); R(d.x - 1, d.y - 6, 2, 5, '#e8b440'); } }
+    for (const pn of s.pans) { if (pn.warn > 0) { if (Math.floor(s.t * 8) % 2) T('!', pn.vx > 0 ? pn.lane.x + 6 : pn.lane.x + pn.lane.w - 6, pn.y - 14, '#e9665a', 9, 'center'); continue; }
+      g.save(); g.translate(pn.x, pn.y - 5); g.rotate(pn.spin); R(-7, -3, 14, 6, '#2b2d31'); R(-6, -2, 12, 2, '#55595f'); R(6, -1, 9, 2, '#1a1a1a'); g.restore(); }
     for (const l of s.loot) { if (l.kind === 'soap') { R(l.x - 6, l.y - 6, 12, 6, '#9fd1ff'); R(l.x - 4, l.y - 8, 8, 2, '#fff'); } else { R(l.x - 4, l.y - 10, 8, 10, '#f4f1ea'); R(l.x - 4, l.y - 6, 8, 3, '#8a5a2e'); } }
     for (const f of s.foes) { if (f.st !== 'walk') continue; const bob = Math.sin(s.t * 10 + f.x) * 1.5;
+      { const k = f.kind === 'wipe' ? 'wipe_' : 'grease_', im = MG('sr_' + k + (Math.floor(s.t * (f.kind === 'wipe' ? 4 : 2.5) + f.x) % 6));
+        if (im) { const h = f.kind === 'wipe' ? 20 : 16, w = h * im.width / im.height; g.save(); g.translate(f.x, 0); if (f.vx > 0 && f.kind !== 'wipe') g.scale(-1, 1); if (f.angry) g.filter = 'saturate(1.6) hue-rotate(-20deg)';
+          g.drawImage(im, -w / 2, f.kind === 'wipe' ? f.y - h - 4 + bob : f.y - h + 1, w, h); g.restore(); continue; } }
       if (f.kind === 'wipe') { R(f.x - 9, f.y - 20 + bob, 18, 16, '#f4f4f2'); R(f.x - 7, f.y - 18 + bob, 14, 2, '#d9d4c8'); R(f.x - 4, f.y - 14 + bob, 2, 3, f.angry ? '#e9665a' : '#222'); R(f.x + 2, f.y - 14 + bob, 2, 3, f.angry ? '#e9665a' : '#222'); }
       else { C(f.x, f.y - 8 + bob, 9, f.angry ? '#8a5a1e' : '#c9a640'); C(f.x - 3, f.y - 11 + bob, 3, '#e8d48a'); R(f.x - 4, f.y - 9 + bob, 2, 3, f.angry ? '#e9665a' : '#222'); R(f.x + 2, f.y - 9 + bob, 2, 3, f.angry ? '#e9665a' : '#222'); } }
     for (const b of s.bubs) { g.globalAlpha = 0.85; C(b.x, b.y, 11, 'rgba(159,209,255,.35)'); g.strokeStyle = '#9fd1ff'; g.lineWidth = 1.5; g.beginPath(); g.arc(b.x, b.y, 11, 0, 7); g.stroke(); g.globalAlpha = 1; R(b.x - 5, b.y - 6, 3, 3, '#fff');
-      if (b.foe) { if (b.foe.kind === 'wipe') R(b.x - 6, b.y - 5, 12, 10, '#f4f4f2'); else C(b.x, b.y, 6, '#c9a640'); if (b.t > 4) T('!', b.x, b.y - 16, '#e9665a', 7, 'center'); } }
-    if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) HERO_AT(s, s.px, s.py, 1.5, { face: s.face > 0 ? 'R' : 'L', force: true, horiz: true });
+      if (b.foe) { const im = MG('sr_' + (b.foe.kind === 'wipe' ? 'wipe_6' : 'grease_6')); if (im) g.drawImage(im, b.x - 7, b.y - 7, 14, 14 * im.height / im.width); else if (b.foe.kind === 'wipe') R(b.x - 6, b.y - 5, 12, 10, '#f4f4f2'); else C(b.x, b.y, 6, '#c9a640'); if (b.t > 4) T('!', b.x, b.y - 16, '#e9665a', 7, 'center'); } }
+    if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) HERO_AT(s, s.px, s.py, 0.85, { face: s.face > 0 ? 'R' : 'L', force: true, horiz: true });   // half the old height, so the room has space
     DRAWFX(s);
     HUD(s, 'GREASE BOBBLE', s.TIME - s.t); PANTS(s, 6, 22);
     T('LEFT ' + s.foes.filter(f => f.st !== 'gone').length, W - 6, 26, '#f7c418', 6, 'right');
