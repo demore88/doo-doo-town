@@ -454,6 +454,7 @@ const SHOP = [
   { id: 'ppe', name: 'PPE KIT', price: 600, kind: 'gear', desc: "Suits, masks, respirators. BENEFIT: unlocks the biohazard story jobs." },
   { id: 'espresso', name: "ROD'S ESPRESSO MAKER", price: 400, kind: 'gear', desc: "Rod insists. BENEFIT: +8 stamina every morning." },
   { id: 'camera', name: 'SEWER CAMERA + LOCATOR', price: 16500, kind: 'gear', desc: "BENEFIT: unlocks the camera story jobs, and the septic search shows which way the pipe leaves the house." },
+  { id: 'glass', name: 'NEW WINDSHIELD', price: 350, kind: 'service', desc: "Rod knows a guy in Gorham. BENEFIT: every crack from every crash, gone. Clear view again." },
   { id: 'jetter', name: 'JETTER TRAILER', price: 14200, kind: 'gear', desc: "4,000 PSI. BENEFIT: unlocks the hotel, campground and lost-jetter story jobs." },
 ];
 // day one: you borrowed $80,000 (enough for the basics, not the camera or jetter). This is what it takes to open the doors.

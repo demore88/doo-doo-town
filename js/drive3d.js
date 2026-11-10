@@ -273,6 +273,36 @@ function drive3d(choice, opts) {
   const say = (m, s = 1.4) => { msg = m; msgT = s; };
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__deer = (d = 1) => critters.push({ kind: 'deer', seg: 0, off: 0, dir: d, hit: true, fly: 0.001, flyDir: d });   // dev: test the windshield deer
   const sfx = (n, o) => { if (window.DDTSfx) DDTSfx.play(n, o); };
+  // ---------- the windshield: cracks that stick around (and grow with every hit), bugs, mud, and now and then some weather ----------
+  let glass = 0; try { glass = (DDT.get() || {}).glass || 0; } catch (e) {}
+  const hurtGlass = n => { if (!n) return; glass = Math.min(14, glass + n); try { const s = DDT.get(); s.glass = glass; DDT.save(s); } catch (e) {} };
+  const rng = seed => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+  // where each new crack lands, in order: around the edges first, so the road ahead stays readable longest
+  const CRACK_AT = [[408, 64], [66, 84], [446, 168], [34, 206], [338, 42], [132, 46], [462, 236], [18, 132], [292, 58], [196, 52], [424, 112], [70, 244], [244, 40], [372, 222]];
+  const CRACKS = CRACK_AT.map(([cx, cy], i) => { const R = rng(97 + i * 131), rays = [];
+    const n = 5 + Math.floor(R() * 4), big = 22 + R() * 34;
+    for (let k = 0; k < n; k++) { let a = (k / n) * Math.PI * 2 + R() * 0.6, x = cx, y = cy; const pts = [[x, y]], len = big * (0.5 + R() * 0.7);
+      for (let d = 0; d < len; d += 6 + R() * 6) { a += (R() - 0.5) * 0.5; x += Math.cos(a) * 8; y += Math.sin(a) * 8; pts.push([x, y]); }
+      rays.push(pts); }
+    return { cx, cy, rays, ring: 5 + R() * 5 }; });
+  const ZONE = SNOW ? 'snow' : SEA.name === 'mud' ? 'mud' : ['spring', 'summer', 'early fall'].includes(SEA.name) ? 'bugs' : 'none';
+  const events = [];   // { at: progress 0-1, kind }
+  if (ZONE === 'bugs' && Math.random() < 0.4) { const n = 1 + Math.floor(Math.random() * 3); for (let i = 0; i < n; i++) events.push({ at: 0.1 + Math.random() * 0.75, kind: 'bug' }); }
+  if ((ZONE === 'mud' || SEA.name === 'thaw') && Math.random() < 0.45) { const n = 1 + (Math.random() < 0.35 ? 1 : 0); for (let i = 0; i < n; i++) events.push({ at: 0.12 + Math.random() * 0.7, kind: 'mud' }); }
+  const WXF = typeof DDT !== 'undefined' && DDT.DEV && DDT.param && DDT.param('wx');   // dev: ?wx=rain|fog|squall
+  const WX = WXF ? WXF : Math.random() < 0.16 ? (SNOW ? 'squall' : Math.random() < 0.6 ? 'rain' : 'fog') : null;   // weather: only once in a while
+  const wxFrom = WXF ? 0 : 0.1 + Math.random() * 0.45, wxTo = Math.min(0.95, wxFrom + 0.25 + Math.random() * 0.3);
+  const bugs = [], muds = [], drops = []; let rainSnd = null;
+  function splatBug() { const x = 40 + Math.random() * 400, y = 30 + Math.random() * 170, R = rng(1 + Math.floor(Math.random() * 99999)), big = Math.random() < 0.3;
+    const dots = []; for (let i = 0; i < (big ? 22 : 13); i++) { const a = R() * 7, d = Math.pow(R(), 1.5) * (big ? 16 : 10); dots.push([Math.cos(a) * d, Math.sin(a) * d * 0.8, Math.max(1, (big ? 5 : 3.5) * (1 - d / (big ? 16 : 10)) + R())]); }
+    bugs.push({ x, y, dots, col: ['#cfd94a', '#b8c83a', '#e0c83a', '#9fbf3a'][Math.floor(R() * 4)], big, t: 0 }); sfx('squish', { vol: 0.6 }); if (Math.random() < 0.4) say(big ? 'JUNE BUG. GROSS.' : 'BUG!', 1); }
+  function splatMud() { const R = rng(1 + Math.floor(Math.random() * 99999)), side = Math.random() < 0.5 ? -1 : 1, blobs = [];
+    const cx = W / 2 + side * (60 + R() * 120), cy = 150 + R() * 70;
+    for (let i = 0; i < 90; i++) { const a = R() * 7, d = Math.pow(R(), 1.6) * 110; blobs.push([cx + Math.cos(a) * d * 1.3, cy + Math.sin(a) * d * 0.7, Math.max(0.8, (1 - d / 110) * (1.5 + R() * 5)), R()]); }
+    muds.push({ blobs, t: 0 }); sfx('splash', { vol: 0.7 }); say('MUD!', 1); }
+  let glassT = 0;
+  if (typeof DDT !== 'undefined' && DDT.DEV) { window.__bug = () => splatBug(); window.__mud = () => splatMud(); window.__glass = n => { glass = n; }; }
+  const glassFor = { car: 1, truck: 2, onc: 3, moose: 3, deer: 2, turkeys: 1, peeper: 0 };
 
   // ---------- projection ----------
   function project(p, camX, camY, camZ) {
@@ -337,7 +367,7 @@ function drive3d(choice, opts) {
         if (c.off !== c.tgt) { const d = c.tgt - c.off; c.off += Math.sign(d) * Math.min(Math.abs(d), dt * 0.55); }
         const VAN_HW = 0.16;   // the van, measured the same way as the cars it can hit
         if (live && inv <= 0 && ahead > -SEG * 0.6 && ahead < SEG * (c.truck ? 1.6 : 1.1) && Math.abs(px - c.off) < c.hw + VAN_HW - 0.03) {
-          crashes++; inv = 1.4; shake = c.onc ? 0.6 : 0.35;
+          crashes++; inv = 1.4; shake = c.onc ? 0.6 : 0.35; hurtGlass(glassFor[c.onc ? 'onc' : c.truck ? 'truck' : 'car']);
           const p = c.onc ? 20 : c.truck ? 14 : 10; /* a crash costs real time: exchanging info, checking the bumper */ penalty += p; speed = c.onc ? 0 : Math.min(speed, Math.abs(c.speed) * 0.6);
           if (!c.truck) { c.spin = 1.6; c.spinDir = px < c.off ? 1 : -1; c.speed *= 0.3; }   // the car you hit spins out (log trucks just shrug)
           px += c.onc ? (px < c.off ? -0.4 : 0.4) : (px < c.off ? -0.3 : 0.3);
@@ -389,7 +419,7 @@ function drive3d(choice, opts) {
           if (cr.snap > 0) { cr.snap -= dt; cr.flash = (cr.flash + dt) % 0.4; } else cr.off += cr.dir * CSPD[cr.kind] * dt * 1.4;
         }
         if (live && !cr.hit && inv <= 0 && Math.abs(dz - PZ) < SEG * 1.1 && Math.abs(px - cr.off) < CW[cr.kind] + 0.1) {
-          cr.hit = true; crashes++; inv = 1.4; shake = cr.kind === 'moose' ? 0.7 : 0.3; penalty += PEN[cr.kind]; speed *= cr.kind === 'moose' ? 0.1 : 0.4;
+          cr.hit = true; crashes++; hurtGlass(glassFor[cr.kind]); inv = 1.4; shake = cr.kind === 'moose' ? 0.7 : 0.3; penalty += PEN[cr.kind]; speed *= cr.kind === 'moose' ? 0.1 : 0.4;
           cr.dir = Math.sign(cr.off - px) || 1; cr.snap = 0;
           if (cr.kind !== 'moose') { cr.fly = 0.001; cr.flyDir = cr.dir; }   // up and over the roof
           sfx(cr.kind === 'moose' ? 'horn_angry' : 'horn');
@@ -403,7 +433,7 @@ function drive3d(choice, opts) {
         done = true; removeEventListener('keydown', kd); removeEventListener('keyup', ku); rc.onpointerdown = rc.onpointerup = rc.onpointermove = rc.onpointercancel = null;
         const mins = Math.round(opts.leave + play * MIN_PER_S + penalty);
         say('MADE IT!', 2); draw(false, true, 0);
-        setTimeout(() => { rc.style.display = 'none'; res({ crashes, mins, rivalWon }); }, 700); return;
+        if (rainSnd) { rainSnd.stop(); rainSnd = null; } setTimeout(() => { rc.style.display = 'none'; res({ crashes, mins, rivalWon }); }, 700); return;
       }
       requestAnimationFrame(frame);
     }
@@ -502,6 +532,33 @@ function drive3d(choice, opts) {
         if (k < 0.3) { r.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < 6; i++) r.fillRect(W / 2 + (i - 3) * 9, H - 70 - i * 3 - k * 60, 3, 3); }   // fur and feathers
       }
       r.restore();
+      // ---------- the windshield ----------
+      { const pr = pos / ((N - 40) * SEG), dt = Math.min(0.05, Math.max(0, t - glassT)); glassT = t;
+        for (const e of events) if (!e.done && pr >= e.at) { e.done = true; e.kind === 'bug' ? splatBug() : splatMud(); }
+        const wxK = WX ? Math.max(0, Math.min(1, (pr - wxFrom) / 0.05, (wxTo - pr) / 0.05)) : 0;
+        if (WX === 'rain') { if (wxK > 0 && !rainSnd && window.DDTSfx) rainSnd = DDTSfx.loop ? DDTSfx.loop('rain_loop') : null; if (wxK <= 0 && rainSnd) { rainSnd.stop(); rainSnd = null; } }
+        if (wxK > 0) {
+          if (WX === 'fog') { const gr = r.createLinearGradient(0, HORIZON - 30, 0, H); gr.addColorStop(0, `rgba(214,220,224,${0.92 * wxK})`); gr.addColorStop(0.45, `rgba(214,220,224,${0.7 * wxK})`); gr.addColorStop(1, `rgba(214,220,224,${0.15 * wxK})`); r.fillStyle = gr; r.fillRect(0, 0, W, H); }
+          if (WX === 'rain') { r.fillStyle = `rgba(60,70,85,${0.25 * wxK})`; r.fillRect(0, 0, W, H); r.strokeStyle = `rgba(200,215,230,${0.55 * wxK})`; r.lineWidth = 1; r.beginPath();
+            for (let i = 0; i < 90; i++) { const x = (i * 53 + t * 260 + i * i) % (W + 40) - 20, y = (i * 37 + t * 520 * (1 + i % 3 * 0.2)) % H; r.moveTo(x, y); r.lineTo(x - 4, y + 12); } r.stroke();
+            if (Math.random() < dt * 14 * wxK) drops.push({ x: Math.random() * W, y: 20 + Math.random() * (H - 30), r: 1.5 + Math.random() * 2.5, t: 0 }); }
+          if (WX === 'squall') { r.fillStyle = `rgba(235,240,245,${0.35 * wxK})`; r.fillRect(0, 0, W, H); r.fillStyle = `rgba(255,255,255,${0.9 * wxK})`;
+            for (let i = 0; i < 160; i++) r.fillRect((i * 97 + t * 220 * (1 + i % 4 * 0.3) + px * 60) % W, (i * 61 + t * 90 * (1 + i % 5 * 0.2)) % H, 1.5, 1.5); }
+        }
+        for (let i = drops.length - 1; i >= 0; i--) { const d = drops[i]; d.t += dt; d.y += d.t > 1.2 ? dt * 30 : 0; if (d.t > 3.5 || d.y > H) { drops.splice(i, 1); continue; }   // raindrops sit, then run down
+          r.fillStyle = 'rgba(180,200,220,.45)'; r.beginPath(); r.arc(d.x, d.y, d.r, 0, 7); r.fill(); r.fillStyle = 'rgba(255,255,255,.7)'; r.fillRect(d.x - d.r * 0.4, d.y - d.r * 0.5, 1, 1); }
+        for (let i = muds.length - 1; i >= 0; i--) { const m = muds[i]; m.t += dt; const a = m.t < 3 ? 0.9 : 0.9 - (m.t - 3) / 2.5; if (a <= 0) { muds.splice(i, 1); continue; }   // mud runs down, then the wipers finally win
+          r.globalAlpha = a * 0.92; for (const [x, y, rr, k] of m.blobs) { const dy = rr > 3 ? Math.min(30, m.t * 5 * (0.3 + k)) : 0; r.fillStyle = k < 0.4 ? '#4e3820' : k < 0.8 ? '#644a2c' : '#7a5e3a';
+            r.fillRect(Math.round(x - rr), Math.round(y - rr * 0.8), Math.ceil(rr * 2), Math.ceil(rr * 1.6)); if (rr > 2.5) r.fillRect(Math.round(x - rr * 0.6), Math.round(y - rr * 1.2), Math.ceil(rr * 1.2), Math.ceil(rr * 2.4)); if (dy) r.fillRect(Math.round(x - 1), Math.round(y), 2, dy); } r.globalAlpha = 1; }
+        for (const b of bugs) { b.t += dt; for (const [dx, dy, rr] of b.dots) { r.fillStyle = b.col; r.fillRect(b.x + dx - rr / 2, b.y + dy - rr / 2, rr, rr); }   // guts, then the bug bits
+          r.fillStyle = 'rgba(40,40,30,.9)'; r.fillRect(b.x - 2, b.y - 1, b.big ? 5 : 3, b.big ? 3 : 2); r.fillRect(b.x - 5, b.y + 1, 2, 1); r.fillRect(b.x + 3, b.y - 2, 2, 1); r.fillRect(b.x - 4, b.y - 3, 1, 2); r.fillStyle = 'rgba(220,235,255,.5)'; r.fillRect(b.x - 3, b.y - 4, 3, 2); }   // body, legs, a wing
+        const nc = Math.min(CRACKS.length, Math.floor(glass));
+        for (let i = 0; i < nc; i++) { const c = CRACKS[i];   // spider cracks: a dark line and a bright edge, like real broken glass
+          for (const [col, off] of [['rgba(30,40,50,.45)', 0.6], ['rgba(240,248,255,.85)', 0]]) { r.strokeStyle = col; r.lineWidth = 0.7; r.beginPath();
+            for (const pts of c.rays) { r.moveTo(pts[0][0] + off, pts[0][1] + off); for (const [x, y] of pts) r.lineTo(x + off, y + off); }
+            r.stroke(); }
+          r.fillStyle = 'rgba(255,255,255,.9)'; r.fillRect(c.cx - 1, c.cy - 1, 2, 2); }
+      }
       // HUD
       const mins = Math.round(opts.leave + play * MIN_PER_S + penalty), late = mins > opts.due;
       r.fillStyle = 'rgba(16,21,31,.92)'; r.fillRect(0, 0, W, 20);

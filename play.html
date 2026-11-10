@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794286374"></script>
-<script src="js/calls.js?v=1794286374"></script>
-<script src="js/placeholders.js?v=1794286374"></script>
-<script src="js/music.js?v=1794286374"></script>
-<script src="js/sfx.js?v=1794286374"></script>
+<script src="js/state.js?v=1794286682"></script>
+<script src="js/calls.js?v=1794286682"></script>
+<script src="js/placeholders.js?v=1794286682"></script>
+<script src="js/music.js?v=1794286682"></script>
+<script src="js/sfx.js?v=1794286682"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -477,6 +477,9 @@ const ShopUI = {
     if (p === null) return; this.cur = p;
     if (p === SHOP.length) return this.done();
     const it = SHOP[p], s = DDT.get();
+    if (it.kind === 'service') { if (!(s.glass > 0)) { this.msg = 'NOT A SCRATCH ON IT'; this.msgT = 1.2; SND.bad(); return; }
+      if (s.money < it.price) { this.msg = "CAN'T AFFORD IT"; this.msgT = 1.2; SND.bad(); return; }
+      s.money -= it.price; s.glass = 0; DDT.save(s); this.msg = 'GOOD AS NEW'; this.msgT = 1.2; SND.good(); return; }
     if (it.kind === 'gear' && s.inv[it.id]) { this.msg = 'ALREADY HAVE IT'; this.msgT = 1.2; SND.bad(); return; }
     if (s.money < it.price) { this.msg = "CAN'T AFFORD IT"; this.msgT = 1.2; SND.bad(); return; }
     DDT.apply({ money: -it.price, item: { [it.id]: 1 } }); this.msg = `BOUGHT ${it.name}`; this.msgT = 1.2; SND.good();
@@ -493,7 +496,7 @@ const ShopUI = {
       else if (ix) g.drawImage(IMG.fit, it.icon[0] * 32, it.icon[1] * 32, 32, 32, x + 2, y + 2, 26, 26);
       T(it.name, x + 4 + ix, y + 7, '#fff', 4, 'left', false); T(have ? 'OWNED' : `$${it.price.toLocaleString()}`, x + w - 4, y + 7, have ? '#7dffb0' : '#f7c418', 4, 'right', false);
       const ben = it.desc.includes('BENEFIT') ? '+ ' + it.desc.split(/BENEFIT[^:]*: /)[1] : it.desc;   // the tile leads with what it does for you
-      wrap(ben, w - 10 - ix, 4).slice(0, 2).forEach((l, k) => T(l, x + 4 + ix, y + 16 + k * 7, '#9fe07a', 4, 'left', false)); if (it.kind === 'part') T(`HAVE ${own}`, x + w - 4, y + 25, '#fff', 4, 'right', false);
+      wrap(ben, w - 10 - ix, 4).slice(0, 2).forEach((l, k) => T(l, x + 4 + ix, y + 16 + k * 7, '#9fe07a', 4, 'left', false)); if (it.kind === 'service') T(s.glass > 0 ? `${Math.ceil(s.glass)} DINGS` : 'CLEAR', x + w - 4, y + 25, s.glass > 0 ? '#e9665a' : '#7dffb0', 4, 'right', false); if (it.kind === 'part') T(`HAVE ${own}`, x + w - 4, y + 25, '#fff', 4, 'right', false);
     });
     const [x, y, w, h] = this.box(SHOP.length); R(x, y, w, h, this.cur === SHOP.length ? '#2c6cd6' : '#1d2638'); T('DONE', x + w / 2, y + 9, '#fff', 6, 'center', false);
     const sel = SHOP[this.cur]; if (sel) { R(8, 234, 356, 32, '#10151f'); T(sel.name, 12, 240, '#f7c418', 5, 'left', false);   // the full story on whatever is highlighted
