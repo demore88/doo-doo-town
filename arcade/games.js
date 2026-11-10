@@ -1936,7 +1936,7 @@ GAMES.push({
     }
     // you, with the locator wand
     if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) { const fy = Y(s.row) + 9, k = 0.6, h = 40 * k;   // smaller than a car; the locator wand scales with him
-      HERO_AT(s, s.px, fy, k, { face: 'U' }); R(s.px + 4, fy - h * 0.6, 1, h * 0.5, '#f39c12'); R(s.px + 2, fy - h * 0.72, 5, 3, '#f7c418'); R(s.px - 3, fy - h * 0.82, 9, 2, '#ff7a00'); }
+      HERO_AT(s, s.px, fy, k, { face: 'U' }); R(s.px + 4, fy - h * 0.6, 1, h * 0.5, '#f39c12'); R(s.px + 3, fy - h * 0.66, 3, 2, '#f7c418'); }   // just the wand in his hand, nothing over his head
     DRAWFX(s);
     if (s.sayT > 0) T(s.say, W / 2, Y(s.nl + 1) - 26, '#fff', 7, 'center');
     if (s.flash > 0) { g.globalAlpha = s.flash; R(0, 0, W, H, '#ff2d95'); g.globalAlpha = 1; }
