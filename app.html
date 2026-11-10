@@ -9,7 +9,7 @@
 <link rel="icon" href="./icons/icon-192.png"><link rel="apple-touch-icon" href="./icons/apple-180.png"><meta name="mobile-web-app-capable" content="yes">
 <style>
   html,body{margin:0;height:100%;background:#0e1118;overflow:hidden}
-  #f{position:fixed;inset:0;width:100%;height:100%;border:0;display:block}
+  .gf{position:fixed;inset:0;width:100%;height:100%;border:0;display:block}
   #max{position:fixed;right:10px;bottom:10px;z-index:9;width:44px;height:44px;border-radius:10px;border:2px solid #f7c418;background:rgba(16,21,31,.85);display:flex;align-items:center;justify-content:center;padding:0}
 </style>
 </head>
@@ -42,13 +42,20 @@ window.DDT_RADIO = (() => {
 })();
 </script>
 <!-- On phones the whole game runs inside this one frame, so full screen stays on while the game moves between screens. -->
-<iframe id="f" allow="autoplay; fullscreen"></iframe>
+<iframe class="gf" allow="autoplay; fullscreen"></iframe>
 <button id="max" aria-label="Full screen"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></svg></button>
 <script>
   let p = new URLSearchParams(location.search).get('p') || 'index.html';
   if (!/^[\w\-\/.]+\.html([?#].*)?$/.test(p) || p.includes('..') || p.startsWith('app.html')) p = 'index.html';
-  const f = document.getElementById('f'), b = document.getElementById('max');
+  let f = document.querySelector('.gf'); const b = document.getElementById('max');
   f.src = p + (p.includes('?') ? '&' : '?') + 't=' + Date.now();   // never an old saved copy of the first screen
+  // Every screen change loads into a fresh frame (the old one stays up until the new one is ready, then goes away).
+  // Chrome can keep a finger "stuck" to an old screen; a brand-new frame always starts with clean touches.
+  window.ddtLoad = url => {
+    const nf = document.createElement('iframe'); nf.className = 'gf'; nf.allow = 'autoplay; fullscreen'; nf.style.visibility = 'hidden';
+    f.after(nf); nf.addEventListener('load', () => { nf.style.visibility = ''; const old = f; f = nf; old.remove(); try { document.title = nf.contentDocument.title; } catch (e) {} nf.focus(); }, { once: true });
+    nf.src = url;
+  };
   window.ddtFS = () => {
     const d = document.documentElement; if (document.fullscreenElement || !d.requestFullscreen) return;
     d.requestFullscreen({ navigationUI: 'hide' }).then(() => { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); }).catch(() => {});
@@ -57,7 +64,7 @@ window.DDT_RADIO = (() => {
   const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   const upd = () => { b.style.display = !TOUCH || document.fullscreenElement ? 'none' : 'flex'; };
   document.addEventListener('fullscreenchange', upd); upd();
-  f.addEventListener('load', () => { try { document.title = f.contentDocument.title; } catch (e) {} f.focus(); });
+  f.addEventListener('load', () => { try { document.title = f.contentDocument.title; } catch (e) {} f.focus(); }, { once: true });
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
 </script>
 </body>

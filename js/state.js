@@ -35,7 +35,10 @@ const DDT = {
   // the next page then ignores single taps until a second finger comes down.
   fingers: 0,
   nav(url) {
-    const go = () => { location.href = url; };
+    const go = () => {   // in the app, each screen gets a brand-new frame: a clean slate for touches every time
+      try { if (window.top !== window && window.parent.ddtLoad) { window.parent.ddtLoad(new URL(url, location.href).href); return; } } catch (e) {}
+      location.href = url;
+    };
     if (!this.fingers) return go();
     const t0 = Date.now(), iv = setInterval(() => { if (!this.fingers || Date.now() - t0 > 4000) { clearInterval(iv); setTimeout(go, 60); } }, 40);
   },
