@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<style id="ddt-touch">html,body{overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}</style>
 <script id="ddt-fs">(function(){var st=matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches;if(st||!("ontouchstart" in window))return;if(window.top!==window){addEventListener("pointerdown",function(){try{parent.ddtFS&&parent.ddtFS()}catch(e){}},true);return}var root=location.href.split(/[?#]/)[0].replace(/(story|arcade)\/[^\/]*$|[^\/]*$/,"");location.replace(root+"app.html?p="+encodeURIComponent(location.href.slice(root.length)))})();</script>
 <link rel="manifest" href="../manifest.webmanifest"><meta name="theme-color" content="#2a5ab0"><link rel="icon" href="../icons/icon-192.png"><link rel="apple-touch-icon" href="../icons/apple-180.png"><meta name="mobile-web-app-capable" content="yes"><script>if ("serviceWorker" in navigator && window.top === window && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch(() => {});</script>
 <meta charset="utf-8">
@@ -16,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794274183"></script>
-<script src="js/calls.js?v=1794274183"></script>
-<script src="js/placeholders.js?v=1794274183"></script>
-<script src="js/music.js?v=1794274183"></script>
-<script src="js/sfx.js?v=1794274183"></script>
+<script src="js/state.js?v=1794274520"></script>
+<script src="js/calls.js?v=1794274520"></script>
+<script src="js/placeholders.js?v=1794274520"></script>
+<script src="js/music.js?v=1794274520"></script>
+<script src="js/sfx.js?v=1794274520"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -81,12 +82,23 @@ if (typeof DDTSfx !== 'undefined') DDTSfx.patch(SND);   // recorded sounds where
 const keys = {}, hit = {};
 addEventListener('keydown', e => { if (!keys[e.key]) hit[e.key] = true; keys[e.key] = true; if (e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault(); ac(); });
 addEventListener('keyup', e => { keys[e.key] = false; });
-const ptr = { x: 0, y: 0, down: false, clicked: false };
-function toCanvas(e) { const b = cv.getBoundingClientRect(); ptr.x = (e.clientX - b.left) / b.width * W; ptr.y = (e.clientY - b.top) / b.height * H; }
-cv.addEventListener('pointerdown', e => { toCanvas(e); ptr.down = true; ptr.clicked = true; ac(); smear.push({ x: ptr.x, y: ptr.y, t: performance.now(), dot: true }); });
+const ptr = { x: 0, y: 0, down: false, clicked: false, released: false };
 const smear = [];   // every tap leaves a brown smudge; dragging leaves a streak. Both fade away.
-cv.addEventListener('pointermove', e => { toCanvas(e); if (ptr.down) { const l = smear[smear.length - 1]; if (!l || Math.hypot(l.x - ptr.x, l.y - ptr.y) > 2) smear.push({ x: ptr.x, y: ptr.y, t: performance.now(), px: l ? l.x : ptr.x, py: l ? l.y : ptr.y }); } });
-addEventListener('pointerup', () => { ptr.down = false; });
+function toCanvasXY(cx, cy) { const b = cv.getBoundingClientRect(); ptr.x = (cx - b.left) / b.width * W; ptr.y = (cy - b.top) / b.height * H; }
+function toCanvas(e) { toCanvasXY(e.clientX, e.clientY); }
+// Phones: listen to touch AND pointer events and take whichever arrives first. Some phones drop the first
+// pointer events after a page change; touch events still come through, so a tap always registers.
+let lastDown = 0;
+function pDown(cx, cy) { const n = performance.now(); if (n - lastDown < 250 && ptr.down) return; lastDown = n; toCanvasXY(cx, cy); ptr.down = true; ptr.clicked = true; ptr.released = false; ac(); smear.push({ x: ptr.x, y: ptr.y, t: n, dot: true }); }
+function pMove(cx, cy) { toCanvasXY(cx, cy); if (ptr.down) { const l = smear[smear.length - 1]; if (!l || Math.hypot(l.x - ptr.x, l.y - ptr.y) > 2) smear.push({ x: ptr.x, y: ptr.y, t: performance.now(), px: l ? l.x : ptr.x, py: l ? l.y : ptr.y }); } }
+function pUp() { if (ptr.down) ptr.released = true; ptr.down = false; }
+cv.addEventListener('touchstart', e => { e.preventDefault(); const t = e.changedTouches[0]; pDown(t.clientX, t.clientY); }, { passive: false });
+cv.addEventListener('touchmove', e => { e.preventDefault(); const t = e.changedTouches[0]; pMove(t.clientX, t.clientY); }, { passive: false });
+cv.addEventListener('touchend', e => { e.preventDefault(); pUp(); }, { passive: false });
+cv.addEventListener('touchcancel', pUp);
+cv.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') return; pDown(e.clientX, e.clientY); });
+cv.addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; pMove(e.clientX, e.clientY); });
+addEventListener('pointerup', e => { if (e.pointerType !== 'touch') pUp(); });
 const pressed = k => hit[k];
 const confirmHit = () => hit[' '] || hit['Enter'] || hit['z'] || hit['Z'];
 const inBox = (x, y, w, h) => ptr.x >= x && ptr.x <= x + w && ptr.y >= y && ptr.y <= y + h;
@@ -679,50 +691,83 @@ function boardList(s) {
   for (const id of (s.board || [])) { const c = callById(id); if (c && !(s.doneToday || []).includes(id)) rows.push({ c }); }
   return rows;
 }
-const VM_Y = 61, VM_H = 23;
+// the voicemail board: Matt holds up the poop phone. Swipe (or ▲▼) through the messages, tap one to call them back.
+const VMP = { x: 150, y: 50, w: 180, h: 214 }, VM_ROW = 58, VM_TOP = VMP.y + 40, VM_VIEW = VMP.h - 54;
 const BoardUI = {
-  init() { this.cur = 0; this.msg = ''; this.msgT = 0; },
+  init() { this.cur = 0; this.scroll = 0; this.drag = null; this.msg = ''; this.msgT = 0; this.vel = 0; },
   rows() { return boardList(DDT.get()); },
-  box(i) { return [8, VM_Y + i * (VM_H + 2), 464, VM_H]; },
-  foot(i) { return [[8, 240, 150, 22], [164, 240, 150, 22], [320, 240, 152, 22]][i]; },
+  side(i) { return [[8, 70, 132, 52], [340, 70, 132, 52], [340, 132, 132, 52]][i]; },
+  maxScroll() { return Math.max(0, this.rows().length * VM_ROW - VM_VIEW); },
+  choose(p) {
+    const rows = this.rows(), sv = DDT.get(); SND.blip();
+    if (p === 'lead') { sv.prefLead = (sv.prefLead || 'rod') === 'rod' ? 'matt' : 'rod'; DDT.save(sv); return; }
+    if (p === 'drive') { sv.prefDrive = ((sv.prefDrive ?? 1) + 1) % 3; DDT.save(sv); return; }
+    if (p === 'shop') return this.done({ shop: true });
+    const r = rows[p]; if (!r) return;
+    if (r.c.gate && !sv.inv[r.c.gate]) { this.msg = `NEEDS A ${SHOP.find(i => i.id === r.c.gate).name}`; this.msgT = 2; SND.bad(); return; }
+    this.done(r);
+  },
+  hitAt(x, y) {
+    const sides = ['lead', 'drive', 'shop']; for (let k = 0; k < 3; k++) if (x >= this.side(k)[0] && x <= this.side(k)[0] + this.side(k)[2] && y >= this.side(k)[1] && y <= this.side(k)[1] + this.side(k)[3]) return sides[k];
+    if (x >= VMP.x && x <= VMP.x + VMP.w && y >= VM_TOP && y <= VM_TOP + VM_VIEW) { const i = Math.floor((y - VM_TOP + this.scroll) / VM_ROW); if (i >= 0 && i < this.rows().length) return i; }
+    return null;
+  },
   update(dt) {
     this.msgT = Math.max(0, this.msgT - dt);
-    const rows = this.rows(), n = rows.length + 3;
-    if (pressed('ArrowDown') || pressed('ArrowRight')) this.cur = (this.cur + 1) % n; if (pressed('ArrowUp') || pressed('ArrowLeft')) this.cur = (this.cur + n - 1) % n;
-    let p = null; if (ptr.clicked) { rows.forEach((r, i) => { if (inBox(...this.box(i))) p = i; }); for (let k = 0; k < 3; k++) if (inBox(...this.foot(k))) p = rows.length + k; }
-    if (confirmHit()) p = this.cur;
-    if (p === null) return; this.cur = p; SND.blip();
-    const sv = DDT.get();
-    if (p === rows.length) { sv.prefLead = (sv.prefLead || 'rod') === 'rod' ? 'matt' : 'rod'; DDT.save(sv); return; }
-    if (p === rows.length + 1) { sv.prefDrive = ((sv.prefDrive ?? 1) + 1) % 3; DDT.save(sv); return; }
-    if (p === rows.length + 2) return this.done({ shop: true });
-    const r = rows[p];
-    if (r.c.gate && !sv.inv[r.c.gate]) { this.msg = `NEEDS A ${SHOP.find(i => i.id === r.c.gate).name}. FERNKO'S HAS ONE.`; this.msgT = 2; SND.bad(); return; }
-    this.done(r);
+    const rows = this.rows(), n = rows.length;
+    // keyboard: ▲▼ through the messages, ◀▶ to the side buttons, Enter to pick
+    if (pressed('ArrowDown')) this.cur = typeof this.cur === 'number' ? Math.min(n - 1, this.cur + 1) : 0;
+    if (pressed('ArrowUp')) this.cur = typeof this.cur === 'number' ? Math.max(0, this.cur - 1) : 0;
+    if (pressed('ArrowLeft')) this.cur = 'lead'; if (pressed('ArrowRight')) this.cur = this.cur === 'drive' ? 'shop' : 'drive';
+    if (typeof this.cur === 'number' && (pressed('ArrowDown') || pressed('ArrowUp'))) { const y = this.cur * VM_ROW; if (y < this.scroll) this.scroll = y; if (y + VM_ROW > this.scroll + VM_VIEW) this.scroll = y + VM_ROW - VM_VIEW; }
+    if (confirmHit()) return this.choose(this.cur);
+    // touch: drag to scroll (with a little fling), lift without dragging to tap
+    if (ptr.clicked) { this.drag = { y0: ptr.y, x0: ptr.x, s0: this.scroll, moved: false, ly: ptr.y }; this.vel = 0; }
+    if (this.drag && ptr.down) {
+      const dy = ptr.y - this.drag.y0; if (Math.abs(dy) > 5) this.drag.moved = true;
+      if (this.drag.moved) { this.vel = (this.drag.ly - ptr.y) / Math.max(dt, 0.001); this.scroll = this.drag.s0 - dy; }
+      this.drag.ly = ptr.y;
+    }
+    if (this.drag && !ptr.down) { const d = this.drag; this.drag = null; if (!d.moved) { const h = this.hitAt(d.x0, d.y0); if (h !== null) { this.cur = h; return this.choose(h); } } }
+    if (!this.drag && Math.abs(this.vel) > 5) { this.scroll += this.vel * dt; this.vel *= Math.pow(0.04, dt); }
+    this.scroll = Math.max(0, Math.min(this.maxScroll(), this.scroll));
   },
   draw() {
     backdrop();
+    g.fillStyle = 'rgba(8,10,16,.55)'; g.fillRect(0, 46, W, H - 46);
     const s = DDT.get(), rows = this.rows(), lead = s.prefLead || 'rod', drv = s.prefDrive ?? 1;
-    R(4, 48, 472, 220, 'rgba(10,14,22,.94)'); g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(4.5, 48.5, 471, 219);
-    T(`VOICEMAIL (${rows.length})`, 12, 55, '#f7c418', 6, 'left', false);
-    T(`DAY ${(s.day || 0) + 1} OF ${DAYS_PER_MONTH} · CALL ${(s.jobsToday || 0) + 1} OF ${CALLS_PER_DAY}${(s.jobsToday || 0) < LUNCH_AFTER ? ' · LUNCH AFTER ' + LUNCH_AFTER : ''}`, 468, 55, '#9fb3d9', 4, 'right', false);
+    // side buttons
+    const SB = [[`PLAYING AS`, lead.toUpperCase(), lead === 'rod' ? 'Steady · 40 MPH' : 'Fast · 60 MPH', 'lead'], ['DRIVE', DRV[drv].replace('SLOW AND STEADY', 'SLOW + STEADY'), 'Tap to change', 'drive'], ["FERNKO'S", 'SUPPLY', '+20 min · parts, gear', 'shop']];
+    SB.forEach(([a, b, c, id], k) => { const [x, y, w, h] = this.side(k); R(x, y, w, h, this.cur === id ? '#2c6cd6' : 'rgba(16,21,31,.92)'); g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(x + .5, y + .5, w - 1, h - 1);
+      if (id === 'lead') { const im = artImg(lead + '_normal'); g.imageSmoothingEnabled = false; if (im) g.drawImage(im, x + 4, y + 6, 40, 40); T(a, x + 50, y + 12, '#9fb3d9', 4, 'left', false); T(b, x + 50, y + 26, '#fff', 7, 'left', false); T(c, x + 50, y + 40, '#7dffb0', 4, 'left', false); }
+      else { T(a, x + w / 2, y + 12, '#9fb3d9', 4, 'center', false); T(b, x + w / 2, y + 26, '#fff', 6, 'center', false); T(c, x + w / 2, y + 40, '#7dffb0', 4, 'center', false); } });
+    T('TAP TO SWAP', 74, 130, '#9fb3d9', 4, 'center', false);
+    // the phone
+    const rr = (x, y, w, h, r, col) => { g.fillStyle = col; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); };
+    const { x: px, y: py, w: pw, h: ph } = VMP;
+    rr(px - 4, py - 4, pw + 8, ph + 12, 18, '#000'); rr(px - 2, py - 2, pw + 4, ph + 8, 16, '#6a6a72'); rr(px, py, pw, ph + 4, 14, '#0d0d10');
+    rr(px + 5, py + 5, pw - 10, ph - 6, 10, '#0f1a2c');
+    E(px + pw / 2, py + 11, 2.5, 2.5, '#000');
+    T('VOICEMAIL', px + 12, py + 22, '#f7c418', 6, 'left', false); T(`${rows.length} NEW`, px + pw - 12, py + 22, '#9fb3d9', 4, 'right', false);
+    T(`DAY ${(s.day || 0) + 1}/${DAYS_PER_MONTH} · CALL ${(s.jobsToday || 0) + 1}/${CALLS_PER_DAY}${(s.jobsToday || 0) < LUNCH_AFTER ? ' · LUNCH AFTER ' + LUNCH_AFTER : ''}`, px + pw / 2, py + 32, '#6f7fa8', 4, 'center', false);
+    g.save(); g.beginPath(); g.rect(px + 5, VM_TOP, pw - 10, VM_VIEW); g.clip();
     rows.forEach((r, i) => {
-      const [x, y, w, h] = this.box(i), c = r.c, sel = i === this.cur, locked = c.gate && !s.inv[c.gate];
-      R(x, y, w, h, sel ? '#2c6cd6' : locked ? '#2a1d22' : '#1d2638');
-      if (isStory(c)) { R(x, y, 3, h, '#f7c418'); }
-      T(c.cust ? c.cust.name : 'UNKNOWN', x + 8, y + 7, '#fff', 5, 'left', false);
-      T(c.town, x + 8, y + 16, '#9fb3d9', 4, 'left', false);
-      const msg = c.ring || c.title;
-      wrap('"' + msg + '"', 262, 4).slice(0, 2).forEach((l, k) => T(l, x + 96, y + 7 + k * 8, sel ? '#fff' : '#cfd8e8', 4, 'left', false));
-      const tag = isStory(c) ? 'STORY JOB' : '';
-      T(GAME_NAME[c.game] || '', x + w - 6, y + 7, '#7dffb0', 4, 'right', false);
-      if (locked) T(`NEEDS ${SHOP.find(q => q.id === c.gate).name}`, x + w - 6, y + 16, '#e9665a', 4, 'right', false);
-      else if (tag) T(tag, x + w - 6, y + 16, c.story ? '#f7c418' : '#b9c9e6', 4, 'right', false);
+      const y = VM_TOP + i * VM_ROW - this.scroll; if (y > VM_TOP + VM_VIEW || y + VM_ROW < VM_TOP) return;
+      const c = r.c, sel = i === this.cur, locked = c.gate && !s.inv[c.gate], story = isStory(c);
+      R(px + 7, y + 1, pw - 14, VM_ROW - 3, sel ? '#2c6cd6' : locked ? '#2a1d22' : '#1d2638'); if (story) R(px + 7, y + 1, 3, VM_ROW - 3, '#f7c418');
+      E(px + 22, y + 15, 9, 9, '#3a4a64'); T((c.cust ? c.cust.name : '?')[0], px + 22, y + 16, '#cfd8e8', 7, 'center', false);
+      T(c.cust ? c.cust.name : 'UNKNOWN', px + 36, y + 10, '#fff', 5, 'left', false); T(c.town, px + 36, y + 20, '#9fb3d9', 4, 'left', false);
+      T(GAME_NAME[c.game] || '', px + pw - 12, y + 10, '#7dffb0', 4, 'right', false);
+      if (locked) T(`NEEDS ${SHOP.find(q => q.id === c.gate).name}`, px + pw - 12, y + 20, '#e9665a', 4, 'right', false);
+      else if (story) T('STORY JOB', px + pw - 12, y + 20, '#f7c418', 4, 'right', false);
+      wrap('"' + (c.ring || c.title) + '"', pw - 30, 4).slice(0, 3).forEach((l, k) => T(l, px + 14, y + 31 + k * 7, sel ? '#fff' : '#cfd8e8', 4, 'left', false));
     });
-    if (!rows.length) T('NO MESSAGES. QUIET DAY.', 240, 120, '#9fb3d9', 6, 'center');
-    const n = rows.length, F = [[`PLAYING AS ${lead.toUpperCase()}`, lead === 'rod' ? 'TAP TO SWAP · STEADY' : 'TAP TO SWAP · FAST'], [`DRIVE: ${DRV[drv]}`, 'TAP TO CHANGE'], ["FERNKO'S SUPPLY", '+20 MIN · PARTS + GEAR']];
-    F.forEach(([a, b], k) => { const [x, y, w, h] = this.foot(k); R(x, y, w, h, this.cur === n + k ? '#2c6cd6' : '#262f45'); T(a, x + w / 2, y + 6, '#fff', 4, 'center', false); T(b, x + w / 2, y + 14, '#9fb3d9', 4, 'center', false); });
-    if (this.msgT > 0) { R(8, 226, 464, 14, '#5a1d22'); T(this.msg, 240, 233, '#fff', 5, 'center', false); }
+    if (!rows.length) T('NO MESSAGES', px + pw / 2, VM_TOP + 40, '#9fb3d9', 5, 'center', false);
+    g.restore();
+    // scroll bar + swipe hint
+    const ms = this.maxScroll(); if (ms > 0) { const bh = VM_VIEW * VM_VIEW / (VM_VIEW + ms); R(px + pw - 7, VM_TOP + (VM_VIEW - bh) * (this.scroll / ms), 2, bh, '#9fb3d9'); }
+    if (ms > 0 && this.scroll < 4) T('SWIPE UP FOR MORE', px + pw / 2, py + ph - 4, '#6f7fa8', 4, 'center', false);
+    if (this.msgT > 0) { R(px + 8, py + ph - 26, pw - 16, 14, '#5a1d22'); T(this.msg, px + pw / 2, py + ph - 19, '#fff', 4, 'center', false); }
   },
 };
 
@@ -1075,7 +1120,7 @@ function frame(now) {
       g.globalAlpha = 1; }
     drawButtons();
   }
-  ptr.clicked = false; for (const k in hit) delete hit[k];
+  ptr.clicked = false; ptr.released = false; for (const k in hit) delete hit[k];
   requestAnimationFrame(frame);
 }
 const ASSETS = { rod: 'rod_dance', van: 'van_left', matt: 'matt_dance', rod_normal: 'rod_normal', rod_happy: 'rod_happy', rod_phone: 'rod_phone',
