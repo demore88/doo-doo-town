@@ -270,6 +270,7 @@ function drive3d(choice, opts) {
   rc.onpointerup = rc.onpointercancel = rc.onlostpointercapture = e => { pts.delete(e.pointerId); retouch(); };
   addEventListener('pointerup', e => { if (pts.delete(e.pointerId)) retouch(); }); addEventListener('blur', () => { pts.clear(); retouch(); });
   const say = (m, s = 1.4) => { msg = m; msgT = s; };
+  if (typeof DDT !== 'undefined' && DDT.DEV) window.__deer = () => critters.push({ kind: 'deer', seg: 0, off: 0, dir: 1, hit: true, fly: 0.001, flyDir: 1 });   // dev: test the windshield deer
   const sfx = (n, o) => { if (window.DDTSfx) DDTSfx.play(n, o); };
 
   // ---------- projection ----------
@@ -476,7 +477,29 @@ function drive3d(choice, opts) {
         else if (vanFail) { r.save(); r.translate(vx + 36, vy + 52); r.rotate(steer * 0.04); r.scale(1.35, 1.35); r.drawImage(brake ? VANBRAKE : VAN, -36, -52); r.restore(); }
         if (gas && speed > CRUISE * 0.9) { r.fillStyle = 'rgba(200,200,205,.6)'; for (let i = 0; i < 3; i++) r.fillRect(vx + 20 + Math.random() * 4, vy + 50 + i * 3, 3, 2); }
       }
-      for (const cr of critters) if (cr.fly > 0 && cr.fly < 1.3) {
+      for (const cr of critters) if (cr.kind === 'deer' && cr.fly > 0 && cr.fly < 4.2) {   // the deer: spins up over the hood and lands face-first on the windshield
+        const img = CIMG.deer, f = cr.fly, HIT = 0.75;
+        if (f < HIT) {   // tumbling up and toward us, getting huge
+          const k = f / HIT, sc = 1.2 + k * 1.8, fx = W / 2 + 10 + (W - 150 - W / 2) * k, fy = H - 70 - Math.sin(k * Math.PI * 0.9) * 120;
+          r.save(); r.translate(fx, fy); r.rotate(k * Math.PI * 4); r.drawImage(img, -img.width * sc / 2, -img.height * sc / 2, img.width * sc, img.height * sc); r.restore();
+        } else {   // SPLAT: face-first on the glass, upside down, then a slow slide down leaving a streak
+          const u = Math.min(1, (f - HIT) / 2.6), slide = u * u * 170, ix = W - 70, iy = 58, hy = iy + slide, fade = f > 3.5 ? 1 - (f - 3.5) / 0.7 : 1;
+          if (!cr.splat) { cr.splat = 1; shake = Math.max(shake, 0.35); sfx('horn'); say('SPLAT!', 1.4); }
+          r.save();
+          r.globalAlpha = 0.85 * fade; r.fillStyle = '#e8eef2';   // star crack where the face hit
+          for (let a = 0; a < 7; a++) { const an = a * 0.9 + 0.2; for (let d = 4; d < 34; d += 2) r.fillRect(Math.round(ix + Math.cos(an) * d), Math.round(iy + Math.sin(an) * d * 0.8), 1.5, 1.5); }
+          r.globalAlpha = 0.75 * fade;   // the smear: a wide brown streak from the hit down to where the face is now
+          r.fillStyle = '#6b4423'; r.fillRect(ix - 13, iy, 26, slide);
+          r.fillStyle = '#4e3018'; r.fillRect(ix - 9, iy, 6, slide); r.fillRect(ix + 4, iy, 5, slide);
+          r.fillStyle = '#8a5a2e'; for (let i = 0; i < 6; i++) { const dx = -15 + i * 6, len = slide * (0.55 + (i * 37 % 10) / 22); r.fillRect(ix + dx, iy, 2, len); r.fillRect(ix + dx - 1, iy + len, 4, 3); }   // drips
+          r.beginPath(); r.arc(ix, iy, 15, 0, 7); r.fill();
+          r.globalAlpha = fade; const sc = 3, w = img.width * sc, h = img.height * sc, sq = f - HIT < 0.15 ? 0.75 : 1;
+          r.translate(ix, hy); r.rotate(1.85 + Math.sin(f * 7) * 0.04); r.scale(1, sq);   // head at the glass, body hanging above it
+          r.drawImage(img, -0.78 * w, -0.17 * h, w, h);
+          r.restore();
+        }
+      }
+      for (const cr of critters) if (cr.kind !== 'deer' && cr.fly > 0 && cr.fly < 1.3) {
         const k = cr.fly / 1.3, img = CIMG[cr.kind], sc = (cr.kind === 'deer' ? 2.4 : 2) * (1.4 - k * 0.9);
         const fx = W / 2 + cr.flyDir * (20 + 140 * k), fy = H - 60 - Math.sin(k * Math.PI) * 170 + k * 20;
         r.save(); r.translate(fx, fy); r.rotate(cr.flyDir * k * 9); r.drawImage(img, -img.width * sc / 2, -img.height * sc / 2, img.width * sc, img.height * sc); r.restore();
