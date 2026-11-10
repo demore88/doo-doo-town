@@ -154,7 +154,7 @@ function drive3d(choice, opts) {
   const SHOULDER = [0, 1, 2].map(i => DI(`shoulder_${SK}_${i}`));
   const BLDG = [0, 1, 2, 3, 4].map(i => DI(`bldg_${SNOW ? 'winter' : 'summer'}_${i}`));
   const MTN_IMG = DI(`mtn_${SK}`);
-  const CAR_B = [0, 1, 2, 3, 4, 5].map(i => DI(`car_back_${i}`)), CAR_F = [0, 1, 2, 3, 4, 5].map(i => DI(`car_front_${i}`));
+  const CAR_B = [...Array(12).keys()].map(i => DI(`car_back_${i}`)), CAR_F = [...Array(12).keys()].map(i => DI(`car_front_${i}`));
   const LOG_B = DI('logtruck_back'), LOG_F = DI('logtruck_front');
   const ANIM = { moose: [DI('moose_0'), DI('moose_1')], deer: [DI('deer_0'), DI('deer_1')], turkeys: [DI('turkey_0'), DI('turkey_1')] };
   const artReady = () => DL.every(i => i.failed || (i.complete && i.naturalWidth > 0));
