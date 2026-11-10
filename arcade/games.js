@@ -1691,7 +1691,7 @@ GAMES.push({
   },
   draw(s) {
     const L = SR_LEVEL, cam = Math.round(s.cam), t = s.t;
-    const BG = MG('sr_bg'), SI = n => MG('sr_' + n);
+    const BG = MG('sr_bg'), SI = n => MG('sr_' + n), T2 = n => MG('sr2_' + n);
     R(0, 0, W, H, '#2a1d14');   // nothing stale ever shows below the level
     if (BG) { const ox = -((cam * 0.3) % W); g.drawImage(BG, ox, -20, W, H); g.drawImage(BG, ox + W, -20, W, H); }   // the White Mountains, scrolling slowly
     else { const gr = g.createLinearGradient(0, 0, 0, 240); gr.addColorStop(0, '#5aa8f0'); gr.addColorStop(1, '#bfe6ff'); g.fillStyle = gr; g.fillRect(0, 0, W, H); }
@@ -1701,18 +1701,24 @@ GAMES.push({
     const c0 = Math.floor(cam / SR_TILE), c1 = c0 + Math.ceil(W / SR_TILE) + 1;
     for (let c = c0; c <= c1; c++) {
       const x = c * SR_TILE - cam;
-      if (SI('grass')) {   // solid dirt columns; pits are a dark drop; edge tiles only lend their curled grass lip
-        if (!srSolid(c, SR_GROUND)) { R(x, 246, 16, 80, '#1e150e'); R(x, 246, 16, 3, '#3a2a1c'); continue; }
-        const l = !srSolid(c - 1, SR_GROUND), rr = !srSolid(c + 1, SR_GROUND);
-        for (let y = 255; y < 320; y += 16) g.drawImage(SI('dirt'), x - 0.5, y, 17, 17);
-        const e = l ? SI('edgeR') : rr ? SI('edgeL') : null;   // edgeL curls to the right (ground on the left of a pit), edgeR curls to the left
-        if (e) { g.drawImage(SI('grass'), x - 0.5, 238, 17, 19); R(l ? x : x + 13, 250, 3, 70, 'rgba(0,0,0,.4)'); R(l ? x : x + 15, 246, 1, 6, '#2e5a1c'); }   // a clean cliff: the dirt wall, shaded on the pit side
-        else g.drawImage(SI('grass'), x - 0.5, 238, 17, 19);
+      if (T2('grass')) {   // the ground tile set: grass tops, dirt, straight cliff walls at pits, dark pit shafts
+        const tile = (n, ty) => { const im = T2(n), h = 16 * im.height / im.width; g.drawImage(im, x - 0.5, ty + 16 - h, 17, h + 0.5); };   // bottom-anchored, so grass blades poke up
+        if (!srSolid(c, SR_GROUND)) { tile('pittop', 240); for (let y = 256; y < 320; y += 16) tile('pit', y); continue; }
+        const l = !srSolid(c - 1, SR_GROUND), rr = !srSolid(c + 1, SR_GROUND), v = (c * 7919) % 11;
+        for (let y = 256; y < 320; y += 16) tile(l ? 'cliffL' : rr ? 'cliffR' : (y === 272 && v === 3) ? 'dirtrock' : (y === 288 && v === 7) ? 'dirtroots' : 'dirt', y);
+        tile(l ? 'cliffLtop' : rr ? 'cliffRtop' : 'grass', 240);
         continue; }
       if (srSolid(c, SR_GROUND)) { R(x, 240, 16, 64, '#8a5a32'); R(x, 240, 16, 4, '#5fb848'); R(x + 3, 250, 3, 3, '#6b4423'); R(x + 10, 260, 3, 3, '#6b4423'); }
     }
     for (const [px, h] of L.pipes) {                                   // white PVC "pipes" (they're cleanouts, Ron)
       const x = px * SR_TILE - cam, top = (SR_GROUND - h) * SR_TILE; if (x < -40 || x > W + 10) continue;
+      if (T2('ptop')) {   // pipe pieces: the cap off the top piece, the flared foot off the base piece, plain pipe repeating in between (clipped to the pipe's height)
+        const pw = 36, px0 = x + 16 - pw / 2, bot = SR_GROUND * SR_TILE, I = T2, part = (n, f0, f1, y, h) => g.drawImage(I(n), 0, I(n).height * f0, I(n).width, I(n).height * (f1 - f0), px0, y, pw, h);
+        const capH = pw * I('ptop').height * 0.5 / I('ptop').width, footH = pw * I('pbase').height * 0.22 / I('pbase').width, bodyH = pw * I('pbody').height / I('pbody').width;
+        g.save(); g.beginPath(); g.rect(px0 - 2, top, pw + 4, bot - top); g.clip();
+        let k = 0; for (let y = bot - footH; y > top + capH * 0.6 - bodyH; y -= bodyH) { const n = ['pbody', 'pcoup', 'pbody', 'pstain'][(px + k++) % 4]; part(n, 0, 1, y - bodyH, bodyH + 0.5); }
+        part('pbase', 0.78, 1, bot - footH, footH); g.restore();
+        g.drawImage(I('ptop'), 0, 0, I('ptop').width, I('ptop').height * 0.5, px0 - 1, top - 3, pw + 2, capH); continue; }
       if (SI('pipetop')) { const pw = 40, px0 = x - 4, mh = pw * SI('pipemid').height / SI('pipemid').width; g.save(); g.beginPath(); g.rect(px0, top, pw, SR_GROUND * SR_TILE - top + 2); g.clip();
         for (let y = SR_GROUND * SR_TILE - mh + 4; y > top - mh; y -= mh) g.drawImage(SI('pipemid'), px0, y, pw, mh); g.restore(); g.drawImage(SI('pipetop'), px0 - 1, top - 4, pw + 2, 22); continue; }
       R(x + 2, top + 6, 28, h * SR_TILE - 6, '#e8ecef'); R(x + 4, top + 6, 5, h * SR_TILE - 6, '#ffffff'); R(x + 24, top + 6, 5, h * SR_TILE - 6, '#c9ced6');
@@ -1720,6 +1726,7 @@ GAMES.push({
     }
     for (const [bx, by] of L.bricks) {                                // cinder blocks (break them when you're big)
       const k = bx + ',' + by; if (SR_BROKE && SR_BROKE.has(k)) continue; const x = bx * SR_TILE - cam, y = by * SR_TILE - (s.bumps.some(b => b.k === k) ? 3 : 0); if (x < -16 || x > W) continue;
+      if (T2('cinder')) { g.drawImage(T2('cinder'), x, y, 16, 16); continue; }
       if (SI('cinder')) { g.drawImage(SI('cinder'), x, y, 16, 16); continue; }
       R(x, y, 16, 16, '#9a958c'); R(x, y, 16, 1, '#c4bfb4'); R(x, y + 7, 16, 2, '#6f6a62'); R(x + 7, y, 2, 7, '#6f6a62'); R(x + 3, y + 9, 2, 7, '#6f6a62'); R(x + 11, y + 9, 2, 7, '#6f6a62'); R(x + 2, y + 2, 4, 4, '#7d786f'); R(x + 10, y + 2, 4, 4, '#7d786f');
     }
@@ -1729,6 +1736,7 @@ GAMES.push({
       for (let i = 0; i < 2; i++) R(x - 2 + i * 4, it.y - 14 - Math.abs(Math.sin(t * 6 + i)) * 3, 1, 3, '#ffffffaa'); }
     for (const [bx, by] of L.blocks) {                                // toolboxes
       const x = bx * SR_TILE - cam, y = by * SR_TILE - (s.bumps.some(b => b.k === bx + ',' + by) ? 3 : 0), used = s.bonked.has(bx + ',' + by); if (x < -16 || x > W) continue;
+      if (T2('toolbox')) { g.drawImage(T2(used ? 'toolbox_used' : 'toolbox'), x, y, 16, 16); continue; }
       if (SI('toolbox')) { g.drawImage(SI(used ? 'toolbox_open' : 'toolbox'), x - 1, y + 1, 18, 15); continue; }
       R(x, y, 16, 16, used ? '#7a4a40' : '#c0392b'); R(x, y + 6, 16, 2, '#8b2a1f'); R(x + 5, y + 2, 6, 2, '#222'); if (!used) R(x + 7, y + 9, 2, 3, '#f7c418');
     }
