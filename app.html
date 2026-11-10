@@ -20,7 +20,7 @@
   let p = new URLSearchParams(location.search).get('p') || 'index.html';
   if (!/^[\w\-\/.]+\.html([?#].*)?$/.test(p) || p.includes('..') || p.startsWith('app.html')) p = 'index.html';
   const f = document.getElementById('f'), b = document.getElementById('max');
-  f.src = p;
+  f.src = p + (p.includes('?') ? '&' : '?') + 't=' + Date.now();   // never an old saved copy of the first screen
   window.ddtFS = () => {
     const d = document.documentElement; if (document.fullscreenElement || !d.requestFullscreen) return;
     d.requestFullscreen({ navigationUI: 'hide' }).then(() => { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); }).catch(() => {});

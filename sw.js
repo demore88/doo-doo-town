@@ -1,7 +1,7 @@
 /* Doo Doo Town offline cache.
    Pages and scripts: network first (so updates show up right away), cache when offline.
    Art and sound: served from the cache, refreshed in the background. */
-const CACHE = 'ddt-v2';
+const CACHE = 'ddt-v3';
 const CORE = ['./', './index.html', './app.html', './play.html', './arcade/index.html', './arcade/games.js',
   './story/job.html', './story/stop.html', './story/coffee.html', './story/fluffernutter.html', './story/alien.html',
   './js/calls.js', './js/drive3d.js', './js/music.js', './js/placeholders.js', './js/sfx.js', './js/state.js',
@@ -12,7 +12,7 @@ self.addEventListener('fetch', e => {
   const r = e.request; if (r.method !== 'GET' || new URL(r.url).origin !== location.origin) return;
   const path = new URL(r.url).pathname, code = r.mode === 'navigate' || /\.(html|js|webmanifest)$/.test(path) || path.endsWith('/');
   if (code) {
-    e.respondWith(fetch(r).then(res => { const cp = res.clone(); caches.open(CACHE).then(c => c.put(r, cp)); return res; })
+    e.respondWith(fetch(r, { cache: 'no-cache' }).then(res =>   /* always check GitHub for a newer copy */ { const cp = res.clone(); caches.open(CACHE).then(c => c.put(r, cp)); return res; })
       .catch(() => caches.match(r, { ignoreSearch: true })));
   } else {
     e.respondWith(caches.match(r).then(hit => {
