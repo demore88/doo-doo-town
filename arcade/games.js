@@ -12,7 +12,9 @@ function R(x, y, w, h, c) { g.fillStyle = c; g.fillRect(Math.round(x), Math.roun
 function C(x, y, r, c) { g.fillStyle = c; g.beginPath(); g.arc(x, y, Math.max(0.5, r), 0, 7); g.fill(); }
 function T(s, x, y, c, sz, al) {
   g.font = Math.max(5, sz || 8) + 'px "Press Start 2P", monospace'; g.textAlign = al || 'left'; g.textBaseline = 'middle';
-  g.fillStyle = '#000'; g.fillText(s, x + 1, y + 1); g.fillStyle = c || '#fff'; g.fillText(s, x, y); g.textAlign = 'left';
+  const col = c || '#fff', m = /^#([0-9a-f]{6})$/i.exec(col), n = m ? parseInt(m[1], 16) : 0xffffff, lum = m ? (0.3 * (n >> 16) + 0.59 * ((n >> 8) & 255) + 0.11 * (n & 255)) : 255;
+  if (lum > 110) { g.fillStyle = '#000'; g.fillText(s, x + 1, y + 1); }   // drop shadow only behind light text; dark text on a light label stays crisp
+  g.fillStyle = col; g.fillText(s, x, y); g.textAlign = 'left';
 }
 function BAR(x, y, w, h, f, c, label) {
   R(x - 1, y - 1, w + 2, h + 2, '#000'); R(x, y, w, h, '#2c3326'); R(x, y, w * Math.max(0, Math.min(1, f)), h, c);
@@ -1934,7 +1936,8 @@ GAMES.push({
       R(x0 + 4, y + 5, 6, 3, '#111'); R(x0 + c.w - 10, y + 5, 6, 3, '#111');
     }
     // you, with the locator wand
-    if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) { const fy = Y(s.row) + 10; HERO_AT(s, s.px, fy, 1.3, { face: 'U' }); R(s.px + 7, fy - 22, 2, 18, '#f39c12'); R(s.px + 4, fy - 26, 8, 5, '#f7c418'); R(s.px - 7, fy - 30, 14, 3, '#ff7a00'); }
+    if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) { const fy = Y(s.row) + 9, k = 0.6, h = 40 * k;   // smaller than a car; the locator wand scales with him
+      HERO_AT(s, s.px, fy, k, { face: 'U' }); R(s.px + 4, fy - h * 0.6, 1, h * 0.5, '#f39c12'); R(s.px + 2, fy - h * 0.72, 5, 3, '#f7c418'); R(s.px - 3, fy - h * 0.82, 9, 2, '#ff7a00'); }
     DRAWFX(s);
     if (s.sayT > 0) T(s.say, W / 2, Y(s.nl + 1) - 26, '#fff', 7, 'center');
     if (s.flash > 0) { g.globalAlpha = s.flash; R(0, 0, W, H, '#ff2d95'); g.globalAlpha = 1; }
