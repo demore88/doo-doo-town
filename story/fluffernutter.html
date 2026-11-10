@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794338136"></script>
-<script src="../js/music.js?v=1794338136"></script>
-<script src="../js/sfx.js?v=1794338136"></script>
-<script src="../js/calls.js?v=1794338136"></script>
-<script src="../js/placeholders.js?v=1794338136"></script>
+<script src="../js/state.js?v=1794340144"></script>
+<script src="../js/music.js?v=1794340144"></script>
+<script src="../js/sfx.js?v=1794340144"></script>
+<script src="../js/calls.js?v=1794340144"></script>
+<script src="../js/placeholders.js?v=1794340144"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');
@@ -272,25 +272,25 @@ function choicePad() { const lefty = ((typeof DDT !== 'undefined' && DDT.get()) 
 function drawDialog() {
   const d = dialog; if (!d) return;
   d.shown = Math.min(d.text.length, d.shown + 1.1);
-  const Y = st.dialogTop ? -158 : 0;   // dialog can sit at the top so the crew stays visible
-  g.save(); g.translate(0, Y);
-  R(6, 180, W - 12, 86, '#10151f'); g.strokeStyle = '#fff'; g.lineWidth = 3; g.strokeRect(7.5, 181.5, W - 15, 83);
+  // two compact boxes: the speaker's portrait, and a text box sized to the words (so the scene behind stays visible)
+  const top = st.dialogTop || window.DIALOG_TOP;
+  const all = wrap(d.text, 352, 8), n = Math.max(1, all.length), done = d.shown >= d.text.length;
+  const padOn = TOUCHDEV && d.opts && done;
+  const optH = d.opts ? d.opts.length * 13 + 2 : 0, th = 24 + n * 13 + optH, PS = 62;
+  const tx = 6 + PS + 4, tw = W - tx - 6, ty = top ? 6 : H - 6 - th, py = top ? 6 : H - 6 - PS;
+  const frame = (x, y, w, h, c) => { R(x, y, w, h, c); R(x, y, w, 2, '#fff'); R(x, y + h - 2, w, 2, '#fff'); R(x, y, 2, h, '#fff'); R(x + w - 2, y, 2, h, '#fff'); };
   const p = d.port === 'alien' ? IMG.alienP : (IMG[d.port] || portLoad(d.port));
-  const padOn = TOUCHDEV && d.opts && d.shown >= d.text.length;
-  if (!padOn) { R(12, 184, 80, 80, '#2a3346'); if (p) g.drawImage(p, 12, 184, 80, 80);
-  g.strokeStyle = '#f7c418'; g.lineWidth = 2; g.strokeRect(12, 184, 80, 80); }
-  T(d.name, 102, 194, '#f7c418', 8);
-  const lines = wrap(d.text.slice(0, Math.floor(d.shown)), 360, 8);
-  lines.forEach((l, i) => T(l, 102, 210 + i * 13, '#fff', 8));
-  const done = d.shown >= d.text.length;
+  if (!padOn) { frame(6, py, PS, PS, '#2a3346'); if (p) g.drawImage(p, 8, py + 2, PS - 4, PS - 4); }
+  frame(tx, ty, tw, th, 'rgba(16,21,31,.94)');
+  T(d.name, tx + 8, ty + 11, '#f7c418', 8);
+  wrap(d.text.slice(0, Math.floor(d.shown)), 352, 8).forEach((l, i) => T(l, tx + 8, ty + 26 + i * 13, '#fff', 8));
   if (done && d.opts) {
-    const top = 210 + Math.max(1, wrap(d.text, 360, 8).length) * 13 - 2;
-    d.boxes = d.opts.map((o, i) => [100, top + i * 13 + Y, padOn ? 292 : 368, 12]);
+    const oy = ty + 20 + n * 13;
+    d.boxes = d.opts.map((o, i) => [tx + 4, oy + i * 13, tw - 8, 12]);
     if (pressed('ArrowUp')) d.sel = (d.sel + d.opts.length - 1) % d.opts.length;
     if (pressed('ArrowDown')) d.sel = (d.sel + 1) % d.opts.length;
-    d.opts.forEach((o, i) => { const [x, yy, w, h] = d.boxes[i], y = yy - Y; R(x, y, w, h, i === d.sel ? '#2c6cd6' : '#1d2638'); T((i === d.sel ? '> ' : '  ') + o, x + 4, y + 6, '#fff', 6, 'left', false); });
-  } else if (done && Math.floor(performance.now() / 400) % 2) T('▼'.replace('▼', 'v'), 462, 256, '#f7c418', 8, 'right');
-  g.restore();
+    d.opts.forEach((o, i) => { const [x, y, w, h] = d.boxes[i]; R(x, y, w, h, i === d.sel ? '#2c6cd6' : '#1d2638'); T((i === d.sel ? '> ' : '  ') + o, x + 4, y + 6, '#fff', 6, 'left', false); });
+  } else if (done && Math.floor(performance.now() / 400) % 2) T('v', tx + tw - 8, ty + th - 8, '#f7c418', 8, 'right');
   if (padOn) { const P = choicePad();
     for (const [k, lab] of [['up', '▲'], ['dn', '▼']]) { const [x, y, w, h] = P[k]; R(x, y, w, h, '#262f45'); g.strokeStyle = '#9fb3d9'; g.lineWidth = 1.5; g.strokeRect(x + .5, y + .5, w - 1, h - 1); T(lab, x + w / 2, y + h / 2 + 1, '#fff', 10, 'center', false); }
     const [x, y, w, h] = P.sel; E(x + w / 2, y + h / 2, w / 2, h / 2, '#2c6cd6'); g.strokeStyle = '#f7c418'; g.lineWidth = 2; g.beginPath(); g.ellipse(x + w / 2, y + h / 2, w / 2 - 1, h / 2 - 1, 0, 0, 7); g.stroke(); T('SELECT', x + w / 2, y + h / 2 + 1, '#fff', 6, 'center', false); }

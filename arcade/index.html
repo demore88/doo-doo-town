@@ -30,6 +30,8 @@
   .card i{font-style:normal;color:#9fb3d9;font-size:.85em;display:block}
   .card .st{color:#f7c418;margin-top:.4em}
   .box{max-width:44em;margin:4% auto;background:#10151f;border:4px solid #f7c418;box-shadow:6px 6px 0 #000;padding:3% 4%}
+  #result{background:rgba(11,14,21,.25)} #result .box{max-width:26em;margin:2% auto;background:rgba(16,21,31,.72);border-width:3px;padding:1.4% 2.4%;line-height:1.6}
+  #result .big{font-size:1.5em;margin:.1em 0} #result .stars{font-size:1.2em} #result p{margin:.4em 0}
   .box h2{color:#f7c418;margin:0 0 .3em;font-size:1.5em}
   .box .tag{color:#9fb3d9;margin-bottom:1em}
   .box ul{padding-left:1.2em;margin:.6em 0}
@@ -54,6 +56,11 @@
   #pad button.dn{background:rgba(247,196,24,.6)}
   #pad .A{right:3%;bottom:8%;width:15%;border-radius:50%;border-color:#f7c418;font-size:clamp(8px,1.6vw,16px)}
   #pad.nodp .dp{display:none}
+  /* floating thumbstick: put your thumb down anywhere in the left half and slide; it follows your thumb */
+  #pad.stick .dp{display:none} #stickzone{display:none;position:absolute;left:0;bottom:0;width:48%;height:72%;pointer-events:auto;touch-action:none}
+  #pad.stick #stickzone{display:block} #pad.lefty #stickzone{left:auto;right:0}
+  #stickbase{position:absolute;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;border:2px solid rgba(255,255,255,.45);background:rgba(16,21,31,.28);display:none;pointer-events:none}
+  #stickknob{position:absolute;left:50%;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;background:rgba(247,196,24,.75);border:2px solid #fff}
   #pad.lr .dp[data-k=U],#pad.lr .dp[data-k=D],#pad.ud .dp[data-k=L],#pad.ud .dp[data-k=R]{display:none}
   /* left/right games: ◀ on the left edge, ▶ on the right edge, the action button in the middle */
   #pad.lr .dp[data-k=L]{left:3% !important;bottom:8% !important;width:13%}#pad.lr .dp[data-k=R]{left:auto !important;right:3%;bottom:8% !important;width:13%}
@@ -75,6 +82,7 @@
   <div id="pad">
     <button class="dp" data-k="L" style="left:2%;bottom:18%">◀</button><button class="dp" data-k="R" style="left:22%;bottom:18%">▶</button>
     <button class="dp" data-k="U" style="left:12%;bottom:34%">▲</button><button class="dp" data-k="D" style="left:12%;bottom:2%">▼</button>
+    <div id="stickzone"><div id="stickbase"><div id="stickknob"></div></div></div>
     <button data-k="A" class="A" id="actbtn">GO</button>
   </div>
   <div id="top"><button id="quit" style="display:none">✕ QUIT</button><button id="padbtn">PAD</button><button id="snd">♪ OFF</button></div>
@@ -91,9 +99,9 @@
   <div class="scr" id="result"><div class="box" id="resbox"></div></div>
 </div></div>
 <audio id="music" src="../assets/doo_doo_town.mp3" loop preload="auto"></audio>
-<script src="../js/state.js?v=1794338136"></script>
-<script src="../js/sfx.js?v=1794338136"></script>
-<script src="games.js?v=1794338136"></script>
+<script src="../js/state.js?v=1794340144"></script>
+<script src="../js/sfx.js?v=1794340144"></script>
+<script src="games.js?v=1794340144"></script>
 <script>
 const cv = document.getElementById('c'); g = cv.getContext('2d'); const SCALE = 3; g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
 const $ = s => document.querySelector(s);
@@ -128,6 +136,17 @@ document.querySelectorAll('#pad button').forEach(b => {
   const up = () => { held[k] = 0; b.classList.remove('dn'); };
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
 });
+{ // the thumbstick: origin is wherever your thumb lands; direction is how far you slide from there
+  const z = $('#stickzone'), base = $('#stickbase'), knob = $('#stickknob'); let id = null, ox = 0, oy = 0;
+  const setK = (k, on) => { if (on && !held[k]) edge[k] = 1; held[k] = on ? 1 : 0; };
+  const move = e => { if (e.pointerId !== id) return; const r = z.getBoundingClientRect(), dx = e.clientX - ox, dy = e.clientY - oy, m = Math.hypot(dx, dy), lim = 26, k = m > lim ? lim / m : 1;
+    knob.style.transform = `translate(${dx * k}px,${dy * k}px)`;
+    setK('L', dx < -9); setK('R', dx > 9); setK('U', dy < -22 && Math.abs(dy) > Math.abs(dx) * 1.2); setK('D', dy > 22 && Math.abs(dy) > Math.abs(dx) * 1.2); };
+  z.addEventListener('pointerdown', e => { e.preventDefault(); id = e.pointerId; const r = z.getBoundingClientRect(); ox = e.clientX; oy = e.clientY; base.style.left = (ox - r.left) + 'px'; base.style.top = (oy - r.top) + 'px'; base.style.display = 'block'; knob.style.transform = ''; try { z.setPointerCapture(id); } catch (_) {} move(e); });
+  z.addEventListener('pointermove', move);
+  const end = e => { if (e.pointerId !== id) return; id = null; base.style.display = 'none'; ['L', 'R', 'U', 'D'].forEach(k => held[k] = 0); };
+  z.addEventListener('pointerup', end); z.addEventListener('pointercancel', end); z.addEventListener('lostpointercapture', end);
+}
 let coarse = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 let padOn = coarse;
 addEventListener('touchstart', () => { if (!coarse) { coarse = true; padOn = true; showPad(); } }, { passive: true });
@@ -137,7 +156,7 @@ function showPad() {
   const G = cur != null ? GAMES[cur] : null;
   $('#pad').classList.toggle('on', padOn && (phase === 'play' || phase === 'ready') && !(G && G.pad === false));
   $('#pad').classList.toggle('lefty', ((DDT.get() || {}).hand) === 'L');
-  $('#pad').classList.toggle('nodp', !!(G && G.dpad === false)); $('#pad').classList.toggle('lr', !!(G && G.dpad === 'lr')); $('#pad').classList.toggle('ud', !!(G && G.dpad === 'ud'));
+  $('#pad').classList.toggle('nodp', !!(G && G.dpad === false)); $('#pad').classList.toggle('lr', !!(G && G.dpad === 'lr')); $('#pad').classList.toggle('ud', !!(G && G.dpad === 'ud')); $('#pad').classList.toggle('stick', !!(G && G.dpad === 'stick'));
   $('#actbtn').textContent = (G && G.act) || 'GO'; $('#actbtn').style.display = G && G.act === null ? 'none' : '';
   $('#padbtn').textContent = padOn ? 'PAD ON' : 'PAD';
 }

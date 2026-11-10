@@ -314,19 +314,25 @@ GAMES.push({
 // 4. FIND THE SEPTIC — numbers are the exact step-distance to the target.
 GAMES.push({
   id: 'septic', name: 'FIND THE SEPTIC', tag: 'Two feet of snow · "no idea where it is"',
-  how: ['Like Battleship: tap the yard to push your probe rod in.', 'MISS = nothing. "!" = you scraped concrete or gravel nearby.', 'Find the TANK first, then the LEACH FIELD.', 'Own the inspection camera? It shows which way the pipe leaves the house.'],
+  how: ['Like Battleship: tap the yard to push your probe rod in. Find the TANK and the LEACH FIELD.', 'One pipe runs from the tank to a small D-box. From there the field is a big box of perforated pipe with a line down the middle.', 'MISS = nothing. "!" = you scraped concrete or gravel nearby.', 'Find the TANK first, then the LEACH FIELD.', 'Own the inspection camera? It shows which way the pipe leaves the house.'],
   ctl: 'TAP A SQUARE  ·  OR ARROWS + SPACE',
   pad: false, phone: 'tap a square to probe.',
   init(s) {
     s.C = 22; s.Rw = 12; s.Z = 18; s.ox = 42; s.oy = 16; s.HH = 18;   // a BIG snowy yard, house strip above
     s.cam = !!s.camera;
-    s.probes = s.left = [24, 20, 17][s.diff];
-    const wide = s.rnd() < 0.5, tw = wide ? 3 : 2, th = wide ? 2 : 3;
-    s.tc = 1 + Math.floor(s.rnd() * (s.C - tw - 2)); s.tr = Math.floor(s.rnd() * 5);
+    s.probes = s.left = [24, 20, 17][s.diff] + (Number(DDT.param('probes')) || 0);   // spare probe rods from Fernko's
+    const wide = s.rnd() < 0.5, tw = wide ? 3 : 2, th = wide ? 2 : 3, L = 3 + Math.floor(s.rnd() * 2), arm = 3;   // the field: 2*arm+1 wide, L deep
+    s.tc = arm - 1 + Math.floor(s.rnd() * (s.C - tw - 2 * arm + 2)); s.tr = Math.floor(s.rnd() * Math.max(1, s.Rw - th - 2 - L - 1));
     s.tank = new Set(); for (let c = s.tc; c < s.tc + tw; c++) for (let r = s.tr; r < s.tr + th; r++) s.tank.add(`${c},${r}`);
     s.pipeC = s.tc + Math.floor(tw / 2);
-    const lr = Math.min(s.Rw - 3, s.tr + th + 1 + Math.floor(s.rnd() * 3)), lc = clamp(s.tc - 4 + Math.floor(s.rnd() * 8), 0, s.C - 5); s.leach = new Set();
-    for (const r of [lr, lr + 2]) if (r < s.Rw) for (let c = lc; c < lc + 5; c++) s.leach.add(`${c},${r}`);
+    const dr = Math.min(s.Rw - 1 - L, s.tr + th + 1 + Math.floor(s.rnd() * 2)), dc = clamp(s.pipeC, arm, s.C - 1 - arm);
+    s.pipe = new Set(); for (let r = s.tr + th; r < dr; r++) s.pipe.add(`${s.pipeC},${r}`);   // the one solid line out of the tank
+    if (dc !== s.pipeC) for (let c = Math.min(dc, s.pipeC); c <= Math.max(dc, s.pipeC); c++) s.pipe.add(`${c},${dr - 1}`);
+    s.dbox = `${dc},${dr}`; s.dpos = { c: dc, r: dr }; s.L = L; s.arm = arm;
+    s.leach = new Set();   // two squares side by side: the outside box, plus the center line straight down from the D-box
+    for (let c = dc - arm; c <= dc + arm; c++) { s.leach.add(`${c},${dr}`); s.leach.add(`${c},${dr + L}`); }
+    for (let r = dr; r <= dr + L; r++) { s.leach.add(`${dc - arm},${r}`); s.leach.add(`${dc + arm},${r}`); s.leach.add(`${dc},${r}`); }
+    s.leach.delete(s.dbox);
     s.probed = {}; s.found = { tank: false, leach: false }; s.cur = { c: 11, r: 6 }; s.msg = s.cam ? 'Camera says the pipe heads out here. Find the TANK.' : 'Find the TANK. No clues. Just you and a probe rod.';
   },
   update(s, dt, I) {
@@ -338,7 +344,8 @@ GAMES.push({
     if (I.Ap) pick = { ...s.cur };
     if (pick) this.probe(s, pick.c, pick.r);
     const used = s.probes - s.left;
-    if (s.found.tank && s.found.leach) s.end = { win: true, stars: stars3(used <= 11, used <= 15), line: `Found both with ${used} probes.` };
+    if (s.found.tank && s.found.leach && !s.reveal) { s.reveal = 0.001; s.msg = 'Found it all! Tank, pipe, D-box, leach field.'; SFX('ding'); }
+    if (s.reveal) { s.reveal += dt; if (s.reveal > 2.6) s.end = { win: true, stars: stars3(used <= 11, used <= 15), line: `Found the tank and the field with ${used} probes.` }; return; }   // let them look at it first
     else if (s.left <= 0) s.end = { win: false, stars: 0, line: 'Out of probes. Time to call the town for the septic plan.' };
   },
   near(set, c, r) { for (let dc = -1; dc <= 1; dc++) for (let dr = -1; dr <= 1; dr++) if (set.has(`${c + dc},${r + dr}`)) return true; return false; },
@@ -346,8 +353,10 @@ GAMES.push({
     const k = `${c},${r}`; if (s.probed[k] !== undefined) return;
     s.left--;
     if (!s.found.tank && s.tank.has(k)) { s.found.tank = true; s.tank.forEach(t => s.probed[t] = 'T'); s.msg = 'CLUNK! Tank found. Now the LEACH FIELD.'; SFX('clog'); return; }
+    if (k === s.dbox) { s.probed[k] = 'D'; if (!s.found.leach) { s.found.leach = true; s.msg = s.found.tank ? '' : 'The D-box! The field fans out from here. Now the TANK.'; } SFX('clog'); return; }
     if (s.leach.has(k)) { s.probed[k] = 'L'; if (!s.found.leach) { s.found.leach = true; s.msg = s.found.tank ? '' : 'Gravel! Leach field. Now the TANK.'; } return; }
-    const target = s.found.tank ? s.leach : s.tank;
+    if (s.pipe.has(k)) { s.probed[k] = 'P'; s.msg = 'Clink. A pipe. Follow it.'; return; }
+    const target = s.found.tank ? new Set([...s.leach, s.dbox]) : s.tank;
     s.probed[k] = this.near(target, c, r) ? '!' : 'X';
     s.msg = s.probed[k] === '!' ? 'Scraped something. Close!' : 'Nothing. Just dirt.';
   },
@@ -365,10 +374,23 @@ GAMES.push({
     g.strokeStyle = '#dde4ea'; g.lineWidth = 1;
     for (let c = 0; c <= s.C; c++) { g.beginPath(); g.moveTo(s.ox + c * s.Z + .5, gy); g.lineTo(s.ox + c * s.Z + .5, gy + s.Rw * s.Z); g.stroke(); }
     for (let r = 0; r <= s.Rw; r++) { g.beginPath(); g.moveTo(s.ox, gy + r * s.Z + .5); g.lineTo(s.ox + s.C * s.Z, gy + r * s.Z + .5); g.stroke(); }
+    const cx = c => s.ox + c * s.Z + s.Z / 2, cy = r => gy + r * s.Z + s.Z / 2, show = !!s.reveal;
+    if (s.found.tank) { const xs = [...s.tank].map(k => +k.split(',')[0]), ys = [...s.tank].map(k => +k.split(',')[1]), x0 = s.ox + Math.min(...xs) * s.Z, y0 = gy + Math.min(...ys) * s.Z, w = (Math.max(...xs) - Math.min(...xs) + 1) * s.Z, h = (Math.max(...ys) - Math.min(...ys) + 1) * s.Z;
+      R(x0 - 1, y0 - 1, w + 2, h + 2, '#55595e'); R(x0 + 1, y0 + 1, w - 2, h - 2, '#8a8f94'); for (let i = 1; i < 4; i++) R(x0 + 2, y0 + i * h / 4, w - 4, 1, '#7a7f84');   // the concrete tank
+      if (!SPC('septiclid', x0 + w / 2, y0 + h / 2, (Math.min(w, h)) / 55)) T('LID', x0 + w / 2, y0 + h / 2, '#fff', 5, 'center'); }
+    if (show) {   // the whole system, drawn in once you've found it
+      g.strokeStyle = '#3a3f46'; g.lineWidth = 4; g.beginPath(); const pc = [...s.pipe].map(k => k.split(',').map(Number));
+      g.moveTo(cx(s.pipeC), cy(s.tr) + s.Z); for (const [c, r] of pc) g.lineTo(cx(c), cy(r)); g.lineTo(cx(s.dpos.c), cy(s.dpos.r)); g.stroke();
+      const a = s.arm, d = s.dpos; g.strokeStyle = 'rgba(70,60,40,.85)'; g.lineWidth = 5; g.setLineDash([4, 3]);
+      g.strokeRect(cx(d.c - a), cy(d.r), a * 2 * s.Z, s.L * s.Z); g.beginPath(); g.moveTo(cx(d.c), cy(d.r)); g.lineTo(cx(d.c), cy(d.r + s.L)); g.stroke(); g.setLineDash([]);
+      R(cx(d.c) - 6, cy(d.r) - 6, 12, 12, '#6f747a'); R(cx(d.c) - 4, cy(d.r) - 4, 8, 8, '#9aa0a6'); T('D', cx(d.c), cy(d.r) + 1, '#222', 5, 'center');
+      T('LEACH FIELD', cx(d.c), cy(d.r + s.L) + s.Z * 0.9, '#2a3346', 5, 'center'); }
     for (const k in s.probed) {
       const [c, r] = k.split(',').map(Number), p = s.probed[k], x = s.ox + c * s.Z, y = gy + r * s.Z;
-      if (p === 'T') { if (SPC('septiclid', x + s.Z / 2, y + s.Z / 2, (s.Z + 6) / 55)) continue; R(x + 1, y + 1, s.Z - 2, s.Z - 2, '#8a8f94'); T('LID', x + s.Z / 2, y + s.Z / 2, '#fff', 5, 'center'); }
-      else if (p === 'L') { R(x + 1, y + 1, s.Z - 2, s.Z - 2, '#9a8a6a'); T('GRV', x + s.Z / 2, y + s.Z / 2, '#fff', 5, 'center'); }
+      if (p === 'T') continue;
+      if (p === 'P') { R(x + 2, y + s.Z / 2 - 2, s.Z - 4, 4, '#3a3f46'); continue; }
+      if (p === 'D') { R(x + 3, y + 3, s.Z - 6, s.Z - 6, '#6f747a'); T('D', x + s.Z / 2, y + s.Z / 2 + 1, '#fff', 5, 'center'); continue; }
+      if (p === 'L') { R(x + 1, y + 1, s.Z - 2, s.Z - 2, '#9a8a6a'); T('GRV', x + s.Z / 2, y + s.Z / 2, '#fff', 5, 'center'); }
       else if (p === '!') { C(x + s.Z / 2, y + s.Z / 2, 9, '#f2903d'); T('!', x + s.Z / 2 + 1, y + s.Z / 2 + 1, '#111', 8, 'center'); }
       else { g.strokeStyle = '#8fa0b0'; g.lineWidth = 2; g.beginPath(); g.moveTo(x + 7, y + 7); g.lineTo(x + s.Z - 7, y + s.Z - 7); g.moveTo(x + s.Z - 7, y + 7); g.lineTo(x + 7, y + s.Z - 7); g.stroke(); }
     }
@@ -424,58 +446,58 @@ GAMES.push({
 // 6. SEWER CAMERA — you're looking at the camera monitor, straight down the pipe. Push it, tag what's wrong, pick the right branch, find the clog.
 GAMES.push({
   id: 'camera', name: 'SEWER CAMERA', tag: 'Scope the line · tag the problems · find the clog',
-  how: ['This is the camera monitor: you are looking down the pipe.', 'The camera creeps forward on its own. Hold ▲ to push faster, ▼ to back up.', 'When a problem (roots, a crack, an offset joint, the clog) is inside the yellow box, press SPACE to TAG it.', 'Push too fast past an offset joint and the head snags: back up and go again. At the Y, steer ◀ ▶ into the branch the mess is coming from.'],
-  ctl: '▲ PUSH · ▼ BACK UP · ◀ ▶ PICK THE BRANCH · SPACE = TAG',
+  how: ['This is the camera monitor: you are looking down the pipe. Push the camera with ▲ (▼ backs up). Watch the footage counter.', 'The head rolls and wanders as it goes. Keep it LEVEL with ◀ ▶ or the picture tumbles and you lose time.', 'Offset joints catch the head: keep pushing ▲ hard to pop it over the lip.', 'Tag every problem with SPACE when it is in the yellow box. Find the clog.'],
+  ctl: '▲ PUSH · ▼ BACK · ◀ ▶ KEEP LEVEL · SPACE = TAG',
   act: 'TAG',
   init(s) {
-    s.TIME = [45, 40, 36][s.diff]; s.d = 0; s.v = 0; s.FORK = 34 + s.rnd() * 6; s.CLOG = s.FORK + 26 + s.rnd() * 8; s.CAP = s.FORK + 14;
+    s.TIME = [50, 45, 40][s.diff]; s.d = 0; s.v = 0; s.FORK = 1e9; s.CLOG = 42 + s.rnd() * 14; s.CAP = 1e9; s.lvl = 0; s.lvlV = 0; s.push = 0; s.tumble = 0;   // one straight run of pipe, no branches
     s.good = s.rnd() < 0.5 ? -1 : 1; s.choice = 0; s.branch = 0; s.snag = 0; s.snags = 0; s.wrong = 0; s.misses = 0; s.msg = ''; s.msgT = 0; s.flash = 0;
     s.PVC = s.rnd() < 0.5;   // white plastic or old cast iron
     const kinds = ['roots', 'crack', 'offset', 'belly', 'grease', 'roots', 'offset'];
     s.def = []; const add = (a, b, n) => { for (let i = 0; i < n; i++) s.def.push({ d: a + (b - a) * (i + 0.3 + s.rnd() * 0.4) / n, kind: kinds[Math.floor(s.rnd() * kinds.length)], ang: s.rnd() * 6.28, br: a >= s.FORK ? 1 : 0, tagged: false }); };
-    add(6, s.FORK - 4, [3, 3, 4][s.diff]); add(s.FORK + 4, s.CLOG - 4, [2, 3, 3][s.diff]);
-    s.def.push({ d: s.CLOG, kind: 'clog', ang: 0, br: 1, tagged: false });
+    add(6, s.CLOG - 4, [5, 6, 7][s.diff]); s.def.forEach(o => o.br = 0);
+    s.def.push({ d: s.CLOG, kind: 'clog', ang: 0, br: 0, tagged: false });
   },
   bend(s, z) { return 46 * Math.sin(z / 17) + 20 * Math.sin(z / 7.3 + 1); },
   update(s, dt, I) {
-    s.t += dt; FX(s, dt); s.msgT = Math.max(0, s.msgT - dt); s.flash = Math.max(0, s.flash - dt);
+    s.t += dt; FX(s, dt); s.msgT = Math.max(0, s.msgT - dt); s.flash = Math.max(0, s.flash - dt); s.branch = 0;
     const say = (m, t = 1.2) => { s.msg = m; s.msgT = t; };
-    // steering at the Y
-    if (I.L || I.Lp) s.choice = -1; if (I.R || I.Rp) s.choice = 1;
-    if (I.ptr.down && I.ptr.y > 60 && I.ptr.y < 220 && s.d > s.FORK - 12 && !s.branch) s.choice = I.ptr.x < 240 ? -1 : 1;
-    // speed: creeps on its own, ▲ pushes, ▼ backs up (a held finger on the top/bottom of the screen does the same)
-    let want = 3.2;
-    const up = I.U || (I.ptr.down && I.ptr.y < 90), dn = I.D || (I.ptr.down && I.ptr.y > 210);
-    if (up) want = 9 * HERO(s).spd; if (dn) want = -6;
-    if (s.snag > 0) { want = Math.min(0, want); if (dn) { s.snag -= dt * 2.5; if (s.snag <= 0) say('FREE. EASY NOW.'); } }
+    const pd = I.ptr.down, px = I.ptr.x, py = I.ptr.y;
+    const up = I.U || (pd && py < 90), dn = I.D || (pd && py > 210);
+    const lft = I.L || (pd && py >= 90 && py <= 210 && px < 150), rgt = I.R || (pd && py >= 90 && py <= 210 && px > 330);
+    // keeping it level: the head rolls with the pipe's bends and wanders on its own; you steer against it
+    const bendK = (this.bend(s, s.d + 1) - this.bend(s, s.d)) / 30;
+    s.lvlV += ((bendK * s.v * 0.9) + Math.sin(s.t * 1.7 + s.d * 0.3) * 0.5 * s.k + (lft ? 1.9 : 0) - (rgt ? 1.9 : 0) - s.lvl * 0.6) * dt;
+    s.lvlV *= Math.pow(0.35, dt); s.lvl = clamp(s.lvl + s.lvlV * dt, -1.3, 1.3);
+    if (s.tumble > 0) { s.tumble -= dt; s.v = 0; if (s.tumble <= 0) { s.lvl = 0; s.lvlV = 0; say('BACK UPRIGHT.', 0.8); } return; }
+    if (Math.abs(s.lvl) > 1.15) { s.tumble = 1.6; s.shake = 0.4; SFX('clog', { vol: 0.5 }); say('THE HEAD FLIPPED OVER! WAIT FOR IT...', 1.6); return; }
+    // pushing: creeps on its own, ▲ pushes, ▼ backs up; crooked = slow
+    let want = 2.6; if (up) want = 8.5 * HERO(s).spd; if (dn) want = -6;
+    want *= Math.abs(s.lvl) > 0.6 ? 0.45 : 1;
+    if (s.snag > 0) {   // stuck on an offset: shove it over the lip
+      want = Math.min(0, want); if (I.Up || (I.ptr.clicked && py < 90)) s.push += 0.34; if (up) s.push += dt * 0.55; s.push = Math.max(0, s.push - dt * 0.25);
+      if (s.push >= 1) { s.snag = 0; s.push = 0; s.d += 1.4; s.v = 3; s.shake = 0.25; SFX('clog', { vol: 0.6 }); say('POPPED OVER THE LIP.', 1); }
+      if (dn) { s.snag = 0; s.push = 0; }
+    }
     s.v += (want - s.v) * Math.min(1, dt * 4);
     const before = s.d; s.d = Math.max(0, s.d + s.v * dt);
-    // offset joints catch the head if you hit them fast
-    for (const o of s.def) if (o.kind === 'offset' && o.br === s.branch && before < o.d - 0.8 && s.d >= o.d - 0.8) {
-      if (s.v > 6 * Math.sqrt(HERO(s).steady)) { s.d = o.d - 0.9; s.v = 0; s.snag = 1; s.snags++; s.shake = 0.3; SFX('clog', { vol: 0.5 }); say('SNAGGED ON THE JOINT! BACK UP (▼)', 1.6); }
-    }
-    // the Y: you have to pick a side
-    if (!s.branch && s.d >= s.FORK) {
-      if (!s.choice) { s.d = s.FORK; s.v = 0; if (s.msgT <= 0) say('A Y IN THE LINE. ◀ OR ▶ ?', 1); }
-      else { s.branch = s.choice === s.good ? 1 : 2; if (s.branch === 2) say('HMM. CLEAN IN HERE...', 1.2); }
-    }
-    if (s.branch && s.d < s.FORK - 0.5) { s.branch = 0; s.choice = 0; }   // backed out to the Y
-    if (s.branch === 2 && s.d >= s.CAP - 1.5) { s.d = s.CAP - 1.5; s.v = Math.min(s.v, 0); if (s.msgT <= 0) { say('DEAD END. BACK IT UP (▼).', 1.6); s.wrong++; SFX('drill_stop'); } }
+    for (const o of s.def) if (o.kind === 'offset' && before < o.d - 0.8 && s.d >= o.d - 0.8 && !o.popped) {   // every offset joint catches the head
+      o.popped = true; s.d = o.d - 0.85; s.v = 0; s.snag = 1; s.push = 0; s.snags++; s.shake = 0.3; SFX('clog', { vol: 0.5 }); say('OFFSET JOINT! PUSH HARD (TAP ▲ ▲ ▲)', 1.8); }
     // TAG
-    if (I.Ap || (I.ptr.clicked && I.ptr.y >= 90 && I.ptr.y <= 210 && !(s.d > s.FORK - 12 && !s.branch))) {
-      const inBox = s.def.filter(o => !o.tagged && o.br === (s.branch === 1 ? 1 : 0) && o.d - s.d > 1.2 && o.d - s.d < 6.5);
+    if (I.Ap || (I.ptr.clicked && py >= 90 && py <= 210 && px >= 150 && px <= 330)) {
+      const inBox = s.def.filter(o => !o.tagged && o.d - s.d > 0.4 && o.d - s.d < 6.5);
       if (inBox.length) { const o = inBox[0]; o.tagged = true; s.flash = 0.25; SFX('ui_select'); POP(s, 240, 120, `TAGGED: ${this.label(o.kind)} @ ${o.d.toFixed(1)} FT`, '#7dffb0');
         if (o.kind === 'clog') { SFX('drain'); const all = s.def.filter(x => x.kind !== 'clog'), got = all.filter(x => x.tagged).length;
-          s.end = { win: true, stars: stars3(got === all.length && !s.snags && !s.wrong, got >= all.length / 2), line: `Found it at ${o.d.toFixed(0)} feet. Tagged ${got} of ${all.length} problems on the way.` }; return; } }
+          s.end = { win: true, stars: stars3(got === all.length && s.snags <= 1, got >= all.length / 2), line: `Found the clog at ${o.d.toFixed(0)} feet. Tagged ${got} of ${all.length} problems on the way.` }; } }
       else { s.misses++; SFX('click', { vol: 0.3 }); say('NOTHING IN THE BOX', 0.7); }
     }
-    // anything you drive past without tagging is a miss on the report
     if (s.t >= s.TIME) s.end = { win: false, stars: 0, line: "Ran out of time. Customer's watching the clock. No report." };
   },
   label(k) { return { roots: 'ROOTS', crack: 'CRACK', offset: 'OFFSET JOINT', belly: 'BELLY (STANDING WATER)', grease: 'GREASE', clog: 'THE CLOG' }[k]; },
   draw(s) {
     const t = s.t, D = s.d, wall = s.PVC ? [232, 230, 222] : [96, 90, 84], CX = 240, CY = 132;
     R(0, 0, W, H, '#050605');
+    g.save(); g.translate(CX, CY); g.rotate(s.lvl * 0.75 + (s.tumble > 0 ? s.t * 9 : 0)); g.translate(-CX, -CY);   // the picture rolls when the head rolls
     const path = z => { const p = this.bend(s, D + z) - this.bend(s, D); return [CX + p * Math.min(1, z / 14), CY + 18 * Math.sin((D + z) / 11) * Math.min(1, z / 14) - 18 * Math.sin(D / 11) * Math.min(1, z / 14)]; };
     const rad = z => 900 / (z + 2.6);
     const shade = z => { const k = Math.max(0, 1 - z / 26) ** 1.4; return `rgb(${wall.map(c => Math.round(c * (0.12 + 0.88 * k))).join(',')})`; };
@@ -501,9 +523,15 @@ GAMES.push({
     for (const o of vis) {
       const z = o.d - D; let [x, y] = path(z); if (s.branch) x += branchDir * z * 1.5; const r = rad(z), a = o.ang;
       const wx = x + Math.cos(a) * r * 0.82, wy = y + Math.sin(a) * r * 0.82, k = Math.max(0.4, r / 60);
-      if (o.kind === 'roots') { g.strokeStyle = '#8a6a3e'; g.lineWidth = Math.max(1, k); for (let i = 0; i < 7; i++) { g.beginPath(); g.moveTo(x - r * 0.4 + i * r * 0.13, y - r * 0.95); g.quadraticCurveTo(x - r * 0.3 + i * r * 0.12 + Math.sin(i) * r * 0.2, y - r * 0.4, x - r * 0.35 + i * r * 0.11, y - r * (0.2 + (i % 3) * 0.12)); g.stroke(); } }
+      if (o.kind === 'roots') {   // a curtain of roots hanging through a joint: thick at the top, thin and swaying at the tips, with hairs
+        for (let i = 0; i < 14; i++) { const ax = -0.85 + i * 0.13, sx = x + ax * r, sy = y - Math.sqrt(Math.max(0, 1 - ax * ax)) * r * 0.97, len = r * (0.45 + ((i * 37) % 10) / 14), sw = Math.sin(t * 1.6 + i * 1.3) * r * 0.06;
+          let px0 = sx, py0 = sy; for (let k = 1; k <= 6; k++) { const f = k / 6, nx = sx + sw * f * f * 2 + Math.sin(i * 2.1 + k) * r * 0.02, ny = sy + len * f;
+            g.strokeStyle = k < 3 ? '#7a5a32' : '#a4825a'; g.lineWidth = Math.max(0.6, (1 - f * 0.8) * r * 0.045); g.beginPath(); g.moveTo(px0, py0); g.lineTo(nx, ny); g.stroke();
+            if (k > 2 && (i + k) % 2) { g.lineWidth = Math.max(0.5, r * 0.01); g.beginPath(); g.moveTo(nx, ny); g.lineTo(nx + ((k % 2) ? 1 : -1) * r * 0.05, ny + r * 0.04); g.stroke(); }   // root hairs
+            px0 = nx; py0 = ny; } } }
       else if (o.kind === 'crack') { g.strokeStyle = '#1a1612'; g.lineWidth = Math.max(1, k * 0.8); g.beginPath(); g.moveTo(wx, wy - r * 0.3); for (let i = 1; i < 6; i++) g.lineTo(wx + (i % 2 ? 1 : -1) * r * 0.06, wy - r * 0.3 + i * r * 0.12); g.stroke(); }
-      else if (o.kind === 'offset') { g.strokeStyle = s.PVC ? '#9a968a' : '#1a1612'; g.lineWidth = Math.max(2, r * 0.12); g.beginPath(); g.arc(x + r * 0.12, y + r * 0.08, r * 0.95, 0, 7); g.stroke(); g.strokeStyle = 'rgba(232,130,42,.9)'; g.lineWidth = Math.max(2, r * 0.07); g.beginPath(); g.arc(x + r * 0.12, y + r * 0.08, r * 0.9, -0.7, 1.1); g.stroke(); }   // the lip of the shifted pipe catches the light
+      else if (o.kind === 'offset') { g.fillStyle = s.PVC ? 'rgba(120,118,108,.9)' : 'rgba(20,18,16,.95)'; g.beginPath(); g.arc(x, y, r * 0.98, Math.PI * 0.85, Math.PI * 2.15); g.arc(x + r * 0.16, y + r * 0.12, r * 0.86, Math.PI * 2.15, Math.PI * 0.85, true); g.fill();   // the lip where one pipe sits lower than the next
+        g.strokeStyle = s.PVC ? '#9a968a' : '#1a1612'; g.lineWidth = Math.max(2, r * 0.12); g.beginPath(); g.arc(x + r * 0.12, y + r * 0.08, r * 0.95, 0, 7); g.stroke(); g.strokeStyle = 'rgba(232,130,42,.9)'; g.lineWidth = Math.max(2, r * 0.07); g.beginPath(); g.arc(x + r * 0.12, y + r * 0.08, r * 0.9, -0.7, 1.1); g.stroke(); }   // the lip of the shifted pipe catches the light
       else if (o.kind === 'belly') { g.fillStyle = 'rgba(70,110,140,.75)'; g.beginPath(); g.ellipse(x, y + r * 0.62, r * 0.75, r * 0.3, 0, 0, Math.PI); g.fill(); R(x - r * 0.5, y + r * 0.6 + Math.sin(t * 2) * k, r, Math.max(1, k), 'rgba(200,230,255,.5)'); }
       else if (o.kind === 'grease') { g.fillStyle = 'rgba(214,190,90,.85)'; for (let i = 0; i < 5; i++) { const aa = a + i * 0.35; g.beginPath(); g.arc(x + Math.cos(aa) * r * 0.85, y + Math.sin(aa) * r * 0.85, r * 0.12, 0, 7); g.fill(); } }
       else if (o.kind === 'clog') { const mess = s.room === 'kitchen' ? ['#1c1a17', '#2e2a24'] : ['#7a4a1e', '#5a3a1c'];
@@ -511,6 +539,7 @@ GAMES.push({
         R(x - r * 0.2, y - r * 0.1, r * 0.3, r * 0.14, '#f4f4f2'); }   // a wipe in there, naturally
       if (o.tagged) T('TAG', x + r * 0.6, y - r * 0.6, '#7dffb0', 6, 'center');
     }
+    g.restore();
     // the camera's own light falling off, and a vignette like a real monitor
     const vg = g.createRadialGradient(CX, CY, 60, CX, CY, 300); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.85)'); g.fillStyle = vg; g.fillRect(0, 0, W, H);
     // the TAG box: things between 1 and 6.5 feet ahead
@@ -518,12 +547,13 @@ GAMES.push({
     for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { g.beginPath(); g.moveTo(bx + sx * bs, by + sy * bs * 0.6); g.lineTo(bx + sx * bs, by + sy * bs); g.lineTo(bx + sx * bs * 0.6, by + sy * bs); g.stroke(); }
     // monitor overlay: footage counter, REC, scanlines
     for (let y = 16; y < H; y += 3) R(0, y, W, 1, 'rgba(0,0,0,.18)');
-    T(`FT ${s.d.toFixed(1).padStart(5, '0')}`, 12, 30, '#7dffb0', 8); T(s.PVC ? 'PVC 4"' : 'CAST IRON 4"', 12, 44, '#7dffb0', 5);
+    R(8, 20, 92, 20, 'rgba(0,0,0,.55)'); T(`${s.d.toFixed(1).padStart(5, '0')} FT`, 14, 30, '#7dffb0', 10);   // footage counter
+    { const gx = 240, gy = 252; R(gx - 60, gy - 5, 120, 10, 'rgba(0,0,0,.6)'); R(gx - 14, gy - 5, 28, 10, 'rgba(125,255,176,.25)'); R(gx - 2 + clamp(s.lvl, -1.2, 1.2) * 50, gy - 6, 4, 12, Math.abs(s.lvl) > 0.6 ? '#e9665a' : '#7dffb0'); T('LEVEL', gx - 66, gy, '#7dffb0', 5, 'right'); } T(s.PVC ? 'PVC 4"' : 'CAST IRON 4"', 12, 44, '#7dffb0', 5);
     if (Math.floor(t * 2) % 2) { C(W - 70, 28, 3, '#e9665a'); } T('REC', W - 62, 28, '#e9665a', 6);
     const tagged = s.def.filter(o => o.tagged && o.kind !== 'clog').length; T(`TAGS ${tagged}`, W - 12, 44, '#f7c418', 6, 'right');
     if (s.flash > 0) { g.globalAlpha = s.flash * 2; R(0, 16, W, H, '#fff'); g.globalAlpha = 1; }
     if (s.msgT > 0) T(s.msg, 240, 236, '#f7c418', 7, 'center');
-    if (s.snag > 0) T('SNAGGED', 240, 214, '#e9665a', 9, 'center');
+    if (s.snag > 0) { T('SNAGGED · PUSH!', 240, 206, '#e9665a', 9, 'center'); R(190, 214, 100, 6, 'rgba(0,0,0,.6)'); R(190, 214, 100 * Math.min(1, s.push), 6, '#f7c418'); }
     DRAWFX(s); HUD(s, 'SEWER CAMERA', s.TIME - s.t);
   },
 });
@@ -859,12 +889,26 @@ GAMES.push({
     if (IMG.van) { const fw = (IMG.van.width / Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35)))), vh = 144 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.drawImage(IMG.van, 0, 0, fw, IMG.van.height, Math.round(s.LEN - cam + 10), 202 - vh, 144, vh); g.imageSmoothingEnabled = false; };
     for (const o of s.obs) { const x = o.d - cam; R(x - 14, 192, 28, 6, '#2f6f2a'); if (!o.done) R(x - 1, 170, 2, 10, '#f7c418'); }
     const hy = s.hop > 0 ? -Math.sin((1 - s.hop / 0.45) * Math.PI) * 14 : 0;
-    const hasB = !!IMG[(s.hero || 'matt') + '_more'];
-    SPR(s.hero || 'matt', MORE(s.hero || 'matt', 13, 6), 120, 198 + hy);
+    const who = s.hero || 'matt', more = IMG[who + '_more'], hasB = !!more, walking = (s.lastX != null && s.x > s.lastX); s.lastX = s.x;
     const tilt = s.a * 0.5;
     for (const pd of s.puddles) { const x = pd.x - cam; if (x > -10 && x < W + 10) { g.fillStyle = 'rgba(120,190,240,.6)'; g.beginPath(); g.ellipse(x, 199, pd.r * 2, pd.r * 0.6, 0, 0, 7); g.fill(); } }
-    if (hasB) { const sw = Math.abs(s.a) > 0.25 ? s.a : 0; g.fillStyle = 'rgba(150,210,255,.9)';   // the water surface tipping inside the buckets
-      for (const bx of [112, 128]) { g.beginPath(); g.ellipse(bx + sw * 6, 170 + hy - Math.abs(sw) * 3, 6, 2 + Math.abs(sw) * 2, sw * 0.5, 0, 7); g.fill(); } }
+    if (hasB) {   // top half: arms down, hauling. bottom half: real walking legs. Then the buckets, with the water in them.
+      const fw = more.width / 9, fh = more.height, sc = 1.8 * (who === 'rod' ? 0.94 : 1), w = 24 * sc, h = 40 * sc, x0 = 120 - w / 2, y0 = 198 + hy - h, cut = 0.58;
+      const legs = walking ? Math.floor(s.t * 8) % 4 : 1;
+      g.imageSmoothingEnabled = true;
+      g.drawImage(more, legs * fw, fh * cut, fw, fh * (1 - cut), x0, y0 + h * cut, w, h * (1 - cut));   // walking legs
+      g.drawImage(more, 4 * fw, 0, fw, fh * cut, x0, y0, w, h * cut);                                      // hauling top
+      g.imageSmoothingEnabled = false;
+      const hy0 = y0 + h * 0.6;   // where the hands are
+      for (const [bx, front] of [[120 - 5, false], [120 + 7, true]]) {
+        g.save(); g.translate(bx, hy0); g.rotate(tilt * 0.35);
+        R(-7, 2, 14, 15, front ? '#e8822a' : '#c96a1a'); R(-8, 2, 16, 2, front ? '#f29a4a' : '#d77a2a'); R(-6, 9, 12, 1, 'rgba(0,0,0,.18)');   // the bucket
+        g.strokeStyle = '#9aa0a6'; g.lineWidth = 1; g.beginPath(); g.arc(0, 2, 7, Math.PI, 0); g.stroke();                                 // the bail handle
+        const lvl = 2 + (1 - s.load / 100) * 10;   // water level drops as you spill
+        g.fillStyle = 'rgba(120,195,255,.95)'; g.beginPath(); g.ellipse(0, 3 + lvl, 6, 1.6 + Math.abs(s.a) * 1.5, -tilt * 0.9, 0, 7); g.fill();
+        if (Math.abs(s.a) > 0.3) { g.fillStyle = 'rgba(200,235,255,.9)'; g.beginPath(); g.arc(Math.sign(s.a) * 6, 2 + lvl * 0.5, 1.5 + Math.abs(s.a), 0, 7); g.fill(); }   // a wave climbing the rim
+        g.restore(); }
+    } else SPR(who, 6, 120, 198 + hy);
     for (const d of s.drops) { C(d.x, d.y, 2, '#9fd1ff'); R(d.x - 1, d.y - 3, 1, 2, '#d8f0ff'); }
     if (!hasB) for (const side of [-1, 1]) { g.save(); g.translate(120 + side * 14, 178 + hy); g.rotate(tilt); if (!SPI('bucket', 0, 16, 0.52)) { R(-7, 0, 14, 14, '#e07a1f'); R(-6, 2, 12, 6 * s.load / 100 + 1, '#9fd1ff'); } g.restore(); }
     if (s.flash > 0) T('TRIPPED!', 120, 140, '#e9665a', 8, 'center');
@@ -1379,7 +1423,7 @@ GAMES.push({
     for (let c = 0; c < s.C; c++) for (let r = 0; r < s.Rw; r++) {
       const k = c + ',' + r, x = s.ox + c * s.Z, y = s.oy + r * s.Z;
       if (s.open.has(k)) { R(x, y, s.Z, s.Z, '#9cbf6e'); const n = this.count(s, c, r);
-        if (n) T(String(n), x + s.Z / 2 + 1, y + s.Z / 2 + 1, ['', '#2e6fd6', '#2e8a3a', '#d6352e', '#6a2ea0', '#8a3a10'][Math.min(5, n)], 9, 'center'); }
+        if (n && !(c === s.pos.c && r === s.pos.r)) T(String(n), x + s.Z / 2 + 1, y + s.Z / 2 + 1, ['', '#2e6fd6', '#2e8a3a', '#d6352e', '#6a2ea0', '#8a3a10'][Math.min(5, n)], 9, 'center'); }
       else { R(x, y, s.Z, s.Z, (c + r) % 2 ? '#4e7d36' : '#558a3b'); R(x + 6, y + 8, 2, 4, '#6fa04f'); R(x + 18, y + 16, 2, 4, '#6fa04f');
         if (this.reachable(s, c, r) && !s.end) { g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 1; g.strokeRect(x + 1.5, y + 1.5, s.Z - 3, s.Z - 3); } }
       if ((s.stepped.has(k) || (s.end && s.poop.has(k))) && SPI(s.stepped.has(k) ? 'poop' : 'poopcorn', x + 15, y + 26, 0.8)) {} else if (s.stepped.has(k) || (s.end && s.poop.has(k))) { C(x + 15, y + 19, 7, '#5a3a1c'); C(x + 15, y + 14, 5, '#6b4423'); C(x + 15, y + 10, 3, '#7a4a1e'); }
@@ -1389,6 +1433,8 @@ GAMES.push({
     const gx = s.ox + s.goal.c * s.Z, gy = s.oy + s.goal.r * s.Z; if (!SPC('septiclid', gx + 15, gy + 15, 0.5)) C(gx + 15, gy + 15, 11, '#8a8f94'); C(gx + 15, gy + 15, 8, '#a0a5aa'); T('LID', gx + 15, gy + 15, '#333', 5, 'center');
     g.strokeStyle = '#f7c418'; g.lineWidth = 2; g.strokeRect(s.ox + s.cur.c * s.Z + 1, s.oy + s.cur.r * s.Z + 1, s.Z - 2, s.Z - 2);
     HERO_AT(s, s.ox + s.pos.c * s.Z + 15, s.oy + s.pos.r * s.Z + 30, 1.15, { face: 'D' });
+    { const n = s.open.has(s.pos.c + ',' + s.pos.r) ? this.count(s, s.pos.c, s.pos.r) : 0;   // the number under your boots, tucked in the corner so you can still read it
+      if (n) { const x = s.ox + s.pos.c * s.Z, y = s.oy + s.pos.r * s.Z; R(x + s.Z - 11, y + s.Z - 11, 10, 10, 'rgba(255,255,255,.85)'); T(String(n), x + s.Z - 6, y + s.Z - 5, ['', '#2e6fd6', '#2e8a3a', '#d6352e', '#6a2ea0', '#8a3a10'][Math.min(5, n)], 7, 'center'); } }
     HUD(s, 'POOP SWEEPER', null);
     T('BOOTS ' + 'U'.repeat(s.boots) + '-'.repeat(s.bootsMax - s.boots), W - 6, 8, '#fff', 8, 'right');
     R(334, 246, 140, 20, s.flagMode ? '#e9665a' : '#10151f'); T(s.flagMode ? 'FLAG MODE: ON' : 'FLAG MODE: OFF', 404, 256, '#fff', 6, 'center');
@@ -1517,7 +1563,7 @@ GAMES.push({
   id: 'superron', name: 'SUPER RON', tag: 'Ron has a video game now. Rod has notes.',
   how: ['Run right to the golden toilet at the end. Keep running to build up speed; a running jump goes higher.', 'Bonk toolboxes from below. Some hold an espresso: grab it to get big, smash cinder blocks, and survive one extra hit.', 'Squash grease blobs and wipe ghosts by landing on them. Chain stomps for bigger points.', 'Grab golden plungers. Rod will be commenting.'],
   ctl: 'LEFT / RIGHT TO RUN  ·  SPACE / UP TO JUMP',
-  act: 'JUMP',
+  act: 'JUMP', dpad: 'stick',
   init(s) {
     const L = SR_LEVEL;
     s.p = { x: 40, y: SR_GROUND * SR_TILE, vx: 0, vy: 0, on: true, face: 1 };
@@ -1613,12 +1659,13 @@ GAMES.push({
   draw(s) {
     const L = SR_LEVEL, cam = Math.round(s.cam), t = s.t;
     const gr = g.createLinearGradient(0, 0, 0, 240); gr.addColorStop(0, '#5aa8f0'); gr.addColorStop(1, '#bfe6ff'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    g.save(); g.translate(0, -34);   // the whole level sits higher, so your thumbs on the bottom don't cover Ron
     for (let i = 0; i < 6; i++) { const x = ((i * 190 - cam * 0.3) % 1140 + 1140) % 1140 - 100; C(x, 60 + (i % 3) * 18, 12, '#fff'); C(x + 14, 56 + (i % 3) * 18, 15, '#fff'); C(x + 30, 60 + (i % 3) * 18, 11, '#fff'); }
     for (let i = 0; i < 8; i++) { const x = ((i * 160 - cam * 0.55) % 1280 + 1280) % 1280 - 120; g.fillStyle = i % 2 ? '#3f8f4a' : '#4fa357'; g.beginPath(); g.ellipse(x, 242, 70, 40 + (i % 3) * 12, 0, Math.PI, 0); g.fill(); }
     const c0 = Math.floor(cam / SR_TILE), c1 = c0 + Math.ceil(W / SR_TILE) + 1;
     for (let c = c0; c <= c1; c++) {
       const x = c * SR_TILE - cam;
-      if (srSolid(c, SR_GROUND)) { R(x, 240, 16, 30, '#8a5a32'); R(x, 240, 16, 4, '#5fb848'); R(x + 3, 250, 3, 3, '#6b4423'); R(x + 10, 260, 3, 3, '#6b4423'); }
+      if (srSolid(c, SR_GROUND)) { R(x, 240, 16, 64, '#8a5a32'); R(x, 240, 16, 4, '#5fb848'); R(x + 3, 250, 3, 3, '#6b4423'); R(x + 10, 260, 3, 3, '#6b4423'); }
     }
     for (const [px, h] of L.pipes) {                                   // white PVC "pipes" (they're cleanouts, Ron)
       const x = px * SR_TILE - cam, top = (SR_GROUND - h) * SR_TILE; if (x < -40 || x > W + 10) continue;
@@ -1652,10 +1699,11 @@ GAMES.push({
       if (s.won) { for (let i = 0; i < 8; i++) { const a = s.flush * 6 + i; C(tx + 13 + Math.cos(a) * 14 * (1 - s.flush / 2.2), 210 + Math.sin(a) * 5, 2, '#9fd0e0'); } } }
     if (!s.won || s.flush < 0.8) srRon(s.p.x - cam, s.p.y, s.p.skid ? -s.p.face : s.p.face, t * (1 + Math.abs(s.p.vx) / 140), Math.abs(s.p.vx) > 10 && s.p.on, s.inv > 0, s.big);
     s.texts.forEach(o => T(o.txt, o.x - cam, o.y, '#fff', 6, 'center'));
+    g.restore();
     HUD(s, 'SUPER RON', s.time);
     for (let i = 0; i < s.heartsMax; i++) { const on = i < s.hearts; C(130 + i * 12, 8, 3, on ? '#e9665a' : '#444'); C(135 + i * 12, 8, 3, on ? '#e9665a' : '#444'); g.fillStyle = on ? '#e9665a' : '#444'; g.beginPath(); g.moveTo(127 + i * 12, 9); g.lineTo(132.5 + i * 12, 15); g.lineTo(138 + i * 12, 9); g.fill(); }
     R(305, 3, 2, 10, '#c98a1e'); R(301, 2, 10, 4, '#f2c94c'); T(`${s.got}/${s.total}`, 314, 8, '#f2c94c', 6);   // golden plunger count
-    T(String(s.score).padStart(6, '0'), 400, 8, '#fff', 6);
+    T(String(s.score).padStart(6, '0'), W - 8, 22, '#fff', 6, 'right');
     // Rod's running commentary
     if (s.bub) { const lines = []; let ln = ''; for (const w of s.bub.txt.split(' ')) { if ((ln + ' ' + w).length > 34) { lines.push(ln); ln = w; } else ln = ln ? ln + ' ' + w : w; } lines.push(ln);
       const h = 18 + lines.length * 10; R(8, 22, 300, h, 'rgba(16,21,31,.92)'); g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(8.5, 22.5, 299, h - 1);

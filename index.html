@@ -29,7 +29,8 @@
   #menu{position:absolute;left:3%;top:43%;display:flex;flex-direction:column;gap:clamp(4px,1vw,10px);pointer-events:auto}
   .btn{font:inherit;font-size:clamp(7px,1.25vw,14px);background:#10151fcc;color:#fff;border:3px solid #f7c418;padding:.6em 1.2em;cursor:pointer;
     box-shadow:4px 4px 0 #10151f;text-align:center;min-width:12em}
-  #watch{position:absolute;top:2%;right:9.5%;font:inherit;font-size:clamp(6px,1vw,11px);background:#10151fcc;color:#fff;border:2px solid #fff;padding:.5em .7em;cursor:pointer;pointer-events:auto}
+  /* bottom-right stack on the menu: screensaver (bottom), full screen (the shell's button, middle), music (top) */
+  #watch{position:fixed;right:10px;width:44px;height:44px;border-radius:10px;border:2px solid #f7c418;background:rgba(16,21,31,.85);color:#fff;font:inherit;font-size:9px;line-height:1.2;padding:0;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;pointer-events:auto;z-index:8;bottom:10px}
   body.watching #ui, body.watching #press{display:none !important}
   .btn:hover,.btn:focus-visible{background:#2c6cd6;outline:none}
   .btn.sel{background:#2c6cd6}
@@ -43,7 +44,8 @@
   #footer{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:clamp(7px,1.35vw,15px);color:#fff;background:#10151fe6;
     border-top:3px solid #f7c418;padding:.7em 0;text-shadow:2px 2px 0 #000;letter-spacing:.03em}
   #footer b{color:#f7c418;font-weight:normal}
-  #sound{position:absolute;top:2%;right:1.5%;font:inherit;font-size:clamp(6px,1vw,11px);background:#10151fcc;color:#fff;border:2px solid #fff;padding:.5em .7em;cursor:pointer;pointer-events:auto}
+  #sound{position:fixed;right:10px;width:44px;height:44px;border-radius:10px;border:2px solid #f7c418;background:rgba(16,21,31,.85);color:#fff;font:inherit;font-size:9px;line-height:1.2;padding:0;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;pointer-events:auto;z-index:8;bottom:114px;font-size:16px}
+  #sound.off{color:#e9665a;text-decoration:line-through}
 
   /* ---------- opening call cutscene ---------- */
   #cut{position:absolute;inset:0;background:#0b0e15f2;display:none;pointer-events:auto;font-size:clamp(7px,1.25vw,14px)}
@@ -139,8 +141,8 @@
       <button class="btn dev" data-a="scenes">CUTSCENES (DEV)</button>
     </div>
   </div>
-  <button id="sound">♪ ON</button>
-  <button id="watch">SCREENSAVER</button>
+  <button id="sound" title="Music on/off">♪</button>
+  <button id="watch" title="Screensaver">ZZ<br>SAVER</button>
   <div id="press">♪ TAP ANYWHERE FOR SOUND</div>
   <div id="panel"></div>
   <div id="toast"></div>
@@ -180,10 +182,10 @@
 
 <audio id="music" src="assets/doo_doo_town.mp3" loop preload="auto"></audio>
 <audio id="call" src="assets/call_fluffernutter.mp3" preload="auto"></audio>
-<script src="js/state.js?v=1794338136"></script>
-<script src="js/sfx.js?v=1794338136"></script>
-<script src="js/drive3d.js?v=1794338136"></script>
-<script src="js/music.js?v=1794338136"></script>
+<script src="js/state.js?v=1794340144"></script>
+<script src="js/sfx.js?v=1794340144"></script>
+<script src="js/drive3d.js?v=1794340144"></script>
+<script src="js/music.js?v=1794340144"></script>
 <script>
 const W = 480, H = 270, LOOP_W = 6688;           // strip loop width at 270px tall
 const cv = document.getElementById('c'), g = cv.getContext('2d');
@@ -232,8 +234,8 @@ function draw(t) {
   const roof = VAN_Y + bounce + 64 - VH + 1;   // the top of the van's roof, where their boots go
   const dt = (!music.paused && music.currentTime > 0) ? music.currentTime : t;   // lock to the song while it plays
   const r = pose(dt, 0), m = pose(dt, -4);
-  const RW = 48 * 0.94, RH = 80 * 0.94, MW = 48, MH = 80;   // 2x size, standing on the roof; Matt a little taller than Rod
-  g.imageSmoothingEnabled = true; g.drawImage(rod, r.f * rod.width / 9, 0, rod.width / 9, rod.height, Math.round(VAN_X + 66 - RW / 2), Math.round(roof - RH + r.hop * 2), RW, RH);
+  const RW = 60 * 0.94, RH = 100 * 0.94, MW = 60, MH = 100;   // 2.5x size, standing on the roof; Matt a little taller than Rod
+  g.imageSmoothingEnabled = true; g.drawImage(rod, r.f * rod.width / 9, 0, rod.width / 9, rod.height, Math.round(VAN_X + 58 - RW / 2), Math.round(roof - RH + r.hop * 2), RW, RH);
   g.drawImage(matt, m.f * matt.width / 9, 0, matt.width / 9, matt.height, Math.round(VAN_X + 114 - MW / 2), Math.round(roof - MH + m.hop * 2), MW, MH); g.imageSmoothingEnabled = false;
 }
 
@@ -263,6 +265,7 @@ function start() { if (!started && !cutLive && !IS_EMBED) playMusic(); }
 }, { capture: true }));
 // back at the title: the van radio (it lives in the app shell and survives screen changes) has to go quiet,
 // or it plays on top of the title song and the ♪ OFF button can't reach it
+(() => { if (IS_EMBED) return; try { const mx = window.parent !== window && window.parent.document.getElementById('max'); if (mx) { mx.style.bottom = '62px'; addEventListener('pagehide', () => { mx.style.bottom = ''; }); } } catch (e) {} })();
 const HOSTRADIO = (() => { try { return window.parent !== window && window.parent.DDT_RADIO || null; } catch (e) { return null; } })();
 if (!IS_EMBED && HOSTRADIO) HOSTRADIO.pause();
 if (!IS_EMBED) playMusic();
@@ -702,7 +705,7 @@ $('#watch').onclick = e => { e.stopPropagation(); saver(true); };
 document.addEventListener('keydown', e => { if ((e.key === 's' || e.key === 'S') && !document.body.classList.contains('saver') && !cutLive) saver(true); });
 $('#sound').onclick = e => {
   e.stopPropagation(); soundOn = !soundOn;
-  $('#sound').textContent = soundOn ? '♪ ON' : '♪ OFF';
+  $('#sound').classList.toggle('off', !soundOn);
   if (soundOn) playMusic(); else { music.pause(); if (HOSTRADIO && !IS_EMBED) HOSTRADIO.pause(); $('#press').style.display = 'none'; }
 };
 document.addEventListener('visibilitychange', () => { if (document.hidden) music.pause(); else if (soundOn && started) music.play().catch(() => {}); });

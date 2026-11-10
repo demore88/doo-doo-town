@@ -454,6 +454,7 @@ const SHOP = [
   { id: 'ppe', name: 'PPE KIT', price: 600, kind: 'gear', desc: "Suits, masks, respirators. BENEFIT: unlocks the biohazard story jobs." },
   { id: 'espresso', name: "ROD'S ESPRESSO MAKER", price: 400, kind: 'gear', desc: "Rod insists. BENEFIT: +8 stamina every morning." },
   { id: 'camera', name: 'SEWER CAMERA + LOCATOR', price: 16500, kind: 'gear', desc: "BENEFIT: unlocks the camera story jobs, and the septic search shows which way the pipe leaves the house." },
+  { id: 'probes', name: 'PROBE RODS x5', price: 30, kind: 'part', desc: "Spare steel probe rods. BENEFIT on septic hunts: +5 probes. Used up on the job." },
   { id: 'glass', name: 'NEW WINDSHIELD', price: 350, kind: 'service', desc: "Rod knows a guy in Gorham. BENEFIT: every crack from every crash, gone. Clear view again." },
   { id: 'jetter', name: 'JETTER TRAILER', price: 14200, kind: 'gear', desc: "4,000 PSI. BENEFIT: unlocks the hotel, campground and lost-jetter story jobs." },
 ];
@@ -500,3 +501,5 @@ const STOPS = {
       menu: [['ESPRESSO + PASTRY · $8', { stamina: 15, health: 5, cost: 16 }, 'Fresh out of the oven.'], ['LATTE + DESSERT · $10', { stamina: 12, mood: 2, cost: 20 }, 'Treat yourselves.'], ['BOX OF PASTRIES · $14', { mood: 2, health: 5, cost: 14 }, 'For the van.']] },
   ],
 };
+// Jetter work doesn't start until summer: any jetter story job set earlier in the year moves to July.
+(() => { for (let m = 0; m < 5; m++) { const keep = []; for (const c of CALLS[m]) { if (c.story && c.gate === 'jetter') CALLS[6].push(c); else keep.push(c); } CALLS[m] = keep; } })();

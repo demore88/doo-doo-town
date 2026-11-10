@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794338136"></script>
-<script src="js/calls.js?v=1794338136"></script>
-<script src="js/placeholders.js?v=1794338136"></script>
-<script src="js/music.js?v=1794338136"></script>
-<script src="js/sfx.js?v=1794338136"></script>
+<script src="js/state.js?v=1794340144"></script>
+<script src="js/calls.js?v=1794340144"></script>
+<script src="js/placeholders.js?v=1794340144"></script>
+<script src="js/music.js?v=1794340144"></script>
+<script src="js/sfx.js?v=1794340144"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -276,27 +276,25 @@ function choicePad() { const lefty = ((typeof DDT !== 'undefined' && DDT.get()) 
 function drawDialog() {
   const d = dialog; if (!d) return;
   d.shown = Math.min(d.text.length, d.shown + 1.1);
-  // the box grows upward when a long list of options would spill out the bottom
-  const grow = d.opts ? Math.max(0, 210 + Math.max(1, wrap(d.text, 360, 8).length) * 13 - 2 + d.opts.length * 13 - 262) : 0;
-  const top = st.dialogTop || window.DIALOG_TOP, Y = (top ? -158 : 0) - (top ? 0 : grow);   // dialog can sit at the top so the crew stays visible
-  g.save(); g.translate(0, Y);
-  R(6, 180, W - 12, 86 + grow, '#10151f'); g.strokeStyle = '#fff'; g.lineWidth = 3; g.strokeRect(7.5, 181.5, W - 15, 83 + grow);
+  // two compact boxes: the speaker's portrait, and a text box sized to the words (so the scene behind stays visible)
+  const top = st.dialogTop || window.DIALOG_TOP;
+  const all = wrap(d.text, 352, 8), n = Math.max(1, all.length), done = d.shown >= d.text.length;
+  const padOn = TOUCHDEV && d.opts && done;
+  const optH = d.opts ? d.opts.length * 13 + 2 : 0, th = 24 + n * 13 + optH, PS = 62;
+  const tx = 6 + PS + 4, tw = W - tx - 6, ty = top ? 6 : H - 6 - th, py = top ? 6 : H - 6 - PS;
+  const frame = (x, y, w, h, c) => { R(x, y, w, h, c); R(x, y, w, 2, '#fff'); R(x, y + h - 2, w, 2, '#fff'); R(x, y, 2, h, '#fff'); R(x + w - 2, y, 2, h, '#fff'); };
   const p = d.port === 'alien' ? IMG.alienP : (IMG[d.port] || portLoad(d.port));
-  const padOn = TOUCHDEV && d.opts && d.shown >= d.text.length;
-  if (!padOn) { R(12, 184, 80, 80, '#2a3346'); if (p) g.drawImage(p, 12, 184, 80, 80);
-  g.strokeStyle = '#f7c418'; g.lineWidth = 2; g.strokeRect(12, 184, 80, 80); }
-  T(d.name, 102, 194, '#f7c418', 8);
-  const lines = wrap(d.text.slice(0, Math.floor(d.shown)), 360, 8);
-  lines.forEach((l, i) => T(l, 102, 210 + i * 13, '#fff', 8));
-  const done = d.shown >= d.text.length;
+  if (!padOn) { frame(6, py, PS, PS, '#2a3346'); if (p) g.drawImage(p, 8, py + 2, PS - 4, PS - 4); }
+  frame(tx, ty, tw, th, 'rgba(16,21,31,.94)');
+  T(d.name, tx + 8, ty + 11, '#f7c418', 8);
+  wrap(d.text.slice(0, Math.floor(d.shown)), 352, 8).forEach((l, i) => T(l, tx + 8, ty + 26 + i * 13, '#fff', 8));
   if (done && d.opts) {
-    const top = 210 + Math.max(1, wrap(d.text, 360, 8).length) * 13 - 2;
-    d.boxes = d.opts.map((o, i) => [100, top + i * 13 + Y, padOn ? 292 : 368, 12]);
+    const oy = ty + 20 + n * 13;
+    d.boxes = d.opts.map((o, i) => [tx + 4, oy + i * 13, tw - 8, 12]);
     if (pressed('ArrowUp')) d.sel = (d.sel + d.opts.length - 1) % d.opts.length;
     if (pressed('ArrowDown')) d.sel = (d.sel + 1) % d.opts.length;
-    d.opts.forEach((o, i) => { const [x, yy, w, h] = d.boxes[i], y = yy - Y; R(x, y, w, h, i === d.sel ? '#2c6cd6' : '#1d2638'); T((i === d.sel ? '> ' : '  ') + o, x + 4, y + 6, '#fff', 6, 'left', false); });
-  } else if (done && Math.floor(performance.now() / 400) % 2) T('▼'.replace('▼', 'v'), 462, 256, '#f7c418', 8, 'right');
-  g.restore();
+    d.opts.forEach((o, i) => { const [x, y, w, h] = d.boxes[i]; R(x, y, w, h, i === d.sel ? '#2c6cd6' : '#1d2638'); T((i === d.sel ? '> ' : '  ') + o, x + 4, y + 6, '#fff', 6, 'left', false); });
+  } else if (done && Math.floor(performance.now() / 400) % 2) T('v', tx + tw - 8, ty + th - 8, '#f7c418', 8, 'right');
   if (padOn) { const P = choicePad();
     for (const [k, lab] of [['up', '▲'], ['dn', '▼']]) { const [x, y, w, h] = P[k]; R(x, y, w, h, '#262f45'); g.strokeStyle = '#9fb3d9'; g.lineWidth = 1.5; g.strokeRect(x + .5, y + .5, w - 1, h - 1); T(lab, x + w / 2, y + h / 2 + 1, '#fff', 10, 'center', false); }
     const [x, y, w, h] = P.sel; E(x + w / 2, y + h / 2, w / 2, h / 2, '#2c6cd6'); g.strokeStyle = '#f7c418'; g.lineWidth = 2; g.beginPath(); g.ellipse(x + w / 2, y + h / 2, w / 2 - 1, h / 2 - 1, 0, 0, 7); g.stroke(); T('SELECT', x + w / 2, y + h / 2 + 1, '#fff', 6, 'center', false); }
@@ -341,7 +339,7 @@ function matt(x, y, f = 0, s = 2, a = 1) {
 function van(x, y) { if (IMG.van) { const N = Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35))), fw = IMG.van.width / N, f = Math.floor(Math.abs(x) / 6) % N, vh = 144 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(IMG.van, f * fw, 0, fw, IMG.van.height, Math.round(x), Math.round(y - vh), 144, vh); g.imageSmoothingEnabled = false; } }   // wheels turn as the van moves
 load('assets/fittings.png').then(i => IMG.fit = i);
 // shop shelf art (from the mini-game sheets)
-const SHOPART = { fernco125: 'coupling', fernco15: 'coupling', fernco2: 'coupling', waxring: 'waxring', heads: 'cable', muckboots: 'boots', waders: 'waders', ppe: 'gloves', camera: 'camera', jetter: 'jetter', ptrap: 'pvc_2' };
+const SHOPART = { fernco125: 'coupling', fernco15: 'coupling', fernco2: 'coupling', waxring: 'waxring', heads: 'cable', muckboots: 'boots', waders: 'waders', ppe: 'gloves', camera: 'camera', jetter: 'jetter', ptrap: 'pvc_2', probes: 'shovel' };
 [...new Set(Object.values(SHOPART))].forEach(n => load('assets/mg/' + n + '.png').then(i => IMG['mg_' + n] = i).catch(() => {}));
 if (DDT.param('new')) { DDT.save(DDT.fresh()); history.replaceState(null, '', 'play.html'); }
 // the name bit on the phone: usually they get it wrong. Once in a great while they get it RIGHT, and Rod is not ready for that.
@@ -392,6 +390,7 @@ function hud() {
   bar(8, 34, 80, s.health, 100, '#e9665a', `HEALTH ${s.health}`);
   bar(96, 34, 80, s.stamina, 100, '#f7c418', `STAMINA ${s.stamina}`);
   T(`REP ${s.rep}`, 196, 37, s.rep >= 0 ? '#7dffb0' : '#e9665a', 6);
+  { const b = Math.max(-2, Math.min(10, Math.floor((s.rep || 0) / 10))) * 5; if (b) T(`${b > 0 ? '+' : ''}${b}% PAY`, 196, 45, b > 0 ? '#7dffb0' : '#e9665a', 4); }   // every 10 rep = 5% more per job
   T(`$${s.money.toLocaleString()}`, 250, 33, s.money < 0 ? '#e9665a' : '#7dffb0', 6);
   if (s.loan) T(`LOAN $${Math.round(s.loan / 1000)}K`, 250, 42, '#e9a05a', 4);
   if (s.today) T(DDT.clock(s.today.time), 472, 37, '#fff', 6, 'right');
@@ -715,8 +714,10 @@ const GAME_NAME = {"dodge":"SPLASH DODGE","sprinkler":"CLEANOUT BLOWOUT","cable"
 const DRV = ['SLOW AND STEADY', 'NORMAL', 'FOOT ON THE GAS'];
 const ALL_CALLS = CALLS.flat();
 const callById = id => ALL_CALLS.find(c => c.id === id);
+// breakfast before 11, lunch 11 to 3, once each a day, whenever you want (the side button on the voicemail board)
+const mealNow = s => { const t = (s.today && s.today.time) || 420; if (t < 660 && !s.ateB) return 'breakfast'; if (t >= 660 && t < 900 && !s.ateL) return 'lunch'; return null; };
 const isStory = c => !!(c.story || c.page || c.call);
-const storyLeft = s => (CALLS[s.month] || []).filter(c => isStory(c) && !s.done[c.id] && c.id !== 'alien');
+const storyLeft = s => (CALLS[s.month] || []).filter(c => isStory(c) && !s.done[c.id] && c.id !== 'alien' && !(c.gate === 'jetter' && !s.inv.jetter));   // jetter jobs stay hidden until you own one
 const realLeft = s => (CALLS[s.month] || []).filter(c => !s.done[c.id] && c.id !== 'alien');
 // the day's voicemails: a random handful of regular calls from this time of year. You can't do them all,
 // so a mini-game you don't like may not show up, or you can just skip it. Story jobs are always on the board.
@@ -725,6 +726,7 @@ function rollBoard(s) {
   const m = s.month, pool = [];
   for (const [mm, w] of [[m, 4], [m - 1, 2], [m + 1, 1]]) for (const c of (CALLS[mm] || [])) {
     if (isStory(c) || c.id === 'alien' || (c.gate && !s.inv[c.gate])) continue;
+    if (c.game === 'jetter' && !(s.inv.jetter && s.month >= 5)) continue;   // jetter work starts around June, and only once you own one
     pool.push({ id: c.id, w: w * (s.done[c.id] ? 0.35 : 1) });   // fresh calls first; ones you've done can still come up
   }
   const out = [], n = BOARD_SIZE - storyLeft(s).length;
@@ -745,7 +747,7 @@ const VMP = { x: 150, y: 50, w: 180, h: 214 }, VM_ROW = 58, VM_TOP = VMP.y + 40,
 const BoardUI = {
   init() { this.cur = 0; this.scroll = 0; this.drag = null; this.msg = ''; this.msgT = 0; this.vel = 0; },
   rows() { return boardList(DDT.get()); },
-  side(i) { return [[8, 70, 132, 52], [340, 70, 132, 52], [340, 132, 132, 52], [8, 132, 132, 52]][i]; },
+  side(i) { return [[8, 70, 132, 52], [340, 70, 132, 52], [340, 132, 132, 52], [8, 132, 132, 52], [340, 194, 132, 52]][i]; },
   maxScroll() { return Math.max(0, this.rows().length * VM_ROW - VM_VIEW); },
   choose(p) {
     const rows = this.rows(), sv = DDT.get(); SND.blip();
@@ -753,12 +755,13 @@ const BoardUI = {
     if (p === 'drive') { sv.prefDrive = ((sv.prefDrive ?? 1) + 1) % 3; DDT.save(sv); return; }
     if (p === 'shop') return this.done({ shop: true });
     if (p === 'hand') { sv.hand = sv.hand === 'L' ? 'R' : 'L'; DDT.save(sv); return; }
+    if (p === 'eat') { const m = mealNow(sv); if (!m) { this.msg = 'KITCHENS ARE CLOSED'; this.msgT = 1.6; SND.bad(); return; } return this.done({ eat: m }); }
     const r = rows[p]; if (!r) return;
     if (r.c.gate && !sv.inv[r.c.gate]) { this.msg = `NEEDS A ${SHOP.find(i => i.id === r.c.gate).name}`; this.msgT = 2; SND.bad(); return; }
     this.done(r);
   },
   hitAt(x, y) {
-    const sides = ['lead', 'drive', 'shop', 'hand']; for (let k = 0; k < 4; k++) if (x >= this.side(k)[0] && x <= this.side(k)[0] + this.side(k)[2] && y >= this.side(k)[1] && y <= this.side(k)[1] + this.side(k)[3]) return sides[k];
+    const sides = ['lead', 'drive', 'shop', 'hand', 'eat']; for (let k = 0; k < 5; k++) if (x >= this.side(k)[0] && x <= this.side(k)[0] + this.side(k)[2] && y >= this.side(k)[1] && y <= this.side(k)[1] + this.side(k)[3]) return sides[k];
     if (x >= VMP.x && x <= VMP.x + VMP.w && y >= VM_TOP && y <= VM_TOP + VM_VIEW) { const i = Math.floor((y - VM_TOP + this.scroll) / VM_ROW); if (i >= 0 && i < this.rows().length) return i; }
     return null;
   },
@@ -768,7 +771,7 @@ const BoardUI = {
     // keyboard: ▲▼ through the messages, ◀▶ to the side buttons, Enter to pick
     if (pressed('ArrowDown')) this.cur = typeof this.cur === 'number' ? Math.min(n - 1, this.cur + 1) : 0;
     if (pressed('ArrowUp')) this.cur = typeof this.cur === 'number' ? Math.max(0, this.cur - 1) : 0;
-    if (pressed('ArrowLeft')) this.cur = 'lead'; if (pressed('ArrowRight')) this.cur = this.cur === 'drive' ? 'shop' : 'drive';
+    if (pressed('ArrowLeft')) this.cur = 'lead'; if (pressed('ArrowRight')) this.cur = this.cur === 'drive' ? 'shop' : this.cur === 'shop' ? 'eat' : 'drive';
     if (typeof this.cur === 'number' && (pressed('ArrowDown') || pressed('ArrowUp'))) { const y = this.cur * VM_ROW; if (y < this.scroll) this.scroll = y; if (y + VM_ROW > this.scroll + VM_VIEW) this.scroll = y + VM_ROW - VM_VIEW; }
     if (confirmHit()) return this.choose(this.cur);
     // touch: drag to scroll (with a little fling), lift without dragging to tap
@@ -788,6 +791,7 @@ const BoardUI = {
     const s = DDT.get(), rows = this.rows(), lead = s.prefLead || 'rod', drv = s.prefDrive ?? 1;
     // side buttons
     const SB = [[`PLAYING AS`, lead.toUpperCase(), lead === 'rod' ? 'Steady · 40 MPH' : 'Fast · 60 MPH', 'lead'], ['DRIVE', DRV[drv].replace('SLOW AND STEADY', 'SLOW + STEADY'), 'Tap to change', 'drive'], ["FERNKO'S", 'SUPPLY', '+20 min · parts, gear', 'shop'], ['BUTTONS FOR', (s.hand === 'L' ? 'LEFT' : 'RIGHT') + ' HAND', 'Tap to swap', 'hand']];
+    { const m = mealNow(s); SB.push(m ? [m === 'breakfast' ? 'GRAB' : 'TIME FOR', m.toUpperCase(), `STAMINA ${s.stamina}`, 'eat'] : ['MEALS', 'CLOSED', m === null && (s.today && s.today.time >= 900) ? 'Too late to eat' : 'Already ate', 'eat']); }
     SB.forEach(([a, b, c, id], k) => { const [x, y, w, h] = this.side(k); R(x, y, w, h, this.cur === id ? '#2c6cd6' : 'rgba(16,21,31,.92)'); g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(x + .5, y + .5, w - 1, h - 1);
       if (id === 'lead') { const im = artImg(lead + '_normal'); g.imageSmoothingEnabled = false; if (im) g.drawImage(im, x + 4, y + 6, 40, 40); T(a, x + 50, y + 12, '#9fb3d9', 4, 'left', false); T(b, x + 50, y + 26, '#fff', 7, 'left', false); T(c, x + 50, y + 40, '#7dffb0', 4, 'left', false); }
       else { T(a, x + w / 2, y + 12, '#9fb3d9', 4, 'center', false); T(b, x + w / 2, y + 26, '#fff', 6, 'center', false); T(c, x + w / 2, y + 40, '#7dffb0', 4, 'center', false); } });
@@ -912,16 +916,16 @@ SCENES.hub = async () => {
       s.today = { time: 420, from: 'BERLIN', lead: s.prefLead, drive: s.prefDrive ?? 1 };
       const alien = (CALLS[s.month] || []).find(q => q.id === 'alien' && !s.done[q.id]);
       if (alien) { s.today.id = 'alien'; s.step = 'job'; DDT.save(s); continue; }
-      s.step = 'breakfast'; DDT.save(s); continue;
+      s.ateB = false; s.ateL = false; s.step = 'board'; DDT.save(s); continue;
     }
 
     if (s.step === 'breakfast') {
       view = () => backdrop();
       const rows = STOPS.breakfast.map(b => ({ label: b.name, sub: b.far ? `${b.far} Worth it?` : `${b.town} · about ${b.time} min${b.page ? '' : '  (placeholder)'}` }));
-      rows.push({ label: 'SKIP BREAKFAST', sub: 'Save time. Run on fumes.' });
+      rows.push({ label: 'NEVER MIND', sub: 'Back to the voicemails.' });
       const r = await phoneList('BREAKFAST?', rows, `STAMINA ${s.stamina}`);
       setStep('board');
-      if (r >= STOPS.breakfast.length) { DDT.apply({ stamina: -10 }); await card(['NO BREAKFAST', '-10 STAMINA'], 1100, '#e9665a'); }
+      if (r >= STOPS.breakfast.length) { s = DDT.get(); s.ateB = false; DDT.save(s); }
       else { const b = STOPS.breakfast[r]; await go(b.page ? `${b.page}?${RET}` : `story/stop.html?id=${b.id}&${RET}`); }
       continue;
     }
@@ -932,6 +936,7 @@ SCENES.hub = async () => {
       if (!boardList(s).length) { await card(['NO MORE CALLS TODAY', 'HEADING HOME'], 1400); setStep('night'); continue; }
       const r = await play(BoardUI);
       if (r.shop) { await play(ShopUI); DDT.apply({ time: 20 }); await rodCleanouts(); continue; }
+      if (r.eat) { s = DDT.get(); if (r.eat === 'breakfast') s.ateB = true; else s.ateL = true; s.step = r.eat === 'breakfast' ? 'breakfast' : 'lunchstop'; DDT.save(s); continue; }
       s = DDT.get();
       const pick = r.c, from = s.today.from || s.lastTown || 'BERLIN';
       s.today = { ...s.today, id: pick.id, lead: s.prefLead || 'rod', drive: s.prefDrive ?? 1, from, called: s.today.time };
@@ -976,7 +981,7 @@ SCENES.hub = async () => {
       s.lastTown = c.town; s.today = { time: s.today.time, from: c.town };
       if (s.health <= 0) { s.health = 50; s.rep -= 2; s.log.push('Sent home sick.'); s.step = 'night'; DDT.save(s); view = () => backdrop(); await say('MATT', 'matt_tired', "Rod, I don't feel good. I'm going home."); continue; }
       if (s.stamina <= 0) { s.step = 'night'; DDT.save(s); view = () => backdrop(); await say('ROD', 'rod_tired', "That's it. I'm done. We're running on empty."); await card(['OUT OF STAMINA', 'CALLING IT A DAY'], 1500, '#e9665a'); continue; }
-      s.step = s.jobsToday >= CALLS_PER_DAY ? 'night' : s.jobsToday === LUNCH_AFTER ? 'lunchstop' : 'board';
+      s.step = s.jobsToday >= CALLS_PER_DAY ? (s.chatDone ? 'night' : 'chat') : 'board';   // meals are on the side button now; the day's chat still happens
       DDT.save(s); continue;
     }
 
@@ -984,7 +989,7 @@ SCENES.hub = async () => {
       view = () => backdrop();
       const rows = STOPS.lunch.map(b => ({ label: b.name, sub: `${b.town} · about ${b.time} min` }));
       rows.push({ label: 'EAT IN THE VAN', sub: 'Gas station sandwich. +5 stamina.' });
-      const r = await phoneList('LUNCH?', rows, `STAMINA ${s.stamina} · ONE MORE CALL AFTER`);
+      const r = await phoneList('LUNCH?', rows, `STAMINA ${s.stamina}`);
       setStep('chat');
       if (r < STOPS.lunch.length) await go(`story/stop.html?id=${STOPS.lunch[r].id}&${RET}`);
       DDT.apply({ stamina: 5, money: -6, time: 15 }); continue;
@@ -1031,7 +1036,7 @@ SCENES.hub = async () => {
       view = () => { R(0, 0, W, H, '#0e1118'); hud(); };
       s = DDT.get();
       await card([`${MONTHS[m]} IS IN THE BOOKS`, `REP ${s.rep} · $${s.money.toLocaleString()}`], 2000);
-      DDT.apply({ stamina: 40, health: 20 }); await card(['A WEEKEND OFF', '+40 STAMINA  +20 HEALTH'], 1400, '#7dffb0');
+      DDT.apply({ stamina: 60, health: 20 }); await card(['A WEEKEND OFF', '+60 STAMINA  +20 HEALTH'], 1400, '#7dffb0');
       s = DDT.get();
       if (s.loan > 0) {
         const interest = Math.round(s.loan * s.rate / 12);
@@ -1040,8 +1045,11 @@ SCENES.hub = async () => {
         if (s.money < 0) { await say('ROD', 'rod_panic', "We're in the red, Matt."); await say('MATT', 'matt_tired', 'More jobs. Less Granite Grind.'); }
         else {
           const opts = [{ label: 'NOT THIS MONTH', sub: 'Keep the cash for parts and gas.' }];
-          const amounts = [1000, 5000, 10000, 25000, 50000].filter(a => s.money - a >= 500 && a < s.loan);
+          const spare = Math.floor((s.money - 500) / 100) * 100;   // keep $500 for gas and parts
+          const amounts = [1000, 2500, 5000, 10000, 25000, 50000].filter(a => a <= spare && a < s.loan);
+          if (spare > 0 && spare < s.loan && !amounts.includes(spare)) amounts.push(spare);   // or everything you can spare
           if (s.money - s.loan >= 500) amounts.push(s.loan);
+          amounts.sort((a, b) => a - b);
           amounts.forEach(a => opts.push({ label: a === s.loan ? `PAY IT ALL OFF ($${a.toLocaleString()})` : `PAY DOWN $${a.toLocaleString()}`, sub: a === s.loan ? 'The van is ours. No more interest.' : `Saves $${Math.round(a * s.rate / 12)}/month in interest.` }));
           const r = await pickList('PAY DOWN THE LOAN?', opts, `LOAN $${s.loan.toLocaleString()} · BANK $${s.money.toLocaleString()}`, 0);
           if (r > 0) { const a = amounts[r - 1]; s = DDT.get(); s.money -= a; s.loan -= a; DDT.save(s); SND.good(); await card(['PAID DOWN', `LOAN NOW $${s.loan.toLocaleString()}`], 1500, '#7dffb0'); }

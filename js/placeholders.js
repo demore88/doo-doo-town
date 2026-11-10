@@ -16,21 +16,84 @@ function custLook(seed) {
   const r = srand(seed * 9973 + 7);
   return { skin: pick(r, SKIN), hair: pick(r, HAIR), shirt: pick(r, SHIRT), style: Math.floor(r() * 5), glasses: r() < 0.35, beard: r() < 0.3, pants: pick(r, ['#2a3346', '#4a3a2a', '#3a3a3a', '#5a6a7a']) };
 }
-// small standing customer, feet at (x, y)
+// ---------- CUSTOMER SPRITE BUILDER ----------
+// Every customer is built from their seed: height, build, skin, hair style + color, facial hair, glasses, top, bottoms, shoes.
+// Poses: idle (breathing, blinking), talk (mouth moves while they're the one speaking), walk (when they move), wave, upset (arms up, shaking), happy (smile + little bounce).
+// Drawn in half-units for more detail; feet at (x, y).
+const CUST_MV = {};
+function custBuild(seed) {
+  const r = srand(seed * 7919 + 13), L = custLook(seed);
+  const tops = ['tee', 'flannel', 'hoodie', 'sweater', 'polo', 'tank', 'jacket'], bots = ['jeans', 'khaki', 'sweats', 'jeans', 'shorts'];
+  return { ...L, h: 72 + Math.floor(r() * 14), build: Math.floor(r() * 3), top: tops[Math.floor(r() * tops.length)], bot: bots[Math.floor(r() * bots.length)],
+    hairStyle: ['bald', 'short', 'long', 'ponytail', 'bun', 'curly', 'buzz', 'cap', 'beanie', 'short'][Math.floor(r() * 10)],
+    face: ['none', 'beard', 'mustache', 'stubble', 'none', 'none'][L.beard ? 1 + Math.floor(r() * 3) : 0],
+    shoe: ['#222', '#5a3a1c', '#e8e4d8', '#3a4a6a'][Math.floor(r() * 4)], accent: ['#c0392b', '#2c6cd6', '#2e8a3a', '#f2c94c', '#e8e4d8'][Math.floor(r() * 5)],
+    cap: ['#2c4f9c', '#c0392b', '#2e5a2e', '#e8822a'][Math.floor(r() * 4)] };
+}
+const _cbuild = {};
 function customer(x, y, seed, s = 2, mood = 'normal') {
-  const L = custLook(seed), t = performance.now() / 1000, j = mood === 'upset' ? Math.round(Math.sin(t * 16)) : 0;
-  g.save(); g.translate(Math.round(x + j), Math.round(y)); g.scale(s, s);
-  R(-6, -14, 5, 14, L.pants); R(1, -14, 5, 14, L.pants); R(-7, -1, 6, 2, '#222'); R(1, -1, 6, 2, '#222');
-  R(-7, -28, 14, 15, L.shirt); R(-10, -27, 3, 12, L.shirt); R(7, -27, 3, 12, L.shirt);
-  if (mood === 'upset') { R(-11, -36, 3, 10, L.shirt); R(8, -36, 3, 10, L.shirt); }
-  R(-5, -40, 10, 12, L.skin);
-  if (L.style === 1) R(-6, -42, 12, 4, L.hair);
-  if (L.style === 2) { R(-6, -42, 12, 4, L.hair); R(-7, -40, 3, 14, L.hair); R(4, -40, 3, 14, L.hair); }
-  if (L.style === 3) { R(-6, -42, 12, 4, L.hair); R(-3, -46, 6, 4, L.hair); }
-  if (L.style === 4) { R(-6, -43, 12, 5, '#c0392b'); R(-9, -39, 4, 2, '#c0392b'); }
-  if (L.beard) R(-5, -32, 10, 4, L.hair);
-  R(-3, -36, 2, 2, '#1a1a1a'); R(1, -36, 2, 2, '#1a1a1a');
-  if (L.glasses) { g.strokeStyle = '#222'; g.lineWidth = 0.6; g.strokeRect(-4.5, -37.5, 4, 3); g.strokeRect(0.5, -37.5, 4, 3); }
+  const B = _cbuild[seed] || (_cbuild[seed] = custBuild(seed)), now = performance.now(), t = now / 1000;
+  const mv = CUST_MV[seed] || (CUST_MV[seed] = { x, mv: 0, dir: 1 }); if (Math.abs(x - mv.x) > 0.05) { mv.mv = now; mv.dir = x > mv.x ? 1 : -1; } mv.x = x;
+  const walking = now - mv.mv < 150, talking = typeof dialog !== 'undefined' && dialog && dialog.shown < dialog.text.length && typeof JOB !== 'undefined' && JOB.cust && dialog.name === JOB.cust.name;
+  const shake = mood === 'upset' ? Math.round(Math.sin(t * 16)) : 0, hop = mood === 'happy' ? -Math.abs(Math.sin(t * 5)) * 3 : 0;
+  const breath = walking ? 0 : Math.round(Math.sin(t * 2.2) * 0.6), step = walking ? Math.floor(t * 8) % 4 : -1;
+  g.save(); g.translate(Math.round(x + shake), Math.round(y + hop)); g.scale(s / 2, s / 2); if (walking && mv.dir < 0) g.scale(-1, 1);
+  const H = B.h, wide = [0, 2, 6][B.build], hw = 13 + wide, legH = Math.round(H * 0.44), torsoH = Math.round(H * 0.3), headH = 22, top = -H + headH;
+  const r = (a, b, c, d, col) => R(a, b, c, d, col);
+  const dark = col => { const n = parseInt(col.slice(1), 16), f = v => Math.max(0, Math.round(v * 0.72)); return '#' + [f(n >> 16), f((n >> 8) & 255), f(n & 255)].map(v => v.toString(16).padStart(2, '0')).join(''); };
+  // legs (and walking strides)
+  const pants = B.bot === 'khaki' ? '#b8a27a' : B.bot === 'sweats' ? '#7a7f88' : B.pants, sh = B.bot === 'shorts';
+  const lx = [-hw + 3, 2], swing = step < 0 ? [0, 0] : [[4, -4], [0, 0], [-4, 4], [0, 0]][step];
+  for (let k = 0; k < 2; k++) { const ox = lx[k] + swing[k], lw = 10 + Math.floor(wide / 2);
+    r(ox, -legH, lw, sh ? legH * 0.45 : legH - 4, k ? pants : dark(pants)); if (sh) r(ox + 1, -legH * 0.55, lw - 2, legH * 0.55 - 4, B.skin);
+    r(ox - 1, -5, lw + 3, 5, B.shoe); r(ox - 1, -2, lw + 3, 2, dark(B.shoe)); }
+  // torso
+  const ty = -legH - torsoH + breath, shirt = B.shirt;
+  r(-hw, ty, hw * 2, torsoH + 3, shirt);
+  if (B.top === 'flannel') { for (let i = -hw; i < hw; i += 6) r(i, ty, 2, torsoH + 3, dark(shirt)); for (let j = ty + 3; j < ty + torsoH; j += 6) r(-hw, j, hw * 2, 2, dark(shirt)); }
+  if (B.top === 'hoodie') { r(-6, ty + 3, 12, 8, dark(shirt)); r(-2, ty + 2, 1, 10, '#ddd'); r(2, ty + 2, 1, 10, '#ddd'); r(-hw + 4, ty + torsoH - 8, hw * 2 - 8, 6, dark(shirt)); }
+  if (B.top === 'polo') { r(-5, ty, 10, 4, '#fff'); r(-1, ty + 4, 2, 6, dark(shirt)); }
+  if (B.top === 'sweater') { r(-hw, ty + torsoH - 2, hw * 2, 4, dark(shirt)); r(-6, ty, 12, 3, dark(shirt)); }
+  if (B.top === 'jacket') { r(-1, ty, 2, torsoH + 3, dark(shirt)); r(-hw, ty, 4, torsoH + 3, dark(shirt)); r(hw - 4, ty, 4, torsoH + 3, dark(shirt)); }
+  if (B.top === 'tank') { r(-hw, ty, 5, 6, B.skin); r(hw - 5, ty, 5, 6, B.skin); }
+  if (B.top === 'tee') r(-5, ty + 6, 10, 6, B.accent);   // a logo on the shirt
+  r(-hw, -legH, hw * 2, 3, dark(pants));   // belt line
+  // arms: by the sides; swinging when walking; up and shaking when upset; one hand waving when happy; gesturing while talking
+  const armW = 7, sleeve = B.top === 'tank' ? B.skin : shirt, ay = ty + 2;
+  const talkA = talking ? Math.round(Math.sin(t * 7) * 3) : 0;
+  for (const side of [-1, 1]) { const ax = side < 0 ? -hw - armW + 1 : hw - 1;
+    if (mood === 'upset') { r(ax, ay - 16, armW, 18, sleeve); r(ax, ay - 20, armW, 5, B.skin); }
+    else if (mood === 'happy' && side > 0) { const w = Math.round(Math.sin(t * 9) * 3); r(ax + w, ay - 16, armW, 18, sleeve); r(ax + w, ay - 21, armW, 6, B.skin); }
+    else { const sw = walking ? (side > 0 ? swing[0] : swing[1]) * 0.6 : (side > 0 ? talkA : 0); r(ax + sw, ay + (side > 0 && talking ? -talkA : 0), armW, torsoH - 2, sleeve); r(ax + sw, ay + torsoH - 3 + (side > 0 && talking ? -talkA : 0), armW, 5, B.skin); } }
+  // head
+  const hy = top - headH + breath, hx = -9;
+  r(-3, hy + headH - 2, 6, 4, B.skin);   // neck
+  r(hx, hy, 18, headH, B.skin); r(hx - 2, hy + 8, 2, 5, B.skin); r(hx + 18, hy + 8, 2, 5, B.skin);   // face + ears
+  const hc = B.hair, hs = B.hairStyle;
+  if (hs === 'short' || hs === 'curly' || hs === 'ponytail' || hs === 'bun' || hs === 'long') r(hx - 1, hy - 2, 20, 7, hc);
+  if (hs === 'curly') for (let i = 0; i < 6; i++) r(hx - 2 + i * 4, hy - 4 + (i % 2) * 2, 4, 4, hc);
+  if (hs === 'long') { r(hx - 3, hy, 4, headH + 8, hc); r(hx + 17, hy, 4, headH + 8, hc); }
+  if (hs === 'ponytail') { r(hx + 17, hy + 4, 5, 6, hc); r(hx + 20, hy + 8, 4, 12, hc); }
+  if (hs === 'bun') r(hx + 4, hy - 8, 10, 7, hc);
+  if (hs === 'buzz') r(hx, hy - 1, 18, 3, dark(hc));
+  if (hs === 'cap') { r(hx - 1, hy - 3, 20, 7, B.cap); r(hx + 12, hy + 2, 12, 3, dark(B.cap)); }
+  if (hs === 'beanie') { r(hx - 1, hy - 5, 20, 9, B.cap); r(hx - 1, hy + 2, 20, 2, dark(B.cap)); r(hx + 7, hy - 8, 4, 3, '#eee'); }
+  // face: eyes (blink), brows, mouth (moves while talking), facial hair, glasses
+  const blink = Math.floor(t * 0.7 + seed) % 5 === 0 && (t * 0.7 + seed) % 1 < 0.08, ey = hy + 9;
+  if (blink) { r(hx + 4, ey + 1, 4, 1, '#1a1a1a'); r(hx + 11, ey + 1, 4, 1, '#1a1a1a'); }
+  else { r(hx + 4, ey, 3, 3, '#1a1a1a'); r(hx + 11, ey, 3, 3, '#1a1a1a'); r(hx + 4, ey, 1, 1, '#fff'); r(hx + 11, ey, 1, 1, '#fff'); }
+  const brow = hs === 'bald' || hs === 'buzz' ? '#6a5040' : hc;
+  if (mood === 'upset') { r(hx + 3, ey - 3, 5, 1, brow); r(hx + 11, ey - 3, 5, 1, brow); r(hx + 7, ey - 2, 1, 1, brow); r(hx + 11, ey - 2, 1, 1, brow); }
+  else r(hx + 3, ey - 3, 5, 1, brow), r(hx + 11, ey - 3, 5, 1, brow);
+  r(hx + 8, ey + 4, 2, 3, dark(B.skin));   // nose
+  const my = hy + 17, open = talking ? [0, 2, 1, 3][Math.floor(t * 12) % 4] : 0;
+  if (mood === 'happy') { r(hx + 5, my, 8, 2, '#7a3030'); r(hx + 6, my + 2, 6, 1, '#7a3030'); }
+  else if (mood === 'upset') r(hx + 6, my, 6, 3 + open, '#46141a');
+  else r(hx + 6, my, 6, 1 + open, '#7a3030');
+  if (B.face === 'beard') { r(hx, hy + 13, 18, 9, hc); r(hx + 3, hy + 21, 12, 3, hc); r(hx + 6, my, 6, 1 + open, '#3a1818'); }
+  if (B.face === 'mustache') r(hx + 4, my - 2, 10, 2, hc);
+  if (B.face === 'stubble') for (let i = 0; i < 8; i++) r(hx + 2 + i * 2, hy + 15 + (i % 2) * 3, 1, 1, dark(B.skin));
+  if (B.glasses) { g.strokeStyle = '#222'; g.lineWidth = 1; g.strokeRect(hx + 2.5, ey - 1.5, 6, 5); g.strokeRect(hx + 9.5, ey - 1.5, 6, 5); r(hx + 8, ey, 2, 1, '#222'); }
   g.restore();
 }
 // 80x80 portrait canvas for the dialog box
