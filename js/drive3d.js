@@ -157,7 +157,9 @@ function drive3d(choice, opts) {
   const CAR_B = [...Array(12).keys()].map(i => DI(`car_back_${i}`)), CAR_F = [...Array(12).keys()].map(i => DI(`car_front_${i}`));
   const LOG_B = DI('logtruck_back'), LOG_F = DI('logtruck_front');
   const DSPLAT = DI('deer_splat');
-  const FEATH = DI('feathers');   // the turkey family, all at once (6 frames, 2x sheet)   // the deer, face on the windshield (6 frames, sliding down)
+  const FEATH = DI('feathers');
+  const CRASH = DI('crash');   // bumper-hit burst (6 frames, 2x sheet)
+  const bursts = [];   // the turkey family, all at once (6 frames, 2x sheet)   // the deer, face on the windshield (6 frames, sliding down)
   const ANIM = { moose: [DI('moose_0'), DI('moose_1')], deer: [DI('deer_0'), DI('deer_1')], turkeys: [DI('turkey_0'), DI('turkey_1')] };
   const artReady = () => DL.every(i => i.failed || (i.complete && i.naturalWidth > 0));
   const flipC = new Map(), flipped = img => { if (!img.width) return img; let c = flipC.get(img); if (!c) { c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const k = c.getContext('2d'); k.scale(-1, 1); k.drawImage(img, -img.width, 0); flipC.set(img, c); } return c; };
@@ -272,7 +274,7 @@ function drive3d(choice, opts) {
   rc.onpointerup = rc.onpointercancel = rc.onlostpointercapture = e => { pts.delete(e.pointerId); retouch(); };
   addEventListener('pointerup', e => { if (pts.delete(e.pointerId)) retouch(); }); addEventListener('blur', () => { pts.clear(); retouch(); });
   const say = (m, s = 1.4) => { msg = m; msgT = s; };
-  if (typeof DDT !== 'undefined' && DDT.DEV) window.__turk = () => critters.push({ kind: 'turkeys', seg: 0, off: 0, dir: 1, hit: true, fly: 0.001, flyDir: 1 }); window.__deer = (d = 1) => critters.push({ kind: 'deer', seg: 0, off: 0, dir: d, hit: true, fly: 0.001, flyDir: d });   // dev: test the windshield deer
+  if (typeof DDT !== 'undefined' && DDT.DEV) window.__crash = () => bursts.push({ t: 0, side: 0.3, big: false }); window.__turk = () => critters.push({ kind: 'turkeys', seg: 0, off: 0, dir: 1, hit: true, fly: 0.001, flyDir: 1 }); window.__deer = (d = 1) => critters.push({ kind: 'deer', seg: 0, off: 0, dir: d, hit: true, fly: 0.001, flyDir: d });   // dev: test the windshield deer
   const sfx = (n, o) => { if (window.DDTSfx) DDTSfx.play(n, o); };
   // ---------- the windshield: cracks that stick around (and grow with every hit), bugs, mud, and now and then some weather ----------
   let glass = 0; try { glass = (DDT.get() || {}).glass || 0; } catch (e) {}
@@ -368,7 +370,7 @@ function drive3d(choice, opts) {
         if (c.off !== c.tgt) { const d = c.tgt - c.off; c.off += Math.sign(d) * Math.min(Math.abs(d), dt * 0.55); }
         const VAN_HW = 0.16;   // the van, measured the same way as the cars it can hit
         if (live && inv <= 0 && ahead > -SEG * 0.6 && ahead < SEG * (c.truck ? 1.6 : 1.1) && Math.abs(px - c.off) < c.hw + VAN_HW - 0.03) {
-          crashes++; inv = 1.4; shake = c.onc ? 0.6 : 0.35; hurtGlass(glassFor[c.onc ? 'onc' : c.truck ? 'truck' : 'car']);
+          bursts.push({ t: 0, side: Math.max(-1, Math.min(1, (c.off - px) * 2.5)), big: c.onc || c.truck }); crashes++; inv = 1.4; shake = c.onc ? 0.6 : 0.35; hurtGlass(glassFor[c.onc ? 'onc' : c.truck ? 'truck' : 'car']);
           const p = c.onc ? 20 : c.truck ? 14 : 10; /* a crash costs real time: exchanging info, checking the bumper */ penalty += p; speed = c.onc ? 0 : Math.min(speed, Math.abs(c.speed) * 0.6);
           if (!c.truck) { c.spin = 1.6; c.spinDir = px < c.off ? 1 : -1; c.speed *= 0.3; }   // the car you hit spins out (log trucks just shrug)
           px += c.onc ? (px < c.off ? -0.4 : 0.4) : (px < c.off ? -0.3 : 0.3);
@@ -538,6 +540,11 @@ function drive3d(choice, opts) {
         if (k < 0.3) { r.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < 6; i++) r.fillRect(W / 2 + (i - 3) * 9, H - 70 - i * 3 - k * 60, 3, 3); }   // fur and feathers
       }
       r.restore();
+      // ---------- crash bursts, right where the van meets the bumper ----------
+      if (CRASH.complete && CRASH.naturalWidth) for (let i = bursts.length - 1; i >= 0; i--) { const b = bursts[i]; b.t += Math.min(0.05, Math.max(0, t - (b.last ?? t))); b.last = t;
+        const fi = Math.floor(b.t / 0.1); if (fi > 5) { bursts.splice(i, 1); continue; }
+        const fw = CRASH.width / 6, fh = CRASH.height, sc = b.big ? 1.25 : 1, dw = fw / 2 * sc, dh = fh / 2 * sc, cx = W / 2 + steer * 6 + b.side * 30, cy = H - 114;   // the front of the van, where the bumper is
+        r.drawImage(CRASH, fi * fw, 0, fw, fh, Math.round(cx - dw / 2), Math.round(cy - dh * 0.54), Math.round(dw), Math.round(dh)); }
       // ---------- the windshield ----------
       { const pr = pos / ((N - 40) * SEG), dt = Math.min(0.05, Math.max(0, t - glassT)); glassT = t;
         for (const e of events) if (!e.done && pr >= e.at) { e.done = true; e.kind === 'bug' ? splatBug() : splatMud(); }
