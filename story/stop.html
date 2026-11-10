@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794280187"></script>
-<script src="../js/calls.js?v=1794280187"></script>
-<script src="../js/placeholders.js?v=1794280187"></script>
-<script src="../js/music.js?v=1794280187"></script>
-<script src="../js/sfx.js?v=1794280187"></script>
+<script src="../js/state.js?v=1794280642"></script>
+<script src="../js/calls.js?v=1794280642"></script>
+<script src="../js/placeholders.js?v=1794280642"></script>
+<script src="../js/music.js?v=1794280642"></script>
+<script src="../js/sfx.js?v=1794280642"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -251,6 +251,10 @@ function spaceToilet(x, y, hoseT = 0) {
 }
 
 // ---------- dialog box ----------
+// phones: when a choice is up, a little pad appears. ▲▼ on your weak thumb, SELECT under your strong thumb.
+const TOUCHDEV = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+function choicePad() { const lefty = ((typeof DDT !== 'undefined' && DDT.get()) || {}).hand === 'L';
+  return { up: [lefty ? 412 : 16, 186, 54, 36], dn: [lefty ? 412 : 16, 228, 54, 36], sel: [lefty ? 14 : 402, 190, 66, 70] }; }
 function drawDialog() {
   const d = dialog; if (!d) return;
   d.shown = Math.min(d.text.length, d.shown + 1.1);
@@ -260,20 +264,24 @@ function drawDialog() {
   g.save(); g.translate(0, Y);
   R(6, 180, W - 12, 86 + grow, '#10151f'); g.strokeStyle = '#fff'; g.lineWidth = 3; g.strokeRect(7.5, 181.5, W - 15, 83 + grow);
   const p = d.port === 'alien' ? IMG.alienP : (IMG[d.port] || portLoad(d.port));
-  R(12, 184, 80, 80, '#2a3346'); if (p) g.drawImage(p, 12, 184, 80, 80);
-  g.strokeStyle = '#f7c418'; g.lineWidth = 2; g.strokeRect(12, 184, 80, 80);
+  const padOn = TOUCHDEV && d.opts && d.shown >= d.text.length;
+  if (!padOn) { R(12, 184, 80, 80, '#2a3346'); if (p) g.drawImage(p, 12, 184, 80, 80);
+  g.strokeStyle = '#f7c418'; g.lineWidth = 2; g.strokeRect(12, 184, 80, 80); }
   T(d.name, 102, 194, '#f7c418', 8);
   const lines = wrap(d.text.slice(0, Math.floor(d.shown)), 360, 8);
   lines.forEach((l, i) => T(l, 102, 210 + i * 13, '#fff', 8));
   const done = d.shown >= d.text.length;
   if (done && d.opts) {
     const top = 210 + Math.max(1, wrap(d.text, 360, 8).length) * 13 - 2;
-    d.boxes = d.opts.map((o, i) => [100, top + i * 13 + Y, 368, 12]);
+    d.boxes = d.opts.map((o, i) => [100, top + i * 13 + Y, padOn ? 292 : 368, 12]);
     if (pressed('ArrowUp')) d.sel = (d.sel + d.opts.length - 1) % d.opts.length;
     if (pressed('ArrowDown')) d.sel = (d.sel + 1) % d.opts.length;
     d.opts.forEach((o, i) => { const [x, yy, w, h] = d.boxes[i], y = yy - Y; R(x, y, w, h, i === d.sel ? '#2c6cd6' : '#1d2638'); T((i === d.sel ? '> ' : '  ') + o, x + 4, y + 6, '#fff', 6, 'left', false); });
   } else if (done && Math.floor(performance.now() / 400) % 2) T('▼'.replace('▼', 'v'), 462, 256, '#f7c418', 8, 'right');
   g.restore();
+  if (padOn) { const P = choicePad();
+    for (const [k, lab] of [['up', '▲'], ['dn', '▼']]) { const [x, y, w, h] = P[k]; R(x, y, w, h, '#262f45'); g.strokeStyle = '#9fb3d9'; g.lineWidth = 1.5; g.strokeRect(x + .5, y + .5, w - 1, h - 1); T(lab, x + w / 2, y + h / 2 + 1, '#fff', 10, 'center', false); }
+    const [x, y, w, h] = P.sel; E(x + w / 2, y + h / 2, w / 2, h / 2, '#2c6cd6'); g.strokeStyle = '#f7c418'; g.lineWidth = 2; g.beginPath(); g.ellipse(x + w / 2, y + h / 2, w / 2 - 1, h / 2 - 1, 0, 0, 7); g.stroke(); T('SELECT', x + w / 2, y + h / 2 + 1, '#fff', 6, 'center', false); }
 }
 function dialogInput() {
   const d = dialog; if (!d) return false;
@@ -284,7 +292,11 @@ function dialogInput() {
   if (d.opts && performance.now() - d.optT < 650) return true;   // choices ignore taps for a moment, so a quick double-tap can't answer for you
   if (!d.opts) { dialog = null; SND.blip(); d.res(0); return true; }
   let pick = null;
-  if (ptr.clicked && d.boxes) d.boxes.forEach(([x, y, w, h], i) => { if (ptr.y >= y - 1 && ptr.y <= y + h + 1) pick = i; });   // the whole width of the line counts
+  if (ptr.clicked && TOUCHDEV && d.opts) { const P = choicePad(), inR = ([x, y, w, h]) => ptr.x >= x && ptr.x <= x + w && ptr.y >= y && ptr.y <= y + h;
+    if (inR(P.up)) { d.sel = (d.sel + d.opts.length - 1) % d.opts.length; SND.blip(); return true; }
+    if (inR(P.dn)) { d.sel = (d.sel + 1) % d.opts.length; SND.blip(); return true; }
+    if (inR(P.sel)) { dialog = null; SND.blip(); d.res(d.sel); return true; } }
+  if (ptr.clicked && d.boxes) d.boxes.forEach(([x, y, w, h], i) => { if (ptr.y >= y - 1 && ptr.y <= y + h + 1 && (!TOUCHDEV || (ptr.x >= x && ptr.x <= x + w))) pick = i; });   // the whole width of the line counts
   if (confirmHit()) pick = d.sel;
   if (pick !== null) { dialog = null; SND.blip(); d.res(pick); }
   return true;
