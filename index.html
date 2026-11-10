@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>if (/[?&](drive|call)=/.test(location.search)) document.documentElement.classList.add("embedboot");</script>
 <script id="ddt-fs">(function(){var st=matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches;if(st||!("ontouchstart" in window))return;if(window.top!==window){addEventListener("pointerdown",function(){try{parent.ddtFS&&parent.ddtFS()}catch(e){}},true);return}var root=location.href.split(/[?#]/)[0].replace(/(story|arcade)\/[^\/]*$|[^\/]*$/,"");location.replace(root+"app.html?p="+encodeURIComponent(location.href.slice(root.length)))})();</script>
 <link rel="manifest" href="./manifest.webmanifest"><meta name="theme-color" content="#2a5ab0"><link rel="icon" href="./icons/icon-192.png"><link rel="apple-touch-icon" href="./icons/apple-180.png"><meta name="mobile-web-app-capable" content="yes"><script>if ("serviceWorker" in navigator && window.top === window && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(() => {});</script>
 <meta charset="utf-8">
@@ -13,6 +14,7 @@
   #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
   #stage{position:relative;aspect-ratio:16/9;width:min(100vw,calc(100vh*16/9));width:min(100vw,calc(100dvh*16/9))}
   canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+  html.embedboot #ui, html.embedboot #press, html.embedboot #watch{display:none !important}
   #ui{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;pointer-events:none}
   .pre{margin-top:2.2%;font-size:clamp(7px,1.3vw,14px);color:#fff;text-align:center;background:#10151fd9;padding:.55em .9em;border:2px solid #f7c418;
     text-shadow:2px 2px 0 #000}
@@ -176,10 +178,10 @@
 
 <audio id="music" src="assets/doo_doo_town.mp3" loop preload="auto"></audio>
 <audio id="call" src="assets/call_fluffernutter.mp3" preload="auto"></audio>
-<script src="js/state.js?v=1794272144"></script>
-<script src="js/sfx.js?v=1794272144"></script>
-<script src="js/drive3d.js?v=1794272144"></script>
-<script src="js/music.js?v=1794272144"></script>
+<script src="js/state.js?v=1794272541"></script>
+<script src="js/sfx.js?v=1794272541"></script>
+<script src="js/drive3d.js?v=1794272541"></script>
+<script src="js/music.js?v=1794272541"></script>
 <script>
 const W = 480, H = 270, LOOP_W = 6688;           // strip loop width at 270px tall
 const cv = document.getElementById('c'), g = cv.getContext('2d');

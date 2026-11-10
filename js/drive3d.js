@@ -219,7 +219,7 @@ function drive3d(choice, opts) {
         CSPD = { moose: 0.25, deer: 0.9, turkeys: 0.3, peeper: 0.35 }, PEN = { moose: 20, deer: 12, turkeys: 5, peeper: 8 };
 
   // ---------- state + input ----------
-  let pos = 0, speed = 0, px = LANE[2], t = 0, play = 0, crashes = 0, penalty = 0, inv = 0, shake = 0, msg = '', msgT = 0, done = false, last = null, bounce = 0, skyX = 0;
+  let wasLive = false, offT = 0, pos = 0, speed = 0, px = LANE[2], t = 0, play = 0, crashes = 0, penalty = 0, inv = 0, shake = 0, msg = '', msgT = 0, done = false, last = null, bounce = 0, skyX = 0;
   const key = { L: 0, R: 0, U: 0, D: 0 }, touch = { L: 0, R: 0, U: 0, D: 0 };
   const KM = { arrowleft: 'L', a: 'L', arrowright: 'R', d: 'R', arrowup: 'U', w: 'U', arrowdown: 'D', s: 'D', ' ': 'D' };
   const kd = e => { if (e.key === ']') key.skip = 1; const k = KM[e.key.toLowerCase()]; if (k) { e.preventDefault(); key[k] = 1; } };
@@ -231,9 +231,10 @@ function drive3d(choice, opts) {
   // phone: one thumb steers. Both thumbs down (left AND right) = gas. No thumbs = cruise.
   function retouch() { touch.L = touch.R = touch.U = touch.D = 0; for (const z of pts.values()) touch[z] = 1; if (touch.L && touch.R && !touch.D) touch.U = 1; }
   const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  rc.onpointerdown = e => { e.preventDefault(); pts.set(e.pointerId, zone(e)); try { rc.setPointerCapture(e.pointerId); } catch (_) {} retouch(); };
+  rc.onpointerdown = e => { e.preventDefault(); if (e.isPrimary) pts.clear(); /* a fresh touch: forget any finger the phone never told us was lifted */ pts.set(e.pointerId, zone(e)); try { rc.setPointerCapture(e.pointerId); } catch (_) {} retouch(); };
   rc.onpointermove = e => { if (pts.has(e.pointerId)) { pts.set(e.pointerId, zone(e)); retouch(); } };
-  rc.onpointerup = rc.onpointercancel = e => { pts.delete(e.pointerId); retouch(); };
+  rc.onpointerup = rc.onpointercancel = rc.onlostpointercapture = e => { pts.delete(e.pointerId); retouch(); };
+  addEventListener('pointerup', e => { if (pts.delete(e.pointerId)) retouch(); }); addEventListener('blur', () => { pts.clear(); retouch(); });
   const say = (m, s = 1.4) => { msg = m; msgT = s; };
   const sfx = (n, o) => { if (window.DDTSfx) DDTSfx.play(n, o); };
 
@@ -261,6 +262,7 @@ function drive3d(choice, opts) {
       if (last === null) last = ms;
       const dt = Math.min(0.05, (ms - last) / 1000); last = ms; if (vanReady()) t += dt;   /* the clock doesn't start until our van's art is in */
       const live = t > 1.2;   /* hands on the wheel at GO, not before */
+      if (live && !wasLive) { wasLive = true; pts.clear(); retouch(); }   /* forget any tap from before GO: you start with no fingers down */
       if (t > 2 && !helpSeen) { helpSeen = true; try { localStorage.setItem('ddt_drive_help2', '1'); } catch (e) {} }
       if (typeof DDT !== 'undefined' && DDT.DEV && key.skip) pos = (N - 40) * SEG;   // dev shortcut: ] jumps to the finish
       const L = key.L || touch.L, Rr = key.R || touch.R, gas = live && (key.U || touch.U), brake = live && (key.D || touch.D);
@@ -273,7 +275,7 @@ function drive3d(choice, opts) {
       px += steer * dt * 2.1 * (0.35 + 0.65 * ratio);
       px -= seg.curve * ratio * ratio * dt * 0.42;
       // off the road: grass (or a snowbank) slows you down hard
-      if (Math.abs(px) > 1) { const floor = (SNOW ? 0.22 : 0.3) * MAX; if (speed > floor) speed = floor + (speed - floor) * Math.pow(0.1, dt); /* grass/snow drags you to a crawl, never backwards */ shake = Math.max(shake, 0.08); if (SNOW && Math.abs(px) > 1.15) { px = Math.sign(px) * 1.15; if (msgT <= 0) say('SNOWBANK!', 0.8); } }
+      if (Math.abs(px) > 1) { const deep = SNOW && Math.abs(px) > 1.1, floor = (deep ? 0.07 : SNOW ? 0.15 : 0.22) * MAX; if (live) { penalty += dt * (deep ? 0.9 : 0.4); offT = (offT || 0) + dt; } /* stuck in it: minutes tick away */ if (speed > floor) speed = floor + (speed - floor) * Math.pow(0.1, dt); /* grass/snow drags you to a crawl, never backwards */ shake = Math.max(shake, 0.08); if (SNOW && Math.abs(px) > 1.15) { px = Math.sign(px) * 1.15; if (msgT <= 0) say('SNOWBANK!', 0.8); } }
       px = Math.max(-1.6, Math.min(1.6, px));
       if (live) { pos += speed * dt; play += dt; }
       // frost heaves bounce the van
