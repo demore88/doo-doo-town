@@ -122,22 +122,25 @@ GAMES.push({
     else if (s.t >= s.DUR) s.end = { win: true, stars: stars3(s.hits === 0, s.hits <= 1), line: s.hits ? `Splashed ${s.hits}x. Still standing.` : 'Not a drop on you!' };
   },
   draw(s) {
-    R(0, 0, W, H, '#a9c4d9');
+    const yard = BGI('bg_yard'), dy = yard ? 62 : 0;
+    if (!yard) { R(0, 0, W, H, '#a9c4d9');
     R(0, 18, W, 52, '#d9cdb4'); for (let x = 0; x < W; x += 40) R(x, 18, 2, 52, '#c4b79c');   // the house
     R(100, 62, 280, 10, '#7a5a3a'); R(100, 72, 280, 3, '#5a3e26');                                  // porch
-    R(226, 24, 28, 38, '#6b3a2a');                                                                   // door
+    R(226, 24, 28, 38, '#6b3a2a'); }                                                                 // door
+    g.save(); g.translate(0, dy);
     // the customer, winding up with a cooking pot
     const cx = s.cx, arm = s.wind > 0 ? -10 : 2;
     R(cx - 5, 40, 10, 14, '#3a6ea5'); R(cx - 4, 54, 3, 8, '#333'); R(cx + 1, 54, 3, 8, '#333'); C(cx, 35, 5, '#e8b48a'); R(cx - 5, 29, 10, 3, '#5a3e26');
     R(cx + 5, 42 + arm, 8, 3, '#e8b48a'); R(cx + 11, 38 + arm, 9, 6, '#9aa0a6'); R(cx + 11, 37 + arm, 9, 2, '#6b4423');
-    R(0, 75, W, 195, '#f4f7fa'); for (let i = 0; i < 40; i++) R((i * 97) % W, 80 + (i * 53) % 140, 2, 2, '#e3eaf0');   // snowy yard
+    g.restore();
+    if (!yard) R(0, 75, W, 195, '#f4f7fa'); if (!yard) for (let i = 0; i < 40; i++) R((i * 97) % W, 80 + (i * 53) % 140, 2, 2, '#e3eaf0');   // snowy yard
     R(206, 214, 68, 12, '#8a8f94'); R(212, 216, 56, 8, '#3a2a14'); R(212, 216, 56, 3, '#5a4420');   // open septic tank
     for (const p of s.splats) { const age = s.t - p.t, fr = age < 0.12 ? 1 : age < 0.25 ? 2 : 3; if (SPI('splat_' + fr, p.x, 229, p.r / (fr === 3 ? 12 : 10), false, Math.max(0, 1 - age / 6))) continue; g.globalAlpha = Math.max(0, 1 - age / 6); R(p.x - p.r * 1.6, 224, p.r * 3.2, 4, '#8a6a1e'); R(p.x - p.r, 223, p.r * 2, 2, '#6b4423'); g.globalAlpha = 1; }
     for (const o of s.globs) {
       const f = (s.t - o.t0) / o.fly;
       g.globalAlpha = 0.25 + 0.55 * f; R(o.tx - o.r - 4, 225, (o.r + 4) * 2, 4, '#1a0f05'); g.globalAlpha = 1;
       R(o.tx - 1, 229, 2, 2, '#e9665a');
-      const x = lerp(o.sx + 14, o.tx, f), y = lerp(40, 222, f) - Math.sin(f * Math.PI) * 60;
+      const x = lerp(o.sx + 14, o.tx, f), y = lerp(40 + dy, 222, f) - Math.sin(f * Math.PI) * 60;
       if (!SPC('glob_' + (Math.floor(f * 8) % 4), x, y, o.r / 14, o.tx < o.sx)) { C(x, y, o.r * 0.8, '#8a6a1e'); C(x - o.r * 0.25, y - o.r * 0.25, o.r * 0.3, '#c9a640'); }
     }
     if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) SPR(s.hero || 'matt', 0, s.px, 224);
@@ -196,9 +199,9 @@ GAMES.push({
       } else { g.strokeStyle = 'rgba(122,74,30,.25)'; g.lineWidth = 2; g.setLineDash([4, 6]); g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + ux * 600, cy + uy * 600); g.stroke(); g.setLineDash([]); }
     }
     if (s.note > 0) T('IT SPLIT! TWO JETS!', 240, 40, '#e9665a', 8, 'center');
-    for (const c of s.corn) R(c.x - 1, c.y - 1, 3, 3, '#f2c12e');
+    for (const c of s.corn) if (!SPC('poopcorn', c.x, c.y, 0.2)) R(c.x - 1, c.y - 1, 3, 3, '#f2c12e');
     const sh = s.warn > 0 ? (Math.random() - .5) * 4 : 0;
-    C(cx + sh, cy, 10, '#d6d6d6'); C(cx + sh, cy, 6, '#5b3a1c');
+    if (!SPC('cleanout', cx + sh, cy, 0.6)) { C(cx + sh, cy, 10, '#d6d6d6'); C(cx + sh, cy, 6, '#5b3a1c'); }
     if (s.warn > 0) T('!', cx, cy - 22, '#e9665a', 12, 'center');
     if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) SPR(s.hero || 'matt', 7, s.px, s.py + 12);
     HUD(s, 'CLEANOUT BLOWOUT', s.DUR - s.t); PANTS(s, 6, 22);
@@ -266,6 +269,7 @@ GAMES.push({
     if (cy > -40) { const left = 1 - s.chew / s.CHEW, c = this.cx(s, s.LEN);
       for (let i = 0; i < 18 * left + 2; i++) C(c - 24 + (i * 37) % 48, cy - 10 + (i * 13) % 26, 7, greasy ? (i % 2 ? '#1c1a17' : '#2e2a24') : (i % 2 ? '#7a4a1e' : '#5a3a1c')); }
     for (const j of s.junk) if (!j.gone) { const y = 190 - (j.d - s.d), x = this.cx(s, j.d) + j.off; if (y < 10 || y > H) continue;
+      if (SPC(j.kind === 'wipe' ? 'wipes' : j.kind === 'root' ? 'roots' : 'toycar', x, y, 0.6)) continue;
       if (j.kind === 'wipe') { R(x - 8, y - 6, 16, 12, '#f4f4f2'); R(x - 6, y - 4, 12, 2, '#d9d4c8'); }
       else if (j.kind === 'root') { for (let i = 0; i < 5; i++) R(x - 10 + i * 4, y - 6 + (i % 2) * 4, 2, 10, '#8a6a3e'); }
       else { R(x - 7, y - 4, 14, 8, '#c0392b'); C(x - 4, y + 5, 2.5, '#222'); C(x + 4, y + 5, 2.5, '#222'); } }
@@ -325,10 +329,11 @@ GAMES.push({
     s.msg = s.probed[k] === '!' ? 'Scraped something. Close!' : 'Nothing. Just dirt.';
   },
   draw(s) {
-    R(0, 0, W, H, '#cfd8df');
+    const yd = MG('bg_yard');
+    if (yd) g.drawImage(yd, 0, 0, W, H); else R(0, 0, W, H, '#cfd8df');
     R(s.ox, s.oy, s.C * s.Z, s.HH, '#6d4a2f'); R(s.ox + 10, s.oy + 3, 14, 15, '#3d2a1a'); T('HOUSE', s.ox + 32, s.oy + 10, '#fff', 6);
     const gy = s.oy + s.HH;
-    R(s.ox, gy, s.C * s.Z, s.Rw * s.Z, '#f4f7fa');
+    if (yd) g.drawImage(yd, 170, 140, 300, 125, s.ox, gy, s.C * s.Z, s.Rw * s.Z); else R(s.ox, gy, s.C * s.Z, s.Rw * s.Z, '#f4f7fa');
     if (s.cam) {   // the camera tells you which way the pipe goes, not how far
       R(s.ox + s.pipeC * s.Z + s.Z / 2 - 2, s.oy + s.HH - 4, 4, 6, '#888');
       g.setLineDash([3, 4]); g.strokeStyle = 'rgba(70,90,110,.55)'; g.lineWidth = 2; g.beginPath();
@@ -339,7 +344,7 @@ GAMES.push({
     for (let r = 0; r <= s.Rw; r++) { g.beginPath(); g.moveTo(s.ox, gy + r * s.Z + .5); g.lineTo(s.ox + s.C * s.Z, gy + r * s.Z + .5); g.stroke(); }
     for (const k in s.probed) {
       const [c, r] = k.split(',').map(Number), p = s.probed[k], x = s.ox + c * s.Z, y = gy + r * s.Z;
-      if (p === 'T') { R(x + 1, y + 1, s.Z - 2, s.Z - 2, '#8a8f94'); T('LID', x + s.Z / 2, y + s.Z / 2, '#fff', 5, 'center'); }
+      if (p === 'T') { if (SPC('septiclid', x + s.Z / 2, y + s.Z / 2, (s.Z + 6) / 55)) continue; R(x + 1, y + 1, s.Z - 2, s.Z - 2, '#8a8f94'); T('LID', x + s.Z / 2, y + s.Z / 2, '#fff', 5, 'center'); }
       else if (p === 'L') { R(x + 1, y + 1, s.Z - 2, s.Z - 2, '#9a8a6a'); T('GRV', x + s.Z / 2, y + s.Z / 2, '#fff', 5, 'center'); }
       else if (p === '!') { C(x + s.Z / 2, y + s.Z / 2, 9, '#f2903d'); T('!', x + s.Z / 2 + 1, y + s.Z / 2 + 1, '#111', 8, 'center'); }
       else { g.strokeStyle = '#8fa0b0'; g.lineWidth = 2; g.beginPath(); g.moveTo(x + 7, y + 7); g.lineTo(x + s.Z - 7, y + s.Z - 7); g.moveTo(x + s.Z - 7, y + 7); g.lineTo(x + 7, y + s.Z - 7); g.stroke(); }
@@ -375,8 +380,9 @@ GAMES.push({
   },
   draw(s) {
     const FL = 230;
-    R(0, 0, W, H, '#3a3d42');
-    for (let y = 16; y < FL; y += 30) for (let x = (y / 30 % 2) * 30; x < W; x += 60) R(x, y, 58, 28, '#45494f');
+    if (BGI('bg_basement')) { g.globalAlpha = 0.35; R(0, 0, W, H, '#10151f'); g.globalAlpha = 1; }
+    else { R(0, 0, W, H, '#3a3d42');
+    for (let y = 16; y < FL; y += 30) for (let x = (y / 30 % 2) * 30; x < W; x += 60) R(x, y, 58, 28, '#45494f'); }
     R(0, FL, W, H - FL, '#8a8f94');
     const pw = s.mess / 60 * 420; g.fillStyle = '#6b4423'; g.beginPath(); g.ellipse(240, FL + 12, pw / 2 + 1, 5 + pw / 40, 0, 0, 7); g.fill();
     R(0, 60, 40, 30, '#d6d6d6'); R(36, 54, 12, 42, '#bbb');
@@ -731,7 +737,7 @@ GAMES.push({
     R(0, 0, W, H, '#5f6a5a'); for (let i = 0; i < 40; i++) R((i * 97) % W, 20 + (i * 53) % 250, 3, 2, '#55604f');   // the driveway
     // hose bib + toilet
     R(s.ox - 26, s.oy + s.src * s.Z + 12, 22, 14, '#9a9a96'); R(s.ox - 8, s.oy + s.src * s.Z + 15, 8, 8, '#5fa8e0');
-    const ty = s.oy + s.dst * s.Z, bx = s.ox + s.C * s.Z + 4; R(bx, ty + 8, 24, 26, '#e8822a'); R(bx - 2, ty + 6, 28, 4, '#c96a1a'); R(bx + 2, ty + 14, 20, 6, '#f4f4f2'); g.strokeStyle = '#999'; g.lineWidth = 1; g.beginPath(); g.arc(bx + 12, ty + 6, 12, Math.PI, 0); g.stroke();
+    const ty = s.oy + s.dst * s.Z, bx = s.ox + s.C * s.Z + 4; if (!SPI('bucket', bx + 12, ty + 36, 0.9)) { R(bx, ty + 8, 24, 26, '#e8822a'); R(bx - 2, ty + 6, 28, 4, '#c96a1a'); R(bx + 2, ty + 14, 20, 6, '#f4f4f2'); g.strokeStyle = '#999'; g.lineWidth = 1; g.beginPath(); g.arc(bx + 12, ty + 6, 12, Math.PI, 0); g.stroke(); }
     for (let r = 0; r < s.Rw; r++) for (let c = 0; c < s.C; c++) {
       const p = s.grid[r][c], x = s.ox + c * s.Z, y = s.oy + r * s.Z;
       R(x + 1, y + 1, s.Z - 2, s.Z - 2, '#3a4036');
@@ -773,6 +779,7 @@ GAMES.push({
     R(0, 0, W, H, '#2b2a26'); R(0, 90, W, 70, '#5d6168'); R(0, 100, W, 50, '#1e1d1a');
     const rem = 1 - s.prog / 100;
     R(260, 98, 140 * rem + 6, 54, '#cfc3a6'); for (let i = 0; i < 30 * rem; i++) R(262 + (i * 37) % (140 * rem + 1), 100 + (i * 17) % 50, 3, 3, '#a89c80');
+    for (let i = 0; i < 6 * rem; i++) SPC('beads', 272 + (i * 53) % (130 * rem + 1), 110 + (i * 23) % 36, 0.5);
     const ny = 104 + s.aim * 42, sy = 104 + s.spot * 42;
     R(256, sy - 5, 10, 10, '#f7c418'); R(258, sy - 3, 6, 6, '#fff3b0');                       // the soft spot
     R(0, ny - 3, 120, 6, '#222'); R(116, ny - 7, 12, 14, '#999');
@@ -816,7 +823,7 @@ GAMES.push({
     const hy = s.hop > 0 ? -Math.sin((1 - s.hop / 0.45) * Math.PI) * 14 : 0;
     SPR(s.hero || 'matt', 6, 120, 198 + hy);
     const tilt = s.a * 0.5;
-    for (const side of [-1, 1]) { g.save(); g.translate(120 + side * 14, 178 + hy); g.rotate(tilt); R(-7, 0, 14, 14, '#e07a1f'); R(-6, 2, 12, 6 * s.load / 100 + 1, '#9fd1ff'); g.restore(); }
+    for (const side of [-1, 1]) { g.save(); g.translate(120 + side * 14, 178 + hy); g.rotate(tilt); if (!SPI('bucket', 0, 16, 0.52)) { R(-7, 0, 14, 14, '#e07a1f'); R(-6, 2, 12, 6 * s.load / 100 + 1, '#9fd1ff'); } g.restore(); }
     if (Math.abs(s.a) > 0.55) for (let i = 0; i < 3; i++) C(120 + Math.sign(s.a) * (22 + i * 6), 184 + i * 5 + hy, 2, '#9fd1ff');
     if (s.flash > 0) T('TRIPPED!', 120, 140, '#e9665a', 8, 'center');
     HUD(s, 'BUCKET HAUL', s.TIME - s.t);
@@ -894,7 +901,7 @@ GAMES.push({
       else { R(c.x - 9, y - 7, 18, 13, '#c9a36a'); R(c.x - 9, y - 7, 18, 3, '#e8e4d8'); for (let k = 0; k < 4; k++) R(c.x - 7 + k * 4, y - 2, 2, 7, '#8a6a3a'); } }
     const py = this.yAt(s, s.f, s.x) - s.jy, dirF = Math.sign(s.fl[s.f].b - s.fl[s.f].a);
     if (s.cans.some(c => c.f === s.f && (s.x - c.x) * dirF > 0 && (s.x - c.x) * dirF < 120) && Math.floor(s.t * 8) % 2) T('!', s.x - dirF * 18, py - 50, '#e9665a', 10, 'center');
-    if (s.inv <= 0 || Math.floor(s.t * 10) % 2) { SPR(s.hero || 'matt', s.facing > 0 ? 6 : 8, s.x, py, false); R(s.x - 12 * s.facing - 7, py - 22, 14, 12, '#e8822a'); R(s.x - 12 * s.facing - 5, py - 26, 10, 4, '#333'); }   // carrying the jetter
+    if (s.inv <= 0 || Math.floor(s.t * 10) % 2) { SPR(s.hero || 'matt', s.facing > 0 ? 6 : 8, s.x, py, false); if (!SPI('jetter', s.x - 15 * s.facing, py - 10, 0.42, s.facing < 0)) { R(s.x - 12 * s.facing - 7, py - 22, 14, 12, '#e8822a'); R(s.x - 12 * s.facing - 5, py - 26, 10, 4, '#333'); } }   // carrying the jetter
     DRAWFX(s); HUD(s, 'STAIRS OF DEATH', null); PANTS(s, W - 6 - s.pantsMax * 14, 20); T(`FLIGHT ${s.f + 1}/4`, 6, 24, '#fff', 6);
   },
 });
@@ -1036,16 +1043,18 @@ GAMES.push({
   draw(s) {
     const Z = s.Z, X = c => s.ox + c * Z, Y = r => s.oy + r * Z;
     R(0, 0, W, H, '#14110e');
+    const dirt = MG('bg_crawl'); if (dirt) g.drawImage(dirt, 0, 40, 480, 230, X(0), Y(0), 23 * Z, s.map.length * Z);
     for (let r = 0; r < s.map.length; r++) for (let c = 0; c < 23; c++) {
       if (s.map[r][c] === '#') { R(X(c), Y(r), Z, Z, '#5a5a56'); R(X(c), Y(r), Z, 3, '#7a7a72'); R(X(c), Y(r) + Z - 2, Z, 2, '#3a3a38'); if ((r * 7 + c) % 5 === 0) R(X(c) + 6, Y(r) + 8, 6, 3, '#2a2a28'); }   // cinder blocks + piers
-      else { R(X(c), Y(r), Z, Z, '#4a3a28'); if ((r * 13 + c * 7) % 6 === 0) R(X(c) + 4, Y(r) + 12, 3, 2, '#3a2c1e'); }   // dirt
+      else if (!dirt) { R(X(c), Y(r), Z, Z, '#4a3a28'); if ((r * 13 + c * 7) % 6 === 0) R(X(c) + 4, Y(r) + 12, 3, 2, '#3a2c1e'); }   // dirt
     }
     for (const k of s.dots) { const c = k % 100, r = Math.floor(k / 100); R(X(c) + 9, Y(r) + 9, 3, 3, '#f0b8c8'); }   // pink insulation crumbs
     for (const pt of s.parts) if (!pt.got) { const x = X(pt.c) + 10, y = Y(pt.r) + 10, b = Math.sin(s.t * 5) * 2;
+      if (SPC(pt.k === 'FERNCO' ? 'coupling' : pt.k === 'CLAMP' ? 'waxring' : 'pvc_1', x, y + b, pt.k === 'PIPE' ? 0.45 : 0.5)) continue;
       if (pt.k === 'FERNCO') { R(x - 6, y - 5 + b, 12, 10, '#2b2b2b'); R(x - 7, y - 4 + b, 14, 2, '#c9c4b8'); R(x - 7, y + 2 + b, 14, 2, '#c9c4b8'); }
       else if (pt.k === 'CLAMP') { C(x, y + b, 6, '#c9c4b8'); C(x, y + b, 3, '#4a3a28'); R(x + 4, y - 2 + b, 5, 4, '#c9c4b8'); }
       else { R(x - 8, y - 3 + b, 16, 6, '#e8e4d8'); R(x - 8, y - 3 + b, 16, 2, '#fff'); } }
-    for (const L of s.lights) if (!L.got) { const x = X(L.c) + 10, y = Y(L.r) + 10; R(x - 6, y - 3, 10, 6, '#f7c418'); R(x + 4, y - 4, 3, 8, '#fff6c0'); }
+    for (const L of s.lights) if (!L.got) { const x = X(L.c) + 10, y = Y(L.r) + 10; if (SPC('flashlight', x, y, 0.5)) continue; R(x - 6, y - 3, 10, 6, '#f7c418'); R(x + 4, y - 4, 3, 8, '#fff6c0'); }
     // the broken joint: a dripping pipe
     { const x = X(s.joint.c), y = Y(s.joint.r); R(x - 4, y + 2, 12, 6, '#e8e4d8'); R(x + 14, y + 4, 10, 6, '#e8e4d8'); const d = (s.t * 1.5) % 1; R(x + 10, y + 8 + d * 10, 2, 3, '#7a5a2e'); }
     for (const r of s.rats) { const x = X(r.x) + 10, y = Y(r.y) + 12, scared = s.scare > 0 && !r.shooed, col = r.shooed ? '#3a3a3a' : scared && (s.scare > 1.5 || Math.floor(s.t * 8) % 2) ? '#6a8ad8' : '#6a5a4c';
@@ -1162,6 +1171,8 @@ GAMES.push({
       g.strokeStyle = res === 'slow' ? 'rgba(95,155,192,.5)' : '#5f9bc0'; g.lineWidth = 3;
       for (let i = 0; i < Math.min(p, f.path.length); i++) { const P = s.seg[f.path[i]], u = Math.min(1, p - i), n = P.length / 2 - 1, upto = u * n;
         g.beginPath(); g.moveTo(P[0], P[1]); for (let j = 0; j < n; j++) { const v = Math.min(1, Math.max(0, upto - j)); if (v <= 0) break; g.lineTo(P[j * 2] + (P[j * 2 + 2] - P[j * 2]) * v, P[j * 2 + 1] + (P[j * 2 + 3] - P[j * 2 + 1]) * v); } g.stroke(); } }
+    const FIXSPR = { t2: 'toilet', tub: 'tub', k: 'kitchensink', sk: 'vanity', w: 'washer', fd: 'floordrain', co: 'cleanout' };
+    s.fix.forEach(f => { const n = FIXSPR[f.id], im = n && MG(n); if (im) { const hh = (f.id === 'fd' || f.id === 'co') ? 16 : 28; SPI(n, f.x, f.y - 10, hh / im.height); } });
     s.fix.forEach((f, i) => {
       const hot = s.mode === 'test' && !s.camMode && s.sel === i, r = s.res[f.id];
       R(f.x - 31, f.y - 10, 62, 22, hot ? '#f7c418' : f.id === s.told ? '#e8b84a' : '#fff'); R(f.x - 29, f.y - 8, 58, 18, r === 'back' ? '#e9c8c0' : r === 'slow' ? '#efe2b8' : '#f4efe6');
@@ -1320,10 +1331,11 @@ GAMES.push({
         if (n) T(String(n), x + s.Z / 2 + 1, y + s.Z / 2 + 1, ['', '#2e6fd6', '#2e8a3a', '#d6352e', '#6a2ea0', '#8a3a10'][Math.min(5, n)], 9, 'center'); }
       else { R(x, y, s.Z, s.Z, (c + r) % 2 ? '#4e7d36' : '#558a3b'); R(x + 6, y + 8, 2, 4, '#6fa04f'); R(x + 18, y + 16, 2, 4, '#6fa04f');
         if (this.reachable(s, c, r) && !s.end) { g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 1; g.strokeRect(x + 1.5, y + 1.5, s.Z - 3, s.Z - 3); } }
-      if (s.stepped.has(k) || (s.end && s.poop.has(k))) { C(x + 15, y + 19, 7, '#5a3a1c'); C(x + 15, y + 14, 5, '#6b4423'); C(x + 15, y + 10, 3, '#7a4a1e'); }
+      if ((s.stepped.has(k) || (s.end && s.poop.has(k))) && SPI(s.stepped.has(k) ? 'poop' : 'poopcorn', x + 15, y + 26, 0.8)) {} else if (s.stepped.has(k) || (s.end && s.poop.has(k))) { C(x + 15, y + 19, 7, '#5a3a1c'); C(x + 15, y + 14, 5, '#6b4423'); C(x + 15, y + 10, 3, '#7a4a1e'); }
       if (s.flag.has(k)) { R(x + 13, y + 6, 2, 18, '#333'); g.fillStyle = '#e9665a'; g.beginPath(); g.moveTo(x + 15, y + 6); g.lineTo(x + 24, y + 10); g.lineTo(x + 15, y + 14); g.fill(); }
     }
-    const gx = s.ox + s.goal.c * s.Z, gy = s.oy + s.goal.r * s.Z; C(gx + 15, gy + 15, 11, '#8a8f94'); C(gx + 15, gy + 15, 8, '#a0a5aa'); T('LID', gx + 15, gy + 15, '#333', 5, 'center');
+    { const f = Math.floor(s.t * 3) % 2; SPI('dog_' + f, 452, 70, 0.8, true); SPI('lab_' + (1 - f), 450, 130, 0.8, true); SPI('dog_' + (1 - f), 452, 190, 0.8, true); }
+    const gx = s.ox + s.goal.c * s.Z, gy = s.oy + s.goal.r * s.Z; if (!SPC('septiclid', gx + 15, gy + 15, 0.5)) C(gx + 15, gy + 15, 11, '#8a8f94'); C(gx + 15, gy + 15, 8, '#a0a5aa'); T('LID', gx + 15, gy + 15, '#333', 5, 'center');
     g.strokeStyle = '#f7c418'; g.lineWidth = 2; g.strokeRect(s.ox + s.cur.c * s.Z + 1, s.oy + s.cur.r * s.Z + 1, s.Z - 2, s.Z - 2);
     SPR(s.hero || 'matt', 0, s.ox + s.pos.c * s.Z + 15, s.oy + s.pos.r * s.Z + 30);
     HUD(s, 'POOP SWEEPER', null);
@@ -1656,6 +1668,8 @@ GAMES.push({
     if (s.bg && BGI('bg_mainstreet')) {
       R(p[0][0] - 4, Y(s.nl + 2) - 3, 8, 8, '#ddd'); R(p[0][0] - 3, Y(s.nl + 2) - 2, 6, 6, '#2c8a4a');
       SPR('rod', 7, p[0][0] + 14, Y(s.nl + 2) + 10);
+      const f = Math.floor(s.t * 4) % 2, gx = (s.t * 14) % (W + 80) - 40, sx = W + 40 - (s.t * 22) % (W + 80);
+      SPI('gull_' + f, gx, Y(0) + 6, 0.5); SPI('squirrel_' + f, sx, Y(s.nl + 1) + 6, 0.45, true);
     } else {
     R(0, 0, W, H, '#5c6b3a');
     R(0, Y(0) - 11, W, 22, '#b9b4a8'); for (let x = 0; x < W; x += 24) R(x, Y(0) - 11, 1, 22, '#9f998c');      // far sidewalk

@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794283442"></script>
-<script src="js/calls.js?v=1794283442"></script>
-<script src="js/placeholders.js?v=1794283442"></script>
-<script src="js/music.js?v=1794283442"></script>
-<script src="js/sfx.js?v=1794283442"></script>
+<script src="js/state.js?v=1794284019"></script>
+<script src="js/calls.js?v=1794284019"></script>
+<script src="js/placeholders.js?v=1794284019"></script>
+<script src="js/music.js?v=1794284019"></script>
+<script src="js/sfx.js?v=1794284019"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -322,6 +322,9 @@ function matt(x, y, f = 0, s = 2, a = 1) {
 }
 function van(x, y) { if (IMG.van) { const f = IMG.van.width >= 432 ? Math.floor(Math.abs(x) / 3) % 3 : 0; g.drawImage(IMG.van, f * 144, 0, 144, 64, Math.round(x), Math.round(y - 64), 144, 64); } }   // wheels turn as the van moves
 load('assets/fittings.png').then(i => IMG.fit = i);
+// shop shelf art (from the mini-game sheets)
+const SHOPART = { fernco125: 'coupling', fernco15: 'coupling', fernco2: 'coupling', waxring: 'waxring', heads: 'cable', muckboots: 'boots', waders: 'waders', ppe: 'gloves', camera: 'camera', jetter: 'jetter', ptrap: 'pvc_2' };
+[...new Set(Object.values(SHOPART))].forEach(n => load('assets/mg/' + n + '.png').then(i => IMG['mg_' + n] = i).catch(() => {}));
 if (DDT.param('new')) { DDT.save(DDT.fresh()); history.replaceState(null, '', 'play.html'); }
 // the name bit on the phone: usually they get it wrong. Once in a great while they get it RIGHT, and Rod is not ready for that.
 async function nameBit(c) {
@@ -485,7 +488,9 @@ const ShopUI = {
     SHOP.forEach((it, i) => {
       const [x, y, w, h] = this.box(i), own = s.inv[it.id] || 0, have = it.kind === 'gear' && own;
       R(x, y, w, h, i === this.cur ? '#2c6cd6' : have ? '#173a26' : '#1d2638');
-      const ix = it.icon && IMG.fit ? 28 : 0; if (ix) g.drawImage(IMG.fit, it.icon[0] * 32, it.icon[1] * 32, 32, 32, x + 2, y + 2, 26, 26);
+      const art = IMG['mg_' + SHOPART[it.id]], ix = art || (it.icon && IMG.fit) ? 28 : 0;
+      if (art) { const k = Math.min(26 / art.width, 26 / art.height), aw = art.width * k, ah = art.height * k; g.drawImage(art, Math.round(x + 2 + (26 - aw) / 2), Math.round(y + 2 + (26 - ah) / 2), Math.round(aw), Math.round(ah)); }
+      else if (ix) g.drawImage(IMG.fit, it.icon[0] * 32, it.icon[1] * 32, 32, 32, x + 2, y + 2, 26, 26);
       T(it.name, x + 4 + ix, y + 7, '#fff', 4, 'left', false); T(have ? 'OWNED' : `$${it.price.toLocaleString()}`, x + w - 4, y + 7, have ? '#7dffb0' : '#f7c418', 4, 'right', false);
       const ben = it.desc.includes('BENEFIT') ? '+ ' + it.desc.split(/BENEFIT[^:]*: /)[1] : it.desc;   // the tile leads with what it does for you
       wrap(ben, w - 10 - ix, 4).slice(0, 2).forEach((l, k) => T(l, x + 4 + ix, y + 16 + k * 7, '#9fe07a', 4, 'left', false)); if (it.kind === 'part') T(`HAVE ${own}`, x + w - 4, y + 25, '#fff', 4, 'right', false);
