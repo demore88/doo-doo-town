@@ -19,7 +19,7 @@ function BAR(x, y, w, h, f, c, label) {
   if (label) T(label, x, y - 6, '#fff', 6);
 }
 function SPR(who, frame, cx, feetY, flip, sc) {       // crew sheets: 24x40 frames. 0 front, 6 right, 7 back, 8 left. sc: scale to match a drawn room
-  sc = sc || 1.8; const w = 24 * sc, h = 40 * sc;   // default 1.4x: readable on a phone
+  sc = (sc || 1.8) * (who === 'rod' ? 0.94 : 1); const w = 24 * sc, h = 40 * sc;   // Matt stands a little taller than Rod   // default 1.4x: readable on a phone
   const im = IMG[who]; if (!im) { R(cx - 8 * sc, feetY - 36 * sc, 16 * sc, 36 * sc, who === 'rod' ? '#22325e' : '#2a3d78'); return; }
   let src = im, fi = frame; if (frame >= 18) { src = IMG[who + '_walk'] || im; fi = src === im ? (frame >= 22 ? 7 : 0) : frame - 18; }   // 18-21 walk toward you, 22-25 walk away
   else if (frame >= 9) { src = IMG[who + '_more'] || im; fi = src === im ? 0 : frame - 9; }   // 9-17: the extra poses (walk, buckets, kneel, gag, sludge, thumbs up)
