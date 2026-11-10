@@ -1549,8 +1549,13 @@ function srSolid(c, r) {
   return L.blocks.some(([bx, by]) => bx === c && by === r) || (L.brickSet.has(c + ',' + r) && !(SR_BROKE && SR_BROKE.has(c + ',' + r)));
 }
 let SR_BROKE = null;   // cinder blocks smashed this run
-function srRon(x, y, face, t, run, hurt, big) {          // feet at (x, y); a tiny Ron (big = on espresso)
+function srRon(x, y, face, t, run, hurt, big, pose) {    // feet at (x, y); Ron, God of Drains (big = on espresso)
   if (hurt && Math.floor(t * 12) % 2) return;
+  const im = IMG.ron_sheet;
+  if (im) {   // the drawn sheet: 18 frames, facing right. 0 idle, 1-3 walk, 4-5 run, 6 jump, 7 fall, 8 crouch, 9 swing, 10 powered, 11 hurt, 12 dazed, 13-14 victory, 17 wave
+    const fw = im.width / 18, fh = im.height, f = pose != null ? pose : run ? 1 + Math.floor(t * 9) % 3 : 0, h = (big ? 52 : 40), w = fw * h / (fh * 0.92);
+    g.save(); g.translate(Math.round(x), Math.round(y)); if (face < 0) g.scale(-1, 1); g.imageSmoothingEnabled = true;
+    g.drawImage(im, f * fw, 0, fw, fh, -w / 2, -h / 0.92 + 1, w, h / 0.92); g.restore(); g.imageSmoothingEnabled = false; return; }
   g.save(); g.translate(Math.round(x), Math.round(y)); if (face < 0) g.scale(-1, 1); if (big) g.scale(1.4, 1.4);
   const leg = run ? Math.sin(t * 18) * 2 : 0;
   R(-7, -18, 6, 14 + Math.sin(t * 6), '#b8262b');                                   // cape
@@ -1699,7 +1704,8 @@ GAMES.push({
     // the golden toilet
     const tx = (L.len - 6) * SR_TILE - cam; if (tx < W + 40) { R(tx, 212, 26, 28, '#f2c94c'); g.fillStyle = '#f7d96a'; g.beginPath(); g.ellipse(tx + 13, 212, 18, 7, 0, 0, Math.PI * 2); g.fill(); R(tx + 14, 180, 18, 26, '#f2c94c'); T('FLUSH', tx + 13, 172, '#f7c418', 5, 'center');
       if (s.won) { for (let i = 0; i < 8; i++) { const a = s.flush * 6 + i; C(tx + 13 + Math.cos(a) * 14 * (1 - s.flush / 2.2), 210 + Math.sin(a) * 5, 2, '#9fd0e0'); } } }
-    if (!s.won || s.flush < 0.8) srRon(s.p.x - cam, s.p.y, s.p.skid ? -s.p.face : s.p.face, t * (1 + Math.abs(s.p.vx) / 140), Math.abs(s.p.vx) > 10 && s.p.on, s.inv > 0, s.big);
+    if (!s.won || s.flush < 0.8) srRon(s.p.x - cam, s.p.y, s.p.skid ? -s.p.face : s.p.face, t * (1 + Math.abs(s.p.vx) / 140), Math.abs(s.p.vx) > 10 && s.p.on, s.inv > 0, s.big,
+      s.won ? 13 + Math.floor(t * 2) % 2 : s.inv > 1.2 ? 11 : !s.p.on ? (s.p.vy < 0 ? 6 : 7) : Math.abs(s.p.vx) > 130 ? 4 + Math.floor(t * 10) % 2 : Math.abs(s.p.vx) > 10 ? 1 + Math.floor(t * 9) % 3 : (s.big && Math.floor(t) % 4 === 0 ? 10 : 0));
     s.texts.forEach(o => T(o.txt, o.x - cam, o.y, '#fff', 6, 'center'));
     g.restore();
     HUD(s, 'SUPER RON', s.time);
