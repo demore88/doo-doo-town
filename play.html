@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794278080"></script>
-<script src="js/calls.js?v=1794278080"></script>
-<script src="js/placeholders.js?v=1794278080"></script>
-<script src="js/music.js?v=1794278080"></script>
-<script src="js/sfx.js?v=1794278080"></script>
+<script src="js/state.js?v=1794278964"></script>
+<script src="js/calls.js?v=1794278964"></script>
+<script src="js/placeholders.js?v=1794278964"></script>
+<script src="js/music.js?v=1794278964"></script>
+<script src="js/sfx.js?v=1794278964"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -619,13 +619,16 @@ const HEROES_PICK = [
   { id: 'matt', name: 'MATT', port: 'matt', blurb: ['Fast and nimble. Twitchy hands.', 'Quick on his feet. Drives 60.'], line: ['MATT', 'matt_happy', "It's poop. It's always poop."] },
 ];
 const HeroUI = {
-  init() { this.cur = 0; this.pick = null; this.t = 0; ['rod_normal', 'rod_happy', 'matt_normal', 'matt_happy'].forEach(artImg); },
+  init() { this.cur = 0; this.pick = null; this.t = 0; this.hand = DDT.get().hand || 'R'; ['rod_normal', 'rod_happy', 'matt_normal', 'matt_happy'].forEach(artImg); },
+  handBox(k) { return [[120, 234, 116, 20], [244, 234, 116, 20]][k]; },
   panel(i) { return [28 + i * 220, 42, 204, 184]; },
   yes() { return [136, 236, 96, 22]; }, no() { return [248, 236, 96, 22]; },
   update(dt) {
     this.t += dt;
     if (this.pick === null) {
       if (pressed('ArrowLeft')) this.cur = 0; if (pressed('ArrowRight')) this.cur = 1;
+      if (ptr.clicked) for (let k = 0; k < 2; k++) if (inBox(...this.handBox(k))) { this.hand = k ? 'L' : 'R'; SND.blip(); return; }
+      if (pressed('ArrowDown')) this.hand = this.hand === 'R' ? 'L' : 'R';
       let p = null; if (ptr.clicked) for (let i = 0; i < 2; i++) if (inBox(...this.panel(i))) p = i;
       if (confirmHit()) p = this.cur;
       if (p !== null) { this.cur = p; this.pick = p; SND.good(); }
@@ -634,7 +637,7 @@ const HeroUI = {
     if (pressed('ArrowLeft') || pressed('ArrowRight')) this.sel = this.sel ? 0 : 1;
     let a = null; if (ptr.clicked) { if (inBox(...this.yes())) a = 'yes'; else if (inBox(...this.no())) a = 'no'; }
     if (confirmHit()) a = this.sel ? 'no' : 'yes'; if (pressed('Escape')) a = 'no';
-    if (a === 'yes') { SND.ding(); return this.done(HEROES_PICK[this.pick].id); }
+    if (a === 'yes') { SND.ding(); const sv = DDT.get(); sv.hand = this.hand; DDT.save(sv); return this.done(HEROES_PICK[this.pick].id); }
     if (a === 'no') { SND.blip(); this.pick = null; this.sel = 0; }
   },
   draw() {
@@ -650,10 +653,12 @@ const HeroUI = {
       h.blurb.forEach((l, k) => T(l, x + w / 2, y + 160 + k * 10, '#cfd8e8', 5, 'center', false));
       g.globalAlpha = 1;
     });
-    if (this.pick === null) { if (Math.floor(this.t * 2) % 2) T('TAP ONE TO PICK', 240, 244, '#fff', 6, 'center'); return; }
+    if (this.pick === null) {   // which hand: the action buttons go under your strong thumb
+      ['RIGHT-HANDED', 'LEFT-HANDED'].forEach((l, k) => { const [x, y, w, h] = this.handBox(k), on = (this.hand === 'L') === !!k; R(x, y, w, h, on ? '#2c6cd6' : '#1d2638'); g.strokeStyle = on ? '#f7c418' : '#33405a'; g.lineWidth = 1; g.strokeRect(x + .5, y + .5, w - 1, h - 1); T(l, x + w / 2, y + h / 2 + 1, '#fff', 5, 'center', false); });
+      if (Math.floor(this.t * 2) % 2) T('TAP A PLAYER TO PICK', 240, 262, '#9fb3d9', 5, 'center', false); return; }
     R(0, 196, W, 74, 'rgba(10,14,22,.96)'); R(0, 196, W, 2, '#f7c418');
     T('ARE YOU SURE?', 240, 208, '#fff', 9, 'center');
-    T("DON'T WORRY, YOU CAN CHANGE ANY TIME IN THE VAN.", 240, 223, '#9fb3d9', 5, 'center', false);
+    T(`DON'T WORRY, YOU CAN CHANGE ANY TIME IN THE VAN.  ·  ${this.hand === 'L' ? 'LEFT' : 'RIGHT'}-HANDED`, 240, 223, '#9fb3d9', 5, 'center', false);
     [[this.yes(), 'YES', 0], [this.no(), 'NO', 1]].forEach(([[x, y, w, hh], l, k]) => { R(x, y, w, hh, (this.sel || 0) === k ? '#2c6cd6' : '#262f45'); T(l, x + w / 2, y + hh / 2 + 1, '#fff', 7, 'center'); });
   },
 };
@@ -702,19 +707,20 @@ const VMP = { x: 150, y: 50, w: 180, h: 214 }, VM_ROW = 58, VM_TOP = VMP.y + 40,
 const BoardUI = {
   init() { this.cur = 0; this.scroll = 0; this.drag = null; this.msg = ''; this.msgT = 0; this.vel = 0; },
   rows() { return boardList(DDT.get()); },
-  side(i) { return [[8, 70, 132, 52], [340, 70, 132, 52], [340, 132, 132, 52]][i]; },
+  side(i) { return [[8, 70, 132, 52], [340, 70, 132, 52], [340, 132, 132, 52], [8, 132, 132, 52]][i]; },
   maxScroll() { return Math.max(0, this.rows().length * VM_ROW - VM_VIEW); },
   choose(p) {
     const rows = this.rows(), sv = DDT.get(); SND.blip();
     if (p === 'lead') { sv.prefLead = (sv.prefLead || 'rod') === 'rod' ? 'matt' : 'rod'; DDT.save(sv); return; }
     if (p === 'drive') { sv.prefDrive = ((sv.prefDrive ?? 1) + 1) % 3; DDT.save(sv); return; }
     if (p === 'shop') return this.done({ shop: true });
+    if (p === 'hand') { sv.hand = sv.hand === 'L' ? 'R' : 'L'; DDT.save(sv); return; }
     const r = rows[p]; if (!r) return;
     if (r.c.gate && !sv.inv[r.c.gate]) { this.msg = `NEEDS A ${SHOP.find(i => i.id === r.c.gate).name}`; this.msgT = 2; SND.bad(); return; }
     this.done(r);
   },
   hitAt(x, y) {
-    const sides = ['lead', 'drive', 'shop']; for (let k = 0; k < 3; k++) if (x >= this.side(k)[0] && x <= this.side(k)[0] + this.side(k)[2] && y >= this.side(k)[1] && y <= this.side(k)[1] + this.side(k)[3]) return sides[k];
+    const sides = ['lead', 'drive', 'shop', 'hand']; for (let k = 0; k < 4; k++) if (x >= this.side(k)[0] && x <= this.side(k)[0] + this.side(k)[2] && y >= this.side(k)[1] && y <= this.side(k)[1] + this.side(k)[3]) return sides[k];
     if (x >= VMP.x && x <= VMP.x + VMP.w && y >= VM_TOP && y <= VM_TOP + VM_VIEW) { const i = Math.floor((y - VM_TOP + this.scroll) / VM_ROW); if (i >= 0 && i < this.rows().length) return i; }
     return null;
   },
@@ -743,11 +749,10 @@ const BoardUI = {
     g.fillStyle = 'rgba(8,10,16,.55)'; g.fillRect(0, 46, W, H - 46);
     const s = DDT.get(), rows = this.rows(), lead = s.prefLead || 'rod', drv = s.prefDrive ?? 1;
     // side buttons
-    const SB = [[`PLAYING AS`, lead.toUpperCase(), lead === 'rod' ? 'Steady · 40 MPH' : 'Fast · 60 MPH', 'lead'], ['DRIVE', DRV[drv].replace('SLOW AND STEADY', 'SLOW + STEADY'), 'Tap to change', 'drive'], ["FERNKO'S", 'SUPPLY', '+20 min · parts, gear', 'shop']];
+    const SB = [[`PLAYING AS`, lead.toUpperCase(), lead === 'rod' ? 'Steady · 40 MPH' : 'Fast · 60 MPH', 'lead'], ['DRIVE', DRV[drv].replace('SLOW AND STEADY', 'SLOW + STEADY'), 'Tap to change', 'drive'], ["FERNKO'S", 'SUPPLY', '+20 min · parts, gear', 'shop'], ['BUTTONS FOR', (s.hand === 'L' ? 'LEFT' : 'RIGHT') + ' HAND', 'Tap to swap', 'hand']];
     SB.forEach(([a, b, c, id], k) => { const [x, y, w, h] = this.side(k); R(x, y, w, h, this.cur === id ? '#2c6cd6' : 'rgba(16,21,31,.92)'); g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(x + .5, y + .5, w - 1, h - 1);
       if (id === 'lead') { const im = artImg(lead + '_normal'); g.imageSmoothingEnabled = false; if (im) g.drawImage(im, x + 4, y + 6, 40, 40); T(a, x + 50, y + 12, '#9fb3d9', 4, 'left', false); T(b, x + 50, y + 26, '#fff', 7, 'left', false); T(c, x + 50, y + 40, '#7dffb0', 4, 'left', false); }
       else { T(a, x + w / 2, y + 12, '#9fb3d9', 4, 'center', false); T(b, x + w / 2, y + 26, '#fff', 6, 'center', false); T(c, x + w / 2, y + 40, '#7dffb0', 4, 'center', false); } });
-    T('TAP TO SWAP', 74, 130, '#9fb3d9', 4, 'center', false);
     // the phone
     const rr = (x, y, w, h, r, col) => { g.fillStyle = col; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); };
     const { x: px, y: py, w: pw, h: ph } = VMP;

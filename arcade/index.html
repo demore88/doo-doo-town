@@ -57,7 +57,14 @@
   #pad.lr .dp[data-k=U],#pad.lr .dp[data-k=D],#pad.ud .dp[data-k=L],#pad.ud .dp[data-k=R]{display:none}
   /* left/right games: ◀ on the left edge, ▶ on the right edge, the action button in the middle */
   #pad.lr .dp[data-k=L]{left:3% !important;bottom:8% !important;width:13%}#pad.lr .dp[data-k=R]{left:auto !important;right:3%;bottom:8% !important;width:13%}
-  #pad.lr .A{right:auto;left:50%;transform:translateX(-50%);bottom:5%;width:13%}
+  /* the action button rides your strong thumb's arc (up and in from the bottom corner) */
+  #pad .A{right:4%;bottom:12%}
+  #pad.lr .A{right:15%;left:auto;bottom:28%;width:13%}
+  /* left-handed: everything mirrors */
+  #pad.lefty .A{right:auto;left:4%}
+  #pad.lefty.lr .A{left:15%;right:auto}
+  #pad.lefty:not(.lr) .dp[data-k=L]{left:auto !important;right:22%}#pad.lefty:not(.lr) .dp[data-k=R]{left:auto !important;right:2%}
+  #pad.lefty:not(.lr) .dp[data-k=U]{left:auto !important;right:12%}#pad.lefty:not(.lr) .dp[data-k=D]{left:auto !important;right:12%}
   #top{position:absolute;top:.4%;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:5}
   #top button{font:inherit;font-size:clamp(5px,.8vw,9px);background:#10151fcc;color:#fff;border:1px solid #9fb3d9;padding:.35em .55em;cursor:pointer}
 </style>
@@ -84,9 +91,9 @@
   <div class="scr" id="result"><div class="box" id="resbox"></div></div>
 </div></div>
 <audio id="music" src="../assets/doo_doo_town.mp3" loop preload="auto"></audio>
-<script src="../js/state.js?v=1794278080"></script>
-<script src="../js/sfx.js?v=1794278080"></script>
-<script src="games.js?v=1794278080"></script>
+<script src="../js/state.js?v=1794278964"></script>
+<script src="../js/sfx.js?v=1794278964"></script>
+<script src="games.js?v=1794278964"></script>
 <script>
 const cv = document.getElementById('c'); g = cv.getContext('2d'); const SCALE = 3; g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
 const $ = s => document.querySelector(s);
@@ -129,6 +136,7 @@ $('#padbtn').onclick = () => { padOn = !padOn; showPad(); };
 function showPad() {
   const G = cur != null ? GAMES[cur] : null;
   $('#pad').classList.toggle('on', padOn && (phase === 'play' || phase === 'ready') && !(G && G.pad === false));
+  $('#pad').classList.toggle('lefty', ((DDT.get() || {}).hand) === 'L');
   $('#pad').classList.toggle('nodp', !!(G && G.dpad === false)); $('#pad').classList.toggle('lr', !!(G && G.dpad === 'lr')); $('#pad').classList.toggle('ud', !!(G && G.dpad === 'ud'));
   $('#actbtn').textContent = (G && G.act) || 'GO'; $('#actbtn').style.display = G && G.act === null ? 'none' : '';
   $('#padbtn').textContent = padOn ? 'PAD ON' : 'PAD';
