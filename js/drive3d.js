@@ -471,7 +471,7 @@ function drive3d(choice, opts) {
       // our van
       if (!(inv > 0 && Math.floor(t * 10) % 2)) {
         const vx = W / 2 - 36 + steer * 6, vy = H - 58 - bounce * 6 + (Math.abs(px) > 1 ? (Math.random() - .5) * 3 : 0);
-        if (VANS.complete && VANS.naturalWidth) { const fi = (brake ? 3 : 0) + (steer > 0 ? 1 : steer < 0 ? 2 : 0);
+        if (VANS.complete && VANS.naturalWidth) { const fi = (brake ? 3 : 0) + (steer > 0 ? 2 : steer < 0 ? 1 : 0);   /* right turn shows the van's right side */
           r.drawImage(VANS, fi * VANS.width / 6, 0, VANS.width / 6, VANS.height, Math.round(vx + 36 - VCW / 2), Math.round(vy + 52 - VCH), VCW, VCH); }
         else if (vanFail) { r.save(); r.translate(vx + 36, vy + 52); r.rotate(steer * 0.04); r.scale(1.35, 1.35); r.drawImage(brake ? VANBRAKE : VAN, -36, -52); r.restore(); }
         if (gas && speed > CRUISE * 0.9) { r.fillStyle = 'rgba(200,200,205,.6)'; for (let i = 0; i < 3; i++) r.fillRect(vx + 20 + Math.random() * 4, vy + 50 + i * 3, 3, 2); }
