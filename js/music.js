@@ -116,7 +116,7 @@ const DDTMusic = (() => {
   addEventListener('keydown', e => { if ((e.key === 'm' || e.key === 'M') && !e.repeat) toggleMute(); });   // M mutes anywhere
   function button() {
     if (document.getElementById('ddt-mute')) return;
-    if (/play\.html$/.test(location.pathname)) return;   // the campaign has the van's dash radio for this
+    return;   // no floating music button anymore: the van's dash radio (and the title screen's own button) handle it, M key still works
     const b = document.createElement('button'); b.id = 'ddt-mute';
     b.style.cssText = 'position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:9000;font:10px "Press Start 2P",monospace;background:#10151fcc;color:#fff;border:2px solid #fff;padding:4px 7px;cursor:pointer';
     const label = () => { b.textContent = muted ? '♪ OFF' : '♪ ON'; };
