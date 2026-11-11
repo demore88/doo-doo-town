@@ -1276,7 +1276,7 @@ setInterval(() => { const M = TRL.music, n = performance.now(); if (M.h && n - M
 GAMES.push({
   id: 'crawl', name: 'UNDER THE TRAILER', tag: 'A long crawl · rats, possums, a King · Crawlspace Carl',
   how: ['Somewhere under this huge trailer the sewer pipe came apart. Crawl through the dark and find it. Follow the STINK. This is a LONG job.', 'Near the hatch it is just rats. Deeper in: possums, buff rats, raccoons, brown recluses... and THE RAT KING guards the drip.', 'Grab peanut butter crackers off the rat traps and from critters you beat. Crawlspace Carl LOVES them. He lives down here in three places: listen for him, then trade for gear, beans and his special tonic.', 'Win fights to level up. Hurt? Open the BAG (second button) to use items or REST: it heals you but adds 30 minutes to the job.'],
-  dpad: true,
+  dpad: 'omni',
   ctl: '▲ ▼ CRAWL · ◀ ▶ TURN · SPACE = PICK · SHIFT = BAG',
   act: 'PICK', act2: 'BAG', phone: 'd-pad to crawl and turn (or tap the view), PICK in fights, BAG for items and resting.',
   init(s) {
@@ -2176,65 +2176,72 @@ GAMES.push({
     T('LEFT ' + s.foes.filter(f => f.st !== 'gone').length, W - 6, 26, '#f7c418', 6, 'right');
   },
 });
-// 20b. WATER BEADS — a wall of swollen water beads plugging the sewer, seen from the jetter nozzle.
-// Every second you spray, the beads drink the well dry. Pop the ones on the bottom and the rest come down with them.
+// 20b. WATER BEADS — swollen water beads packed in the sewer, seen from the jetter nozzle. Spray one and its whole
+// same-color clump pops; the beads above drop into the gap. Drop-ins that line up 3+ of a color pop on their own: chain them.
 GAMES.push({
-  id: 'beads', name: 'WATER BEADS', tag: 'The bead wall · a dry well · let gravity help',
-  how: ["The kids' water beads swelled up and packed the sewer solid. You're looking down the line from the nozzle.", 'Aim with the stick (or drag), HOLD SPACE (or hold the screen) to spray. A bead pops after a good soak.', "The beads drank the customer's well dry. All you've got is ONE BUCKET in the jetter tank, and it only goes down while you spray.", 'Pop the beads on the BOTTOM and everything stacked on them falls down the line. Clear the pipe before the well runs dry.'],
-  dpad: 'omni', ctl: 'STICK = AIM  ·  HOLD SPACE = SPRAY', act: 'SPRAY', phone: 'hold where you want to spray.',
+  id: 'beads', name: 'WATER BEADS', tag: 'Match the colors · chain reactions · one bucket',
+  how: ["The kids' water beads swelled up and packed the sewer. You've got ONE bucket of water in the jetter tank.", 'Pick a bead with the stick (or tap it) and SPRAY: it pops along with every bead of the same color touching it.', 'Beads above fall into the gap. If 3 or more of one color end up touching, they pop for FREE. Chain them!', 'Every spray costs water. Big clumps and chain reactions are how you clear it before the tank runs dry.'],
+  dpad: 'omni', ctl: 'STICK = PICK A BEAD  ·  SPACE = SPRAY', act: 'SPRAY', phone: 'tap a bead to spray it, or pick with the stick and press SPRAY.',
+  COLS: ['#3f8cff', '#3ccf5a', '#f04a6a', '#f7c418', '#b15cff'],
   init(s) {
-    s.oy = 0.22; s.f = 8.2; const [cx, cy, cr] = TUNNEL.proj(s.f, 0, 0, 0, s.oy); s.cx = cx; s.cy = cy; s.cr = cr * 0.93;
-    s.br = s.cr * [0.13, 0.115, 0.1][s.diff]; s.beads = []; const dx = s.br * 2.02, dy = s.br * 1.98;   /* stacked in columns, so knocking out the bottom one brings the column down */
-    for (let row = 0, y = s.cy + s.cr - s.br; y > s.cy - s.cr + s.br * 0.6; row++, y -= dy) for (let x = s.cx - s.cr + s.br; x < s.cx + s.cr; x += dx) {
-      const xx = x + (s.rnd() - 0.5) * 3; if (Math.hypot(xx - s.cx, y - s.cy) < s.cr - s.br * 0.75) s.beads.push({ x: xx, y, hue: s.rnd(), hp: 1, soak: 0, st: 'stuck', vy: 0, r: s.br * (0.92 + s.rnd() * 0.16) }); }
-    s.N0 = s.beads.length; s.ax = s.cx; s.ay = s.cy + s.cr * 0.55; s.p = 100; s.popped = 0; s.dropped = 0; s.combo = 0; s.spray = false; s.done = 0;
-    s.DRAIN = [9, 11, 13][s.diff];   /* pressure per second while spraying */
+    s.oy = 0.22; const [cx, cy, cr] = TUNNEL.proj(7.5, 0, 0, 0, s.oy); s.cx = cx; s.cy = cy; s.cr = cr * 0.95;
+    s.NC = [9, 10, 11][s.diff]; s.NR = s.NC; s.cell = (s.cr * 2) / s.NC; s.nCol = [4, 4, 5][s.diff];
+    s.g = []; for (let c = 0; c < s.NC; c++) { s.g.push([]); for (let r = 0; r < s.NR; r++) { const x = this.X(s, c), y = this.Y(s, r), inside = Math.hypot(x - s.cx, y - s.cy) < s.cr - s.cell * 0.35; s.g[c].push(inside ? { k: Math.floor(s.rnd() * s.nCol) } : null); } }
+    s.in = s.g.map(col => col.map(b => !!b));
+    this.unclump(s);
+    s.N0 = s.g.flat().filter(Boolean).length; s.shots = [16, 15, 15][s.diff]; s.S0 = s.shots; s.sc = Math.floor(s.NC / 2); s.sr = s.NR - 2; this.snap(s);
+    s.busy = 0; s.popping = []; s.chain = 0; s.best = 0; s.done = 0; s.cleared = 0; s.spray = 0;
   },
-  floorAt(s, x) { const d = x - s.cx; return s.cy + Math.sqrt(Math.max(0, s.cr * s.cr - d * d)); },
-  settle(s) {   // anything with nothing under it falls
-    const stuck = s.beads.filter(b => b.st === 'stuck').sort((a, b) => b.y - a.y), held = new Set();
-    for (const b of stuck) { if (b.y + b.r >= this.floorAt(s, b.x) - b.r * 0.9 || (Math.hypot(b.x - s.cx, b.y - s.cy) + b.r > s.cr - b.r * 0.35 && b.y < s.cy + s.cr * 0.2)) { held.add(b); continue; }   /* jammed against the pipe wall, or sitting on the bottom */
-      if (stuck.some(o => held.has(o) && o.y > b.y + b.r * 0.4 && o.y - b.y < (o.r + b.r) * 1.2 && Math.abs(o.x - b.x) < (o.r + b.r) * 0.45)) held.add(b); }
-    let n = 0; for (const b of stuck) if (!held.has(b)) { b.st = 'fall'; b.vy = 20 + Math.random() * 30; n++; }
-    if (n) { s.dropped += n; s.combo = n; POP(s, s.ax, s.ay - 30, n > 1 ? `${n} CAME DOWN!` : 'DOWN IT GOES', '#7dffb0'); SFX('splash', { vol: 0.4 }); }
-  },
+  X(s, c) { return s.cx - s.cr + s.cell * (c + 0.5); }, Y(s, r) { return s.cy - s.cr + s.cell * (r + 0.5); },
+  unclump(s) { for (let pass = 0; pass < 6; pass++) for (let c = 0; c < s.NC; c++) for (let r = 0; r < s.NR; r++) { const b = s.g[c][r]; if (b && this.group(s, c, r).length >= 3) b.k = Math.floor(s.rnd() * s.nCol); } },   /* no free pops at the start */
+  snap(s) { if (s.g[s.sc] && s.g[s.sc][s.sr]) return; let best = null, bd = 1e9; for (let c = 0; c < s.NC; c++) for (let r = 0; r < s.NR; r++) if (s.g[c][r]) { const d = Math.abs(c - s.sc) * 1.1 + Math.abs(r - s.sr); if (d < bd) { bd = d; best = [c, r]; } } if (best) { s.sc = best[0]; s.sr = best[1]; } },
+  group(s, c, r) { const k = s.g[c][r].k, seen = new Set([c * 100 + r]), q = [[c, r]], out = [];
+    while (q.length) { const [a, b] = q.pop(); out.push([a, b]); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = a + dx, y = b + dy, key = x * 100 + y; if (x < 0 || y < 0 || x >= s.NC || y >= s.NR || seen.has(key)) continue; const n = s.g[x][y]; if (n && n.k === k) { seen.add(key); q.push([x, y]); } } } return out; },
+  pop(s, cells) { for (const [c, r] of cells) { const b = s.g[c][r]; if (!b) continue; s.popping.push({ x: this.X(s, c), y: this.Y(s, r), k: b.k, t: 0 }); s.g[c][r] = null; s.cleared++; } SFX('squish', { vol: 0.5 }); },
+  fall(s) { let moved = false;   // gravity, inside the round pipe
+    for (let c = 0; c < s.NC; c++) for (let r = s.NR - 1; r >= 0; r--) { if (!s.in[c][r] || s.g[c][r]) continue; for (let u = r - 1; u >= 0; u--) if (s.g[c][u]) { s.g[c][r] = s.g[c][u]; s.g[c][r].drop = (s.g[c][r].drop || 0) + (r - u); s.g[c][u] = null; moved = true; break; } }
+    return moved; },
+  cascade(s) { const seen = new Set(), pops = [];
+    for (let c = 0; c < s.NC; c++) for (let r = 0; r < s.NR; r++) { if (!s.g[c][r] || seen.has(c * 100 + r)) continue; const gr = this.group(s, c, r); gr.forEach(([a, b]) => seen.add(a * 100 + b)); if (gr.length >= 3) pops.push(...gr); }
+    return pops; },
   update(s, dt, I) {
-    s.t += dt; FX(s, dt);
-    if (s.done) { s.done += dt; if (s.done > 2.4) { const left = s.beads.filter(b => b.st === 'stuck').length; s.end = s.win2 ? { win: true, stars: stars3(s.p > 40, s.p > 15), line: `Line's open. ${s.popped} popped, ${s.dropped} knocked loose, ${Math.round(s.p)}% of the bucket left.` } : { win: false, stars: 0, line: `Bucket's empty, well's dry. ${left} beads still packed in there, drinking.` }; } return; }
-    let mx = (I.R ? 1 : 0) - (I.L ? 1 : 0), my = (I.D ? 1 : 0) - (I.U ? 1 : 0);
-    if (I.ptr.down) { s.ax += (I.ptr.x - s.ax) * Math.min(1, dt * 10); s.ay += (I.ptr.y - s.ay) * Math.min(1, dt * 10); }
-    s.ax = clamp(s.ax + mx * 160 * HERO(s).spd * dt, s.cx - s.cr, s.cx + s.cr); s.ay = clamp(s.ay + my * 160 * HERO(s).spd * dt, s.cy - s.cr, s.cy + s.cr);
-    s.spray = (I.A || I.ptr.down) && s.p > 0;
-    if (s.spray) { s.p = Math.max(0, s.p - s.DRAIN * dt);
-      const hit = s.beads.filter(b => b.st === 'stuck' && Math.hypot(b.x - s.ax, b.y - s.ay) < b.r * 1.1).sort((a, b) => Math.hypot(a.x - s.ax, a.y - s.ay) - Math.hypot(b.x - s.ax, b.y - s.ay))[0];
-      if (hit) { hit.soak += dt * (2.2 / (0.8 + 0.2 * s.diff)) * HERO(s).grip; hit.r = Math.min(s.br * 1.35, hit.r + dt * 2.5);   /* it drinks, it swells */
-        if (hit.soak >= 1) { hit.st = 'pop'; hit.pt = 0; s.popped++; PUFF(s, hit.x, hit.y, `hsl(${hit.hue * 360},80%,65%)`, 14, 120); SFX('squish', { vol: 0.5 }); this.settle(s); } } }
-    for (const b of s.beads) { if (b.st === 'fall') { b.vy += 520 * dt; b.y += b.vy * dt; b.x += (s.cx - b.x) * dt * 0.6; if (b.y > s.cy + s.cr + b.r * 3) b.st = 'gone'; } else if (b.st === 'pop') { b.pt += dt; if (b.pt > 0.3) b.st = 'gone'; } }
-    const left = s.beads.filter(b => b.st === 'stuck').length;
-    if (left <= Math.max(1, s.N0 * 0.04)) { s.done = 0.01; s.win2 = true; s.beads.filter(b => b.st === 'stuck').forEach(b => { b.st = 'fall'; b.vy = 60; }); SFX('drain'); POP(s, 240, 80, 'IT ALL LETS GO!', '#7dffb0'); }
-    else if (s.p <= 0) { s.done = 0.01; s.win2 = false; POP(s, 240, 80, 'OUT OF WATER', '#e9665a'); }
+    s.t += dt; FX(s, dt); s.spray = Math.max(0, s.spray - dt);
+    for (const p of s.popping) p.t += dt; s.popping = s.popping.filter(p => p.t < 0.35);
+    for (const col of s.g) for (const b of col) if (b && b.drop) b.drop = Math.max(0, b.drop - dt * 9);
+    if (s.done) { s.done += dt; if (s.done > 2.2) { const left = s.g.flat().filter(Boolean).length; s.end = s.win2 ? { win: true, stars: stars3(s.shots >= 4, s.shots >= 1), line: `Line's open. ${s.cleared} beads popped, best chain x${s.best}, ${s.shots} spray${s.shots === 1 ? '' : 's'} left in the bucket.` } : { win: false, stars: 0, line: `Bucket's empty. ${left} beads still in there, drinking.` }; } return; }
+    if (s.busy > 0) { s.busy -= dt; if (s.busy <= 0) {   // after a pop: let things fall, then check for chain pops
+        if (this.fall(s)) { s.busy = 0.28; return; }
+        const more = this.cascade(s); if (more.length) { s.chain++; s.best = Math.max(s.best, s.chain); this.pop(s, more); POP(s, 240, 60, `CHAIN x${s.chain}!`, '#7dffb0'); s.busy = 0.3; return; }
+        s.chain = 0; this.snap(s); this.check(s); } return; }
+    // pick a bead: stick steps from bead to bead, tap picks directly
+    const step = (dc, dr) => { for (let n = 1; n < s.NC; n++) { const c = s.sc + dc * n, r = s.sr + dr * n; if (c < 0 || r < 0 || c >= s.NC || r >= s.NR) return; if (s.g[c][r]) { s.sc = c; s.sr = r; SFX('ui_tap', { vol: 0.2 }); return; } } };
+    if (I.Lp) step(-1, 0); if (I.Rp) step(1, 0); if (I.Up) step(0, -1); if (I.Dp) step(0, 1);
+    let fire = I.Ap;
+    if (I.ptr.clicked && Math.hypot(I.ptr.x - s.cx, I.ptr.y - s.cy) < s.cr) { const c = Math.floor((I.ptr.x - (s.cx - s.cr)) / s.cell), r = Math.floor((I.ptr.y - (s.cy - s.cr)) / s.cell); if (s.g[c] && s.g[c][r]) { s.sc = c; s.sr = r; fire = true; } }
+    if (fire && s.g[s.sc][s.sr] && s.shots > 0) { s.shots--; s.spray = 0.35; const gr = this.group(s, s.sc, s.sr); this.pop(s, gr); if (gr.length >= 4) POP(s, 240, 48, `${gr.length} AT ONCE!`, '#f7c418'); s.chain = 1; s.busy = 0.3; }
   },
+  check(s) { const left = s.g.flat().filter(Boolean).length;
+    if (left <= s.N0 * 0.2) { s.done = 0.01; s.win2 = true; for (let c = 0; c < s.NC; c++) for (let r = 0; r < s.NR; r++) if (s.g[c][r]) { s.popping.push({ x: this.X(s, c), y: this.Y(s, r), k: s.g[c][r].k, t: -r * 0.03 }); s.g[c][r] = null; } SFX('drain'); POP(s, 240, 70, 'IT ALL LETS GO!', '#7dffb0'); }
+    else if (s.shots <= 0) { s.done = 0.01; s.win2 = false; POP(s, 240, 70, 'OUT OF WATER', '#e9665a'); } },
   draw(s) {
     R(0, 0, W, H, '#050605');
     TUNNEL.draw({ D: 0, t: s.t, pvc: false, ox: 0, oy: s.oy, plugs: [], water: 0.22, flow: -1, light: 1 }, 0, 0);
-    // the bead wall
-    for (const b of s.beads) { if (b.st === 'gone') continue; const pop = b.st === 'pop', k = pop ? 1 + b.pt * 3 : 1, a = pop ? Math.max(0, 1 - b.pt / 0.3) : 1;
-      g.globalAlpha = 0.92 * a; C(b.x, b.y, b.r * k, `hsl(${b.hue * 360},${70 + b.soak * 20}%,${48 + b.soak * 14}%)`); g.globalAlpha = a;
-      C(b.x - b.r * 0.32, b.y - b.r * 0.35, b.r * 0.28, 'rgba(255,255,255,.7)'); C(b.x + b.r * 0.3, b.y + b.r * 0.3, b.r * 0.18, 'rgba(255,255,255,.2)');
-      g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 1; g.beginPath(); g.arc(b.x, b.y, b.r * k, 0, 7); g.stroke(); g.globalAlpha = 1; }
+    const rr = s.cell * 0.48, sel = s.g[s.sc] && s.g[s.sc][s.sr], grp = sel && !s.busy && !s.done ? new Set(this.group(s, s.sc, s.sr).map(([a, b]) => a * 100 + b)) : new Set();
+    for (let c = 0; c < s.NC; c++) for (let r = 0; r < s.NR; r++) { const b = s.g[c][r]; if (!b) continue; const x = this.X(s, c), y = this.Y(s, r) - (b.drop || 0) * s.cell, col = this.COLS[b.k], hot = grp.has(c * 100 + r);
+      C(x, y, rr * (hot ? 1.06 + Math.sin(s.t * 10) * 0.04 : 1), col); C(x - rr * 0.3, y - rr * 0.35, rr * 0.3, 'rgba(255,255,255,.65)'); C(x + rr * 0.3, y + rr * 0.3, rr * 0.18, 'rgba(255,255,255,.2)');
+      g.strokeStyle = hot ? '#fff' : 'rgba(0,0,0,.4)'; g.lineWidth = hot ? 1.5 : 1; g.beginPath(); g.arc(x, y, rr, 0, 7); g.stroke(); }
+    for (const p of s.popping) { if (p.t < 0) { C(p.x, p.y, rr, this.COLS[p.k]); continue; } const k = p.t / 0.35; g.globalAlpha = Math.max(0, 1 - k); C(p.x, p.y, rr * (1 + k * 1.2), this.COLS[p.k]); g.globalAlpha = 1; for (let i = 0; i < 6; i++) { const a = i * 1.05; R(p.x + Math.cos(a) * rr * (1 + k * 2), p.y + Math.sin(a) * rr * (1 + k * 2), 2, 2, '#e8f6ff'); } }
     TUNNEL.vignette(0.45);
-    // the nozzle and the stream
-    const nx = 240, ny = 232;
-    g.strokeStyle = '#1e1e22'; g.lineWidth = 14; g.beginPath(); g.moveTo(240, H + 10); g.lineTo(nx, ny + 8); g.stroke();
+    const nx = 240, ny = 236; g.strokeStyle = '#1e1e22'; g.lineWidth = 14; g.beginPath(); g.moveTo(240, H + 10); g.lineTo(nx, ny + 8); g.stroke();
     R(nx - 9, ny - 6, 18, 14, '#b8862e'); R(nx - 9, ny - 6, 18, 3, '#e0b45a'); R(nx - 5, ny - 11, 10, 6, '#9a6e22');
-    if (s.spray) { const pw = s.p / 100; for (let i = 0; i < 4 + pw * 6; i++) { g.strokeStyle = `rgba(170,215,255,${0.3 + Math.random() * 0.45})`; g.lineWidth = 1 + Math.random() * 2.5 * pw; g.beginPath(); g.moveTo(nx + (Math.random() - 0.5) * 6, ny - 10); g.lineTo(s.ax + (Math.random() - 0.5) * 10, s.ay + (Math.random() - 0.5) * 8); g.stroke(); }
-      for (let i = 0; i < 8; i++) { const a = Math.random() * 6.28, rr = Math.random() * 14; R(s.ax + Math.cos(a) * rr, s.ay + Math.sin(a) * rr * 0.7, 2, 2, '#e8f6ff'); } }
-    g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 1; g.beginPath(); g.arc(s.ax, s.ay, 7, 0, 7); g.moveTo(s.ax - 11, s.ay); g.lineTo(s.ax + 11, s.ay); g.moveTo(s.ax, s.ay - 11); g.lineTo(s.ax, s.ay + 11); g.stroke();
+    if (sel) { const x = this.X(s, s.sc), y = this.Y(s, s.sr);
+      if (s.spray > 0) for (let i = 0; i < 8; i++) { g.strokeStyle = `rgba(170,215,255,${0.3 + Math.random() * 0.5})`; g.lineWidth = 1 + Math.random() * 2.5; g.beginPath(); g.moveTo(nx + (Math.random() - 0.5) * 6, ny - 10); g.lineTo(x + (Math.random() - 0.5) * 10, y + (Math.random() - 0.5) * 8); g.stroke(); }
+      else if (!s.done) { g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 1; g.beginPath(); g.arc(x, y, rr + 3, 0, 7); g.stroke(); } }
     HUD(s, 'WATER BEADS', null);
-    const left = s.beads.filter(b => b.st === 'stuck').length;
-    T('JETTER TANK · 1 BUCKET', 10, 26, '#9fd1ff', 6); BAR(10, 31, 150, 7, s.p / 100, s.p > 40 ? '#4aa8ff' : s.p > 15 ? '#f7c418' : '#e9665a');
-    T('BEADS LEFT ' + left, W - 8, 26, '#f7c418', 6, 'right'); BAR(W - 158, 31, 150, 7, 1 - left / s.N0, '#7dffb0');
-    if (s.t < 5 && !s.spray) { T('ONE BUCKET OF WATER. USE IT WISELY.', 240, 56, '#9fd1ff', 7, 'center'); T('POP THE ONES HOLDING THE REST UP', 240, 70, '#fff', 7, 'center'); }
+    T('JETTER TANK · 1 BUCKET', 10, 26, '#9fd1ff', 6); for (let i = 0; i < s.S0; i++) R(10 + i * 9, 31, 7, 8, i < s.shots ? '#4aa8ff' : '#26313d');
+    const left = s.g.flat().filter(Boolean).length, need = Math.ceil(s.N0 * 0.2);
+    T(`BEADS ${left}  (CLEAR TO ${need})`, W - 8, 26, '#f7c418', 6, 'right'); BAR(W - 158, 31, 150, 7, (s.N0 - left) / (s.N0 - need), '#7dffb0');
+    if (s.t < 5 && !s.cleared) T('POP CLUMPS. LINE UP CHAINS.', 240, 250, '#fff', 7, 'center');
     if (s.done) T(s.win2 ? 'LINE IS OPEN!' : 'TANK IS EMPTY...', 240, 70, s.win2 ? '#7dffb0' : '#e9665a', 12, 'center');
     DRAWFX(s);
   },
