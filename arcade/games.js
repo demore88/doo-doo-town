@@ -1398,9 +1398,10 @@ GAMES.push({
     if (s.shop) return this.shopping(s, dt, I);
     if (s.battle) return this.fight(s, dt, I);
     if (s.big) return this.bigStep(s, dt, I);
+    if (!s.restTip && s.hp > 0 && s.hp < 15) { s.restTip = true; s.bagPulse = true; (s.log = s.log || []).push('Seems like you need to rest. Tap your BAG and REST for 30 minutes.'); SFX('ui_tap'); }   /* told once, the first time you get low */
     if (I.ptr.clicked && I.ptr.x > 338 && I.ptr.x < 472 && I.ptr.y > 10 && I.ptr.y < 92) { s.big = { stroke: null }; I.ptr.clicked = false; SFX('ui_tap'); return; }   /* tap the little map: the big one */
     { const [x, y, w, h] = this.bagBtn(), tap = I.ptr.clicked && I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h; if (I.Bp || tap) { s.bagQ = true; I.ptr.clicked = false; }   /* asked for the bag while crawling: it opens the moment you stop */
-      if (s.bagQ && !(s.mv > 0)) { s.bagQ = false; s.bag = { sel: 0, battle: false }; SFX('ui_tap'); return; } }
+      if (s.bagQ && !(s.mv > 0)) { s.bagQ = false; s.bagPulse = false; s.bag = { sel: 0, battle: false }; SFX('ui_tap'); return; } }
     const H = HERO(s), dur = 0.26 / H.spd;
     if (s.mv > 0) {   // gliding to the next square / turning
       s.mv -= dt; const k = 1 - Math.max(0, s.mv) / s.mvD;
@@ -1845,7 +1846,7 @@ GAMES.push({
       const st = s.escort ? ['ESCORTING THE PRINCESS', '#ff8ad0'] : stink > 0.75 ? ['SMELLS CLOSE!', Math.floor(t * 3) % 2 ? '#a0d040' : '#6a8a30'] : s.married ? ['MARRIED (TO A POSSUM)', '#ff8ad0'] : null;
       if (st) T(st[0], PX + 8, 131, st[1], 5);
       T('LIGHT x' + s.lights, PX + 8, 146, '#e8dcc0', 5); T('CRACKERS x' + s.crk, PX + 8, 160, '#e8dcc0', 5); T('BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 5);
-      this.tile(s, { id: 'item', label: 'BAG' }, this.bagBtn(), !!s.bagQ, false);   /* tap to open the bag */ }
+      this.tile(s, { id: 'item', label: 'BAG' }, this.bagBtn(), !!s.bagQ || (s.bagPulse && Math.floor(t * 3) % 2 === 0), false);   /* blinks after the rest tip */   /* tap to open the bag */ }
     // bottom bar: the hero's portrait + health, and the message scroll
     bevel(10, 200, 56, 60);
     if (s.wake) { const [who, f] = s.wake.lines[s.wake.i], me = HERO(s).name.toLowerCase();
