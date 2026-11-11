@@ -260,8 +260,8 @@ GAMES.push({
 // =====================================================================
 // 3. SNAKE THE LINE — steer the cable head up a winding pipe. Spin through debris, don't kink on the walls, chew the clog.
 GAMES.push({
-  id: 'cable', name: 'SNAKE THE LINE', tag: 'Wipes · toys · roots · grease',
-  how: ['You steer the cable head up the pipe. It feeds on its own.', 'Scraping the pipe wall KINKS the cable. Three kinks and you are done.', 'Hold SPACE to SPIN the cutter: spin THROUGH wipes and roots, or they snag you.', 'At the end, spin into the clog until it breaks up.'],
+  id: 'cable', name: 'SNAKE THE LINE', tag: 'Flex shaft & chain knocker · wipes · roots',
+  how: ['You are running the FLEX SHAFT up the pipe, a chain knocker on the end. It feeds on its own; you steer.', 'Scraping the pipe wall KINKS the shaft. Three kinks and you are done.', 'Hold SPACE to SPIN: the chains fling out and scour the pipe. Spin THROUGH wipes and roots, or they snag the chains.', 'At the end, spin into the clog until the chains chew it apart.'],
   ctl: '◀ ▶ STEER  ·  HOLD SPACE = SPIN',
   act: 'SPIN', dpad: 'lr',
   init(s) {
@@ -275,7 +275,7 @@ GAMES.push({
   update(s, dt, I) {
     s.t += dt; FX(s, dt);
     const H = HERO(s), spin = I.A || (I.ptr.down && Math.abs(I.ptr.x - 240) < 60), atClog = s.d >= s.LEN;   /* touch: hold the middle to spin, either side to steer */
-    s.spinT += spin ? dt * 18 : dt * 3;
+    s.spinT += spin ? dt * 18 : dt * 0.8; s.spinRate = spin ? 18 : 0;
     if (!atClog) {
       // steering: keys or drag toward your finger
       let st = (I.R ? 1 : 0) - (I.L ? 1 : 0); if (I.ptr.down && Math.abs(I.ptr.x - 240) >= 60) st = Math.sign(I.ptr.x - 240);
@@ -313,14 +313,25 @@ GAMES.push({
       if (!SPC(q.kind === 'wipe' ? 'wipes' : q.kind === 'root' ? 'roots' : 'toycar', x, y, sc)) { if (q.kind === 'wipe') R(x - r * 0.3, y - r * 0.2, r * 0.6, r * 0.4, '#f4f4f2'); else if (q.kind === 'root') for (let i2 = 0; i2 < 5; i2++) R(x - r * 0.3 + i2 * r * 0.15, y - r * 0.3, r * 0.05, r * 0.5, '#8a6a3e'); else R(x - r * 0.25, y - r * 0.15, r * 0.5, r * 0.3, '#c0392b'); }
       g.filter = 'none'; }
     TUNNEL.vignette(0.55);
-    // the cable coming up from behind, and the cutter head spinning in front of you
-    const hx = 240 - off * 30, hy = 214, sp = s.spinT;
-    g.strokeStyle = '#3a3a3e'; g.lineWidth = 12; g.beginPath(); g.moveTo(240, H + 10); g.quadraticCurveTo(240 - off * 10, 250, hx, hy + 8); g.stroke();
-    g.strokeStyle = '#8a8a90'; g.lineWidth = 2; for (let i2 = 0; i2 < 10; i2++) { const yy = hy + 10 + i2 * 6; g.beginPath(); g.moveTo(hx - 6 + (yy - hy) * off * -0.1, yy); g.lineTo(hx + 6 + (yy - hy) * off * -0.1, yy + 3); g.stroke(); }   /* the cable's coil */
-    for (let i2 = 0; i2 < 4; i2++) { const a = sp + i2 * Math.PI / 2, bx = hx + Math.cos(a) * 26, by = hy + Math.sin(a) * 12;
-      g.strokeStyle = s.snag > 0 ? '#e9665a' : '#d8dade'; g.lineWidth = 5; g.beginPath(); g.moveTo(hx, hy); g.lineTo(bx, by); g.stroke(); R(bx - 3, by - 3, 6, 6, '#f4f6f8'); }   /* the cutter blades */
-    C(hx, hy, 7, s.snag > 0 ? '#e9665a' : '#b8bcc2'); C(hx - 2, hy - 2, 2.5, '#fff');
-    if (s.wall > 0.2) for (let i2 = 0; i2 < 6; i2++) R(hx + Math.sign(off) * (30 + Math.random() * 30), hy - 10 + Math.random() * 20, 3, 2, i2 % 2 ? '#f7c418' : '#e9665a');   /* sparks off the wall */
+    // the flex shaft: comes from behind you, runs away down the pipe to the chain knocker spinning a couple of feet ahead
+    const fH = 3.6, hubX = ox, hubY = oy - 0.1, P = (f, X, Y) => { const q = TUNNEL.proj(f, X, Y, ox, oy); q[0] += sway * Math.min(1, Math.max(0, f) / 8); return q; };
+    { const pts = []; for (let f2 = 0.1; f2 <= fH; f2 += 0.1) { const u = (f2 - 0.1) / (fH - 0.1); pts.push(P(f2, hubX + Math.sin(f2 * 1.3 + s.t * 0.6) * 0.05 * (1 - u), hubY + 0.62 * (1 - u) * (1 - u))); }   /* from just under you, away down the pipe */
+      for (let i2 = 0; i2 < pts.length - 1; i2++) { const [x1, y1, r1] = pts[i2], [x2, y2] = pts[i2 + 1], bare = i2 > pts.length - 5, wdt = Math.max(2, r1 * 0.075);
+        g.strokeStyle = bare ? '#9aa0a8' : '#202226'; g.lineWidth = wdt; g.lineCap = 'round'; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+        g.strokeStyle = bare ? ((i2 + Math.floor(s.spinT * 3)) % 2 ? '#d8dce2' : '#6a7078') : 'rgba(255,255,255,.12)'; g.lineWidth = Math.max(1, wdt * 0.3); g.beginPath(); g.moveTo(x1, y1 - wdt * 0.25); g.lineTo(x2, y2 - wdt * 0.25); g.stroke(); }   /* casing sheen; the bare spinning cable at the head */
+      g.lineCap = 'butt'; }
+    { const [hx, hy, hr] = P(fH, hubX, hubY), spin = s.spinT, spinning = (s.spinRate || 0) > 6 && !(s.snag > 0), n = 3, Lc = 0.86;
+      if (spinning) { g.strokeStyle = 'rgba(200,205,212,.18)'; g.lineWidth = Math.max(2, hr * 0.12); g.beginPath(); g.ellipse(hx, hy, hr * Lc, hr * Lc, 0, 0, 7); g.stroke(); }   /* the blur ring the chains make */
+      for (let c2 = 0; c2 < n; c2++) for (let ghost = spinning ? 2 : 0; ghost >= 0; ghost--) {
+        const base = spin + c2 * Math.PI * 2 / n - ghost * 0.22; g.globalAlpha = ghost ? 0.25 / ghost : 1;
+        for (let l = 0; l < 11; l++) { const u = (l + 1) / 11;
+          let X, Y; if (spinning) { X = hubX + Math.cos(base) * Lc * u; Y = hubY + Math.sin(base) * Lc * u; } else { const a0 = c2 * 2.1 + 0.5; X = hubX + Math.cos(a0) * 0.12 * u + Math.sin(s.t * 2 + c2) * 0.03 * u; Y = hubY + u * 0.5; }   /* flung out to the walls, or hanging */
+          const [lx, ly, lr] = P(fH, X, Y), sz = Math.max(1.2, lr * 0.03);
+          if (l % 2) R(lx - sz, ly - sz * 0.5, sz * 2, sz, s.snag > 0 ? '#e9665a' : '#c8ccd2'); else R(lx - sz * 0.5, ly - sz, sz, sz * 2, s.snag > 0 ? '#b8443a' : '#8e949c');   /* alternating links */
+          if (l === 10 && spinning && !ghost) { R(lx - sz, ly - sz, sz * 2, sz * 2, '#f2f4f6'); if (Math.random() < 0.35) R(lx + (Math.random() - 0.5) * 10, ly + (Math.random() - 0.5) * 10, 2, 2, '#f7c418'); } }   /* carbide tip, sparks off the wall */
+        g.globalAlpha = 1; }
+      C(hx, hy, Math.max(3, hr * 0.075), s.snag > 0 ? '#e9665a' : '#7e848c'); C(hx - hr * 0.02, hy - hr * 0.02, Math.max(1, hr * 0.025), '#e8eaee'); }   /* the knocker hub */
+    if (s.wall > 0.2) for (let i2 = 0; i2 < 6; i2++) R(240 + Math.sign(off) * (90 + Math.random() * 60), 150 + Math.random() * 60, 3, 2, i2 % 2 ? '#f7c418' : '#e9665a');   /* scraping the wall */
     DRAWFX(s);
     HUD(s, 'SNAKE THE LINE', s.TIME - s.t);
     BAR(6, 30, 110, 7, s.d / s.LEN, '#7bd65b', 'TO THE CLOG');
@@ -2060,12 +2071,12 @@ GAMES.push({
 // don't cook the pipe, and swap the bucket before the meltwater runs over.
 GAMES.push({
   id: 'steamer', name: 'THAW IT OUT', tag: 'The frozen line · steamer up through the cleanout',
-  how: ['The line froze solid along the outside wall. You are at the cleanout with the steamer, looking up the pipe.', '▶ (or ▲) feeds the steam hose up the pipe, ◀ pulls it back.', 'Hold SPACE to steam the ice in front of the nozzle.', 'Steam too long in one spot and the pipe gets soft. Watch the HEAT bar.', 'The melt runs back down into your bucket. ▼ swaps the bucket before it spills.', 'Melt every chunk of ice to open the line.'],
-  ctl: '◀ ▶ HOSE · SPACE STEAM · ▼ SWAP BUCKET',
-  phone: 'the pad moves the hose (▼ swaps the bucket), the big button steams.',
+  how: ['The line froze solid along the outside wall. You are at the cleanout with the steamer, looking up the pipe.', '▶ (or ▲) feeds the steam hose up the pipe, ◀ pulls it back.', 'Hold SPACE to steam the ice in front of the nozzle.', 'Steam too long in one spot and the pipe gets soft. Watch the HEAT bar.', 'The melt runs back into your bucket. When it gets full, STOP steaming and press ▼ to carry it outside and dump it.', 'Forget, and it runs over: you mop the floor before you can do anything else.', 'Melt every chunk of ice to open the line.'],
+  ctl: '◀ ▶ HOSE · SPACE STEAM · ▼ DUMP BUCKET',
+  phone: 'the pad moves the hose (▼ dumps the bucket), the big button steams.',
   act: 'STEAM',
   init(s) {
-    s.DUR = [60, 55, 50][s.diff]; s.hx = 92; s.heat = 0; s.bucket = 0; s.swap = 0; s.pantsMax = s.pants = [4, 3, 3][s.diff]; s.inv = 0; s.soft = 0; s.spill = 0;
+    s.DUR = [68, 62, 56][s.diff]; s.mop = 0; s.hx = 92; s.heat = 0; s.bucket = 0; s.swap = 0; s.pantsMax = s.pants = [4, 3, 3][s.diff]; s.inv = 0; s.soft = 0; s.spill = 0;
     const n = [3, 4, 5][s.diff]; s.ice = [];
     let x = 150 + s.rnd() * 30;
     for (let i = 0; i < n; i++) { const w = 18 + s.rnd() * 22; s.ice.push({ x, w, hp: 1, max: (1.4 + s.rnd() * 1.0) * (1 + s.diff * 0.15) }); x += w + 20 + s.rnd() * 40; }
@@ -2076,25 +2087,36 @@ GAMES.push({
     s.inv = Math.max(0, s.inv - dt);
     const front = s.ice.find(c => c.hp > 0);
     const maxX = front ? front.x - 6 : 440;
-    if (s.swap > 0) { s.swap -= dt; if (s.swap <= 0) { s.bucket = 0; POP(s, 60, 196, 'FRESH BUCKET', '#7dffb0'); } }
-    else if (I.Dp || (I.D && s.bucket > 0.15) || (I.ptr.clicked && I.ptr.x < 110 && I.ptr.y > 190)) { s.swap = 1.1 / Math.sqrt(H0.spd); SFX('splash'); }   /* or tap the bucket */
-    const dir = (I.R || I.U ? 1 : 0) - (I.L ? 1 : 0) + (I.ptr.down && !I.A ? (I.ptr.x > 330 ? 1 : I.ptr.x < 150 ? -1 : 0) : 0);   /* touch: right side feeds the hose in, left pulls it back, middle steams */
-    s.hx = clamp(s.hx + dir * 70 * H0.spd * dt, 92, maxX);
-    const steaming = (I.A || (I.ptr.down && I.ptr.x >= 150 && I.ptr.x <= 330 && I.ptr.y < 200)) && s.swap <= 0; s.steaming = steaming; s.near = front && front.x - s.hx < 16;
+    const wantSteam = I.A || (I.ptr.down && I.ptr.x >= 150 && I.ptr.x <= 330 && I.ptr.y < 190);
+    const away = s.swap > 0 || s.mop > 0;
+    // the floor: if the bucket ran over you mop before anything else (tap SPACE / tap the screen)
+    if (s.mop > 0) { s.heat = Math.max(0, s.heat - dt * 0.38);
+      if (I.Ap || I.ptr.clicked) { s.mop -= 0.075 * Math.sqrt(H0.spd); s.mopT = 0.15; SFX('squish', { vol: 0.5 }); if (s.mop <= 0) { s.mop = 0; POP(s, 240, 120, "FLOOR'S DRY. BACK TO IT.", '#7dffb0'); } }
+      s.mopT = Math.max(0, (s.mopT || 0) - dt); }
+    // the dump run: stop steaming, carry the bucket out the bulkhead, dump it, come back
+    else if (s.swap > 0) { s.swap -= dt; s.heat = Math.max(0, s.heat - dt * 0.38); if (s.swap <= 0) { s.bucket = 0; POP(s, 240, 120, 'BUCKET DUMPED. BACK AT IT.', '#7dffb0'); } }
+    else if (I.Dp || (I.ptr.clicked && I.ptr.x < 110 && I.ptr.y > 190)) {
+      if (wantSteam) POP(s, 240, 110, 'STOP STEAMING FIRST', '#f7c418');
+      else if (s.bucket < 0.1) POP(s, 240, 110, "BUCKET'S EMPTY", '#cfd8e0');
+      else { s.swap = s.SWAP = 3.2 / Math.sqrt(H0.spd); SFX('splash'); } }
+    if (!away) {
+      const dir = (I.R || I.U ? 1 : 0) - (I.L ? 1 : 0) + (I.ptr.down && !I.A ? (I.ptr.x > 330 ? 1 : I.ptr.x < 150 ? -1 : 0) : 0);   /* touch: right side feeds the hose in, left pulls it back, middle steams */
+      s.hx = clamp(s.hx + dir * 70 * H0.spd * dt, 92, maxX); }
+    const steaming = wantSteam && !away; s.steaming = steaming; s.near = front && front.x - s.hx < 16;
     // heat builds where you steam and bleeds off when you stop. Rod's steadier hands spread it out.
     if (steaming) {
       s.heat += dt * (0.42 + s.diff * 0.06) / H0.grip;
-      if (front && front.x - s.hx < 16) { const m = dt / front.max; front.hp -= m; s.bucket += m * 0.42 * (1 + s.diff * 0.1); if (s.rnd() < dt * 8) s.drips.push({ x: s.hx, v: 0 }); if (front.hp <= 0) { s.melted++; POP(s, front.x + front.w / 2, 120, 'CRACK!', '#9fe0ff'); SFX('drain'); } }
+      if (front && front.x - s.hx < 16) { const m = dt / front.max; front.hp -= m; s.bucket += m * 0.55 * (1 + s.diff * 0.1); if (s.rnd() < dt * 8) s.drips.push({ x: s.hx, v: 0 }); if (front.hp <= 0) { s.melted++; POP(s, 240, 110, 'CRACK!', '#9fe0ff'); SFX('drain'); } }
       if (s.rnd() < dt * 20) s.puffs.push({ x: s.hx + 6, y: 150, l: 0.6 });
-    } else s.heat = Math.max(0, s.heat - dt * 0.38);
-    if (s.heat >= 1 && s.inv <= 0) { s.pants--; s.soft++; s.inv = 1; s.heat = 0.55; s.shake = 0.3; POP(s, s.hx, 120, "PIPE'S GOING SOFT!", '#e9665a'); }
-    if (s.bucket >= 1 && s.inv <= 0) { s.pants--; s.spill++; s.inv = 1; s.bucket = 0.3; s.shake = 0.3; SFX('splash'); POP(s, 60, 190, 'BUCKET SPILLED!', '#e9665a'); }
+    } else if (!away) s.heat = Math.max(0, s.heat - dt * 0.38);
+    if (s.heat >= 1 && s.inv <= 0) { s.pants--; s.soft++; s.inv = 1; s.heat = 0.55; s.shake = 0.3; POP(s, 240, 120, "PIPE'S GOING SOFT!", '#e9665a'); }
+    if (s.bucket >= 1 && !s.mop) { s.spill++; s.bucket = 0; s.mop = 1; s.shake = 0.4; SFX('splash'); POP(s, 240, 100, 'BUCKET RAN OVER! MOP IT UP!', '#e9665a'); }   /* forgot the bucket: water on the basement floor */
     for (const d of s.drips) { d.v += dt * 140; d.x -= d.v * dt; } s.drips = s.drips.filter(d => d.x > 74);
     for (const p of s.puffs) { p.l -= dt; p.y -= dt * 30; p.x += dt * 10; } s.puffs = s.puffs.filter(p => p.l > 0);
     FX(s, dt);
-    if (s.pants <= 0) s.end = { win: false, stars: 0, line: s.soft >= s.spill ? 'Cooked the pipe. Now it needs a new one.' : 'Meltwater all over the basement floor.' };
-    else if (!front) s.end = { win: true, stars: stars3(s.soft + s.spill === 0 && s.t < s.DUR * 0.7, s.soft + s.spill <= 1), line: s.soft + s.spill ? 'Line is open. A little messy.' : 'Line is open. Not a drop on the floor.' };
-    else if (s.t >= s.DUR) s.end = { win: false, stars: 0, line: 'Still frozen. Doreen is pouring hot water down it again.' };
+    if (s.pants <= 0) s.end = { win: false, stars: 0, line: 'Cooked the pipe. Now it needs a new one.' };
+    else if (!front && !s.mop) s.end = { win: true, stars: stars3(s.soft + s.spill === 0 && s.t < s.DUR * 0.75, s.soft + s.spill <= 1), line: s.spill ? `Line is open. Mopped the floor ${s.spill} time${s.spill > 1 ? 's' : ''}.` : s.soft ? 'Line is open. Pipe got a little warm.' : 'Line is open. Not a drop on the floor.' };
+    else if (s.t >= s.DUR) s.end = { win: false, stars: 0, line: s.spill ? 'Still frozen, and the floor is soaked.' : 'Still frozen. Doreen is pouring hot water down it again.' };
   },
   draw(s) {   /* the steam nozzle's view up the frozen line */
     const PX = 10, oy = 0.3, hot = Math.max(0, s.heat - 0.5) * 2;
@@ -2112,11 +2134,25 @@ GAMES.push({
     if (s.steaming && !s.near && Math.floor(s.t * 3) % 2) T('GET CLOSER TO THE ICE ▶', 240, 64, '#f7c418', 7, 'center');
     // the bucket under the cleanout, down in the corner (tap it or ▼ to swap)
     const bx = 14, by = 204; R(bx - 4, by - 8, 92, 60, 'rgba(0,0,0,.55)');
-    if (s.swap > 0) { T('SWAP!', bx + 44, by - 2, '#f7c418', 6, 'center'); g.globalAlpha = 0.4; }
+    if (s.swap > 0 || s.mop > 0) g.globalAlpha = 0.3;
     if (MG('bucket')) { SPI('bucket', bx + 20, by + 46, 1.0); g.fillStyle = 'rgba(127,196,255,.95)'; g.beginPath(); g.ellipse(bx + 20, by + 12 + (1 - Math.min(1, s.bucket)) * 6, 10, 2 + Math.min(1, s.bucket) * 2, 0, 0, 7); g.fill(); }
     else { R(bx + 4, by + 10, 30, 32, '#e8762b'); R(bx + 6, by + 42 - 30 * Math.min(1, s.bucket), 26, 30 * Math.min(1, s.bucket), '#7fc4ff'); }
-    g.globalAlpha = 1; T('▼ SWAP', bx + 62, by + 30, '#cfd8e0', 5, 'center');
-    if (s.bucket > 0.8 && Math.floor(s.t * 6) % 2) T('!', bx + 20, by - 2, '#e9665a', 10, 'center');
+    g.globalAlpha = 1; T('▼ DUMP', bx + 62, by + 30, '#cfd8e0', 5, 'center');
+    if (s.bucket > 0.7 && !s.swap && !s.mop && Math.floor(s.t * 4) % 2) { T('!', bx + 20, by - 2, '#e9665a', 10, 'center'); T("BUCKET'S ALMOST FULL! STOP AND DUMP IT ▼", 240, 78, '#e9665a', 6, 'center'); }
+    if (s.swap > 0 || s.mop > 0) {   /* off the job: out to dump the bucket, or on the floor with the mop */
+      R(0, 16, W, H - 16, 'rgba(8,10,14,.72)'); const pw = 300, px0 = 90, py0 = 90; R(px0, py0, pw, 110, '#1b222c'); R(px0, py0, pw, 3, '#f7c418'); R(px0, py0 + 107, pw, 3, '#0e1218');
+      const who = s.hero || 'rod';
+      if (s.swap > 0) { const f = 1 - s.swap / s.SWAP, out = f < 0.5, x = out ? px0 + 30 + f * 2 * (pw - 60) : px0 + pw - 30 - (f - 0.5) * 2 * (pw - 60), fr = 18 + Math.floor(s.t * 10) % 8;
+        T(f < 0.45 ? 'CARRYING IT OUT THE BULKHEAD...' : f < 0.55 ? 'DUMP!' : 'HEADING BACK DOWN...', px0 + pw / 2, py0 + 14, '#f7c418', 7, 'center');
+        R(px0 + 12, py0 + 92, pw - 24, 2, '#3a4250'); R(px0 + pw - 34, py0 + 40, 22, 52, '#5a4a3a'); R(px0 + pw - 30, py0 + 44, 14, 44, '#8ec6e8');   /* the bulkhead door, daylight */
+        SPR(who, fr, x, py0 + 94, !out, 1.6); if (out) SPI('bucket', x + (out ? 12 : -12), py0 + 92, 0.6);
+        if (Math.abs(f - 0.5) < 0.06) for (let i2 = 0; i2 < 8; i2++) R(px0 + pw - 44 + Math.random() * 20, py0 + 60 + Math.random() * 30, 3, 3, '#7fc4ff');
+        BAR(px0 + 20, py0 + 100, pw - 40, 4, f, '#7fc4ff', ''); }
+      else { T('BUCKET RAN OVER! MOP IT UP', px0 + pw / 2, py0 + 14, '#e9665a', 7, 'center'); T('TAP SPACE / TAP THE SCREEN', px0 + pw / 2, py0 + 28, '#cfd8e0', 5, 'center');
+        g.fillStyle = 'rgba(110,170,220,.8)'; g.beginPath(); g.ellipse(px0 + pw / 2, py0 + 84, 110 * s.mop + 10, 12 * s.mop + 2, 0, 0, 7); g.fill();
+        SPR(who, (s.mopT || 0) > 0 ? 3 : 0, px0 + pw / 2 - 60, py0 + 94, false, 1.6);
+        g.strokeStyle = '#c9a66b'; g.lineWidth = 3; const ma = (s.mopT || 0) > 0 ? 0.5 : -0.3; g.beginPath(); g.moveTo(px0 + pw / 2 - 50, py0 + 40); g.lineTo(px0 + pw / 2 - 30 + Math.sin(ma) * 30, py0 + 86); g.stroke(); R(px0 + pw / 2 - 40 + Math.sin(ma) * 30, py0 + 84, 22, 6, '#e8e4d8');   /* the mop */
+        BAR(px0 + 20, py0 + 100, pw - 40, 4, 1 - s.mop, '#7dffb0', ''); } }
     DRAWFX(s);
     HUD(s, `THAW IT OUT  ${s.melted}/${s.ice.length}`, s.DUR - s.t); PANTS(s, 6, 22);
     BAR(330, 26, 140, 6, s.heat, s.heat > 0.8 ? '#e9665a' : '#f39c12', 'PIPE HEAT');
