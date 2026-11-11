@@ -52,6 +52,24 @@ function HERO_AT(s, x, feetY, sc, opt) {
 function ANIM(o, now, n, hold) { if (o._af == null) { o._af = Math.floor(Math.random() * n); o._at = now; } if (now - o._at >= hold) { o._af = (o._af + 1) % n; o._at = now; } return o._af; }
 // draw every frame of an enemy at ONE scale (from its first frame), so squash/stretch frames don't jump in size
 function SCL(base, h) { return base ? h / base.height : 1; }
+// A proper porcelain bowl seen from above/front: shaded rim, inner wall falling away, deep water with moving highlights.
+function BOWL(cx, cy, rx, ry, t, opt) {
+  const o = opt || {}, E2 = (x, y, a, b, f) => { g.fillStyle = f; g.beginPath(); g.ellipse(x, y, a, b, 0, 0, 7); g.fill(); };
+  E2(cx + 3, cy + ry * 0.16, rx * 1.03, ry * 1.05, 'rgba(0,0,0,.22)');                                   // shadow on the floor
+  let gr = g.createLinearGradient(cx, cy - ry, cx, cy + ry); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.55, '#f0f1ee'); gr.addColorStop(1, '#c9cdca'); E2(cx, cy, rx, ry, gr);   // the rim
+  g.strokeStyle = '#aab0ad'; g.lineWidth = 1.5; g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, 7); g.stroke();
+  gr = g.createLinearGradient(cx, cy - ry * 0.8, cx, cy + ry * 0.8); gr.addColorStop(0, '#b4b9b6'); gr.addColorStop(0.5, '#e6e8e4'); gr.addColorStop(1, '#fafaf8'); E2(cx, cy, rx * 0.86, ry * 0.84, gr);   // inner wall (dark at the top where it falls away)
+  const wx = rx * 0.76, wy = ry * 0.72, wc = cy + ry * 0.05;
+  gr = g.createRadialGradient(cx, wc, 2, cx, wc, wx); gr.addColorStop(0, o.deep || '#2f6f8f'); gr.addColorStop(0.55, o.mid || '#5fa3c2'); gr.addColorStop(1, o.edge || '#a9d3e4'); E2(cx, wc, wx, wy, gr);   // the water
+  g.save(); g.beginPath(); g.ellipse(cx, wc, wx, wy, 0, 0, 7); g.clip();
+  g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = 1.5; for (let i = 0; i < 4; i++) { const a = t * (0.9 + i * 0.25) + i * 1.7; g.beginPath(); g.ellipse(cx, wc, wx * (0.25 + i * 0.19), wy * (0.25 + i * 0.19), 0, a, a + 1.3 + i * 0.2); g.stroke(); }   // swirl highlights
+  g.fillStyle = 'rgba(255,255,255,.5)'; g.beginPath(); g.ellipse(cx - wx * 0.45, wc - wy * 0.5, wx * 0.22, wy * 0.1, -0.4, 0, 7); g.fill();          // the bathroom light, reflected
+  g.restore();
+  g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 2; g.beginPath(); g.ellipse(cx, cy, rx * 0.95, ry * 0.94, 0, Math.PI * 1.1, Math.PI * 1.6); g.stroke();   // a gleam on the rim
+  return { wx, wy, wc };
+}
+function BATHFLOOR(wallH) { R(0, 0, W, wallH, '#bfd6cf'); for (let x = 0; x < W; x += 24) for (let y = 16; y < wallH; y += 24) R(x, y, 23, 23, ((x / 24 + Math.floor(y / 24)) % 2) ? '#cbe0d9' : '#c2d8d1');
+  R(0, wallH, W, 4, '#8fa8a0'); R(0, wallH + 4, W, H - wallH - 4, '#9a9ca3'); for (let x = 0; x < W; x += 40) R(x, wallH + 4, 1, H, '#84868d'); for (let y = wallH + 24; y < H; y += 24) R(0, y, W, 1, '#84868d'); }
 function HUD(s, title, timeLeft) {
   R(0, 0, W, 16, 'rgba(16,21,31,.92)');
   T(title, 6, 8, '#f7c418', 8);
@@ -667,16 +685,14 @@ GAMES.push({
     else if (s.t >= s.TIME) s.end = { win: false, stars: 0, line: 'Still down there. Somewhere.' };
   },
   draw(s) {
-    R(0, 0, W, 150, '#bfd6cf'); for (let x = 0; x < W; x += 24) for (let y = 16; y < 150; y += 24) { R(x, y, 23, 23, (x / 24 + y / 24) % 2 ? '#c9dfd8' : '#c3d9d2'); }   // tiled bathroom wall
-    R(0, 150, W, 4, '#8fa8a0'); R(0, 154, W, H - 154, '#8d8f96'); for (let x = -20; x < W; x += 40) { R(x + ((154 % 80) / 2), 154, 1, H, '#7d7f86'); } for (let y = 174; y < H; y += 24) R(0, y, W, 1, '#7d7f86');
-    R(196, 96, 88, 70, '#f4f4f2'); R(192, 90, 96, 10, '#e2e4e0'); R(270, 104, 10, 4, '#b9bec5');   // the tank
-    g.fillStyle = '#f4f4f2'; g.beginPath(); g.ellipse(240, 200, 120, 46, 0, 0, 7); g.fill();
-    g.fillStyle = '#b9d4e0'; g.beginPath(); g.ellipse(240, 200, 92, 30, 0, 0, 7); g.fill();
+    BATHFLOOR(150);
+    { const gr = g.createLinearGradient(190, 0, 290, 0); gr.addColorStop(0, '#dfe1dd'); gr.addColorStop(0.3, '#ffffff'); gr.addColorStop(1, '#cfd3cf'); g.fillStyle = gr; g.fillRect(194, 92, 92, 76); R(190, 86, 100, 9, '#f4f5f2'); R(190, 94, 100, 2, '#b9beba'); R(272, 104, 10, 4, '#c9ced6'); R(280, 103, 3, 6, '#aab0b8'); }   // the tank, with its lid and handle
+    BOWL(240, 200, 122, 48, s.t);
     const depth = 1 - s.prog / 100, wob = s.sw * 70 + (s.tug > 0 ? Math.sin(s.t * 40) * 4 : 0) + (s.warn > 0 ? Math.sin(s.t * 30) * 1.5 : 0);
     const by = 200 - (1 - depth) * 120;
     g.strokeStyle = s.ten > 70 ? '#e9665a' : '#555'; g.lineWidth = 2; g.beginPath(); g.moveTo(240, 20); g.lineTo(240 + wob, by); g.stroke();
     if (s.prog > 5 && SPC('hair', 240 + wob, by + 10, 0.45 + s.prog / 180)) {} else if (s.prog > 5) { C(240 + wob, by + 6, 6 + s.prog / 12, '#3a2a1e'); for (let i = 0; i < 8; i++) R(240 + wob - 8 + i * 2, by + 6, 1, 6 + s.prog / 6, '#4a3424'); }
-    SPR(s.hero || 'matt', 0, 330, 200);
+    SPR(s.hero || 'matt', s.tug > 0 ? 3 : 0, 404, 262, true, 2.3);
     if (s.warn > 0) T('!', 240 + wob, by - 16, '#e9665a', 14, 'center');
     if (s.tug > 0) T('TUG! LET GO!', 240, 60, '#e9665a', 10, 'center');
     if (s.flash > 0) T('SNAP!', 240, 90, '#e9665a', 14, 'center');
@@ -723,11 +739,8 @@ GAMES.push({
     else if ((s.used >= s.tries && s.drop <= 0) || s.t >= s.TIME) s.end = { win: false, stars: 0, line: 'Out of grabs. It went down the drain.' };
   },
   draw(s) {
-    R(0, 0, W, H, '#cfd6da');
-    g.fillStyle = '#f6f6f4'; g.beginPath(); g.ellipse(s.cx, s.cy, 150, 104, 0, 0, 7); g.fill();
-    g.fillStyle = '#9fc6d8'; g.beginPath(); g.ellipse(s.cx, s.cy, 124, 82, 0, 0, 7); g.fill();
-    g.fillStyle = '#3d5f70'; g.beginPath(); g.ellipse(s.cx, s.cy, 16, 10, 0, 0, 7); g.fill();   // the drain, waiting
-    g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 2; for (let i = 0; i < 3; i++) { g.beginPath(); g.ellipse(s.cx, s.cy, 30 + i * 30, 18 + i * 18, s.t * (1 + i * .3), 0, 4); g.stroke(); }
+    BATHFLOOR(0); BOWL(s.cx, s.cy, 152, 106, s.t);
+    { const gr = g.createRadialGradient(s.cx, s.cy, 1, s.cx, s.cy, 18); gr.addColorStop(0, '#0d1c26'); gr.addColorStop(1, 'rgba(20,50,66,0)'); g.fillStyle = gr; g.beginPath(); g.ellipse(s.cx, s.cy, 20, 13, 0, 0, 7); g.fill(); }   // the drain, waiting
     if (s.diff === 0) for (let i = 0; i < 24; i++) { const [x, y] = this.pos(s, i / 24 * Math.PI * 2); R(x - 1, y - 1, 2, 2, 'rgba(255,255,255,.5)'); }   // easy mode shows the lap
     for (const o of s.wads) { const [x, y] = this.pos(s, o.ang, o.r); if (!SPC('tp', x, y, 0.6)) { R(x - 6, y - 4, 12, 8, '#f4f4f0'); R(x - 4, y - 6, 8, 3, '#e8e8e2'); R(x - 2, y - 1, 3, 2, '#d8d8d0'); } }
     const [ox, oy] = this.pos(s, s.ang);

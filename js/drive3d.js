@@ -88,7 +88,8 @@ function drive3d(choice, opts) {
   let LEGS_HERE = routeLegs(FROM, TO);
   if (!LEGS_HERE || !LEGS_HERE.length) LEGS_HERE = [{ rt: (opts.route || 'Route 16').toUpperCase().replace('ROUTE', 'RT'), name: '', mi: 12, curve: 3.5, hill: 700, heave: 0.2, busy: 1, scene: [] }];
   const TOTAL_MI = LEGS_HERE.reduce((a, L) => a + L.mi, 0);
-  const SEG_PER_MI = Math.max(48, Math.min(110, 1450 / TOTAL_MI));            // short hops still feel like a drive; long hauls don't drag forever
+  const RACE = !!opts.rival;   // racing the Clog Kings: a long open-road run, about two minutes flat out
+  const SEG_PER_MI = RACE ? (125 * TOP * 0.88 / SEG) / TOTAL_MI : Math.max(48, Math.min(110, 1450 / TOTAL_MI));            // short hops still feel like a drive; long hauls don't drag forever
   const legAt = [];   // which leg each segment belongs to
   add(40, 0, 0); for (let i = 0; i < 40; i++) legAt.push(0);
   LEGS_HERE.forEach((L, li) => {
@@ -218,7 +219,7 @@ function drive3d(choice, opts) {
 
   // ---------- the rival: the CLOG KINGS van, racing you to the same job ----------
   const RIVAL = !!opts.rival;
-  let rz = PZ + 5 * SEG, rv = 0, roff = LANE[1], rivalWon = false, rivalImg = null, rivalBump = 0;
+  let rz = PZ + 45 * SEG, rv = 0, roff = LANE[1], rivalWon = false, rivalImg = null, rivalBump = 0;
   let rivalLane = LANE[1], rivalT = 0, rivalSlip = 0;
   function makeRival() {   // repaint our van in Clog Kings colors (blue->red, yellow->black) once the art has loaded
     if (rivalImg || !(VANS.complete && VANS.naturalWidth)) return;
@@ -241,6 +242,7 @@ function drive3d(choice, opts) {
   }
   // traffic lives in a window around the van: anything that falls behind gets sent back up the road (so it never runs dry)
   const BUSY_MAX = Math.max(...LEGS_HERE.map(L => L.busy || 1));
+  if (RACE) { MODE.cars = Math.max(2, Math.round(MODE.cars * 0.45)); MODE.crit = Math.max(1, Math.round(MODE.crit * 0.5)); }   // less traffic in the way of the race
   for (let i = 0; i < Math.round(MODE.cars * Math.min(1, Math.max(0.6, BUSY_MAX))); i++) { let c, tries = 0; do { c = addCar(rnd(14, DRAW) * SEG, Math.random() < MODE.onc); tries++; } while (tries < 10 && cars.some(o => o.lane === c.lane && Math.abs(o.z - c.z) < 4 * SEG)); cars.push(c); }
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__cars = cars;   // dev: lets the test harness check for overlaps
   const respawn = (c, base) => {   // reappear far up the road (out at the horizon), in a lane with room, and never in the last stretch before town
@@ -281,7 +283,9 @@ function drive3d(choice, opts) {
   const sfx = (n, o) => { if (window.DDTSfx) DDTSfx.play(n, o); };
   // ---------- the windshield: cracks that stick around (and grow with every hit), bugs, mud, and now and then some weather ----------
   let glass = 0; try { glass = (DDT.get() || {}).glass || 0; } catch (e) {}
-  const hurtGlass = n => { if (!n) return; glass = Math.min(14, glass + n); try { const s = DDT.get(); s.glass = glass; DDT.save(s); } catch (e) {} };
+  const STATS = { cars: 0, trucks: 0, headons: 0, deer: 0, moose: 0, turkeys: 0, peeper: 0, lost: 0, cracks: 0 };   // this drive's tally, added to the player's record at the end
+  let DEERINS = false; try { DEERINS = !!((DDT.get() || {}).inv || {}).deerins; } catch (e) {}
+  const hurtGlass = n => { if (!n) return; STATS.cracks += n; glass = Math.min(14, glass + n); try { const s = DDT.get(); s.glass = glass; DDT.save(s); } catch (e) {} };
   const rng = seed => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
   // where each new crack lands, in order: around the edges first, so the road ahead stays readable longest
   const CRACK_AT = [[408, 64], [66, 84], [446, 168], [34, 206], [338, 42], [132, 46], [462, 236], [18, 132], [292, 58], [196, 52], [424, 112], [70, 244], [244, 40], [372, 222]];
@@ -374,7 +378,7 @@ function drive3d(choice, opts) {
         const VAN_HW = 0.16;   // the van, measured the same way as the cars it can hit
         if (live && inv <= 0 && ahead > -SEG * 0.6 && ahead < SEG * (c.truck ? 1.6 : 1.1) && Math.abs(px - c.off) < c.hw + VAN_HW - 0.03) {
           bursts.push({ t: 0, side: Math.max(-1, Math.min(1, (c.off - px) * 2.5)), big: c.onc || c.truck }); crashes++; inv = 1.4; shake = c.onc ? 0.6 : 0.35; hurtGlass(glassFor[c.onc ? 'onc' : c.truck ? 'truck' : 'car']);
-          const p = c.onc ? 20 : c.truck ? 14 : 10; /* a crash costs real time: exchanging info, checking the bumper */ penalty += p; speed = c.onc ? 0 : Math.min(speed, Math.abs(c.speed) * 0.6);
+          const p = c.onc ? 20 : c.truck ? 14 : 10; /* a crash costs real time: exchanging info, checking the bumper */ penalty += p; STATS[c.onc ? 'headons' : c.truck ? 'trucks' : 'cars']++; STATS.lost += p; speed = c.onc ? 0 : Math.min(speed, Math.abs(c.speed) * 0.6);
           if (!c.truck) { c.spin = 1.6; c.spinDir = px < c.off ? 1 : -1; c.speed *= 0.3; }   // the car you hit spins out (log trucks just shrug)
           px += c.onc ? (px < c.off ? -0.4 : 0.4) : (px < c.off ? -0.3 : 0.3);
           sfx(c.onc ? 'horn_angry' : 'horn'); say(c.onc ? `HEAD-ON! +${p} MIN` : c.truck ? `LOG TRUCK! +${p} MIN` : `BONK! +${p} MIN`);
@@ -406,7 +410,7 @@ function drive3d(choice, opts) {
       // the rival: weaves through traffic to get around slow cars, gets boxed in and slowed down, and can be beaten
       if (RIVAL && live) {
         const gap = (rz - (pos + PZ)) / SEG;
-        let want = TOP * 0.9 * (gap > 25 ? 0.85 : gap < -25 ? 1.04 : 1);   // a little catch-up, never a cheat
+        let want = TOP * (gap > 120 ? 0.62 : gap > 40 ? 0.76 : gap > 3 ? 0.84 : gap < -30 ? 1.0 : 0.9);   // when they're ahead they run a bit under your top speed, so holding the pedal down reels them in slowly
         rivalT = (rivalT || 0) - dt; rivalSlip = Math.max(0, (rivalSlip || 0) - dt);
         const blocking = cars.filter(o => !o.parked && Math.abs(o.off - rivalLane) < 0.3 && o.z > rz && o.z - rz < 3.2 * SEG && !o.onc);
         if (blocking.length) {
@@ -437,11 +441,12 @@ function drive3d(choice, opts) {
           if (cr.snap > 0) { cr.snap -= dt; cr.flash = (cr.flash + dt) % 0.4; } else cr.off += cr.dir * CSPD[cr.kind] * dt * 1.4;
         }
         if (live && !cr.hit && inv <= 0 && Math.abs(dz - PZ) < SEG * 1.1 && Math.abs(px - cr.off) < CW[cr.kind] + 0.1) {
-          cr.hit = true; crashes++; hurtGlass(glassFor[cr.kind]); inv = 1.4; shake = cr.kind === 'moose' ? 0.7 : 0.3; penalty += PEN[cr.kind]; speed *= cr.kind === 'moose' ? 0.1 : 0.4;
+          const covered = cr.kind === 'deer' && DEERINS;   // deer insurance: no lost time, no cracked glass
+          cr.hit = true; crashes++; STATS[cr.kind] = (STATS[cr.kind] || 0) + 1; if (!covered) { hurtGlass(glassFor[cr.kind]); penalty += PEN[cr.kind]; STATS.lost += PEN[cr.kind]; } inv = 1.4; shake = cr.kind === 'moose' ? 0.7 : 0.3; speed *= cr.kind === 'moose' ? 0.1 : covered ? 0.75 : 0.4;
           cr.dir = Math.sign(cr.off - px) || 1; cr.snap = 0;
           if (cr.kind !== 'moose') { cr.fly = 0.001; cr.flyDir = cr.dir; } else cr.react = 0.001;   // up and over the roof
           sfx(cr.kind === 'moose' ? 'horn_angry' : 'horn');
-          say({ moose: 'HIT THE MOOSE! +20 MIN', deer: 'OH DEER. +12 MIN', turkeys: 'FEATHERS! +5 MIN', peeper: 'SLAMMED THE BRAKES! +8 MIN' }[cr.kind]);
+          say({ moose: 'HIT THE MOOSE! +20 MIN', deer: covered ? 'OH DEER. INSURANCE HAS IT!' : 'OH DEER. +12 MIN', turkeys: 'FEATHERS! +5 MIN', peeper: 'SLAMMED THE BRAKES! +8 MIN' }[cr.kind]);
         }
       }
       inv = Math.max(0, inv - dt); msgT = Math.max(0, msgT - dt); shake = Math.max(0, shake - dt);
@@ -451,6 +456,7 @@ function drive3d(choice, opts) {
         done = true; removeEventListener('keydown', kd); removeEventListener('keyup', ku); rc.onpointerdown = rc.onpointerup = rc.onpointermove = rc.onpointercancel = null;
         const mins = Math.round(opts.leave + play * MIN_PER_S + penalty);
         say('MADE IT!', 2); draw(false, true, 0);
+        try { const sv = DDT.get(), T = sv.stats = sv.stats || {}; for (const k in STATS) T[k] = (T[k] || 0) + STATS[k]; T.drives = (T.drives || 0) + 1; T.miles = (T.miles || 0) + Math.round(TOTAL_MI); if (RIVAL) T[rivalWon ? 'racesLost' : 'racesWon'] = (T[rivalWon ? 'racesLost' : 'racesWon'] || 0) + 1; DDT.save(sv); } catch (e) {}
         if (rainSnd) { rainSnd.stop(); rainSnd = null; } setTimeout(() => { rc.style.display = 'none'; res({ crashes, mins, rivalWon }); }, 700); return;
       }
       requestAnimationFrame(frame);

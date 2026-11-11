@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794360683"></script>
-<script src="js/calls.js?v=1794360683"></script>
-<script src="js/placeholders.js?v=1794360683"></script>
-<script src="js/music.js?v=1794360683"></script>
-<script src="js/sfx.js?v=1794360683"></script>
+<script src="js/state.js?v=1794362041"></script>
+<script src="js/calls.js?v=1794362041"></script>
+<script src="js/placeholders.js?v=1794362041"></script>
+<script src="js/music.js?v=1794362041"></script>
+<script src="js/sfx.js?v=1794362041"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -281,7 +281,7 @@ function drawDialog() {
   const all = wrap(d.text, 352, 8), n = Math.max(1, all.length), done = d.shown >= d.text.length;
   const padOn = TOUCHDEV && d.opts && done;
   const optH = d.opts ? d.opts.length * 13 + 2 : 0, th = 24 + n * 13 + optH, PS = 62;
-  const tx = 6 + PS + 4, tw = W - tx - 6, ty = top ? 6 : H - 6 - th, py = top ? 6 : H - 6 - PS;
+  const TOPY = 30, tx = 6 + PS + 4, tw = W - tx - 6, ty = top ? TOPY : H - 6 - th, py = top ? TOPY : H - 6 - PS;   // up top it sits under the MENU and SKIP buttons, with a gap
   const frame = (x, y, w, h, c) => { R(x, y, w, h, c); R(x, y, w, 2, '#fff'); R(x, y + h - 2, w, 2, '#fff'); R(x, y, 2, h, '#fff'); R(x + w - 2, y, 2, h, '#fff'); };
   const p = d.port === 'alien' ? IMG.alienP : (IMG[d.port] || portLoad(d.port));
   if (!padOn) { frame(6, py, PS, PS, '#2a3346'); if (p) g.drawImage(p, 8, py + 2, PS - 4, PS - 4); }
@@ -482,9 +482,28 @@ const ListUI = {
 const pickList = (title, rows, sub, def) => play(Object.create(ListUI).open(title, rows, sub, def));
 
 // ---------- Fernko's Supply ----------
+// ---------- the player record: everything you've done (and hit) ----------
+const StatsUI = {
+  init() { this.t = 0; },
+  update(dt) { this.t += dt; if (this.t > 0.4 && (pressed('Enter') || pressed(' ') || pressed('Escape') || ptr.clicked)) { SND.good && SND.good(); this.done(); } },
+  draw() {
+    const s = DDT.get(), T0 = s.stats || {}, n = k => (T0[k] || 0);
+    R(0, 0, W, H, '#141a26'); for (let x = 0; x < W; x += 30) R(x, 0, 1, H, '#1a2233');
+    R(0, 0, W, 30, '#2c4f9c'); T('PLAYER RECORD', 240, 12, '#fff', 9, 'center'); T(`${(s.prefLead || 'rod').toUpperCase()} · MT. WASHINGTON SEWER & DRAIN · MONTH ${(s.month || 0) + 1}`, 240, 24, '#cfe0ff', 4, 'center', false);
+    const col = (x, title, rows) => { R(x, 38, 148, 14, '#1d2638'); T(title, x + 74, 45, '#f7c418', 5, 'center', false);
+      rows.forEach(([k, v, c], i) => { const y = 60 + i * 15; R(x, y - 6, 148, 13, i % 2 ? '#182030' : '#1b2436'); T(k, x + 5, y, '#cfd8e8', 4, 'left', false); T(String(v), x + 143, y, c || '#fff', 5, 'right', false); }); };
+    const crashes = n('cars') + n('trucks') + n('headons');
+    col(10, 'ON THE JOB', [['JOBS DONE', n('jobs')], ['PERFECT (3 STAR)', n('perfect'), '#7dffb0'], ['BOTCHED', n('botched'), n('botched') ? '#e9665a' : '#fff'], ['MONEY EARNED', '$' + n('earned').toLocaleString(), '#7dffb0'], ['BEST PAYDAY', '$' + n('best').toLocaleString()], ['REPUTATION', s.rep || 0], ['CASH ON HAND', '$' + (s.money || 0).toLocaleString()], ['LOAN LEFT', '$' + (s.loan || 0).toLocaleString(), s.loan ? '#e9665a' : '#7dffb0']]);
+    col(166, 'ON THE ROAD', [['DRIVES', n('drives')], ['MILES', n('miles').toLocaleString()], ['CARS BONKED', n('cars'), n('cars') ? '#f7c418' : '#fff'], ['LOG TRUCKS HIT', n('trucks'), n('trucks') ? '#f7c418' : '#fff'], ['HEAD-ONS', n('headons'), n('headons') ? '#e9665a' : '#fff'], ['MINUTES LOST', n('lost')], ['WINDSHIELD CRACKS', n('cracks')], ['CLOG KINGS RACES', `${n('racesWon')}W ${n('racesLost')}L`]]);
+    col(322, 'WILDLIFE', [['DEER', n('deer'), n('deer') ? '#f7c418' : '#fff'], ['MOOSE', n('moose'), n('moose') ? '#e9665a' : '#fff'], ['TURKEY FAMILIES', n('turkeys')], ['LEAF PEEPERS SCARED', n('peeper')], ['TOTAL CRASHES', crashes + n('deer') + n('moose') + n('turkeys')], ['DEER INSURANCE', (s.inv || {}).deerins ? 'COVERED' : 'NONE', (s.inv || {}).deerins ? '#7dffb0' : '#9fb3d9'], ['CRACKS RIGHT NOW', Math.ceil(s.glass || 0)], ['', '']]);
+    const verdict = n('deer') >= 10 ? 'THE DEER TELL STORIES ABOUT YOU.' : crashes >= 10 ? "ROD'S INSURANCE AGENT HAS YOU ON SPEED DIAL." : n('perfect') >= 10 ? 'COOS COUNTY\'S FINEST.' : n('jobs') ? 'A SOLID DAY\'S WORK.' : 'NOTHING ON THE BOOKS YET. GO GET A CALL.';
+    R(10, 186, 460, 20, '#1d2638'); T(verdict, 240, 196, '#7dffb0', 5, 'center', false);
+    if (Math.floor(this.t * 2) % 2) T('TAP TO GO BACK', 240, 250, '#9fb3d9', 5, 'center', false);
+  },
+};
 const ShopUI = {
   init() { this.cur = 0; this.msg = ''; this.msgT = 0; },
-  box(i) { return i < SHOP.length ? [8 + (i % 3) * 156, 64 + Math.floor(i / 3) * 34, 150, 31] : [372, 240, 92, 18]; },
+  box(i) { return i < SHOP.length ? [6 + (i % 4) * 117, 64 + Math.floor(i / 4) * 42, 114, 39] : [372, 240, 92, 18]; },
   update(dt) {
     this.msgT = Math.max(0, this.msgT - dt);
     const n = SHOP.length + 1;
@@ -509,11 +528,11 @@ const ShopUI = {
       const [x, y, w, h] = this.box(i), own = s.inv[it.id] || 0, have = it.kind === 'gear' && own;
       R(x, y, w, h, i === this.cur ? '#2c6cd6' : have ? '#173a26' : '#1d2638');
       const art = IMG['mg_' + SHOPART[it.id]], ix = art || (it.icon && IMG.fit) ? 28 : 0;
-      if (art) { const k = Math.min(26 / art.width, 26 / art.height), aw = art.width * k, ah = art.height * k; g.drawImage(art, Math.round(x + 2 + (26 - aw) / 2), Math.round(y + 2 + (26 - ah) / 2), Math.round(aw), Math.round(ah)); }
-      else if (ix) g.drawImage(IMG.fit, it.icon[0] * 32, it.icon[1] * 32, 32, 32, x + 2, y + 2, 26, 26);
-      T(it.name, x + 4 + ix, y + 7, '#fff', 4, 'left', false); T(have ? 'OWNED' : `$${it.price.toLocaleString()}`, x + w - 4, y + 7, have ? '#7dffb0' : '#f7c418', 4, 'right', false);
+      if (art) { const k = Math.min(22 / art.width, 22 / art.height), aw = art.width * k, ah = art.height * k; g.drawImage(art, Math.round(x + 3 + (22 - aw) / 2), Math.round(y + 2 + (22 - ah) / 2), Math.round(aw), Math.round(ah)); }
+      else if (ix) g.drawImage(IMG.fit, it.icon[0] * 32, it.icon[1] * 32, 32, 32, x + 2, y + 1, 24, 24);
+      wrap(it.name, w - 8 - ix, 4).slice(0, 2).forEach((l, k) => T(l, x + 4 + ix, y + 6 + k * 6, '#fff', 4, 'left', false)); T(have ? 'OWNED' : `$${it.price.toLocaleString()}`, x + 4 + ix, y + 20, have ? '#7dffb0' : '#f7c418', 4, 'left', false);
       const ben = it.desc.includes('BENEFIT') ? '+ ' + it.desc.split(/BENEFIT[^:]*: /)[1] : it.desc;   // the tile leads with what it does for you
-      wrap(ben, w - 10 - ix, 4).slice(0, 2).forEach((l, k) => T(l, x + 4 + ix, y + 16 + k * 7, '#9fe07a', 4, 'left', false)); if (it.kind === 'service') T(s.glass > 0 ? `${Math.ceil(s.glass)} DINGS` : 'CLEAR', x + w - 4, y + 25, s.glass > 0 ? '#e9665a' : '#7dffb0', 4, 'right', false); if (it.kind === 'part') T(`HAVE ${own}`, x + w - 4, y + 25, '#fff', 4, 'right', false);
+      wrap(ben, w - 8, 4).slice(0, it.kind === 'gear' ? 2 : 1).forEach((l, k) => T(l, x + 4, y + 33 - (it.kind === 'gear' ? 6 : 0) + k * 6, '#9fe07a', 4, 'left', false)); if (it.kind === 'service') T(s.glass > 0 ? `${Math.ceil(s.glass)} DINGS` : 'CLEAR', x + w - 4, y + 20, s.glass > 0 ? '#e9665a' : '#7dffb0', 4, 'right', false); if (it.kind === 'part') T(`HAVE ${own}`, x + w - 4, y + 20, '#fff', 4, 'right', false);
     });
     const [x, y, w, h] = this.box(SHOP.length); R(x, y, w, h, this.cur === SHOP.length ? '#2c6cd6' : '#1d2638'); T('DONE', x + w / 2, y + 9, '#fff', 6, 'center', false);
     const sel = SHOP[this.cur]; if (sel) { R(8, 234, 356, 32, '#10151f'); T(sel.name, 12, 240, '#f7c418', 5, 'left', false);   // the full story on whatever is highlighted
@@ -727,13 +746,16 @@ function rollBoard(s) {
   for (const [mm, w] of [[m, 4], [m - 1, 2], [m + 1, 1]]) for (const c of (CALLS[mm] || [])) {
     if (isStory(c) || c.id === 'alien' || (c.gate && !s.inv[c.gate])) continue;
     if (c.game === 'jetter' && !(s.inv.jetter && s.month >= 5)) continue;   // jetter work starts around June, and only once you own one
-    pool.push({ id: c.id, w: w * (s.done[c.id] ? 0.35 : 1) });   // fresh calls first; ones you've done can still come up
+    pool.push({ id: c.id, game: c.game, w: w * (s.done[c.id] ? 0.6 : 1) });
   }
+  { const tot = {}; pool.forEach(q => tot[q.game] = (tot[q.game] || 0) + q.w);   // level it out: each mini-game gets the same total chance, however many calls use it
+    const rec = s.recent || []; pool.forEach(q => { q.w = q.w / tot[q.game] * (rec.includes(q.game) ? 0.3 : 1); }); }
   const out = [], n = BOARD_SIZE - storyLeft(s).length;
   while (out.length < n && pool.length) {
     let r = Math.random() * pool.reduce((a, q) => a + q.w, 0), i = 0;
     while (i < pool.length - 1 && (r -= pool[i].w) > 0) i++;
-    out.push(pool.splice(i, 1)[0].id);
+    const got = pool.splice(i, 1)[0]; out.push(got.id);
+    const rest = pool.filter(q => q.game !== got.game); if (rest.length >= n - out.length) { pool.length = 0; pool.push(...rest); }   // no two of the same mini-game on one board
   }
   return out;
 }
@@ -747,7 +769,7 @@ const VMP = { x: 150, y: 50, w: 180, h: 214 }, VM_ROW = 58, VM_TOP = VMP.y + 40,
 const BoardUI = {
   init() { this.cur = 0; this.scroll = 0; this.drag = null; this.msg = ''; this.msgT = 0; this.vel = 0; },
   rows() { return boardList(DDT.get()); },
-  side(i) { return [[8, 62, 132, 30], [340, 62, 132, 30], [340, 96, 132, 30], [8, 96, 132, 30], [340, 130, 132, 30]][i]; },   // short buttons, so the crew fills the bottom corners
+  side(i) { return [[8, 62, 132, 30], [340, 62, 132, 30], [340, 96, 132, 30], [8, 96, 132, 30], [340, 130, 132, 30], [8, 130, 132, 30]][i]; },   // short buttons, so the crew fills the bottom corners
   maxScroll() { return Math.max(0, this.rows().length * VM_ROW - VM_VIEW); },
   choose(p) {
     const rows = this.rows(), sv = DDT.get(); SND.blip();
@@ -755,13 +777,14 @@ const BoardUI = {
     if (p === 'drive') { sv.prefDrive = ((sv.prefDrive ?? 1) + 1) % 3; DDT.save(sv); return; }
     if (p === 'shop') return this.done({ shop: true });
     if (p === 'hand') { sv.hand = sv.hand === 'L' ? 'R' : 'L'; DDT.save(sv); return; }
+    if (p === 'stats') return this.done({ stats: true });
     if (p === 'eat') { const m = mealNow(sv); if (!m) { this.msg = 'KITCHENS ARE CLOSED'; this.msgT = 1.6; SND.bad(); return; } return this.done({ eat: m }); }
     const r = rows[p]; if (!r) return;
     if (r.c.gate && !sv.inv[r.c.gate]) { this.msg = `NEEDS A ${SHOP.find(i => i.id === r.c.gate).name}`; this.msgT = 2; SND.bad(); return; }
     this.done(r);
   },
   hitAt(x, y) {
-    const sides = ['lead', 'drive', 'shop', 'hand', 'eat']; for (let k = 0; k < 5; k++) if (x >= this.side(k)[0] && x <= this.side(k)[0] + this.side(k)[2] && y >= this.side(k)[1] && y <= this.side(k)[1] + this.side(k)[3]) return sides[k];
+    const sides = ['lead', 'drive', 'shop', 'hand', 'eat', 'stats']; for (let k = 0; k < 6; k++) if (x >= this.side(k)[0] && x <= this.side(k)[0] + this.side(k)[2] && y >= this.side(k)[1] && y <= this.side(k)[1] + this.side(k)[3]) return sides[k];
     if (x >= VMP.x && x <= VMP.x + VMP.w && y >= VM_TOP && y <= VM_TOP + VM_VIEW) { const i = Math.floor((y - VM_TOP + this.scroll) / VM_ROW); if (i >= 0 && i < this.rows().length) return i; }
     return null;
   },
@@ -792,6 +815,7 @@ const BoardUI = {
     // side buttons
     const SB = [[`PLAYING AS`, lead.toUpperCase(), lead === 'rod' ? 'Steady · 40 MPH' : 'Fast · 60 MPH', 'lead'], ['DRIVE', DRV[drv].replace('SLOW AND STEADY', 'SLOW + STEADY'), 'Tap to change', 'drive'], ["FERNKO'S", 'SUPPLY', '+20 min · parts, gear', 'shop'], ['BUTTONS FOR', (s.hand === 'L' ? 'LEFT' : 'RIGHT') + ' HAND', 'Tap to swap', 'hand']];
     { const m = mealNow(s); SB.push(m ? [m === 'breakfast' ? 'GRAB' : 'TIME FOR', m.toUpperCase(), `STAMINA ${s.stamina}`, 'eat'] : ['MEALS', 'CLOSED', m === null && (s.today && s.today.time >= 900) ? 'Too late to eat' : 'Already ate', 'eat']); }
+    { const T0 = s.stats || {}; SB.push(['YOUR', 'RECORD', `${T0.jobs || 0} jobs · ${(T0.deer || 0)} deer`, 'stats']); }
     SB.forEach(([a, b, c, id], k) => { const [x, y, w, h] = this.side(k); R(x, y, w, h, this.cur === id ? '#2c6cd6' : 'rgba(16,21,31,.92)'); g.strokeStyle = '#f7c418'; g.lineWidth = 1; g.strokeRect(x + .5, y + .5, w - 1, h - 1);
       if (id === 'lead') { const im = artImg(lead + '_normal'); g.imageSmoothingEnabled = true; if (im) g.drawImage(im, x + 3, y + 3, 24, 24); g.imageSmoothingEnabled = false; T(a, x + 34, y + 7, '#9fb3d9', 4, 'left', false); T(b, x + 34, y + 16, '#fff', 6, 'left', false); T(c, x + 34, y + 25, '#7dffb0', 4, 'left', false); }
       else { T(a, x + w / 2, y + 7, '#9fb3d9', 4, 'center', false); T(b, x + w / 2, y + 16, '#fff', 6, 'center', false); T(c, x + w / 2, y + 25, '#7dffb0', 4, 'center', false); } });
@@ -935,6 +959,7 @@ SCENES.hub = async () => {
       if (!s.board) { s.board = rollBoard(s); s.doneToday = []; DDT.save(s); }
       if (!boardList(s).length) { await card(['NO MORE CALLS TODAY', 'HEADING HOME'], 1400); setStep('night'); continue; }
       const r = await play(BoardUI);
+      if (r.stats) { await play(StatsUI); continue; }
       if (r.shop) { await play(ShopUI); DDT.apply({ time: 20 }); await rodCleanouts(); continue; }
       if (r.eat) { s = DDT.get(); if (r.eat === 'breakfast') s.ateB = true; else s.ateL = true; s.step = r.eat === 'breakfast' ? 'breakfast' : 'lunchstop'; DDT.save(s); continue; }
       s = DDT.get();

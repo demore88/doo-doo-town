@@ -17,9 +17,9 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794360683"></script>
-<script src="../js/music.js?v=1794360683"></script>
-<script src="../js/sfx.js?v=1794360683"></script>
+<script src="../js/state.js?v=1794362041"></script>
+<script src="../js/music.js?v=1794362041"></script>
+<script src="../js/sfx.js?v=1794362041"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('spooky');
@@ -276,7 +276,7 @@ function drawDialog() {
   const all = wrap(d.text, 352, 8), n = Math.max(1, all.length), done = d.shown >= d.text.length;
   const padOn = TOUCHDEV && d.opts && done;
   const optH = d.opts ? d.opts.length * 13 + 2 : 0, th = 24 + n * 13 + optH, PS = 62;
-  const tx = 6 + PS + 4, tw = W - tx - 6, ty = top ? 6 : H - 6 - th, py = top ? 6 : H - 6 - PS;
+  const TOPY = 30, tx = 6 + PS + 4, tw = W - tx - 6, ty = top ? TOPY : H - 6 - th, py = top ? TOPY : H - 6 - PS;   // up top it sits under the MENU and SKIP buttons, with a gap
   const frame = (x, y, w, h, c) => { R(x, y, w, h, c); R(x, y, w, 2, '#fff'); R(x, y + h - 2, w, 2, '#fff'); R(x, y, 2, h, '#fff'); R(x + w - 2, y, 2, h, '#fff'); };
   const p = d.port === 'alien' ? IMG.alienP : (IMG[d.port] || portLoad(d.port));
   if (!padOn) { frame(6, py, PS, PS, '#2a3346'); if (p) g.drawImage(p, 8, py + 2, PS - 4, PS - 4); }

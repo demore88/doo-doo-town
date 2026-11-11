@@ -22,13 +22,11 @@ function custLook(seed) {
 // Drawn in half-units for more detail; feet at (x, y).
 const CUST_MV = {};
 function custBuild(seed) {
-  const r = srand(seed * 7919 + 13), L = custLook(seed);
-  const tops = ['tee', 'flannel', 'hoodie', 'sweater', 'polo', 'tank', 'jacket'], bots = ['jeans', 'khaki', 'sweats', 'jeans', 'shorts'];
-  return { ...L, h: 72 + Math.floor(r() * 14), build: Math.floor(r() * 3), top: tops[Math.floor(r() * tops.length)], bot: bots[Math.floor(r() * bots.length)],
-    hairStyle: ['bald', 'short', 'long', 'ponytail', 'bun', 'curly', 'buzz', 'cap', 'beanie', 'short'][Math.floor(r() * 10)],
-    face: ['none', 'beard', 'mustache', 'stubble', 'none', 'none'][L.beard ? 1 + Math.floor(r() * 3) : 0],
-    shoe: ['#222', '#5a3a1c', '#e8e4d8', '#3a4a6a'][Math.floor(r() * 4)], accent: ['#c0392b', '#2c6cd6', '#2e8a3a', '#f2c94c', '#e8e4d8'][Math.floor(r() * 5)],
-    cap: ['#2c4f9c', '#c0392b', '#2e5a2e', '#e8822a'][Math.floor(r() * 4)] };
+  const r = srand(seed * 7919 + 13), L = custLook(seed);   // L is what their portrait is drawn from, so the two match: same hair, beard, glasses, shirt
+  const tops = ['tee', 'flannel', 'hoodie', 'sweater', 'polo', 'jacket'], bots = ['jeans', 'khaki', 'sweats', 'jeans'];
+  return { ...L, h: 72 + Math.floor(r() * 12), build: Math.floor(r() * 3), top: tops[Math.floor(r() * tops.length)], bot: bots[Math.floor(r() * bots.length)],
+    hairStyle: ['bald', 'short', 'long', 'bun', 'cap'][L.style] || 'short', face: L.beard ? 'beard' : 'none',
+    shoe: ['#222', '#5a3a1c', '#e8e4d8', '#3a4a6a'][Math.floor(r() * 4)], accent: ['#c0392b', '#2c6cd6', '#2e8a3a', '#f2c94c', '#e8e4d8'][Math.floor(r() * 5)], cap: '#c0392b' };
 }
 const _cbuild = {};
 function customer(x, y, seed, s = 2, mood = 'normal') {
@@ -37,9 +35,10 @@ function customer(x, y, seed, s = 2, mood = 'normal') {
   const walking = now - mv.mv < 150, talking = typeof dialog !== 'undefined' && dialog && dialog.shown < dialog.text.length && typeof JOB !== 'undefined' && JOB.cust && dialog.name === JOB.cust.name;
   const shake = mood === 'upset' ? Math.round(Math.sin(t * 16)) : 0, hop = mood === 'happy' ? -Math.abs(Math.sin(t * 5)) * 3 : 0;
   const breath = walking ? 0 : Math.round(Math.sin(t * 2.2) * 0.6), step = walking ? Math.floor(t * 8) % 4 : -1;
-  g.save(); g.translate(Math.round(x + shake), Math.round(y + hop)); g.scale(s / 2, s / 2); if (walking && mv.dir < 0) g.scale(-1, 1);
+  const SC = customer._c || (customer._c = Object.assign(document.createElement('canvas'), { width: 96, height: 150 })), k = SC.getContext('2d'), G0 = g; k.setTransform(1, 0, 0, 1, 0, 0); k.clearRect(0, 0, 96, 150); k.translate(48, 146);
+  { const g = k;   // everything below draws on the scratch canvas (feet at 48,146), in half-units
   const H = B.h, wide = [0, 2, 6][B.build], hw = 13 + wide, legH = Math.round(H * 0.44), torsoH = Math.round(H * 0.3), headH = 22, top = -H + headH;
-  const r = (a, b, c, d, col) => R(a, b, c, d, col);
+  const r = (a, b, c, d, col) => { g.fillStyle = col; g.fillRect(a, b, c, d); };
   const dark = col => { const n = parseInt(col.slice(1), 16), f = v => Math.max(0, Math.round(v * 0.72)); return '#' + [f(n >> 16), f((n >> 8) & 255), f(n & 255)].map(v => v.toString(16).padStart(2, '0')).join(''); };
   // legs (and walking strides)
   const pants = B.bot === 'khaki' ? '#b8a27a' : B.bot === 'sweats' ? '#7a7f88' : B.pants, sh = B.bot === 'shorts';
@@ -94,7 +93,16 @@ function customer(x, y, seed, s = 2, mood = 'normal') {
   if (B.face === 'mustache') r(hx + 4, my - 2, 10, 2, hc);
   if (B.face === 'stubble') for (let i = 0; i < 8; i++) r(hx + 2 + i * 2, hy + 15 + (i % 2) * 3, 1, 1, dark(B.skin));
   if (B.glasses) { g.strokeStyle = '#222'; g.lineWidth = 1; g.strokeRect(hx + 2.5, ey - 1.5, 6, 5); g.strokeRect(hx + 9.5, ey - 1.5, 6, 5); r(hx + 8, ey, 2, 1, '#222'); }
-  g.restore();
+  // shading: a soft shadow down one side of the body and under the chin, so they read as rounded instead of flat
+  g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(0,0,0,.16)'; g.fillRect(4, -H, 40, H); g.fillRect(-9, top - 3, 18, 3); g.fillStyle = 'rgba(255,255,255,.10)'; g.fillRect(-40, -H, 30, H); g.globalCompositeOperation = 'source-over';
+  }
+  // stamp it: a dark outline (the silhouette drawn 4 ways), then the figure, like the crew's sprites
+  const OC = customer._o || (customer._o = Object.assign(document.createElement('canvas'), { width: 96, height: 150 })), ok = OC.getContext('2d'); ok.clearRect(0, 0, 96, 150); ok.globalCompositeOperation = 'source-over'; ok.drawImage(SC, 0, 0); ok.globalCompositeOperation = 'source-in'; ok.fillStyle = '#1a1410'; ok.fillRect(0, 0, 96, 150);
+  const q = s / 2, dx = Math.round(x + shake - 48 * q), dy = Math.round(y + hop - 146 * q), w = 96 * q, h = 150 * q, flipX = walking && mv.dir < 0;
+  G0.save(); if (flipX) { G0.translate(Math.round(x + shake) * 2, 0); G0.scale(-1, 1); } G0.imageSmoothingEnabled = q < 1;
+  G0.fillStyle = 'rgba(0,0,0,.25)'; G0.beginPath(); G0.ellipse(Math.round(x + shake), Math.round(y) + 1, 13 * q, 3 * q, 0, 0, 7); G0.fill();   // ground shadow
+  for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) G0.drawImage(OC, dx + ox * Math.max(1, q * 0.8), dy + oy * Math.max(1, q * 0.8), w, h);
+  G0.drawImage(SC, dx, dy, w, h); G0.imageSmoothingEnabled = false; G0.restore();
 }
 // 80x80 portrait canvas for the dialog box
 const _ports = {};
@@ -244,7 +252,7 @@ function houseDetails(seed, month, h) {
   const r = srand(seed + 77), [dx, dy] = h.door;
   // mailbox with the house number, out by the road
   R(450, 214, 2, 18, '#5a3e26'); R(443, 206, 16, 9, ['#2a2a2a', '#3a5a8a', '#8a2a24', '#d9d4c8'][seed % 4]); R(457, 202, 2, 6, '#c0392b');
-  T(String(10 + seed % 190), 451, 220, '#fff', 4, 'center', false);
+  { const mb = ['#2a2a2a', '#3a5a8a', '#8a2a24', '#d9d4c8'][seed % 4]; R(442, 205, 18, 11, mb); R(442, 205, 18, 2, 'rgba(255,255,255,.25)'); T(String(10 + seed % 190), 451, 211, seed % 4 === 3 ? '#222' : '#fff', 4, 'center', false); }   // the house number, on the mailbox itself
   if (r() < 0.5) { R(dx + 34, dy - 46, 1, 22, '#ccc'); R(dx + 35, dy - 46, 12, 8, '#b22234'); R(dx + 35, dy - 46, 5, 4, '#3c3b6e'); for (let i = 0; i < 3; i++) R(dx + 35, dy - 45 + i * 2.5, 12, 1, '#fff'); }   // flag
   if (r() < 0.4) { const bx = dx - 52, by = dy + 16; E(bx, by, 4, 4, '#222'); E(bx + 12, by, 4, 4, '#222'); R(bx, by - 5, 12, 2, ['#e85a8a', '#4ab0e0', '#7bd65b'][seed % 3]); R(bx + 10, by - 8, 2, 4, '#555'); }   // kid's bike
   if (r() < 0.4) { const wx = h.n === 3 ? 140 : dx - 90; for (let j = 0; j < 3; j++) for (let i = 0; i < 6 - j; i++) E(wx + i * 5 + j * 2.5, dy + 6 - j * 4, 2.6, 2.6, i % 2 ? '#8a5a2e' : '#a8743e'); }   // woodpile
@@ -252,7 +260,8 @@ function houseDetails(seed, month, h) {
 }
 function seasonOver(month) {   // until the winter/fall versions exist, dress the summer art for the season
   const P = DDT.seasonPal(month);
-  if (P.snow) { g.fillStyle = 'rgba(150,175,205,.28)'; g.fillRect(0, 0, W, H); g.fillStyle = 'rgba(242,246,250,.82)'; g.fillRect(0, 200, W, 70); for (let x = 0; x < W; x += 7) R(x, 198 + (x * 13 % 4), 7, 3, 'rgba(242,246,250,.82)'); }
+  if (P.snow) { g.fillStyle = 'rgba(150,175,205,.28)'; g.fillRect(0, 0, W, H); g.fillStyle = '#eef3f8'; g.fillRect(0, 203, W, 67); for (let x = 0; x < W; x += 6) R(x, 199 + (x * 13 % 5), 6, 5, '#eef3f8');   // solid snow: you can't see the lawn through it
+    for (let i = 0; i < 26; i++) { const x = (i * 83) % W, y = 210 + (i * 37) % 54; R(x, y, 14 + (i * 7) % 16, 2, '#dfe7ef'); R(x + 3, y - 1, 8, 1, '#fff'); } }   // drifts and shadows
   else if (P.name === 'mud' || P.name === 'stick season') { g.fillStyle = 'rgba(110,90,60,.30)'; g.fillRect(0, 195, W, 75); g.fillStyle = 'rgba(120,110,100,.18)'; g.fillRect(0, 0, W, 195); }
 }
 function exterior(kind, seed, month) {

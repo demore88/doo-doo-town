@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794360683"></script>
-<script src="../js/calls.js?v=1794360683"></script>
-<script src="../js/placeholders.js?v=1794360683"></script>
-<script src="../js/music.js?v=1794360683"></script>
-<script src="../js/sfx.js?v=1794360683"></script>
+<script src="../js/state.js?v=1794362041"></script>
+<script src="../js/calls.js?v=1794362041"></script>
+<script src="../js/placeholders.js?v=1794362041"></script>
+<script src="../js/music.js?v=1794362041"></script>
+<script src="../js/sfx.js?v=1794362041"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -281,7 +281,7 @@ function drawDialog() {
   const all = wrap(d.text, 352, 8), n = Math.max(1, all.length), done = d.shown >= d.text.length;
   const padOn = TOUCHDEV && d.opts && done;
   const optH = d.opts ? d.opts.length * 13 + 2 : 0, th = 24 + n * 13 + optH, PS = 62;
-  const tx = 6 + PS + 4, tw = W - tx - 6, ty = top ? 6 : H - 6 - th, py = top ? 6 : H - 6 - PS;
+  const TOPY = 30, tx = 6 + PS + 4, tw = W - tx - 6, ty = top ? TOPY : H - 6 - th, py = top ? TOPY : H - 6 - PS;   // up top it sits under the MENU and SKIP buttons, with a gap
   const frame = (x, y, w, h, c) => { R(x, y, w, h, c); R(x, y, w, 2, '#fff'); R(x, y + h - 2, w, 2, '#fff'); R(x, y, 2, h, '#fff'); R(x + w - 2, y, 2, h, '#fff'); };
   const p = d.port === 'alien' ? IMG.alienP : (IMG[d.port] || portLoad(d.port));
   if (!padOn) { frame(6, py, PS, PS, '#2a3346'); if (p) g.drawImage(p, 8, py + 2, PS - 4, PS - 4); }
@@ -338,9 +338,21 @@ function matt(x, y, f = 0, s = 2, a = 1) {
 }
 function van(x, y) { if (IMG.van) { const N = Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35))), fw = IMG.van.width / N, f = Math.floor(Math.abs(x) / 6) % N, vh = 144 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(IMG.van, f * fw, 0, fw, IMG.van.height, Math.round(x), Math.round(y - vh), 144, vh); g.imageSmoothingEnabled = false; } }   // wheels turn as the van moves
 const SAVE = DDT.get(), MONTH = SAVE.month || 0;
-const JOB = CALLS.flat().find(c => c.id === DDT.param('id')) || CALLS[0][1];
+const JOB = Object.assign({}, CALLS.flat().find(c => c.id === DDT.param('id')) || CALLS[0][1]);
+// Same call, different day, different job: the overworked games swap with a related one that still fits the story (picked once per visit).
+{ const ALT = { cable: ['cable', 'detective', 'flush', 'camera'], pull: ['pull', 'claw'], claw: ['claw', 'pull'], septic: ['septic', 'septic', 'poop'], bubble: ['bubble', 'overflow'] };
+  const key = 'alt_' + JOB.id + '_' + (DDT.get().day || 0) + '_' + (DDT.get().month || 0); let pick = null; try { pick = sessionStorage.getItem(key); } catch (e) {}
+  if (!pick && !JOB.story && ALT[JOB.game]) { let opts = ALT[JOB.game].filter(gm => gm !== 'camera' || (DDT.get().inv || {}).camera); const rec = DDT.get().recent || []; const fresh = opts.filter(gm => !rec.includes(gm)); if (fresh.length) opts = fresh;
+    pick = opts[Math.floor(Math.random() * opts.length)]; try { sessionStorage.setItem(key, pick); } catch (e) {} }
+  if (pick) JOB.game = pick; }
 const REPEAT = !!(SAVE.today && SAVE.today.repeat && SAVE.today.id === JOB.id);   // a repeat customer: same house, same problem, less talk
 const FEET = JOB.room === 'yard' ? 206 : roomHasArt(JOB.room) ? 226 : 176;   // feet on the floor of whatever art is behind them
+// Indoors the crew and the customer stand close to us, big enough to match the room's fixtures, and the crew walks in from the left.
+const INS = JOB.room === 'yard' ? 2.2 : 3.1, INY = JOB.room === 'yard' ? 232 : 264;
+function cast(mood, rodTight) { const o = st.inX || 0;
+  if (rodTight) { g.imageSmoothingEnabled = true; const w = 24 * INS * 0.94, h = 40 * INS * 0.94; g.drawImage(rodTight, 0, 0, rodTight.width / 9, rodTight.height, 118 + o - w / 2, INY - h, w, h); g.imageSmoothingEnabled = false; } else rod(118 + o, INY, 0, INS);
+  matt(205 + o, INY, 0, INS); customer(352, INY, JOB.cust.seed, INS * 0.82, mood); }
+const walkIn = async () => { st.inX = -250; await tween(st, 'inX', 0, 1100); };
 const JS = (() => { try { return JSON.parse(localStorage.getItem('ddt_job')) || {}; } catch (e) { return {}; } })();
 const saveJS = () => { try { localStorage.setItem('ddt_job', JSON.stringify(JS)); } catch (e) {} };
 if (JS.id !== JOB.id) { for (const k in JS) delete JS[k]; JS.id = JOB.id; saveJS(); }
@@ -365,7 +377,7 @@ function tightRod() {   // Rod's sprite in a white MEDIUM: shirt turns white, be
 }
 async function tightShirt() {
   const t = tightRod();
-  view = () => { interior(JOB.room, JOB.cust.seed, MONTH, roomArtFor(JOB)); if (st.shirt && t) { g.imageSmoothingEnabled = t.width > 216; g.drawImage(t, 0, 0, t.width / 9, t.height, 150 - 24, FEET - 80, 48, 80); g.imageSmoothingEnabled = false; } else rod(150, FEET, 0, 2); matt(210, FEET, 0, 2); customer(330, FEET, JOB.cust.seed, 2); };
+  view = () => { interior(JOB.room, JOB.cust.seed, MONTH, roomArtFor(JOB)); cast('normal', st.shirt && t ? t : null); };
   await sayL('CUST', "Oh, honey. You can't drive home like that. Here, take one of my husband's shirts.");
   await card(['A CRISP WHITE SHIRT', 'SIZE: MEDIUM'], 1800);
   st.shirt = true; IMG.rod_tight = IMG.rod_tight || null;
@@ -394,7 +406,7 @@ SCENES.arrive = async () => {
     if (st.crew && st.mBehind) matt(st.mx, 228, 6, 1.6);
     if (st.crew && st.rBehind) rod(st.rx, 228, 8, 1.6);
     van(st.vanX, 236);
-    if (st.cust) customer(EXT_DOOR.x, EXT_DOOR.y, JOB.cust.seed, 1.6, st.upset ? 'upset' : 'normal');
+    if (st.cust) customer(EXT_DOOR.x, EXT_DOOR.y, JOB.cust.seed, 0.8, st.upset ? 'upset' : 'normal');   // half the old size: they're up at the door, well behind the crew
     if (st.crew) { if (!st.mBehind) matt(st.mx, 238, 0, 1.6); if (!st.rBehind) rod(st.rx, 238, 0, 1.6); }
   };
   await fadeIn(500);
@@ -418,8 +430,8 @@ SCENES.arrive = async () => {
 };
 
 SCENES.tool = async () => {
-  view = () => { interior(JOB.room, JOB.cust.seed, MONTH, roomArtFor(JOB)); rod(150, FEET, 0, 2); matt(210, FEET, 0, 2); customer(330, FEET, JOB.cust.seed, 2); };
-  await fadeIn(400);
+  view = () => { interior(JOB.room, JOB.cust.seed, MONTH, roomArtFor(JOB)); cast('normal'); };
+  st.inX = -250; await fadeIn(300); await walkIn();
   const T0 = JOB.tool;
   const c = await say('ROD', 'rod_normal', T0.q, T0.opts);
   JS.toolRight = c === T0.right; saveJS();
@@ -450,7 +462,7 @@ SCENES.after = async () => {
   mg = mg || { win: true, stars: 2 };
   JS.win = mg.win; JS.stars = mg.stars; saveJS();
   st.happy = mg.win;
-  view = () => { interior(JOB.room, JOB.cust.seed, MONTH, roomArtFor(JOB)); rod(150, FEET, 0, 2); matt(210, FEET, 0, 2); customer(330, FEET, JOB.cust.seed, 2, st.happy ? 'normal' : 'upset'); };
+  view = () => { interior(JOB.room, JOB.cust.seed, MONTH, roomArtFor(JOB)); cast(st.happy ? 'happy' : 'upset'); };
   IMG.cust = custPortrait(JOB.cust.seed, mg.win ? 'happy' : 'upset');
   await fadeIn(300); DDTSfx.play(mg.win ? 'drain' : 'clog');
   if (!mg.win) {   // a failed run is a failed run: try again (costs time and energy) or leave it broken
@@ -481,6 +493,8 @@ SCENES.payday = async () => {
   const hp = broke ? -10 : win ? -5 : -10, sta = -20;   // a job takes it out of you; only food and rest bring it back
   if (!JS.paid) {
     DDT.apply({ money: pay, rep, health: hp, stamina: sta, time: 75, note: `${JOB.title}: ${JOB.tip}` }); JS.paid = true; saveJS();
+    { const sv = DDT.get(), T = sv.stats = sv.stats || {}; T.jobs = (T.jobs || 0) + 1; T.earned = (T.earned || 0) + pay; if (stars === 3) T.perfect = (T.perfect || 0) + 1; if (!win) T.botched = (T.botched || 0) + 1; T.best = Math.max(T.best || 0, pay);
+      sv.recent = [JOB.game, ...(sv.recent || [])].slice(0, 4); DDT.save(sv); }   // the player record, and which mini-games you've just had (so the board mixes it up)
     const S = DDT.get(), lead = (S.today && S.today.lead) || JOB.lead || 'matt';   // year totals for the share card
     S.stars = (S.stars || 0) + (win ? stars : 0); S.wins = (S.wins || 0) + (win ? 1 : 0); S.leads = S.leads || {}; S.leads[lead] = (S.leads[lead] || 0) + 1; DDT.save(S);
   }

@@ -455,6 +455,7 @@ const SHOP = [
   { id: 'espresso', name: "ROD'S ESPRESSO MAKER", price: 400, kind: 'gear', desc: "Rod insists. BENEFIT: +8 stamina every morning." },
   { id: 'camera', name: 'SEWER CAMERA + LOCATOR', price: 16500, kind: 'gear', desc: "BENEFIT: unlocks the camera story jobs, and the septic search shows which way the pipe leaves the house." },
   { id: 'probes', name: 'PROBE RODS x5', price: 30, kind: 'part', desc: "Spare steel probe rods. BENEFIT on septic hunts: +5 probes. Used up on the job." },
+  { id: 'deerins', name: 'DEER INSURANCE', price: 450, kind: 'gear', desc: "Full comprehensive from an agent in Gorham who has seen things. BENEFIT: hit all the deer you want. No lost time, no cracked glass." },
   { id: 'glass', name: 'NEW WINDSHIELD', price: 350, kind: 'service', desc: "Rod knows a guy in Gorham. BENEFIT: every crack from every crash, gone. Clear view again." },
   { id: 'jetter', name: 'JETTER TRAILER', price: 14200, kind: 'gear', desc: "4,000 PSI. BENEFIT: unlocks the hotel, campground and lost-jetter story jobs." },
 ];
