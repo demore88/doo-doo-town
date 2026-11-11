@@ -195,65 +195,97 @@ GAMES.push({
 });
 
 // =====================================================================
-// 2. CLEANOUT BLOWOUT — a jet sweeps the room like a sprinkler. It sputters off (and warns before reversing).
+// 2. CLEANOUT BLOWOUT — a 3D run across the yard to the van. Cleanouts blast jets ACROSS your path (jump them),
+//    and some shoot STRAIGHT UP, raining turds and corn (watch the shadows, switch lanes).
 GAMES.push({
-  id: 'sprinkler', name: 'CLEANOUT BLOWOUT', tag: 'Shoving the cap back in · the 360° gusher',
-  how: ['You shoved the cap back in. Now it sprays in a circle.', 'Stay out of the jet. It sweeps around the room.', 'It sputters off for a moment now and then: that is your chance to cross it.', 'Halfway through, the cap cracks and it sprays BOTH ways.', 'It shudders right before it reverses. Corn included.', 'Survive 20 seconds.'],
-  dpad: 'omni',
-  ctl: '◀ ▶ ▲ ▼ MOVE (OR DRAG)',
-  act: null,
-  init(s) { s.DUR = 20; s.jets = 1; s.px = 240; s.py = 230; s.a = -Math.PI / 2; s.dir = 1; s.on = true; s.phase = 1.8; s.warn = 0; s.rev = 4; s.pantsMax = s.pants = [4, 3, 3][s.diff]; s.inv = 0; s.hits = 0; s.corn = []; },
+  id: 'sprinkler', name: 'CLEANOUT BLOWOUT', tag: 'Run the yard · jump the jets · dodge the fallout',
+  how: ['The whole line backed up and every cleanout in the yard is blowing its cap. RUN FOR THE VAN.', 'Brown jets blast ACROSS the yard: JUMP over them (▲, SPACE, or tap the middle).', 'When a cleanout shoots STRAIGHT UP, turds and corn rain down. Watch for the SHADOWS and switch lanes (◀ ▶ or tap the sides).', 'Do not run into the cleanout pipes themselves.', 'Get hit too many times and that is it for your pants. Reach the van!'],
+  dpad: 'lr',
+  ctl: '◀ ▶ CHANGE LANE · ▲ / SPACE JUMP',
+  act: 'JUMP',
+  init(s) {
+    s.DIST = [430, 520, 600][s.diff]; s.z = 0; s.v = 0; s.lane = 0; s.lx = 0; s.jy = 0; s.jv = 0; s.objs = []; s.next = 22; s.n = 0;
+    s.pantsMax = s.pants = [4, 3, 3][s.diff]; s.inv = 0; s.hits = 0; s.splats = []; s.say = ''; s.sayT = 0;
+  },
+  G: 26, D: 6, HY: 92, FY: 246, LW: 92, U: 58,   /* gravity · camera distance · horizon y · feet y · lane width · px per world unit at the runner */
+  P(s, rel, lx, h) { const sc = this.D / (Math.max(-this.D * 0.9, rel) + this.D); return { x: 240 + lx * this.LW * sc, y: this.HY + (this.FY - this.HY) * sc - (h || 0) * this.U * sc, sc }; },
+  hit(s, word) { if (s.inv > 0) return; s.pants--; s.hits++; s.inv = 1.1; s.shake = 0.35; s.say = word; s.sayT = 1.2; SFX('splash', { vol: 0.7 }); },
   update(s, dt, I) {
-    s.t += dt;
-    mover(s, I, dt, 125 * HERO(s).spd, 24, W - 24, 30, H - 14);
-    const cx = 240, cy = 140, ramp = s.t / s.DUR;
-    const w = (1.0 + 0.5 * ramp) * s.k;                        // angular speed (rad/s)
-    s.phase -= dt;
-    if (s.phase <= 0) { s.on = !s.on; s.phase = s.on ? 1.3 + s.rnd() * 1.0 : 0.65 / Math.sqrt(s.k); }
-    s.rev -= dt;
-    if (s.rev <= 0.6 && !s.warn) s.warn = 0.6;                 // shudder warning
-    if (s.warn > 0) { s.warn -= dt; if (s.warn <= 0) { s.dir *= -1; s.rev = 3 + s.rnd() * 3; s.warn = 0; } }
-    if (s.on && s.warn <= 0) s.a += w * s.dir * dt;
-    if (s.jets === 1 && s.t > [12, 9, 7][s.diff]) { s.jets = 2; s.note = 1.5; }
-    s.note = Math.max(0, (s.note || 0) - dt);
-    // keep the player out of the splash zone right at the cleanout
-    const dx = s.px - cx, dy = s.py - cy, d = Math.hypot(dx, dy);
-    if (d < 26) { s.px = cx + dx / (d || 1) * 26; s.py = cy + dy / (d || 1) * 26; }
-    s.inv = Math.max(0, s.inv - dt);
-    if (s.on) {
-      for (let j = 0; j < s.jets; j++) {
-        const aa = s.a + j * Math.PI, ux = Math.cos(aa), uy = Math.sin(aa), along = dx * ux + dy * uy, perp = Math.abs(-dx * uy + dy * ux);
-        if (s.inv <= 0 && along > 10 && perp < 9 + 6) { s.pants--; s.hits++; s.inv = 1.0; s.shake = 0.3; s.px += ux * 18; s.py += uy * 18; }
-        if (s.rnd() < 0.5) s.corn.push({ x: cx, y: cy, vx: ux * 260 + (s.rnd() - .5) * 40, vy: uy * 260 + (s.rnd() - .5) * 40, l: 0.6 });
+    s.t += dt; s.inv = Math.max(0, s.inv - dt); s.shake = Math.max(0, (s.shake || 0) - dt); s.sayT = Math.max(0, s.sayT - dt);
+    const ramp = Math.min(1, s.z / s.DIST); s.v = (12 + 7 * ramp) * s.k; s.z += s.v * dt;
+    // input: lanes, jump. On a phone: tap the left / right third to switch lanes, the middle to jump.
+    let jump = I.Ap || I.Up;
+    if (I.Lp) s.lane = Math.max(-1, s.lane - 1); if (I.Rp) s.lane = Math.min(1, s.lane + 1);
+    if (I.ptr.clicked) { const x = I.ptr.x / W; if (x < 0.33) s.lane = Math.max(-1, s.lane - 1); else if (x > 0.67) s.lane = Math.min(1, s.lane + 1); else jump = true; }
+    if (jump && s.jy <= 0) { s.jv = 9.2; SFX('ui_tap', { vol: 0.3 }); }
+    s.jv -= this.G * dt; s.jy = Math.max(0, s.jy + s.jv * dt); if (s.jy <= 0) s.jv = 0;
+    s.lx += (s.lane - s.lx) * Math.min(1, dt * 13);
+    // spawn ahead: jets across the yard, and geysers that rain
+    if (s.z + 70 > s.next && s.next < s.DIST - 25) { s.n++;
+      const gey = s.n > 2 && s.rnd() < 0.38;
+      if (gey) { s.objs.push({ k: 'gey', wz: s.next, lane: Math.floor(s.rnd() * 3) - 1, fired: false, col: 0 }); s.next += 30 - 6 * ramp; }
+      else { s.objs.push({ k: 'jet', wz: s.next, side: s.rnd() < 0.5 ? -1 : 1, wob: s.rnd() * 6 }); s.objs.push({ k: 'pipe', wz: s.next, lane: s.objs[s.objs.length - 1].side * 2.1 }); s.next += (17 - 5 * ramp) * (0.8 + s.rnd() * 0.5); } }
+    const hb = s.jy;   // how high your feet are
+    for (const o of s.objs) {
+      const rel = o.wz - s.z, prev = o.rel == null ? rel : o.rel; o.rel = rel;
+      if (o.k === 'gey' && !o.fired && rel < 30) {   // it blows straight up: the fallout lands around YOU
+        o.fired = true; o.col = 1.3; SFX('gurgle', { vol: 0.8 }); s.say = 'INCOMING!'; s.sayT = 1;
+        const n = [4, 5, 6][s.diff] + Math.floor(ramp * 2);   /* staggered so there's always a way through */
+        for (let i = 0; i < n; i++) { const wz = s.z + 8 + i * (24 / n) + s.rnd() * 1.2, tt = (wz - s.z) / s.v + 0.15, corn = s.rnd() < 0.35;
+          s.objs.push({ k: corn ? 'corn' : 'turd', wz, lane: Math.floor(s.rnd() * 3) - 1, h: 0.5 * this.G * 0.45 * tt * tt, vh: 0, spin: s.rnd() * 6 }); } }
+      if (o.k === 'gey') o.col = Math.max(0, o.col - dt);
+      if (o.k === 'turd' || o.k === 'corn') { if (o.h > 0) { o.vh -= this.G * 0.45 * dt; o.h = Math.max(0, o.h + o.vh * dt); if (o.h <= 0) { o.landed = true; if (rel > 1) SFX('squish', { vol: 0.25 }); } } }
+      if (prev > 0 && rel <= 0) {   // it reaches you this frame
+        if (o.k === 'jet' && hb < 0.95) this.hit(s, 'BLASTED!');
+        if (o.k === 'gey' && Math.abs(o.lane - s.lx) < 0.6 && hb < 1.0) this.hit(s, 'RAN INTO THE PIPE!');
+        if ((o.k === 'turd' || o.k === 'corn') && Math.abs(o.lane - s.lx) < 0.55 && o.h < hb + 1.7 && o.h + 0.4 > hb) this.hit(s, o.k === 'corn' ? 'CORNED!' : 'DIRECT HIT!');
       }
     }
-    for (const c of s.corn) { c.x += c.vx * dt; c.y += c.vy * dt; c.l -= dt; }
-    s.corn = s.corn.filter(c => c.l > 0);
-    s.px = clamp(s.px, 24, W - 24); s.py = clamp(s.py, 30, H - 14);
-    if (s.pants <= 0) s.end = { win: false, stars: 0, line: 'Corn on your arm. Corn everywhere.' };
-    else if (s.t >= s.DUR) s.end = { win: true, stars: stars3(s.hits === 0, s.hits <= 1), line: s.hits ? `Hit ${s.hits}x. You live to tell Rod.` : 'Untouched. Rod is impressed.' };
+    s.objs = s.objs.filter(o => o.wz - s.z > -4);
+    if (s.pants <= 0) s.end = { win: false, stars: 0, line: 'You did not make it to the van. You are not getting IN the van, either.' };
+    else if (s.z >= s.DIST) { SFX('door'); s.end = { win: true, stars: stars3(s.hits === 0, s.hits <= 1), line: s.hits ? `Made it to the van. Hit ${s.hits}x. Rod will make you ride in the back.` : 'Not a speck on you. Rod lets you ride up front.' }; }
   },
   draw(s) {
-    R(0, 0, W, H, '#5d9a48');   // the customer's lawn, seen from above
-    for (let i = 0; i < 140; i++) { const x = (i * 97) % W, y = 16 + (i * 61) % (H - 16); R(x, y, 2, 3, i % 3 ? '#6aae52' : '#4f8a3e'); if (i % 17 === 0) { R(x + 5, y + 1, 2, 2, '#f2e36a'); } }
-    for (let i = 0; i < 6; i++) { g.fillStyle = 'rgba(40,70,30,.18)'; g.beginPath(); g.ellipse((i * 173) % W, 30 + (i * 89) % 220, 40, 14, 0, 0, 7); g.fill(); }
-    const cx = 240, cy = 140;
-    C(cx, cy, 24, 'rgba(107,68,35,.35)');
-    for (let j = 0; j < s.jets; j++) {
-      const ux = Math.cos(s.a + j * Math.PI), uy = Math.sin(s.a + j * Math.PI);
-      if (s.on) {
-        g.strokeStyle = 'rgba(122,74,30,.9)'; g.lineWidth = 14; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + ux * 600, cy + uy * 600); g.stroke();
-        g.strokeStyle = 'rgba(160,106,53,.9)'; g.lineWidth = 5; g.stroke();
-      } else { g.strokeStyle = 'rgba(122,74,30,.25)'; g.lineWidth = 2; g.setLineDash([4, 6]); g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + ux * 600, cy + uy * 600); g.stroke(); g.setLineDash([]); }
-    }
-    if (s.note > 0) T('IT SPLIT! TWO JETS!', 240, 40, '#e9665a', 8, 'center');
-    for (const c of s.corn) if (!SPC('poopcorn', c.x, c.y, 0.2)) R(c.x - 1, c.y - 1, 3, 3, '#f2c12e');
-    const sh = s.warn > 0 ? (Math.random() - .5) * 4 : 0;
-    if (!SPC('cleanout', cx + sh, cy, 0.6)) { C(cx + sh, cy, 10, '#d6d6d6'); C(cx + sh, cy, 6, '#5b3a1c'); }
-    if (s.warn > 0) T('!', cx, cy - 22, '#e9665a', 12, 'center');
-    if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) HERO_AT(s, s.px, s.py + 12, 2, { face: 'U' });
-    HUD(s, 'CLEANOUT BLOWOUT', s.DUR - s.t); PANTS(s, 6, 22);
-    if (!s.on) T('SPUTTERING - CROSS NOW!', 240, 252, '#7bd65b', 8, 'center');
+    const { HY, FY, D } = this, sh = s.shake > 0 ? (Math.random() - 0.5) * 6 : 0, t = s.t;
+    g.save(); g.translate(sh, 0);
+    // sky, the neighbors' houses and trees on the horizon
+    const sky = g.createLinearGradient(0, 0, 0, HY); sky.addColorStop(0, '#7fb6e6'); sky.addColorStop(1, '#cfe6f4'); g.fillStyle = sky; g.fillRect(-6, 0, W + 12, HY);
+    for (let i = 0; i < 9; i++) { const x = ((i * 71 - s.z * 0.3) % 560 + 560) % 560 - 40; C(x, HY - 8, 16 + (i % 3) * 5, '#4f7a3c'); C(x + 14, HY - 12, 12, '#5d8a46'); }
+    // the lawn: mowing stripes rushing at you
+    for (let y = HY; y < H; y += 2) { const rel = D * (FY - HY) / Math.max(0.5, y - HY) - D, k = Math.floor((s.z + rel) / 3) % 2; R(-6, y, W + 12, 2, k ? '#5e9c48' : '#68a852'); }
+    // the path: the lanes, a little worn
+    for (const lx of [-1.5, -0.5, 0.5, 1.5]) { const a = this.P(s, 60, lx), b2 = this.P(s, -1, lx); g.strokeStyle = 'rgba(60,90,40,.35)'; g.lineWidth = 1; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b2.x, b2.y); g.stroke(); }
+    // the van, waiting at the end of the yard
+    { const rel = s.DIST - s.z + 4; if (rel < 75 && IMG.van_back) { const p = this.P(s, rel, 0), im = IMG.van_back, fw = im.width / 6, h = 2.6 * this.U * p.sc, w = h * fw / im.height; g.imageSmoothingEnabled = true; g.drawImage(im, 0, 0, fw, im.height, p.x - w / 2, p.y - h, w, h); g.imageSmoothingEnabled = false; } }
+    // everything in the yard, far to near
+    const L = s.objs.filter(o => o.wz - s.z > -1).sort((a, b) => (b.wz - s.z) - (a.wz - s.z));
+    for (const o of L) { const rel = o.wz - s.z;
+      if (o.k === 'pipe' || o.k === 'gey') { const lane = o.k === 'gey' ? o.lane : o.lane, p = this.P(s, rel, lane), w = 0.42 * this.U * p.sc, h = 0.75 * this.U * p.sc;   /* a white PVC cleanout sticking out of the grass */
+        R(p.x - w / 2, p.y - h, w, h, '#e9e6dc'); R(p.x - w / 2, p.y - h, w * 0.25, h, '#ffffff'); R(p.x + w * 0.25, p.y - h, w * 0.25, h, '#c9c4b6'); R(p.x - w * 0.6, p.y - h - 2 * p.sc, w * 1.2, 4 * p.sc, '#d6d2c6');
+        if (o.k === 'gey' && o.col > 0) { const a2 = Math.min(1, o.col), cw = Math.max(6, w * 1.1), top = 16;   /* the geyser: a thick brown column, chunks flying up out of it */
+          const gr = g.createLinearGradient(p.x - cw / 2, 0, p.x + cw / 2, 0); gr.addColorStop(0, `rgba(90,54,22,${a2})`); gr.addColorStop(0.5, `rgba(150,98,46,${a2})`); gr.addColorStop(1, `rgba(90,54,22,${a2})`); g.fillStyle = gr;
+          g.beginPath(); g.moveTo(p.x - cw * 0.4, p.y - h); g.lineTo(p.x - cw * 0.9, top); g.lineTo(p.x + cw * 0.9, top); g.lineTo(p.x + cw * 0.4, p.y - h); g.fill();
+          for (let i = 0; i < 10; i++) { const yy = p.y - h - ((t * 260 + i * 37) % (p.y - h - top)), xx = p.x + Math.sin(t * 13 + i * 2.1) * cw * 0.8; if (i % 3) C(xx, yy, Math.max(2, 4 * p.sc), `rgba(110,68,28,${a2})`); else R(xx, yy, 3, 3, '#f2c12e'); } }
+        if (o.k === 'gey' && !o.fired && rel < 45 && Math.floor(t * 10) % 2) T('!', p.x, p.y - h - 10 * p.sc - 4, '#e9665a', Math.max(6, Math.round(12 * p.sc)), 'center'); }
+      if (o.k === 'jet') { const a = this.P(s, rel, o.side * 2.1, 0.45), b2 = this.P(s, rel, -o.side * 3.2, 0.3), th = 0.42 * this.U * a.sc;   /* the blast across the path */
+        g.strokeStyle = '#6e4420'; g.lineWidth = th; g.lineCap = 'round'; g.beginPath(); g.moveTo(a.x, a.y); for (let i = 1; i <= 8; i++) { const f = i / 8; g.lineTo(a.x + (b2.x - a.x) * f, a.y + (b2.y - a.y) * f + Math.sin(t * 18 + o.wob + i) * th * 0.25 + f * f * th * 0.6); } g.stroke();
+        g.strokeStyle = '#9a6634'; g.lineWidth = th * 0.4; g.stroke(); g.lineCap = 'butt';
+        for (let i = 0; i < 5; i++) { const f = ((t * 2.2 + i * 0.2 + o.wob) % 1); R(a.x + (b2.x - a.x) * f, a.y + (b2.y - a.y) * f - th * 0.7, 2 * a.sc + 1, 2 * a.sc + 1, '#f2c12e'); } }   /* corn riding the jet */
+      if (o.k === 'turd' || o.k === 'corn') { const gp = this.P(s, rel, o.lane, 0), sz = (o.k === 'corn' ? 0.28 : 0.55) * this.U * gp.sc;
+        if (!o.landed) { const near = Math.max(0, 1 - o.h / 10); g.fillStyle = `rgba(30,40,20,${0.15 + 0.4 * near})`; g.beginPath(); g.ellipse(gp.x, gp.y, sz * (0.5 + 0.6 * near), sz * 0.22 * (0.5 + 0.6 * near), 0, 0, 7); g.fill(); }   /* the shadow: where it lands */
+        const p = this.P(s, rel, o.lane, o.h);
+        if (o.k === 'turd') { if (o.landed) { if (!SPC('splat_' + (Math.floor(o.spin) % 4), gp.x, gp.y - sz * 0.1, gp.sc * 0.9)) C(gp.x, gp.y, sz * 0.5, '#6e4420'); } else if (!SPC('poop', p.x, p.y - sz * 0.4, gp.sc * 0.9 * this.U / 58)) C(p.x, p.y - sz * 0.4, sz * 0.4, '#6e4420'); }
+        else { for (let i = 0; i < 3; i++) { const ox = (i - 1) * sz * 0.6, oy = Math.sin(o.spin + i) * sz * 0.3; g.fillStyle = '#f2c12e'; g.beginPath(); g.ellipse(p.x + ox, p.y - sz * 0.5 + oy, sz * 0.22, sz * 0.3, o.spin + t * (o.landed ? 0 : 8), 0, 7); g.fill(); } } } }
+    // you, running away from the camera
+    { const p = this.P(s, 0, s.lx), who = s.hero || 'matt', run = s.jy > 0 ? 7 : (IMG[who + '_walk'] ? 22 + Math.floor(t * 10) % 4 : 7);
+      g.fillStyle = 'rgba(30,40,20,.4)'; g.beginPath(); g.ellipse(p.x, p.y, 22 - Math.min(10, s.jy * 4), 6, 0, 0, 7); g.fill();
+      if (!(s.inv > 0 && Math.floor(t * 12) % 2)) SPR(who, run, p.x, p.y - s.jy * this.U + (s.jy > 0 ? 0 : Math.abs(Math.sin(t * 20)) * -2), false, 2.4); }
+    g.restore();
+    // HUD: distance to the van
+    R(0, 0, W, 16, 'rgba(16,21,31,.92)'); T('CLEANOUT BLOWOUT', 6, 8, '#f7c418', 8); T('VAN ' + Math.max(0, Math.ceil((s.DIST - s.z) * 1.5)) + ' FT', W - 6, 8, '#fff', 8, 'right');
+    BAR(150, 5, 130, 6, Math.min(1, s.z / s.DIST), '#7bd65b'); PANTS(s, 6, 22);
+    if (s.sayT > 0) T(s.say, 240, 60, s.say === 'INCOMING!' ? '#f7c418' : '#e9665a', 12, 'center');
+    if (s.t < 3) T('JUMP the jets  ·  DODGE the shadows', 240, 40, '#fff', 7, 'center');
   },
 });
 
