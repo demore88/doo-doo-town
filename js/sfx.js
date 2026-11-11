@@ -4,7 +4,7 @@
 //   DDTSfx.play('flush')             one-shot
 //   const h = DDTSfx.loop('drill_loop'); h.stop()
 //   DDTSfx.patch(SND)                swap a page's synth beeps for the real thing
-// Muted together with the music (the ♪ button).
+// Independent of the music: the ♪ button only turns the music off.
 // =====================================================================
 const DDTSfx = (() => {
   const NAMES = ['moose', 'raccoon', 'animal_hit', 'animal_hit_2', 'car_crash', 'squirrel_death_1', 'squirrel_death_2', 'squirrel_death_3', 'deer_glass', 'flush', 'flush_big', 'clog', 'gurgle', 'drain', 'splash', 'squish', 'bubble', 'bubbles_loop', 'drips_loop',
@@ -17,7 +17,7 @@ const DDTSfx = (() => {
   let root = '';
   try { const s = document.currentScript && document.currentScript.src; if (s) root = s.replace(/js\/sfx\.js.*$/, ''); } catch (e) {}
   let ac = null, out = null; const buf = {}, loading = {};
-  const muted = () => { try { return localStorage.getItem('ddt_mute') === '1'; } catch (e) { return false; } };
+  const muted = () => { try { return localStorage.getItem('ddt_sfx_mute') === '1'; } catch (e) { return false; } };
   function ctx() {
     if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); out = ac.createGain(); out.gain.value = 1; out.connect(ac.destination); } catch (e) { return null; } }
     if (ac.state === 'suspended') ac.resume().catch(() => {});
