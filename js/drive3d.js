@@ -447,7 +447,7 @@ function drive3d(choice, opts) {
       if (opts.endless) {
         /* each side has its own budget. Both grow every 20 miles, and they're counted PER LANE, so when the road widens you get more cars, not more room */
         const tier = Math.floor(pos / SEG / SEG_PER_MI / 20), zz = pos + PZ, nO = ourLanes(zz), nC = oncLanes(zz);
-        const wantO = Math.round(Math.min(nO * 3.5, nO * (1.2 + 0.3 * tier))), wantC = Math.round(Math.min(nC * 6, nC * (2.5 + 0.5 * tier)) * (px < -1 / 3 ? 1.4 : 1));   /* sitting in the oncoming lane brings even more */
+        const wantO = Math.round(Math.min(nO * 3.5, nO * (1.2 + 0.3 * tier))), wantC = Math.round(Math.min(nC * 3, nC * (1.25 + 0.25 * tier)) * (px < -1 / 3 ? 1.4 : 1));   /* sitting in the oncoming lane brings even more */
         const live_ = cars.filter(c => !c.parked), haveO = live_.filter(c => !c.onc).length, haveC = live_.filter(c => c.onc).length;
         const trim = onc => { const far = live_.filter(c => !!c.onc === onc && c.z - zz > DRAW * 0.7 * SEG); if (far[0]) { far[0].z = -1e12; far[0].parked = true; far[0].retry = 0; } };
         if (haveO > wantO + 1) trim(false); if (haveC > wantC + 1) trim(true);
