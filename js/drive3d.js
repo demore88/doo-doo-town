@@ -278,7 +278,7 @@ function drive3d(choice, opts) {
   else for (let mi = 2; mi < N / SEG_PER_MI - 1; mi += 1) {   /* the Driving Game: it gets harder every 20 miles */
     const tier = Math.floor(mi / 20), chance = Math.min(0.9, 0.08 + 0.06 * tier);   /* the odds of an animal in any given mile */
     if (Math.random() > chance) continue;
-    const pool = mi < 20 ? ['turkeys', 'squirrel', 'squirrel'] : mi < 30 ? ['turkeys', 'squirrel', 'raccoon'] : mi < 60 ? ['turkeys', 'squirrel', 'raccoon', 'deer'] : mi < 100 ? ['turkeys', 'squirrel', 'raccoon', 'deer', 'deer', 'moose'] : ['turkeys', 'raccoon', 'deer', 'deer', 'moose', 'moose'];
+    const pool = mi < 20 ? ['turkeys', 'squirrel', 'squirrel'] : mi < 30 ? ['turkeys', 'squirrel', 'raccoon'] : mi < 60 ? ['turkeys', 'squirrel', 'raccoon', 'deer'] : mi < 100 ? ['turkeys', 'squirrel', 'raccoon', 'deer', 'deer', 'moose'] : mi < 300 ? ['turkeys', 'squirrel', 'raccoon', 'deer', 'deer', 'moose', 'moose'] : ['turkeys', 'raccoon', 'deer', 'deer', 'moose', 'moose'];   /* squirrels stick around until mile 300 */
     const sg0 = Math.floor((mi + Math.random()) * SEG_PER_MI), sgo = segs[sg0] || {}, kind = pool[Math.floor(Math.random() * pool.length)];
     critters.push({ seg: sg0, kind, spd: kind === 'deer' ? Math.min(1.6, 1 + tier * 0.06) : 1, off: Math.random() < .5 ? (sgo.lt || -1) - 0.6 : (sgo.rt || 1) + 0.6, dir: 0, hit: false, snap: 0, flash: 0 }); }   /* deer get a little quicker every 20 miles, topping out at 1.6x */
   const CIMG = { moose: ANIM.moose[0], deer: ANIM.deer[0], turkeys: ANIM.turkeys[0], peeper: PEEPER, squirrel: ANIM.squirrel[0], raccoon: ANIM.raccoon[0] }, CW = { moose: 0.36, deer: 0.18, turkeys: 0.1, peeper: 0.08, squirrel: 0.06, raccoon: 0.1 },   // half-widths, matching how big they're drawn
