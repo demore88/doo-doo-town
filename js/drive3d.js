@@ -20,7 +20,7 @@ function drive3d(choice, opts) {
   const SEG = 200, ROADW = 1100, LANES = 2, DRAW = 140, CAMH = 900, DEPTH = 0.84, STEP = 1 / 60;
   const MAX = SEG / STEP, MPH = MAX / 72;                   // 12000 units/s = 72 mph on the dial
   // who's driving decides the top speed: Rod tops out at 40, Matt at 60
-  const DRIVER = (opts.driver || ((DDT.get() || {}).today || {}).lead || 'rod') === 'matt' ? 'matt' : 'rod', TOP = (opts.endless ? 50 : DRIVER === 'matt' ? 60 : 40) * MPH;   /* the Driving Game: 50 mph top, whoever drives */
+  const DRIVER = (opts.driver || ((DDT.get() || {}).today || {}).lead || 'rod') === 'matt' ? 'matt' : 'rod', TOP = (opts.endless || opts.rival ? 50 : DRIVER === 'matt' ? 60 : 40) * MPH;   /* the Driving Game: 50 mph top, whoever drives */
   // slow & steady = relaxed but long · normal = normal · hammer down = hard (more traffic, more critters, everyone's in a hurry)
   const MODE = [{ cruise: 0.72, cars: 6, onc: 0.35, crit: 3, blink: 0.015, trucks: 0.02 },     // cars = how many are around you at once
                 { cruise: 0.86, cars: 9, onc: 0.4, crit: 5, blink: 0.03, trucks: 0.02 },
@@ -319,7 +319,7 @@ function drive3d(choice, opts) {
   rc.onpointermove = e => { if (pts.has(e.pointerId)) { pts.set(e.pointerId, zone(e)); retouch(); } };
   rc.onpointerup = rc.onpointercancel = rc.onlostpointercapture = e => { pts.delete(e.pointerId); retouch(); };
   addEventListener('pointerup', e => { if (pts.delete(e.pointerId)) retouch(); }); addEventListener('blur', () => { pts.clear(); retouch(); });
-  const say = (m, s = 1.4) => { msg = opts.endless && m ? m.replace(/ ?\+\d+ MIN/, '') : m; msgT = s; };   /* no clock in the Driving Game, so no lost-minutes */
+  const say = (m, s = 1.4) => { msg = (opts.endless || RACE) && m ? m.replace(/ ?\+\d+ MIN/, '') : m; msgT = s; };   /* no clock in the Driving Game, so no lost-minutes */
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__moose = () => { const c = { kind: 'moose', seg: Math.floor((pos + PZ) / SEG), off: px, dir: -1, hit: true, react: 0.001 }; critters.push(c); }; window.__crash = () => bursts.push({ t: 0, side: 0.3, big: false }); window.__turk = () => critters.push({ kind: 'turkeys', seg: 0, off: 0, dir: 1, hit: true, fly: 0.001, flyDir: 1 }); window.__deer = (d = 1) => critters.push({ kind: 'deer', seg: 0, off: 0, dir: d, hit: true, fly: 0.001, flyDir: d });   // dev: test the windshield deer
   const sfx = (n, o) => { if (typeof DDTSfx !== 'undefined') DDTSfx.play(n, o); };   /* DDTSfx is a top-level const: it's never on window */
   // ---------- the windshield: cracks that stick around (and grow with every hit), bugs, mud, and now and then some weather ----------
@@ -420,7 +420,7 @@ function drive3d(choice, opts) {
       px -= seg.curve * ratio * ratio * dt * 0.42;
       // off the road: grass (or a snowbank) slows you down hard
       const RT = seg.rt || 1, LT = seg.lt || -1, offR = px < LT || px > RT, outBy = px < LT ? LT - px : px - RT;
-      if ((SNOW || opts.endless) && outBy > -0.04) { px = px < LT + 0.1 ? LT + 0.16 : RT - 0.16; speed *= Math.pow(0.35, dt);   /* no hiding on the shoulder: the bank kicks you back into the lane */ shake = Math.max(shake, 0.15); if (!draw.bankT || t - draw.bankT > 2) { draw.bankT = t; say('SNOWBANK!', 0.8); } }   /* the plow berm won't let you off the road */
+      if ((SNOW || opts.endless || RACE) && outBy > -0.04) { px = px < LT + 0.1 ? LT + 0.16 : RT - 0.16; speed *= Math.pow(0.35, dt);   /* no hiding on the shoulder: the bank kicks you back into the lane */ shake = Math.max(shake, 0.15); if (!draw.bankT || t - draw.bankT > 2) { draw.bankT = t; say('SNOWBANK!', 0.8); } }   /* the plow berm won't let you off the road */
       if (offR) { const deep = SNOW && outBy > 0.1, floor = (deep ? 0.07 : SNOW ? 0.15 : 0.22) * MAX; if (live) { penalty += dt * (deep ? 0.9 : 0.4); offT = (offT || 0) + dt; } /* stuck in it: minutes tick away */ if (speed > floor) speed = floor + (speed - floor) * Math.pow(0.1, dt); /* grass/snow drags you to a crawl, never backwards */ shake = Math.max(shake, 0.08); if (SNOW && Math.abs(px) > 1.15) { px = Math.sign(px) * 1.15; if (msgT <= 0) say('SNOWBANK!', 0.8); } }
       px = Math.max(LT - 0.6, Math.min(RT + 0.6, px));
       if (live) { pos += speed * dt; play += dt; if (opts.endless && px > LT + 0.08 && px < RT - 0.08) distPts += speed * dt / (SEG * SEG_PER_MI) * 100 * Math.pow(Math.min(1, speed / TOP), 1.5); }   /* points only while you're in a lane */   /* 100 a mile flat out; crawling earns a lot less */
@@ -754,20 +754,24 @@ function drive3d(choice, opts) {
       r.fillStyle = 'rgba(16,21,31,.92)'; r.fillRect(0, 0, W, 20);
       r.font = '8px "Press Start 2P", monospace'; r.textBaseline = 'middle'; r.textAlign = 'left';
       if (opts.endless) { const mi = pos / SEG / SEG_PER_MI, lanes = ourLanes(pos + PZ) + oncLanes(pos + PZ); r.fillStyle = '#f7c418'; r.fillText('THE DRIVING GAME', 6, 10); r.textAlign = 'right'; r.fillStyle = lanes > 3 ? '#e9665a' : '#fff'; r.fillText(`${lanes} LANES`, 474, 10); r.textAlign = 'left'; }   /* no clock, no destination: just the road */
+      else if (RACE) { r.fillStyle = '#e9665a'; r.fillText('RACE THE CLOG KINGS', 6, 10); r.fillStyle = '#fff'; r.textAlign = 'right'; r.fillText(to.slice(0, 9), 474, 10); r.textAlign = 'left'; }
       else {
       r.fillStyle = late ? '#e9665a' : '#fff'; r.fillText(opts.clock(mins), 6, 10);
       r.fillStyle = '#f7c418'; r.fillText('DUE ' + opts.clock(opts.due).replace(/ ?[AP]M/, ''), 82, 10);
       r.fillStyle = '#fff'; r.fillText(from.slice(0, 8), 166, 10); r.textAlign = 'right'; r.fillText(to.slice(0, 9), 474, 10); r.textAlign = 'left'; }
       const prog = Math.min(1, pos / ((N - 40) * SEG));
-      if (!opts.endless) { const L = LEGS_HERE[(segAt(pos) || {}).leg || 0]; if (L) { r.font = '6px "Press Start 2P", monospace'; r.textAlign = 'left'; r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(4, 24, 8 + (L.rt + '  ' + L.name).length * 6, 12); r.fillStyle = '#f7c418'; r.fillText(L.rt + '  ' + L.name, 8, 30); r.font = '8px "Press Start 2P", monospace'; } }
-      if (RIVAL) { const rp = Math.min(1, rz / ((N - 40) * SEG)); r.fillStyle = '#e9665a'; r.fillRect(236 + 150 * rp, 3, 4, 14);
-        r.font = '6px "Press Start 2P", monospace'; r.textAlign = 'center'; r.fillStyle = rz > pos + PZ ? '#e9665a' : '#7bd65b';
-        r.fillText(rz > pos + PZ ? `CLOG KINGS AHEAD ${Math.round((rz - pos - PZ) / SEG)}` : 'YOU LEAD!', 313, 28); r.font = '8px "Press Start 2P", monospace'; r.textAlign = 'left'; }
-      if (!opts.endless) { r.fillStyle = '#2c3326'; r.fillRect(238, 7, 150, 6); r.fillStyle = '#7bd65b'; r.fillRect(238, 7, 150 * prog, 6); r.fillStyle = '#f7c418'; r.fillRect(236 + 150 * prog, 5, 4, 10); }
+      if (!opts.endless && !RACE) { const L = LEGS_HERE[(segAt(pos) || {}).leg || 0]; if (L) { r.font = '6px "Press Start 2P", monospace'; r.textAlign = 'left'; r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(4, 24, 8 + (L.rt + '  ' + L.name).length * 6, 12); r.fillStyle = '#f7c418'; r.fillText(L.rt + '  ' + L.name, 8, 30); r.font = '8px "Press Start 2P", monospace'; } }
+      if (!opts.endless) { const bx = RACE ? 200 : 238, bw = RACE ? 200 : 150; r.fillStyle = '#2c3326'; r.fillRect(bx, 7, bw, 6); r.fillStyle = '#7bd65b'; r.fillRect(bx, 7, bw * prog, 6);
+        if (RIVAL) { const rp = Math.min(1, rz / ((N - 40) * SEG)); r.fillStyle = '#e9665a'; r.fillRect(bx - 2 + bw * rp, 3, 4, 14); }   /* the Clog Kings' van on the track */
+        r.fillStyle = '#f7c418'; r.fillRect(bx - 2 + bw * prog, 5, 4, 10); }
       // speedometer
       const mph = Math.round(speed / MPH);
       r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(W - 78, 26, 72, 18); r.fillStyle = speed > TOP * 0.97 ? '#f7c418' : '#7bd65b'; r.textAlign = 'right'; r.fillText(mph + ' MPH', W - 10, 35); r.textAlign = 'left';
-      if (crashes && !opts.endless) { r.fillStyle = '#e9665a'; r.textAlign = 'right'; r.fillText('CRASHES ' + crashes, W - 6, 52); r.textAlign = 'left'; }
+      if (RACE) { const box = (x, w, txt, col) => { r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(x, 26, w, 18); r.fillStyle = col; r.textAlign = 'center'; r.fillText(txt, x + w / 2, 35); r.textAlign = 'left'; };   /* the Driving Game's panels */
+        const gap = Math.round((rz - pos - PZ) / SEG), left = Math.max(0, (1 - prog) * TOTAL_MI);
+        box(6, 132, crashes ? `CRASHES ${crashes}` : 'NO CRASHES', crashes ? '#e9665a' : '#7bd65b'); box(150, 84, `${left.toFixed(1)} MI`, '#7bd65b');
+        box(242, 150, gap > 0 ? `KINGS +${gap}` : gap < 0 ? `YOU LEAD +${-gap}` : 'NECK & NECK', gap > 0 ? '#e9665a' : '#7bd65b'); }
+      if (crashes && !opts.endless && !RACE) { r.fillStyle = '#e9665a'; r.textAlign = 'right'; r.fillText('CRASHES ' + crashes, W - 6, 52); r.textAlign = 'left'; }
       if (opts.endless) { const mi = pos / SEG / SEG_PER_MI, box = (x, w, txt, col, al) => { r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(x, 26, w, 18); r.fillStyle = col; r.textAlign = al || 'center'; r.fillText(txt, al === 'left' ? x + 6 : x + w / 2, 35); r.textAlign = 'left'; };   /* same panels as the MPH */
         { const x = 6, w = 132; r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(x, 26, w, 18); const f = 1 - crashes / 20; r.fillStyle = '#2c3326'; r.fillRect(x + 6, 31, w - 52, 8); r.fillStyle = crashes > 14 ? '#e9665a' : crashes > 8 ? '#f7c418' : '#7bd65b'; r.fillRect(x + 6, 31, (w - 52) * f, 8); r.fillStyle = '#fff'; r.textAlign = 'right'; r.fillText(`${20 - crashes}`, x + w - 6, 35); r.textAlign = 'left'; }   /* van health, top left */
         box(150, 84, `${mi.toFixed(1)} MI`, '#7bd65b'); box(242, 150, `${(score + Math.floor(distPts)).toLocaleString()} PTS`, '#f7c418'); }
@@ -810,7 +814,7 @@ function drive3d(choice, opts) {
         r.fillStyle = '#f7c418'; r.textAlign = 'center'; r.fillText((opts.route || 'ROUTE 2').toUpperCase(), 240, 86);
         r.fillStyle = '#fff'; r.fillText(TILT ? 'TILT TO STEER · HOLD = GAS' : TOUCH ? 'ONE THUMB STEERS · BOTH = GAS' : '◀ ▶ STEER   ▲ GAS   ▼ BRAKE', 240, 106);
         if (RIVAL) { r.fillStyle = '#e9665a'; r.fillText('RACE THE CLOG KINGS!', 240, 96); }
-        r.fillStyle = '#9fb3d9'; r.fillText(`${DRIVER === 'matt' ? 'MATT' : 'ROD'} DRIVES · TOP ${opts.endless ? 50 : DRIVER === 'matt' ? 60 : 40} MPH`, 240, 124); r.fillText('WATCH FOR BLINKERS + MOOSE', 240, 138);
+        r.fillStyle = '#9fb3d9'; r.fillText(`${DRIVER === 'matt' ? 'MATT' : 'ROD'} DRIVES · TOP ${opts.endless || RACE ? 50 : DRIVER === 'matt' ? 60 : 40} MPH`, 240, 124); r.fillText('WATCH FOR BLINKERS + MOOSE', 240, 138);
         r.fillStyle = '#f7c418'; r.font = '12px "Press Start 2P", monospace'; r.fillText(t < 1.2 ? 'READY' : 'GO!', 240, 154); r.textAlign = 'left';
       }
       if (msgT > 0) { const my = 68; r.font = '10px "Press Start 2P", monospace'; r.textAlign = 'center'; r.fillStyle = '#000'; r.fillText(msg, 241, my + 1); r.fillStyle = '#f7c418'; r.fillText(msg, 240, my); r.textAlign = 'left'; }   /* drop below the phone call while one is on */
