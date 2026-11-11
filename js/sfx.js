@@ -7,10 +7,10 @@
 // Muted together with the music (the ♪ button).
 // =====================================================================
 const DDTSfx = (() => {
-  const NAMES = ['deer_glass', 'flush', 'flush_big', 'clog', 'gurgle', 'drain', 'splash', 'squish', 'bubble', 'bubbles_loop', 'drips_loop',
+  const NAMES = ['animal_hit', 'animal_hit_2', 'car_crash', 'squirrel_death_1', 'squirrel_death_2', 'squirrel_death_3', 'deer_glass', 'flush', 'flush_big', 'clog', 'gurgle', 'drain', 'splash', 'squish', 'bubble', 'bubbles_loop', 'drips_loop',
     'drill_loop', 'drill_burst', 'drill_stop', 'door', 'click', 'faucet', 'van_arrive', 'rain_loop', 'jackhammer',
     'van_drive_loop', 'engine_start', 'seatbelt', 'van_door_open', 'van_door_close', 'slide_door', 'horn', 'horn_angry', 'phone_ring', 'vm_ping', 'ui_tap', 'ui_select', 'espresso_loop'];
-  const VOL = { deer_glass: 0.9, flush: 0.8, flush_big: 0.8, clog: 0.7, gurgle: 0.8, drain: 0.7, splash: 0.9, squish: 0.8, bubble: 0.7, bubbles_loop: 0.5, drips_loop: 0.45,
+  const VOL = { animal_hit: 0.9, animal_hit_2: 0.9, car_crash: 0.85, squirrel_death_1: 0.9, squirrel_death_2: 0.9, squirrel_death_3: 0.9, deer_glass: 0.9, flush: 0.8, flush_big: 0.8, clog: 0.7, gurgle: 0.8, drain: 0.7, splash: 0.9, squish: 0.8, bubble: 0.7, bubbles_loop: 0.5, drips_loop: 0.45,
     drill_loop: 0.45, drill_burst: 0.6, drill_stop: 0.6, door: 0.8, click: 0.5, faucet: 0.6, van_arrive: 0.55, rain_loop: 0.45, jackhammer: 0.5,
     van_drive_loop: 0.35, engine_start: 0.55, seatbelt: 0.6, van_door_open: 0.7, van_door_close: 0.75, slide_door: 0.6, horn: 0.5, horn_angry: 0.5,
     phone_ring: 0.6, vm_ping: 0.6, ui_tap: 0.45, ui_select: 0.5, espresso_loop: 0.04 };

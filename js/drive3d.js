@@ -422,7 +422,7 @@ function drive3d(choice, opts) {
           const p = c.onc ? 20 : c.truck ? 14 : 10; /* a crash costs real time: exchanging info, checking the bumper */ penalty += p; STATS[c.onc ? 'headons' : c.truck ? 'trucks' : 'cars']++; STATS.lost += p; speed = c.onc ? 0 : Math.min(speed, Math.abs(c.speed) * 0.6);
           if (!c.truck) { c.spin = 1.6; c.spinDir = px < c.off ? 1 : -1; c.speed *= 0.3; }   // the car you hit spins out (log trucks just shrug)
           px += c.onc ? (px < c.off ? -0.4 : 0.4) : (px < c.off ? -0.3 : 0.3);
-          sfx(c.onc ? 'horn_angry' : 'horn'); say(c.onc ? `HEAD-ON! +${p} MIN` : c.truck ? `LOG TRUCK! +${p} MIN` : `BONK! +${p} MIN`);
+          sfx('car_crash'); sfx(c.onc ? 'horn_angry' : 'horn', { vol: 0.5 }); say(c.onc ? `HEAD-ON! +${p} MIN` : c.truck ? `LOG TRUCK! +${p} MIN` : `BONK! +${p} MIN`);
         }
       }
       if (opts.endless) {
@@ -439,7 +439,7 @@ function drive3d(choice, opts) {
         for (const c of cars) { if (c.parked || c.onc || c.spin > 0) continue; const behind = (pos + PZ) - c.z;
           if (behind > 0 && behind < SEG * 0.9 && Math.abs(px - c.off) < c.hw + 0.13 && c.speed > speed + 2 * MPH && inv <= 0) {   /* REAR-ENDED */
             crashes++; DS.rear++; inv = 1.4; shake = 0.45; hurtGlass(1); speed = Math.min(TOP, speed + 6 * MPH); c.z = pos + PZ - SEG * 1.4; { const nl = c.lane === 1 ? 2 : 1; c.blink = 0.4; c.next = nl; c.prev = c.lane; c.tailgater = false; }   /* they bump you, then swing out and go around */
-            bursts.push({ t: 0, side: 0, big: false }); sfx('horn_angry'); say('REAR-ENDED!', 1.2); } }
+            bursts.push({ t: 0, side: 0, big: false }); sfx('car_crash'); sfx('horn_angry', { vol: 0.5 }); say('REAR-ENDED!', 1.2); } }
       }
       // ---- no car can ever be inside another car ----
       // anything sharing a lane with a car just ahead of it is held back a safe gap and matches its speed;
@@ -507,15 +507,15 @@ function drive3d(choice, opts) {
         }
         if (live && !cr.hit && (cr.kind === 'squirrel' || cr.kind === 'raccoon') && Math.abs(dz - PZ) < SEG * 1.1 && Math.abs(px - cr.off) < CW[cr.kind] + 0.1) {
           cr.hit = true; cr.gone = true; STATS[cr.kind] = (STATS[cr.kind] || 0) + 1;
-          if (cr.kind === 'squirrel') { sfx('squish'); say('SQUISH.', 0.9); if (!sqCall && Math.random() < 0.01) setTimeout(() => startSqCall(), 1400); }   /* 1 in 100: the family calls */   /* no damage, just guilt */
-          else { grip = 3.4; gripSide = Math.sign(cr.off - px) || 1; shake = 0.3; speed *= 0.85; penalty += PEN.raccoon; sfx('squish', { rate: 0.7 }); say('A RACCOON IS ON THE WINDSHIELD!', 1.6); }   /* it grabs on and won't let go */
+          if (cr.kind === 'squirrel') { sfx('squirrel_death_' + (1 + Math.floor(Math.random() * 3))); say('SQUISH.', 0.9); if (!sqCall && Math.random() < 0.01) setTimeout(() => startSqCall(), 1400); }   /* 1 in 100: the family calls */   /* no damage, just guilt */
+          else { grip = 3.4; gripSide = Math.sign(cr.off - px) || 1; shake = 0.3; speed *= 0.85; penalty += PEN.raccoon; sfx(Math.random() < 0.5 ? 'animal_hit' : 'animal_hit_2'); say('A RACCOON IS ON THE WINDSHIELD!', 1.6); }   /* it grabs on and won't let go */
           continue; }
         if (live && !cr.hit && inv <= 0 && Math.abs(dz - PZ) < SEG * 1.1 && Math.abs(px - cr.off) < CW[cr.kind] + 0.1) {
           const covered = cr.kind === 'deer' && DEERINS;   // deer insurance: no lost time, no cracked glass
           cr.hit = true; if (!covered) crashes++; STATS[cr.kind] = (STATS[cr.kind] || 0) + 1; if (!covered) { hurtGlass(glassFor[cr.kind]); penalty += PEN[cr.kind]; STATS.lost += PEN[cr.kind]; } inv = 1.4; shake = cr.kind === 'moose' ? 0.7 : 0.3; speed *= cr.kind === 'moose' ? 0.1 : covered ? 0.92 : 0.4;
           cr.dir = Math.sign(cr.off - px) || 1; cr.snap = 0;
           if (cr.kind !== 'moose') { cr.fly = 0.001; cr.flyDir = cr.dir; }   /* up and over the roof; the moose just keeps walking */
-          sfx(cr.kind === 'moose' ? 'horn_angry' : 'horn');
+          sfx(Math.random() < 0.5 ? 'animal_hit' : 'animal_hit_2'); if (cr.kind === 'moose') sfx('horn_angry', { vol: 0.5 });
           say({ moose: 'HIT THE MOOSE! +20 MIN', deer: covered ? 'OH DEER. INSURANCE HAS IT!' : 'OH DEER. +12 MIN', turkeys: 'FEATHERS! +5 MIN', peeper: 'SLAMMED THE BRAKES! +8 MIN' }[cr.kind]);
         }
       }
