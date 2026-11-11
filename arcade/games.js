@@ -1342,7 +1342,7 @@ TRL.wedM = on => { const M = TRL.music; if (on && !M.wed && typeof DDTSfx !== 'u
 setInterval(() => { const M = TRL.music, n = performance.now(); if (M.h && n - M.tick > 400) TRL.bgm(false); if (M.amb && n - M.atick > 400) TRL.amb(false); if (M.wed && n - (M.wtick || 0) > 400) TRL.wedM(false); }, 300);   /* game paused, quit or over: the battle music stops */
 
 GAMES.push({
-  id: 'crawl', name: 'UNDER THE TRAILER', tag: 'A long crawl · rats, possums, a King · Crawlspace Carl',
+  id: 'crawl', noReady: true, name: 'UNDER THE TRAILER', tag: 'A long crawl · rats, possums, a King · Crawlspace Carl',
   how: ['Somewhere under this huge trailer the sewer pipe came apart. Crawl through the dark and find it. Follow the STINK. This is a LONG job.', 'Near the hatch it is just rats. Deeper in: possums, buff rats, raccoons, brown recluses... and THE RAT KING guards the drip.', 'Grab peanut butter crackers off the rat traps and from critters you beat. Crawlspace Carl LOVES them. He lives down here in three places: listen for him, then trade for gear, beans and his special tonic.', 'Win fights to level up. Hurt? Open the BAG (second button) to use items or REST: it heals you but adds 30 minutes to the job.'],
   dpad: 'omni',
   ctl: '▲ ▼ CRAWL · ◀ ▶ TURN · SPACE = PICK · SHIFT = BAG',

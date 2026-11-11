@@ -243,7 +243,7 @@ function start() {
   G.init(s);
   if (NO_K.has(G.id)) s.spd = s.adapt; else s.k *= s.adapt;   /* after init, so games that set their own s.k still get it */ if (DDT.param('boots') === '1' && s.pantsMax) { s.pantsMax++; s.pants++; }   // boots or waders: one more pair of pants in the messy games
   for (const k in held) { held[k] = 0; edge[k] = 0; } ptr.down = false; ptr.clicked = false;
-  phase = 'ready'; readyT = 1.6; screen(''); $('#quit').style.display = ''; showPad();
+  phase = G.noReady ? 'play' : 'ready'; readyT = 1.6; screen(''); $('#quit').style.display = ''; showPad();   /* noReady: slow, story-ish games just start, no GET READY / GO! */
 }
 function finish() {
   const G = GAMES[cur], e = s.end; phase = 'result'; showPad(); store.set('seen_' + G.id, 1);
