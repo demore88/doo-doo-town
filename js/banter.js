@@ -9,7 +9,7 @@ const MATT_NAME = [
   [['MATT', 'matt_happy', "I'm Matt. Nobody ever gets mine wrong."]],
   [['MATT', 'matt_happy', "And I'm Matt."], ['CUST', null, 'Nice to meet you, Mike!'], ['MATT', 'matt_stare', '...']],
   [['MATT', 'matt_normal', "I'm Matt."], ['CUST', null, 'Hi Mark!'], ['ROD', 'rod_smug', 'Welcome to the club, Mark.']],
-  [['MATT', 'matt_happy', "Four letters, Rod. Two of them are the same. You'd think."]],
+  [['MATT', 'matt_happy', "Three letters, Rod. It's not even a hard one."], ['ROD', 'rod_tired', "You'd think."]],
   [['ROD', 'rod_stare', "Don't."], ['MATT', 'matt_happy', "I didn't say anything."], ['ROD', 'rod_stare', 'You were going to.']],
   [['MATT', 'matt_suspicious', "Is Ron paying these people?"]],
   [['MATT', 'matt_happy', "Want me to start answering the phone 'Ron's office'?"], ['ROD', 'rod_angry', 'Do it and you walk home.']],
