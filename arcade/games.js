@@ -233,8 +233,8 @@ GAMES.push({
     while (s.z + 70 > s.next && s.next < s.DIST - 14) { this.row(s, s.next, ramp); s.next += (6.6 - 1.4 * ramp) * (0.9 + s.rnd() * 0.25); }
     for (const o of s.objs) {
       const rel = o.wz - s.z, prev = o.rel == null ? rel : o.rel; o.rel = rel;
-      if (o.k === 'gey') { if (!o.fired && rel < 34) { o.fired = true; o.col = 2.6; SFX('gurgle', { vol: 0.9 }); s.say = 'INCOMING!'; s.sayT = 1.2;
-          for (const q of o.rows) { const tt = (q.wz - s.z) / s.v + 0.05; q.h = 0.5 * this.G * 0.4 * tt * tt; q.vh = 0; q.wait = false; } }
+      if (o.k === 'gey') { if (!o.fired && rel < 62) { o.fired = true; o.col = 2.8; SFX('gurgle', { vol: 0.9 }); s.say = 'INCOMING!'; s.sayT = 1.2;   /* blows way up ahead: everything is down well before you get there */
+          for (const q of o.rows) { const tt = Math.max(0.6, (q.wz - s.z - 20) / s.v); q.h = 0.5 * this.G * 0.4 * tt * tt; q.vh = 0; q.wait = false; } }
         o.col = Math.max(0, o.col - dt); continue; }
       if ((o.k === 'turd' || o.k === 'corn') && !o.landed && !o.wait) { o.vh -= this.G * 0.4 * dt; o.h = Math.max(0, o.h + o.vh * dt); if (o.h <= 0) o.landed = true; }
       if (prev > 0 && rel <= 0 && (o.k === 'turd' || o.k === 'corn') && !o.wait && o.h < 1.2 && Math.abs(o.x - s.x) < (o.k === 'corn' ? 0.34 : 0.4)) this.hit(s, o.pile ? (o.k === 'corn' ? 'STEPPED IN CORN!' : 'STEPPED IN IT!') : (o.k === 'corn' ? 'CORNED!' : 'DIRECT HIT!'));
@@ -263,9 +263,9 @@ GAMES.push({
         if (!o.landed && !o.wait) { const near = Math.max(0, 1 - o.h / 14); g.fillStyle = `rgba(30,30,15,${0.25 + 0.5 * near})`; g.beginPath(); g.ellipse(gp.x, gp.y, sz * (0.5 + 0.7 * near), sz * 0.22 * (0.5 + 0.7 * near), 0, 0, 7); g.fill(); }
         if (o.wait) { continue; }
         const p = this.P(s, rel, o.x, o.landed ? 0 : o.h);
-        if (o.k === 'turd') { if (o.landed) { SPC('splat_' + (Math.floor(o.spin) % 4), gp.x, gp.y - sz * 0.05, gp.sc * 1.1); if (!SPC('poop', gp.x, gp.y - sz * 0.42, gp.sc * 1.0)) C(gp.x, gp.y - sz * 0.3, sz * 0.4, '#6e4420'); }
+        if (o.k === 'turd') { if (o.landed) { if (!SPC('poop', gp.x, gp.y - sz * 0.42, gp.sc * 1.0)) C(gp.x, gp.y - sz * 0.3, sz * 0.4, '#6e4420'); }   /* just poop */
           else if (!SPC('poop', p.x, p.y - sz * 0.4, gp.sc * 1.0)) C(p.x, p.y - sz * 0.4, sz * 0.4, '#6e4420'); }
-        else { if (o.landed) { g.fillStyle = 'rgba(110,70,30,.55)'; g.beginPath(); g.ellipse(gp.x, gp.y, sz * 0.9, sz * 0.25, 0, 0, 7); g.fill(); }
+        else { if (MG('tp')) SPC('tp', p.x + sz * 0.15, p.y - sz * 0.55, gp.sc * 0.75, o.spin > 3);   /* a wad of toilet paper with corn all through it */
           for (let i = 0; i < 5; i++) { const ox = (i - 2) * sz * 0.35, oy = Math.sin(o.spin + i * 1.7) * sz * 0.25; g.fillStyle = '#f2c12e'; g.beginPath(); g.ellipse(p.x + ox, p.y - sz * 0.3 + oy, sz * 0.16, sz * 0.24, o.spin + i + t * (o.landed ? 0 : 8), 0, 7); g.fill(); } } } }
     // you
     { const p = this.P(s, 0, s.x), who = s.hero || 'matt', O = s.outro;
