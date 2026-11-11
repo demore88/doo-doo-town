@@ -634,8 +634,8 @@ function drive3d(choice, opts) {
       };
       for (let n = drawn.length - 1; n > 0; n--) {
         const sg = drawn[n], p = sg.s1; if (!p || p.sc <= 0) continue;
-        for (const sp of sg.sprites) S(sp.img, sp.scale * 2.6, p.sx, p.sy, sp.off > 0 ? sp.off + (sg.rt || 1) - 1 : sp.off + (sg.lt || -1) + 1, p.sw, sg.clip);
-        if (KITS.length && KIT_IMG.complete && KIT_IMG.naturalWidth) for (const k of KITS) if (!k.got && segAt(k.z) === sg) S(KIT_IMG, 0.09, p.sx, p.sy, k.off, p.sw, sg.clip);   /* a toolbox lying in the lane */
+        for (const sp of sg.sprites) S(sp.img, sp.scale * 2.6, p.sx, p.sy, sp.off > 0 ? sp.off + (sg.rt || 1) - 1 : sp.off + (sg.lt || -1) + 1, p.sw, sg.clip, 0, 1);   /* unrounded, so trees and signs slide smoothly instead of twitching a pixel at a time */
+        if (KITS.length && KIT_IMG.complete && KIT_IMG.naturalWidth) for (const k of KITS) if (!k.got && segAt(k.z) === sg) S(KIT_IMG, 0.09, p.sx, p.sy, k.off, p.sw, sg.clip, 0, 1);   /* a toolbox lying in the lane */
         if (RIVAL && rz > pos && segAt(rz) === sg) { makeRival(); if (rivalImg) S(rivalImg, 0.62, p.sx, p.sy, roff, p.sw, sg.clip); }
         for (const c of cars) if (!c.parked && segAt(c.z) === sg) { const q = sg.s2, f = Math.max(0, Math.min(1, ((((c.z % LEN) + LEN) % LEN) - sg.p1.z) / SEG));   /* glide between the segment's two edges instead of hopping strip to strip */
           const b = q && q.sw > 0 ? S(c.img, c.sc, p.sx + (q.sx - p.sx) * f, p.sy + (q.sy - p.sy) * f, c.off, p.sw + (q.sw - p.sw) * f, sg.clip, c.rot, 1) : null;
@@ -645,7 +645,7 @@ function drive3d(choice, opts) {
           { let im = ANIM[cr.kind] ? ANIM[cr.kind][cr.dir && !cr.snap ? Math.floor(t * 6) % 2 : 0] : CIMG[cr.kind]; if (cr.dir < 0 && ANIM[cr.kind]) im = flipped(im);   // walk cycle, facing the way it's going
             let sc = cr.kind === 'moose' ? 2.1 : cr.kind === 'turkeys' ? 0.9 : cr.kind === 'squirrel' ? 0.75 : cr.kind === 'raccoon' ? 1.25 : 1.5;
             if (cr.react > 0 && cr.react < 2.6 && mooseFrame(0)) continue;   // drawn up close, in front of the van, below
-            S(im, sc, p.sx, p.sy, cr.off, p.sw, sg.clip); }
+            S(im, sc, p.sx, p.sy, cr.off, p.sw, sg.clip, 0, 1); }
           if (cr.kind === 'peeper' && cr.snap > 0 && cr.flash < 0.15) S(FLASH, 1, p.sx, p.sy - p.sw * 0.1, cr.off + 0.08, p.sw, sg.clip);
         }
       }
