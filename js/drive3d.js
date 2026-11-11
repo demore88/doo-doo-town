@@ -415,7 +415,7 @@ function drive3d(choice, opts) {
         if (c.off !== c.tgt) { const d = c.tgt - c.off; c.off += Math.sign(d) * Math.min(Math.abs(d), dt * 0.55); }
         const VAN_HW = 0.16;   // the van, measured the same way as the cars it can hit
         if (opts.endless && live && c.prevAhead > 0 && ahead <= 0 && !c.nm) { const gap = Math.abs(px - c.off) - (c.hw + VAN_HW); c.nm = 1;
-          if (gap > -0.02 && gap < 0.2 && inv <= 0) { combo = comboT > 0 ? combo + 1 : 1; comboT = 2.5; DS.near++; DS.bestCombo = Math.max(DS.bestCombo, combo); const pts = 100 * combo * (c.onc ? 2 : 1); score += pts; say(`${c.onc ? 'WHOA! ' : ''}NEAR MISS +${pts}${combo > 1 ? ` (x${combo})` : ''}`, 1); } }   /* threading the needle pays */
+          if (gap > -0.02 && gap < 0.2 && inv <= 0) { combo = comboT > 0 ? combo + 1 : 1; comboT = 2.5; DS.near++; DS.bestCombo = Math.max(DS.bestCombo, combo); if (Math.random() < 0.05) sfx(c.onc ? 'horn_angry' : 'horn');   /* now and then, they lean on the horn */ const pts = 100 * combo * (c.onc ? 2 : 1); score += pts; say(`${c.onc ? 'WHOA! ' : ''}NEAR MISS +${pts}${combo > 1 ? ` (x${combo})` : ''}`, 1); } }   /* threading the needle pays */
         c.prevAhead = ahead;
         if (live && inv <= 0 && ahead > -SEG * 0.6 && ahead < SEG * (c.truck ? 1.6 : 1.1) && Math.abs(px - c.off) < c.hw + VAN_HW - 0.03) {
           bursts.push({ t: 0, side: Math.max(-1, Math.min(1, (c.off - px) * 2.5)), big: c.onc || c.truck }); crashes++; inv = 1.4; shake = c.onc ? 0.6 : 0.35; hurtGlass(glassFor[c.onc ? 'onc' : c.truck ? 'truck' : 'car']);
@@ -515,7 +515,7 @@ function drive3d(choice, opts) {
           cr.hit = true; if (!covered) crashes++; STATS[cr.kind] = (STATS[cr.kind] || 0) + 1; if (!covered) { hurtGlass(glassFor[cr.kind]); penalty += PEN[cr.kind]; STATS.lost += PEN[cr.kind]; } inv = 1.4; shake = cr.kind === 'moose' ? 0.7 : 0.3; speed *= cr.kind === 'moose' ? 0.1 : covered ? 0.92 : 0.4;
           cr.dir = Math.sign(cr.off - px) || 1; cr.snap = 0;
           if (cr.kind !== 'moose') { cr.fly = 0.001; cr.flyDir = cr.dir; }   /* up and over the roof; the moose just keeps walking */
-          sfx(Math.random() < 0.5 ? 'animal_hit' : 'animal_hit_2'); if (cr.kind === 'moose') sfx('moose');
+          if (cr.kind === 'moose') sfx('moose'); else sfx(Math.random() < 0.5 ? 'animal_hit' : 'animal_hit_2');   /* the moose just bellows, no thud */
           say({ moose: 'HIT THE MOOSE! +20 MIN', deer: covered ? 'OH DEER. INSURANCE HAS IT!' : 'OH DEER. +12 MIN', turkeys: 'FEATHERS! +5 MIN', peeper: 'SLAMMED THE BRAKES! +8 MIN' }[cr.kind]);
         }
       }
@@ -647,7 +647,7 @@ function drive3d(choice, opts) {
         } else if (DSPLAT.complete && DSPLAT.naturalWidth) {   // SPLAT: face on the glass, licking it, sliding down out of view
           if (!cr.glassSnd) { cr.glassSnd = 1; sfx('deer_glass'); }   /* the squeak and smear down the windshield */
           const e = f - HIT, fi = Math.min(5, Math.floor(e / 0.4)), fade = e > 2.6 ? Math.max(0, 1 - (e - 2.6) / 0.45) : 1;
-          if (!cr.splat) { cr.splat = 1; shake = Math.max(shake, 0.35); sfx('horn'); say('SPLAT!', 1.4); }
+          if (!cr.splat) { cr.splat = 1; shake = Math.max(shake, 0.35); say('SPLAT!', 1.4); }
           const fw = DSPLAT.width / 6, fh = DSPLAT.height, dw = fw / 2, dh = fh / 2, pop = e < 0.12 ? 1.12 - e : 1;   /* sheet is 2x for the 2x canvas */
           const x0 = side > 0 ? W - 6 - dw : 6, nx = x0 + (side > 0 ? dw * 0.89 : dw * 0.11), ny = H - dh + dh * 0.31;
           r.save(); r.globalAlpha = 0.8 * fade; r.fillStyle = '#e8eef2';   // star crack where the nose hit
