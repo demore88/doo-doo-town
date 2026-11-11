@@ -520,36 +520,79 @@ GAMES.push({
     if (s.t >= s.TIME) s.end = { win: false, stars: 0, line: "Ran out of time. Customer's watching the clock. No report." };
   },
   label(k) { return { roots: 'ROOTS', crack: 'CRACK', offset: 'OFFSET JOINT', belly: 'BELLY (STANDING WATER)', grease: 'GREASE', clog: 'THE CLOG' }[k]; },
+  // ---------- the 3D pipe: one ray per pixel into a cylinder, camera riding low like a real push camera ----------
+  BW: 300, BH: 180, BF: 450, OY: 0.38,
+  tables() {
+    if (this._tab) return this._tab;
+    const { BW, BH, BF, OY } = this, n = BW * BH, Z = new Float32Array(n), TH = new Float32Array(n), INC = new Float32Array(n);
+    for (let py = 0; py < BH; py++) for (let px = 0; px < BW; px++) {
+      const dx = (px + 0.5 - BW / 2) / BF, dy = (py + 0.5 - BH / 2) / BF;   /* ray (dx, dy, 1) from a camera OY below the pipe's axis */
+      const a = dx * dx + dy * dy, b = 2 * OY * dy, c = OY * OY - 1, t = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a), hx = t * dx, hy = OY + t * dy, k = py * BW + px;
+      Z[k] = t; TH[k] = Math.atan2(hy, hx);
+      INC[k] = Math.max(0.15, (hx * dx + hy * dy) / Math.sqrt(a + 1));   /* how square the wall faces the light on the camera head */
+    }
+    const buf = document.createElement('canvas'); buf.width = BW; buf.height = BH; const bx = buf.getContext('2d'), img = bx.createImageData(BW, BH);
+    return (this._tab = { Z, TH, INC, buf, bx, img });
+  },
+  proj(z) {   /* the pipe's cross-section z ft ahead -> centre and radius on screen (game px) */
+    const zz = z + 2.6; return [240, 132 - this.OY * 900 / zz, 900 / zz];
+  },
+  paint(s) {
+    const T_ = this.tables(), { Z, TH, INC, img } = T_, d = img.data, { BW, BH } = this, D = s.d, t = s.t, PVC = s.PVC;
+    const BAY = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+    const hash = (a, b) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+    const near = s.def.filter(o => o.d - D > -2 && o.d - D < 30);
+    const cracks = near.filter(o => o.kind === 'crack'), bellies = near.filter(o => o.kind === 'belly'), greases = near.filter(o => o.kind === 'grease'), offs = near.filter(o => o.kind === 'offset');
+    const HALF = Math.PI / 2;
+    for (let k = 0, n = BW * BH; k < n; k++) {
+      const z = Z[k], th = TH[k], w = D + z - 2.6;   /* w = footage of this bit of wall */
+      let r, g_, b, shine = 0;
+      if (PVC) { r = 226; g_ = 223; b = 212; const mt = hash(Math.floor(th * 9), Math.floor(w * 3)); r -= mt * 8; g_ -= mt * 8; b -= mt * 8;
+        if (Math.abs(th + HALF) < 0.05 && (Math.floor(w * 1.5) % 3)) { r -= 60; g_ -= 66; b -= 40; } }   /* the print line along the crown */
+      else { const m = hash(Math.floor(th * 7), Math.floor(w * 2.2)), m2 = hash(Math.floor(th * 15) + 7, Math.floor(w * 5));
+        r = 104 + m * 26; g_ = 86 + m * 18; b = 70 + m * 10; if (m2 > 0.86) { r += 46; g_ += 18; b -= 10; } if (m2 < 0.08) { r -= 30; g_ -= 26; b -= 22; } }   /* rust, scale and pitting */
+      // joints every 4 ft
+      const jf = w / 4 - Math.floor(w / 4), jw = 0.012 + 0.04 / z;
+      if (jf < jw) { if (PVC) { r *= 0.72; g_ *= 0.72; b *= 0.70; } else { r *= 0.45; g_ *= 0.42; b *= 0.40; } }
+      else if (jf < jw * 2.4 && !PVC) { r *= 1.15; g_ *= 1.1; b *= 1.05; }   /* the hub's raised lip catches the light */
+      // offset joints: the next pipe sits low and to one side, a dark gap and a bright lip
+      for (const o of offs) { const dw = w - o.d; if (dw > -0.25 && dw < 0.5) { let da = th - o.ang; da = Math.atan2(Math.sin(da), Math.cos(da));
+        if (Math.abs(da) < 1.7) { if (dw < 0.05) { r = 18; g_ = 15; b = 12; } else { r = 236; g_ = 150; b = 64; shine = 1; } } } }
+      // cracks: a jagged dark line running with the pipe; a broken one is a black hole in the wall
+      for (const o of cracks) { const dw = w - o.d; if (Math.abs(dw) < 1.3) { let da = th - o.ang; da = Math.atan2(Math.sin(da), Math.cos(da));
+        if (o.ang > 4.5) { if (Math.abs(dw) < 0.55 && Math.abs(da) < 0.5 - 0.25 * hash(Math.floor(dw * 9), Math.floor(da * 9))) { r = 8; g_ = 6; b = 5; } }
+        else { const jag = Math.sin(dw * 11 + o.ang * 3) * 0.07 + Math.sin(dw * 29) * 0.03; if (Math.abs(da - jag) < 0.038 + 0.02 / z) { r *= 0.15; g_ *= 0.13; b *= 0.12; } } } }
+      // grease: lumpy yellow-white coating on the upper walls
+      for (const o of greases) { const dw = w - o.d; if (Math.abs(dw) < 2.2 && th < 0.3) { const blob = hash(Math.floor(th * 5 + 40), Math.floor(w * 1.6)) + hash(Math.floor(th * 2.5 + 9), Math.floor(w * 0.8)) * 0.7;
+        if (blob > 1.0 + Math.abs(dw) * 0.15) { r = 214; g_ = 190; b = 112; if (hash(Math.floor(th * 30), Math.floor(w * 12)) > 0.8) shine = 1; } } }
+      // water along the invert: a trickle, wider and deeper in a belly
+      let wh = 0.32; for (const o of bellies) { const dw = Math.abs(w - o.d); if (dw < 3.2) wh = Math.max(wh, 1.15 * (1 - dw / 3.2) + 0.32); }
+      const fromBottom = Math.abs(th - HALF);
+      if (fromBottom < wh) { const deep = 1 - fromBottom / wh; r = r * 0.25 + 52 * (1 - deep * 0.4); g_ = g_ * 0.25 + 74 * (1 - deep * 0.3); b = b * 0.25 + 70; 
+        if (Math.sin(w * 4 - t * 5) * Math.sin(th * 16 + w * 2.5) > 0.72) shine = 1; }   /* ripples flowing past */
+      // the head's light: strong up close, gone by 25 ft; then posterize with an ordered dither so it reads as pixel art
+      let L = (0.3 + 0.7 * Math.sqrt(INC[k])) / (1 + (z / 13) * (z / 13)) * 1.3; if (shine) L = Math.max(L, 0.9 / (1 + z * z / 220));
+      const px = k % BW, py = (k / BW) | 0, dith = (BAY[(py & 3) * 4 + (px & 3)] / 16 - 0.5) / 9;
+      L = Math.max(0, Math.min(1.25, Math.round((L + dith) * 6) / 6));
+      const o4 = k * 4; d[o4] = Math.min(255, r * L + (shine ? 40 : 0) * L); d[o4 + 1] = Math.min(255, g_ * L + (shine ? 40 : 0) * L); d[o4 + 2] = Math.min(255, b * L + (shine ? 30 : 0) * L); d[o4 + 3] = 255;
+    }
+    T_.bx.putImageData(img, 0, 0); return T_.buf;
+  },
   draw(s) {
-    const t = s.t, D = s.d, wall = s.PVC ? [232, 230, 222] : [96, 90, 84], CX = 240, CY = 132;
+    const t = s.t, D = s.d, CX = 240, CY = 132;
     R(0, 0, W, H, '#050605');
     g.save(); g.translate(CX, CY); g.rotate(s.lvl * 0.75 + (s.tumble > 0 ? s.t * 9 : 0)); g.translate(-CX, -CY);   // the picture rolls when the head rolls
-    const path = z => { const p = this.bend(s, D + z) - this.bend(s, D); return [CX + p * Math.min(1, z / 14), CY + 18 * Math.sin((D + z) / 11) * Math.min(1, z / 14) - 18 * Math.sin(D / 11) * Math.min(1, z / 14)]; };
-    const rad = z => 900 / (z + 2.6);
-    const shade = z => { const k = Math.max(0, 1 - z / 26) ** 1.4; return `rgb(${wall.map(c => Math.round(c * (0.12 + 0.88 * k))).join(',')})`; };
-    // which way the pipe goes past the Y
-    const branchDir = s.branch ? (s.branch === 1 ? s.good : -s.good) : 0;
-    const zEnd = s.branch === 2 ? s.CAP - D : !s.branch ? s.FORK - D : 30;
-    // the tunnel: near rings first, far ones on top (each smaller ring is deeper)
-    for (let z = 0.3; z < Math.min(30, Math.max(0.3, zEnd)); z += 0.5) {
-      let [x, y] = path(z); if (s.branch) x += branchDir * Math.max(0, z - 0) * 1.5;
-      g.fillStyle = shade(z); g.beginPath(); g.arc(x, y, rad(z), 0, 7); g.fill();
-      if (Math.floor((D + z) / 4) !== Math.floor((D + z - 0.5) / 4)) { g.strokeStyle = s.PVC ? 'rgba(150,150,140,.6)' : 'rgba(30,26,22,.8)'; g.lineWidth = Math.max(1, rad(z) / 40); g.beginPath(); g.arc(x, y, rad(z), 0, 7); g.stroke(); }   // joints every 4 ft
-    }
-    // what's at the end of the view: the Y, a dead-end cap, or more pipe into the dark
-    if (!s.branch && zEnd < 30) { const [x, y] = path(zEnd), r = rad(zEnd);
-      for (const side of [-1, 1]) { const hx = x + side * r * 0.45, good = side === s.good;
-        g.fillStyle = '#050605'; g.beginPath(); g.arc(hx, y, r * 0.42, 0, 7); g.fill();
-        if (good) for (let i = 0; i < 6; i++) R(hx - r * 0.3 + i * r * 0.11, y + r * 0.25 + Math.sin(t * 3 + i) * 2, Math.max(1, r * 0.05), Math.max(1, r * 0.04), '#5a3e1c');   // a brown trail coming out of the bad side
-        if (s.choice === side) { g.strokeStyle = '#f7c418'; g.lineWidth = 2; g.beginPath(); g.arc(hx, y, r * 0.46, 0, 7); g.stroke(); } } }
-    else if (s.branch === 2 && zEnd < 30) { const [x, y] = path(zEnd); g.fillStyle = s.PVC ? '#d8d6cc' : '#55504a'; g.beginPath(); g.arc(x + branchDir * zEnd * 1.5, y, rad(zEnd), 0, 7); g.fill(); }
-    else { const [x, y] = path(30); g.fillStyle = '#050605'; g.beginPath(); g.arc(x + branchDir * 45, y, rad(30), 0, 7); g.fill(); }
+    const sway = (this.bend(s, D + 3) - this.bend(s, D)) * 0.35;   /* the view drifts as the pipe wanders */
+    { const buf = this.paint(s); g.imageSmoothingEnabled = false; g.drawImage(buf, CX - this.BW + sway, CY - this.BH, this.BW * 2, this.BH * 2); }
+    const path = z => { const [x, y] = this.proj(z); return [x + sway, y]; }, rad = z => this.proj(z)[2];
+    const zEnd = 30;
     // the problems, far to near
-    const vis = s.def.filter(o => o.br === (s.branch === 1 ? 1 : 0) && o.d - D > 0.4 && o.d - D < Math.min(28, zEnd)).sort((a, b) => b.d - a.d);
+    const vis = s.def.filter(o => o.d - D > 0.4 && o.d - D < 28).sort((a, b) => b.d - a.d);
     for (const o of vis) {
-      const z = o.d - D; let [x, y] = path(z); if (s.branch) x += branchDir * z * 1.5; const r = rad(z), a = o.ang;
+      const z = o.d - D; let [x, y] = path(z); const r = rad(z), a = o.ang;
+      if (o.kind === 'crack' || o.kind === 'belly' || o.kind === 'offset' || (o.kind === 'grease' && o.ang <= 3)) { if (o.tagged) T('TAG', x + r * 0.6, y - r * 0.6, '#7dffb0', 6, 'center'); continue; }   /* painted on the pipe wall */
       const wx = x + Math.cos(a) * r * 0.82, wy = y + Math.sin(a) * r * 0.82, k = Math.max(0.4, r / 60);
-      { const nm = o.kind === 'roots' ? (o.ang > 4 ? 'rootmass' : 'roots_' + (Math.floor(t * 1.5 + o.d) % 3)) : o.kind === 'grease' ? (o.ang > 3 ? 'greaseballs' : 'grease') : o.kind === 'crack' && o.ang > 4.5 ? 'broken' : o.kind, im = MG('cam_' + nm);
+      { const im = null;
         if (im) { g.save(); g.beginPath(); g.arc(x, y, r * 1.02, 0, 7); g.clip(); g.drawImage(im, x - r * 1.08, y - r * 1.08, r * 2.16, r * 2.16); g.restore(); if (o.tagged) T('TAG', x + r * 0.6, y - r * 0.6, '#7dffb0', 6, 'center'); continue; } }   // the drawn camera views
       if (o.kind === 'roots') {   // a curtain of roots hanging through a joint: thick at the top, thin and swaying at the tips, with hairs
         for (let i = 0; i < 14; i++) { const ax = -0.85 + i * 0.13, sx = x + ax * r, sy = y - Math.sqrt(Math.max(0, 1 - ax * ax)) * r * 0.97, len = r * (0.45 + ((i * 37) % 10) / 14), sw = Math.sin(t * 1.6 + i * 1.3) * r * 0.06;
@@ -561,15 +604,24 @@ GAMES.push({
       else if (o.kind === 'offset') { g.fillStyle = s.PVC ? 'rgba(120,118,108,.9)' : 'rgba(20,18,16,.95)'; g.beginPath(); g.arc(x, y, r * 0.98, Math.PI * 0.85, Math.PI * 2.15); g.arc(x + r * 0.16, y + r * 0.12, r * 0.86, Math.PI * 2.15, Math.PI * 0.85, true); g.fill();   // the lip where one pipe sits lower than the next
         g.strokeStyle = s.PVC ? '#9a968a' : '#1a1612'; g.lineWidth = Math.max(2, r * 0.12); g.beginPath(); g.arc(x + r * 0.12, y + r * 0.08, r * 0.95, 0, 7); g.stroke(); g.strokeStyle = 'rgba(232,130,42,.9)'; g.lineWidth = Math.max(2, r * 0.07); g.beginPath(); g.arc(x + r * 0.12, y + r * 0.08, r * 0.9, -0.7, 1.1); g.stroke(); }   // the lip of the shifted pipe catches the light
       else if (o.kind === 'belly') { g.fillStyle = 'rgba(70,110,140,.75)'; g.beginPath(); g.ellipse(x, y + r * 0.62, r * 0.75, r * 0.3, 0, 0, Math.PI); g.fill(); R(x - r * 0.5, y + r * 0.6 + Math.sin(t * 2) * k, r, Math.max(1, k), 'rgba(200,230,255,.5)'); }
-      else if (o.kind === 'grease') { g.fillStyle = 'rgba(214,190,90,.85)'; for (let i = 0; i < 5; i++) { const aa = a + i * 0.35; g.beginPath(); g.arc(x + Math.cos(aa) * r * 0.85, y + Math.sin(aa) * r * 0.85, r * 0.12, 0, 7); g.fill(); } }
-      else if (o.kind === 'clog') { const mess = s.room === 'kitchen' ? ['#1c1a17', '#2e2a24'] : ['#7a4a1e', '#5a3a1c'];
-        for (let i = 0; i < 16; i++) { g.fillStyle = mess[i % 2]; g.beginPath(); g.arc(x + Math.cos(i * 2.4) * r * 0.5 * (i / 16), y + Math.sin(i * 2.4) * r * 0.5 * (i / 16), r * 0.3, 0, 7); g.fill(); }
-        R(x - r * 0.2, y - r * 0.1, r * 0.3, r * 0.14, '#f4f4f2'); }   // a wipe in there, naturally
+      else if (o.kind === 'grease') { for (let i = 0; i < 6; i++) { const bx = x + (i - 2.5) * r * 0.16 + Math.sin(i * 3.1) * r * 0.04, by = y + r * (0.32 + (i % 2) * 0.06) + Math.sin(t * 2 + i) * r * 0.015, br = r * (0.07 + (i % 3) * 0.025);   /* grease balls bobbing on the water */
+        g.fillStyle = '#b89a50'; g.beginPath(); g.arc(bx, by + r * 0.5, br, 0, 7); g.fill(); g.fillStyle = '#e2cc86'; g.beginPath(); g.arc(bx - br * 0.3, by + r * 0.5 - br * 0.3, br * 0.45, 0, 7); g.fill(); } }
+      else if (o.kind === 'clog') {   /* a wall of debris filling the pipe: lumps lit by the camera, darker toward the rim, wipes and paper caught in it */
+        const kit = s.room === 'kitchen', lit = Math.max(0.25, 1 / (1 + (z / 13) * (z / 13))), C3 = kit ? [[40, 36, 30], [66, 60, 48], [96, 88, 70]] : [[84, 52, 24], [122, 80, 38], [160, 112, 58]];
+        const col = (c, f) => `rgb(${c.map(v => Math.round(v * f * lit)).join(',')})`, px2 = Math.max(1, r / 22);
+        g.save(); g.beginPath(); g.arc(x, y, r * 0.97, 0, 7); g.clip();
+        g.fillStyle = col(C3[0], 0.8); g.fillRect(x - r, y - r * 0.55, r * 2, r * 2);   /* the mass, from just above the middle down */
+        for (let i = 0; i < 70; i++) { const h1 = Math.sin(i * 12.9898 + o.d) * 43758.5453, u = h1 - Math.floor(h1), h2 = Math.sin(i * 78.233 + o.d) * 12543.17, v = h2 - Math.floor(h2);
+          const bx = x + (u * 2 - 1) * r * 0.95, by = y - r * 0.5 + v * r * 1.5, rr = r * (0.05 + ((i * 7) % 5) * 0.025), sh = 0.75 + 0.5 * (1 - Math.hypot(bx - x, by - y) / r);
+          g.fillStyle = col(C3[i % 3], sh); g.fillRect(Math.round(bx - rr), Math.round(by - rr), Math.round(rr * 2), Math.round(rr * 1.6));
+          g.fillStyle = col([220, 200, 160], sh * 0.6); g.fillRect(Math.round(bx - rr * 0.6), Math.round(by - rr * 0.8), Math.round(px2 * 2), Math.round(px2)); }   /* wet highlights */
+        for (let i = 0; i < 3; i++) { const wx2 = x + (i - 1) * r * 0.42, wy2 = y - r * 0.25 + (i % 2) * r * 0.3; g.fillStyle = col([238, 236, 228], 1); g.fillRect(Math.round(wx2 - r * 0.17), Math.round(wy2), Math.round(r * 0.34), Math.round(r * 0.13)); g.fillStyle = col([200, 196, 186], 1); g.fillRect(Math.round(wx2 - r * 0.17), Math.round(wy2 + r * 0.1), Math.round(r * 0.34), Math.round(px2)); }   /* wipes */
+        g.restore(); }
       if (o.tagged) T('TAG', x + r * 0.6, y - r * 0.6, '#7dffb0', 6, 'center');
     }
     g.restore();
     // the camera's own light falling off, and a vignette like a real monitor
-    const vg = g.createRadialGradient(CX, CY, 60, CX, CY, 300); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.85)'); g.fillStyle = vg; g.fillRect(0, 0, W, H);
+    const vg = g.createRadialGradient(CX, CY, 140, CX, CY, 300); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.6)'); g.fillStyle = vg; g.fillRect(0, 0, W, H);
     // the TAG box: things between 1 and 6.5 feet ahead
     const [bx, by] = path(4.6), br = rad(4.6) * 0.8; g.strokeStyle = 'rgba(247,196,24,.75)'; g.lineWidth = 2; const bs = br * 1.15;
     for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { g.beginPath(); g.moveTo(bx + sx * bs, by + sy * bs * 0.6); g.lineTo(bx + sx * bs, by + sy * bs); g.lineTo(bx + sx * bs * 0.6, by + sy * bs); g.stroke(); }
