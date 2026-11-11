@@ -312,10 +312,14 @@ function drive3d(choice, opts) {
   const SQ_FACE = { baby: [1, 0] };
   const SQ_SIBS = { kid: ['SQUIRREL KID', 'LITTLE BROTHER'] };   /* two kids on one phone: they pass it back and forth every line */   /* which face first, which face later in the call (the baby starts hopeful, then sad) */
   const KMC = window.KIDSMOM_CALLS || [], ROD_FACE = new Image(); ROD_FACE.src = (window.DDT && DDT.root || '') + 'assets/rod_annoyed.png'; let kmDone = false;
+  /* how often she calls: campaign = at most once every two game months (a few drives' chance once it's been that long); Driving Game = rare */
+  let kmAt = -1; const KM_KEY = 'ddt_km'; let kmS = null; try { kmS = DDT.load(); } catch (e) {}
+  if (!opts.endless && kmS) { let last = null; try { last = JSON.parse(localStorage.getItem(KM_KEY) || 'null'); } catch (e) {} if (!last || last.g !== kmS.started) last = { g: kmS.started, m: -2 };
+    if ((kmS.month || 0) - last.m >= 2 && Math.random() < 0.15) kmAt = 25 + Math.random() * 25; }
   function startKidsMomCall() { if (!KMC.length) return; let seen = []; try { seen = JSON.parse(localStorage.getItem('ddt_km_seen') || '[]'); } catch (e) {}
     let fresh = KMC.map((_, i) => i).filter(i => !seen.includes(i)); if (!fresh.length) { fresh = KMC.map((_, i) => i); seen = []; }
     const k = fresh[Math.floor(Math.random() * fresh.length)]; seen.push(k); try { localStorage.setItem('ddt_km_seen', JSON.stringify(seen)); } catch (e) {}
-    sqCall = { c: { who: 'kidsmom', name: "THE KID'S MOM", lines: KMC[k] }, t: 0, ring: 1.6 }; kmDone = true; sfx('phone_ring'); }
+    sqCall = { c: { who: 'kidsmom', name: "THE KID'S MOM", lines: KMC[k] }, t: 0, ring: 1.6 }; kmDone = true; if (!opts.endless && kmS) try { localStorage.setItem(KM_KEY, JSON.stringify({ g: kmS.started, m: kmS.month || 0 })); } catch (e) {} sfx('phone_ring'); }
   function startSqCall(force) {   /* pick a caller, then a call you haven't heard yet */
     const whos = Object.keys(SQ); if (!whos.length) return; const who = force && SQ[force] ? force : whos[Math.floor(Math.random() * whos.length)], C = SQ[who];
     const seen = SQ_SEEN[who] || []; let fresh = C.calls.map((_, i) => i).filter(i => !seen.includes(i)); if (!fresh.length) { fresh = C.calls.map((_, i) => i); SQ_SEEN[who] = []; }
@@ -528,7 +532,7 @@ function drive3d(choice, opts) {
           say({ moose: 'HIT THE MOOSE! +20 MIN', deer: covered ? 'OH DEER. INSURANCE HAS IT!' : 'OH DEER. +12 MIN', turkeys: 'FEATHERS! +5 MIN', peeper: 'SLAMMED THE BRAKES! +8 MIN' }[cr.kind]);
         }
       }
-      inv = Math.max(0, inv - dt); msgT = Math.max(0, msgT - dt); shake = Math.max(0, shake - dt); grip = Math.max(0, grip - dt); if (grip <= 0 && racSnd) { racSnd.stop(); racSnd = null; } if (!sqCall && !kmDone && live && play > 45 && Math.random() < dt / 300) startKidsMomCall();   /* every so often, she calls */
+      inv = Math.max(0, inv - dt); msgT = Math.max(0, msgT - dt); shake = Math.max(0, shake - dt); grip = Math.max(0, grip - dt); if (grip <= 0 && racSnd) { racSnd.stop(); racSnd = null; } if (!sqCall && !kmDone && live && (opts.endless ? (play > 60 && Math.random() < dt / 1800) : (kmAt >= 0 && play > kmAt))) startKidsMomCall();   /* rarely, she calls */
       if (sqCall) { if (sqCall.ring > 0) sqCall.ring -= dt; else { sqCall.t += dt; if (sqCall.t > sqCall.c.lines.length * 2.8 + 0.6) sqCall = null; } }
       if (window.DRV && DRV.src) DRV.src.playbackRate.value = 0.7 + 0.6 * ratio;
       draw(gas, brake, steer);
