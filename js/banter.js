@@ -41,7 +41,7 @@ const VAN_TALK = [
   [['MATT', 'matt_suspicious', 'You ever think about doing something else?'], ['ROD', 'rod_stare', 'Every day.'], ['MATT', 'matt_normal', 'Like what?'], ['ROD', 'rod_smug', 'Plumbing. But somewhere warm.']],
   [['ROD', 'rod_annoyed', "Somebody wrote 'clean me' on the back of the van."], ['MATT', 'matt_happy', 'At least they spelled it right.']],
   [['MATT', 'matt_normal', "How many toilets you think we've pulled?"], ['ROD', 'rod_tired', 'Counting the ones in my dreams?']],
-  [['ROD', 'rod_normal', "Put your feet down off the dash."], ['MATT', 'matt_stare', 'They\'re clean.'], ['ROD', 'rod_stare', "Nothing about you is clean, Matt. You were in a septic tank at nine."]],
+  [['ROD', 'rod_normal', "Put your feet down off the dash."], ['MATT', 'matt_stare', 'They\'re clean.'], ['ROD', 'rod_stare', "Nothing about you is clean, Matt. You were in a septic tank."]],
   [['MATT', 'matt_happy', 'Pop quiz. Two-inch or three-inch on a kitchen line?'], ['ROD', 'rod_smug', 'Inch and a half. Trick question.'], ['MATT', 'matt_shocked', "How'd you know it was a trick question?"]],
   [['ROD', 'rod_suspicious', 'Why is there a hot dog in the glovebox?'], ['MATT', 'matt_normal', 'Emergency hot dog.'], ['ROD', 'rod_gross', 'From when?'], ['MATT', 'matt_stare', '...Define "when."']],
   [['MATT', 'matt_normal', 'We should get a van dog.'], ['ROD', 'rod_stare', 'We have you.']],
