@@ -1255,13 +1255,15 @@ TRL.face = (who, hp) => { const F = TRL.faces, ld = n => { if (F[n] === undefine
   const n = who + (hp > 0.5 ? '_normal' : hp > 0.25 ? '_tired' : '_panic'); ld(who + '_normal');   /* the hero's real face, looking worse as he gets bitten */
   if (F[n] === undefined) { F[n] = null; const im = new Image(); im.onload = () => F[n] = im; im.onerror = () => { F[n] = false; }; im.src = '../assets/' + n + '.png'; }
   return F[n] || F[who + '_normal'] || null; };
-TRL.FOES = [   /* spr: 8-frame strip (0 idle 1 sniff 2 stalk 3 run 4 rear up 5 attack 6 hurt 7 down) */
-  { name: 'SEWER RAT', spr: 'ut_rat', snd: 'rat_screech', hp: [7, 10], atk: [2, 4], w: 5, sc: 0.7, pts: 50 },
-  { name: 'BIG BUFF RAT', spr: 'ut_buffrat', snd: 'rat_screech', hp: [13, 17], atk: [3, 6], w: 3, sc: 1.05, pts: 120 },
-  { name: 'POSSUM', spr: 'ut_possum', snd: 'possum_hiss', hp: [10, 13], atk: [2, 5], w: 2, sc: 1.05, pts: 90, possum: true },
-  { name: 'RACCOON', spr: 'ut_raccoon', snd: 'raccoon', off: 2.5, hp: [12, 15], atk: [3, 5], w: 2, sc: 1.05, pts: 110, thief: true },
-  { name: 'BROWN RECLUSE', spr: 'ut_spider', snd: 'spider', hp: [5, 8], atk: [2, 3], w: 2, sc: 0.8, pts: 80, venom: true },
-  { name: 'THE RAT KING', spr: 'ut_ratking', snd: 'rat_screech', hp: [22, 26], atk: [4, 7], w: 1, sc: 1.35, king: true, pts: 300 },
+TRL.FOES = [   /* spr: 8-frame strip (0 idle 1 sniff 2 stalk 3 run 4 rear up 5 attack 6 hurt 7 down) · z: how deep before it shows up */
+  { name: 'SEWER RAT', spr: 'ut_rat', snd: 'rat_screech', hp: [7, 10], atk: [2, 4], w: 6, sc: 0.7, pts: 20, z: 0 },
+  { name: 'POSSUM', spr: 'ut_possum', snd: 'possum_hiss', hp: [12, 15], atk: [3, 5], w: 3, sc: 1.05, pts: 35, possum: true, z: 0.2 },
+  { name: 'BIG BUFF RAT', spr: 'ut_buffrat', snd: 'rat_screech', hp: [16, 20], atk: [4, 6], w: 3, sc: 1.05, pts: 45, z: 0.3 },
+  { name: 'RACCOON', spr: 'ut_raccoon', snd: 'raccoon', off: 2.5, hp: [20, 24], atk: [5, 7], w: 3, sc: 1.05, pts: 60, thief: true, z: 0.5 },
+  { name: 'BROWN RECLUSE', spr: 'ut_spider', snd: 'spider', hp: [12, 15], atk: [4, 6], w: 2, sc: 0.8, pts: 55, venom: true, z: 0.65 },
+  { name: 'THE POSSUM PRINCESS', spr: 'ut_possum', snd: 'possum_hiss', hp: [18, 22], atk: [3, 5], w: 0.5, sc: 1.05, pts: 80, possum: true, princess: true, z: 0.25, once: true },
+  { name: 'GARY', spr: 'ut_raccoon', snd: 'raccoon', off: 2.5, hp: [24, 28], atk: [5, 8], w: 0.5, sc: 1.1, pts: 90, thief: true, gary: true, z: 0.55, once: true },
+  { name: 'THE RAT KING', spr: 'ut_ratking', snd: 'rat_screech', hp: [80, 80], atk: [7, 11], w: 0, sc: 1.35, king: true, pts: 400, z: 9 },
 ];
 TRL.cry = (F, long) => SFX(F.snd, { offset: F.off || 0, dur: long ? 1.6 : 1.0 });   /* each critter's own noise */
 TRL.UTS = (n, f, cx, by, h, flip, a) => { const im = MG(n); if (!im) return false; const cw = im.width / 8, w = h * cw / im.height;   /* one frame of a creature strip */
@@ -1272,13 +1274,13 @@ TRL.amb = on => { const M = TRL.music; if (on && !M.amb && typeof DDTSfx !== 'un
 setInterval(() => { const M = TRL.music, n = performance.now(); if (M.h && n - M.tick > 400) TRL.bgm(false); if (M.amb && n - M.atick > 400) TRL.amb(false); }, 300);   /* game paused, quit or over: the battle music stops */
 
 GAMES.push({
-  id: 'crawl', name: 'UNDER THE TRAILER', tag: 'Dark crawlspace · detached pipe · rats',
-  how: ['Somewhere under this trailer the sewer pipe came apart. Crawl through the dark and find it. Rats, possums, raccoons and brown recluses live down there. So does Crawlspace Carl.', 'Grab the peanut butter crackers off the rat traps, and from critters you beat. Carl LOVES the little crackers: trade them for his stuff, or toss one to get away from a fight.', '▲ crawl forward, ▼ back up, ◀ ▶ turn. On the phone you can also tap the left / middle / right of the view.', 'Follow the STINK meter: the stronger it gets, the closer you are. The map in the corner fills in as you go.', 'Rats jump you in the dark. Pick WHACK, FLASHLIGHT, TOSS A CRACKER or RUN, then press the action button. Out of health and you crawl out.'],
+  id: 'crawl', name: 'UNDER THE TRAILER', tag: 'A long crawl · rats, possums, a King · Crawlspace Carl',
+  how: ['Somewhere under this huge trailer the sewer pipe came apart. Crawl through the dark and find it. Follow the STINK. This is a LONG job.', 'Near the hatch it is just rats. Deeper in: possums, buff rats, raccoons, brown recluses... and THE RAT KING guards the drip.', 'Grab peanut butter crackers off the rat traps and from critters you beat. Crawlspace Carl LOVES them. He lives down here in three places: listen for him, then trade for gear, beans and his special tonic.', 'Win fights to level up. Hurt? Open the BAG (second button) to use items or REST: it heals you but adds 30 minutes to the job.'],
   dpad: true,
-  ctl: '▲ ▼ CRAWL · ◀ ▶ TURN · SPACE = PICK',
-  act: 'PICK', phone: 'd-pad to crawl and turn (or tap the view), PICK in fights.',
+  ctl: '▲ ▼ CRAWL · ◀ ▶ TURN · SPACE = PICK · SHIFT = BAG',
+  act: 'PICK', act2: 'BAG', phone: 'd-pad to crawl and turn (or tap the view), PICK in fights, BAG for items and resting.',
   init(s) {
-    const [w, h] = [[5, 4], [6, 5], [7, 6]][s.diff], C = w * 2 + 1, R_ = h * 2 + 1;
+    const [w, h] = [[17, 12], [19, 13], [21, 14]][s.diff], C = w * 2 + 1, R_ = h * 2 + 1;   /* a BIG crawlspace: this is a long job */
     const m = Array.from({ length: R_ }, (_, r) => Array.from({ length: C }, (_, c) => (r === 0 || c === 0 || r === R_ - 1 || c === C - 1) ? 'S' : '#'));
     const st = [[1, 1]]; m[1][1] = '.';   // carve a maze between the piers...
     while (st.length) { const [c, r] = st[st.length - 1], nb = [[2, 0], [-2, 0], [0, 2], [0, -2]].map(([dx, dy]) => [c + dx, r + dy, dx, dy]).filter(([x, y]) => x > 0 && y > 0 && x < C - 1 && y < R_ - 1 && m[y][x] === '#');
@@ -1290,31 +1292,35 @@ GAMES.push({
       while (q.length) { const [c, r] = q.shift(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = c + dx, y = r + dy; if (m[y][x] === '.' && D[y][x] < 0) { D[y][x] = D[r][c] + 1; q.push([x, y]); } } } return D; };
     const D0 = dist(1, 1); let best = [1, 1]; for (let r = 0; r < R_; r++) for (let c = 0; c < C; c++) if (D0[r][c] > D0[best[1]][best[0]]) best = [c, r];
     s.goal = { c: best[0], r: best[1] }; s.gd = dist(best[0], best[1]); s.gmax = s.gd[1][1];
-    { const spots = []; for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) { if (m[r][c] !== '.' || (c === best[0] && r === best[1]) || (c === 1 && r === 1)) continue;
-        const ways = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b2]) => m[r + b2][c + a] === '.').length, f = D0[r][c] / D0[best[1]][best[0]]; if (ways === 1) spots.push([c, r, f > 0.2 && f < 0.85 ? 3 : 1]); }   /* a dead end partway in, if there is one */
-      const mid = spots.filter(q => q[2] === 3), dead = mid.length ? mid : spots, pick = dead.length ? dead[Math.floor(s.rnd() * dead.length)] : (() => {   /* no dead end? knock a nook into a pier for him */
-        for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) if (m[r][c] === '#' && !(c === best[0] && r === best[1])) { const ws = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b2]) => m[r + b2][c + a] === '.'); if (ws.length === 1) { m[r][c] = '.'; return [c, r]; } }
-        return [-9, -9]; })();   /* only in a dead end, so he never blocks the way */
-      s.hobo = { c: pick[0], r: pick[1] }; }
-    if (s.hobo.c < 0 && (s.regen = (s.regen || 0) + 1) < 12) return this.init(s);   /* no spot for Carl: roll a new crawlspace */
+    s.d0 = D0; s.dmax = D0[best[1]][best[0]];
+    { const deadAt = (zt, taken) => { let pickC = null, bd = 1e9;   /* Carl lives in a dead end near this depth: near the start, halfway, and right before the King */
+        for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) { if (m[r][c] !== '.' || (c === best[0] && r === best[1]) || (c === 1 && r === 1) || taken.some(q => q.c === c && q.r === r)) continue;
+          if ([[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b2]) => m[r + b2][c + a] === '.').length !== 1) continue;
+          const dd = Math.abs(D0[r][c] / s.dmax - zt); if (dd < bd) { bd = dd; pickC = { c, r }; } } return pickC; };
+      s.carls = []; [[0.08, 1], [0.5, 2], [0.88, 3]].forEach(([zt, tier]) => { const q = deadAt(zt, s.carls); if (q) s.carls.push({ ...q, tier, met: false }); }); }
+    if (s.carls.length < 3 && (s.regen = (s.regen || 0) + 1) < 12) return this.init(s);   /* not enough nooks for Carl: roll a new crawlspace */
+    s.hobo = s.carls[0];
     s.shop = null; s.mapBought = false;
-    { const free = []; for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) if (m[r][c] === '.' && !(c === 1 && r === 1) && !(c === best[0] && r === best[1]) && !(c === s.hobo.c && r === s.hobo.r)) free.push([c, r]);
-      s.traps = []; for (let i = 0; i < [5, 6, 7][s.diff] && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.traps.push({ c, r }); } }   /* rat traps, baited with the good crackers */
+    { const free = []; for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) if (m[r][c] === '.' && !(c === 1 && r === 1) && !(c === best[0] && r === best[1]) && !s.carls.some(q => q.c === c && q.r === r)) free.push([c, r]);
+      s.traps = []; for (let i = 0; i < [22, 26, 30][s.diff] && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.traps.push({ c, r }); } }   /* rat traps, baited with the good crackers */
     s.pc = 1; s.pr = 1; s.dir = m[1][2] === '.' ? 0 : 1; s.vx = 1.5; s.vy = 1.5; s.va = s.dir * Math.PI / 2; s.mv = 0;
     s.seen = new Set([101]); s.steps = 0; s.since = 0;
     const H = HERO(s), rod = H.name === 'ROD';
     s.hpMax = s.hp = rod ? 36 : 28; s.dmg = rod ? [3, 6] : [4, 7]; s.runOdds = rod ? 0.5 : 0.7;
+    s.lvl = 1; s.xp = 0; s.atkB = 0; s.def = 0; s.gear = []; s.items = { aid: 1, beans: 0, tonic: 0, poison: 0 }; s.restMin = 0; s.bag = null; s.kingDone = false;
     s.lights = 3; s.crk = 2; s.score = 0; s.fights = 0; s.won = 0; s.hits = 0; s.battle = null; s.flash = 0; s.fixT = 0;
     s.cv = document.createElement('canvas'); s.cv.width = TRL.RW; s.cv.height = TRL.RH; s.cx = s.cv.getContext('2d'); s.img = s.cx.createImageData(TRL.RW, TRL.RH); s.buf = new Uint32Array(s.img.data.buffer); s.zb = new Float32Array(TRL.RW);
   },
   open(s, c, r) { return s.map[r] && s.map[r][c] === '.'; },
   update(s, dt, I) {
     s.t += dt; FX(s, dt); s.flash = Math.max(0, s.flash - dt); s.shake = Math.max(0, (s.shake || 0) - dt);
-    if (s.fixT) { s.fixT += dt * (s.fixT > 3.4 && (I.Ap || I.ptr.clicked) ? 6 : 1); if (s.fixT > 9.4) { const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.t < 50 + s.gmax * 2, f >= 0.3), line: s.epi[1] }); } return; }
+    if (s.fixT) { s.fixT += dt * (s.fixT > 3.4 && (I.Ap || I.ptr.clicked) ? 6 : 1); if (s.fixT > 9.4) { const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.t < 50 + s.gmax * 2, f >= 0.3), line: s.epi[1] + (s.restMin ? ` (Rested ${s.restMin} min.)` : ''), extraTime: s.restMin }); } return; }
     if (!s.battle) { TRL.music.atick = performance.now(); TRL.amb(true); } else TRL.amb(false);
-    if (s.talk) { const K = s.talk; K.t += dt; if ((K.t > 0.4 && (I.Ap || I.ptr.clicked)) || K.t > 4.5) { K.i++; K.t = 0; if (K.i >= K.lines.length) { const me = HERO(s).name, them = me === 'ROD' ? 'Matt' : 'Rod'; s.talk.i = K.lines.length - 1; s.end = { win: true, stars: 1, carl: true, line: `${them} fixed it. ${me === 'ROD' ? 'Rod' : 'Matt'} is still talking about Carl.` }; } } return; }
+    if (s.talk) { const K = s.talk; K.t += dt; if ((K.t > 0.4 && (I.Ap || I.ptr.clicked)) || K.t > 4.5) { K.i++; K.t = 0; if (K.i >= K.lines.length) { const me = HERO(s).name, them = me === 'ROD' ? 'Matt' : 'Rod'; s.talk.i = K.lines.length - 1; s.end = { win: true, stars: 1, carl: true, extraTime: s.restMin, line: `${them} fixed it. ${me === 'ROD' ? 'Rod' : 'Matt'} is still talking about Carl.` }; } } return; }
+    if (s.bag) return this.bagging(s, dt, I);
     if (s.shop) return this.shopping(s, dt, I);
     if (s.battle) return this.fight(s, dt, I);
+    if ((I.Bp) && !s.mv) { s.bag = { sel: 0, battle: false }; SFX('ui_tap'); return; }
     const H = HERO(s), dur = 0.26 / H.spd;
     if (s.mv > 0) {   // gliding to the next square / turning
       s.mv -= dt; const k = 1 - Math.max(0, s.mv) / s.mvD;
@@ -1329,29 +1335,41 @@ GAMES.push({
     s.fx0 = s.vx; s.fy0 = s.vy; s.fa0 = s.va; s.ta = s.va; s.mvD = dur;
     if (cmd === 'L' || cmd === 'R') { s.ta = s.va + (cmd === 'L' ? -1 : 1) * Math.PI / 2; s.dir = (s.dir + (cmd === 'L' ? 3 : 1)) % 4; s.mv = s.mvD = dur * 0.8; return; }
     const v = [[1, 0], [0, 1], [-1, 0], [0, -1]][s.dir], sg = cmd === 'F' ? 1 : -1, nc = s.pc + v[0] * sg, nr = s.pr + v[1] * sg;
-    if (nc === s.hobo.c && nr === s.hobo.r && cmd === 'F') { this.openShop(s); return; }   /* crawl up to Carl: he's sitting right there */
-    if (!this.open(s, nc, nr) || (nc === s.hobo.c && nr === s.hobo.r)) { s.shake = 0.15; if (!s.bonk || s.t - s.bonk > 0.6) { s.bonk = s.t; SFX('click', { vol: 0.4 }); } return; }
+    const carlHere = s.carls.find(q => q.c === nc && q.r === nr);
+    if (carlHere && cmd === 'F') { this.openShop(s, carlHere); return; }   /* crawl up to Carl: he's sitting right there */
+    if (!this.open(s, nc, nr) || carlHere) { s.shake = 0.15; if (!s.bonk || s.t - s.bonk > 0.6) { s.bonk = s.t; SFX('click', { vol: 0.4 }); } return; }
     s.pc = nc; s.pr = nr; s.mv = s.mvD = cmd === 'B' ? dur * 1.3 : dur; s.arrived = true; SFX('ui_tap', { vol: 0.12 });
   },
   arrive(s) {
     s.seen.add(s.pr * 100 + s.pc); s.steps++; s.since++;
     { const k = (s.traps || []).findIndex(q => q.c === s.pc && q.r === s.pr); if (k >= 0) { s.traps.splice(k, 1); s.crk++; s.shake = 0.15; SFX('click'); (s.log = s.log || []).push(['You slide a peanut butter cracker off a rat trap... SNAP! Missed your fingers.', 'A rat trap with a little cracker on it. Mine now.', 'Peanut butter cracker off a trap. Slightly chewed.'][Math.floor(s.rnd() * 3)]); } }
     if (s.venom > 0) { s.venom--; if (s.hp > 1) { s.hp--; (s.log = s.log || []).push('The spider bite itches. -1 HP'); } }
-    if (s.pc === s.goal.c && s.pr === s.goal.r) { s.fixT = 0.01; s.score += 500;
+    if (s.pc === s.goal.c && s.pr === s.goal.r) { s.fixT = 0.01; s.score += 500; TRL.amb(false);
       const met = s.met || [], big = ['THE RAT KING', 'BROWN RECLUSE', 'RACCOON', 'BIG BUFF RAT', 'POSSUM', 'SEWER RAT'].find(n => met.includes(n));   /* ...and then nobody believes you */
       const brag = !met.length ? 'Just a drip. Easy one.' : big === 'THE RAT KING' ? 'There was a RAT KING down there. With a CROWN.' : big === 'BROWN RECLUSE' ? 'I fought a brown recluse. Hand to hand.' : big === 'RACCOON' ? 'A raccoon jumped me. We went three rounds.' : met.length > 2 ? `I fought ${met.length} things down there.` : `I had to fight a ${big.toLowerCase()} down there.`;
       const nope = !met.length ? ["That's what I like to hear.", 'Good. Now get in the van.'] : ['Sure you did, bud.', 'Uh huh. Get in the van.', "You were under there twenty minutes. Fixing a Fernco.", 'Was it the same raccoon as last time?', "Sure. And I'm the Rat King.", "You smell like you did, I'll give you that.", "Nobody's gonna believe that.", "Don't tell the customer that."];
       s.epi = [brag, nope[Math.floor(s.rnd() * nope.length)]]; return; }
-    const chance = [0.06, 0.08, 0.10][s.diff];
-    if (s.since > 4 && s.gd[s.pr][s.pc] > 1 && s.rnd() < chance) this.ambush(s);
+    if (s.gd[s.pr][s.pc] === 1 && !s.kingDone) { this.ambush(s, TRL.FOES.find(f => f.king)); return; }   /* he guards the drip */
+    this.carlHint(s);
+    const chance = [0.11, 0.13, 0.15][s.diff];
+    if (s.since > 3 && s.gd[s.pr][s.pc] > 2 && s.rnd() < chance) this.ambush(s);
   },
-  ambush(s) {
-    const deep = 1 - s.gd[s.pr][s.pc] / s.gmax, pool = TRL.FOES.filter(f => !f.king || (deep > 0.55 && s.diff > 0 && !s.kingSeen));
-    let r = s.rnd() * pool.reduce((a, f) => a + f.w, 0), F = pool[0]; for (const f of pool) { if ((r -= f.w) <= 0) { F = f; break; } }
+  zone(s) { return s.d0[s.pr][s.pc] / s.dmax; },
+  carlHint(s) {   // close to a Carl you haven't met: you hear him, and which way
+    const D = Array.from({ length: s.R }, () => Array(s.C).fill(-1)), q = [[s.pc, s.pr]]; D[s.pr][s.pc] = 0;
+    while (q.length) { const [c, r] = q.shift(); if (D[r][c] > 7) continue; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = c + dx, y = r + dy; if ((s.map[y][x] === '.') && D[y][x] < 0) { D[y][x] = D[r][c] + 1; q.push([x, y]); } } }
+    for (const cl of s.carls) { if (cl.met || D[cl.r][cl.c] < 0) continue; const d = D[cl.r][cl.c]; if (cl.heard && s.t - cl.heard < 12) continue; cl.heard = s.t;
+      let c = cl.c, r = cl.r; while (D[r][c] > 1) { for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = c + dx, y = r + dy; if (D[y] && D[y][x] === D[r][c] - 1) { c = x; r = y; break; } } }   /* walk back to the first step from you */
+      const step = [[1, 0], [0, 1], [-1, 0], [0, -1]].findIndex(([dx, dy]) => s.pc + dx === c && s.pr + dy === r), rel = ['AHEAD', 'to your RIGHT', 'BEHIND you', 'to your LEFT'][((step - s.dir) % 4 + 4) % 4];
+      const lines = { 1: [`Somebody is humming... "little crackers, little crackers..." It's coming from ${rel}.`, `You smell candle wax and peanut butter. ${rel}.`], 2: [`"...is that you? Did you bring the LITTLE ones?" A voice, ${rel}.`, `Candlelight flickers ${rel}. Someone giggles.`], 3: [`"Psst. PSST. Before you go in there... come see Carl." ${rel}.`, `A voice: "The King's just past here. Come get ready." ${rel}.`] }[cl.tier];
+      (s.log = s.log || []).push(lines[Math.floor(s.rnd() * lines.length)] + (d <= 2 ? ' VERY close.' : '')); s.hintT = 4; break; } },
+  ambush(s, force) {
+    const z = this.zone(s), pool = TRL.FOES.filter(f => !f.king && f.z <= z && !(f.once && (s.met || []).includes(f.name)));
+    let r = s.rnd() * pool.reduce((a, f) => a + f.w, 0), F = force || pool[0]; if (!force) for (const f of pool) { if ((r -= f.w) <= 0) { F = f; break; } }
     if (F.king) s.kingSeen = true;
-    const hp = F.hp[0] + Math.floor(s.rnd() * (F.hp[1] - F.hp[0] + 1));
+    const hp = Math.round((F.hp[0] + Math.floor(s.rnd() * (F.hp[1] - F.hp[0] + 1))) * (F.king ? [1.1, 1.4, 1.7][s.diff] : 1.5 + this.zone(s) * 0.6));   /* deeper ones are tougher */
     s.battle = { F, hp, max: hp, sel: 0, q: [], stun: 0, open: 0.6, blink: 0, dmgT: 0, pose: 2, poseT: 0.8, out: 0 }; s.since = 0; s.fights++; s.flash = 0.6; (s.met = s.met || []).push(F.name); TRL.bgm(true); TRL.cry(F, true);
-    this.say(s, F.king ? 'THE RAT KING rises from the muck, cape and all!' : F.name === 'BIG BUFF RAT' ? 'A BIG BUFF RAT flexes at you. It has been working out.' : F.venom ? 'A BROWN RECLUSE drops down from a joist!' : F.thief ? 'A RACCOON was already down here. It is not happy.' : F.possum ? 'A POSSUM hisses at you from behind a pier!' : `A ${F.name} jumps out of the dark!`);
+    this.say(s, F.princess ? 'THE POSSUM PRINCESS blocks your way. She expects tribute.' : F.gary ? 'It is GARY. Gary is a raccoon in a tiny vest. Gary has done this before.' : F.king ? 'THE RAT KING rises from the muck, cape and all!' : F.name === 'BIG BUFF RAT' ? 'A BIG BUFF RAT flexes at you. It has been working out.' : F.venom ? 'A BROWN RECLUSE drops down from a joist!' : F.thief ? 'A RACCOON was already down here. It is not happy.' : F.possum ? 'A POSSUM hisses at you from behind a pier!' : `A ${F.name} jumps out of the dark!`);
   },
   // CRAWLSPACE CARL: lives down here. Has for years. Sells what he's got.
   HOBO_HI: ["Do you have... the crackers? The little ones? With the peanut butter? The LITTLE ones?", "Shhh. Don't move. I can smell them on you. Peanut butter crackers.", "Oh. Oh, hello. Nobody comes down here. Did you bring the little crackers?", "The little orange ones. Six to a pack. Do you understand me? Do you UNDERSTAND me?", "I'll trade you anything. ANYTHING. For the little crackers.", "You crawled all this way. For me? With crackers? Nobody's ever crawled for me with crackers."],
@@ -1359,15 +1377,18 @@ GAMES.push({
   HOBO_BUY: ["Ooooh. You chose that. You CHOSE that.", "Take it. Take it and think of Carl.", "I'll treasure your coins. I'm gonna keep 'em in my mouth.", "That's my favorite one. I'll miss it. Goodbye, little friend.", "We're business partners now. That's practically married."],
   HOBO_BYE: ["Don't go. ...Okay, go. But come back. Promise me.", "I'll be right here. I'm always right here.", "You'll dream about Carl tonight. Everybody does.", "Wave at me! ...You waved. I'll remember that forever.", "Mind the spider. Her name's Linda. She's spoken for."],
   HOBO_BROKE: ["No crackers? ...No crackers. That's okay. I'll love you anyway.", "Come back when you have the little ones.", "You don't have enough. That's okay. I'll love you anyway.", "Short? Stay a while. We could just... sit.", "I can't take IOUs. Not since the last one broke my heart."],
-  wares(s) { return [
-    { id: 'bat', label: 'BATTERIES', price: 1, go: () => s.lights++, line: 'Flashlight +1' },
-    { id: 'aid', label: 'BAND-AIDS', price: 1, go: () => s.hp = Math.min(s.hpMax, s.hp + 10), line: '+10 HP' },
-    { id: 'beans', label: 'COLD BEANS', price: 2, go: () => s.hp = Math.min(s.hpMax, s.hp + 22), line: '+22 HP. He warmed them in his armpit.' },
-    { id: 'brace', label: 'KNEE PADS', price: 3, go: () => { s.hpMax += 8; s.hp += 8; s.pads = true; }, line: 'Max HP +8. Still warm.', off: s.pads },
-    { id: 'map', label: 'HIS MAP', price: 2, go: () => { s.mapBought = true; }, line: 'An X on a napkin marks the drip.', off: s.mapBought },
-    { id: 'bye', label: 'LEAVE', price: 0 } ]; },
+  wares(s) { const t = (s.shop && s.shop.tier) || 1, I2 = s.items, gear = (id, label, price, k, v, line) => ({ id, label, price, go: () => { s.gear.push(id); if (k === 'def') s.def += v; else if (k === 'atk') s.atkB += v; else { s.hpMax += v; s.hp += v; } }, line, off: s.gear.includes(id) });
+    const L = [{ id: 'bat', label: 'BATTERIES', price: 1, go: () => s.lights++, line: 'Flashlight +1' }, { id: 'aid', label: 'BAND-AIDS', price: 1, go: () => I2.aid++, line: 'Into the bag. +12 HP when you use them.' }];
+    if (t === 1) L.push(gear('pads', 'KNEE PADS', 3, 'def', 1, 'DEF +1. Still warm.'), { id: 'map', label: 'HIS MAP', price: 3, go: () => { s.mapBought = true; }, line: 'An X on a napkin marks the drip.', off: s.mapBought });
+    if (t >= 2) L.push({ id: 'beans', label: 'COLD BEANS', price: 2, go: () => I2.beans++, line: '+25 HP. He warmed them in his armpit.' }, gear(t === 2 ? 'hat' : 'waders', t === 2 ? 'HARD HAT' : 'CHEST WADERS', t === 2 ? 5 : 7, 'def', t === 2 ? 2 : 3, t === 2 ? "DEF +2. It's his old one." : 'DEF +3. Mostly waterproof.'), gear(t === 2 ? 'wrench' : 'cutter', t === 2 ? 'BIGGER WRENCH' : 'PIPE CUTTER', t === 2 ? 6 : 8, 'atk', t === 2 ? 2 : 3, t === 2 ? 'ATK +2. 24 inches of truth.' : 'ATK +3. Do not ask what else he cut with it.'));
+    if (t === 2) L.push({ id: 'map', label: 'HIS MAP', price: 2, go: () => { s.mapBought = true; }, line: 'An X on a napkin marks the drip.', off: s.mapBought });
+    if (t === 3) L.push({ id: 'tonic', label: "CARL'S TONIC", price: 3, go: () => I2.tonic++, line: 'Full health. Smells like gasoline and love.' }, { id: 'poison', label: 'RAT POISON', price: 4, go: () => I2.poison++, line: '25 damage to anything with a tail. Including Kings.' });
+    return [...L, { id: 'bye', label: 'LEAVE', price: 0 } ]; },
   mood(s, list) { const S = s.shop; if (!S) return; S.face = list[Math.floor(s.rnd() * list.length)]; S.flip = s.rnd() < 0.35 ? [5, 1, 7, 3][Math.floor(s.rnd() * 4)] : null; S.t = 0; },   /* ...and sometimes he flips mid-sentence */
-  openShop(s) { s.shop = { sel: 0, say: this.HOBO_HI[Math.floor(s.rnd() * this.HOBO_HI.length)], t: 0, buyT: 0 }; s.metHobo = true; this.mood(s, [0, 6, 4]); if (!s.metOnce) { s.metOnce = true; s.shop.say = this.HOBO_FIRST; } },
+  HOBO_T2: "YOU! You came back! ...Different Carl? There's only one Carl. I get around. Crackers?",
+  HOBO_T3: "Shhh. He's right through there. The KING. You're gonna want everything Carl's got. Everything. For the little crackers.",
+  openShop(s, cl) { cl = cl || s.carls[0]; s.hobo = cl; s.shop = { sel: 0, tier: cl.tier, say: this.HOBO_HI[Math.floor(s.rnd() * this.HOBO_HI.length)], t: 0, buyT: 0 }; s.metHobo = true; this.mood(s, [0, 6, 4]);
+    if (!cl.met) { cl.met = true; s.shop.say = cl.tier === 1 ? this.HOBO_FIRST : cl.tier === 2 ? this.HOBO_T2 : this.HOBO_T3; } },
   shopping(s, dt, I) {
     const S = s.shop, W2 = this.wares(s); S.t += dt; S.buyT = Math.max(0, S.buyT - dt);
     if (I.Up || I.Lp) S.sel = (S.sel + W2.length - 1) % W2.length; if (I.Dp || I.Rp) S.sel = (S.sel + 1) % W2.length;
@@ -1384,7 +1405,7 @@ GAMES.push({
   // knocked out of the crawlspace: he tells the other guy everything. The other guy doesn't buy a word of it, goes down, and fixes it.
   defeated(s) {
     const me = HERO(s).name, them = me === 'ROD' ? 'MATT' : 'ROD', met = s.met || [], pick = a => a[Math.floor(s.rnd() * a.length)], L = [];
-    const SEEN = { 'SEWER RAT': 'Rats. A LOT of rats.', 'BIG BUFF RAT': "One of the rats was JACKED. Like it LIFTS.", 'POSSUM': 'A possum faked its own death at me. Then it got back UP.', 'RACCOON': 'A raccoon took my peanut butter. Right out of my hand.', 'BROWN RECLUSE': 'A brown recluse came down on a string. I can still feel it.', 'THE RAT KING': 'There is a KING down there. A RAT king. He had a CAPE.' };
+    const SEEN = { 'SEWER RAT': 'Rats. A LOT of rats.', 'BIG BUFF RAT': "One of the rats was JACKED. Like it LIFTS.", 'POSSUM': 'A possum faked its own death at me. Then it got back UP.', 'RACCOON': 'A raccoon took my peanut butter. Right out of my hand.', 'BROWN RECLUSE': 'A brown recluse came down on a string. I can still feel it.', 'THE POSSUM PRINCESS': 'A possum PRINCESS knighted me. With a twig. I am a knight now.', 'GARY': 'A raccoon named Gary robbed me. He had a VEST.', 'THE RAT KING': 'There is a KING down there. A RAT king. He had a CAPE.' };
     L.push([me, pick(["I'm out. I'm not going back down there.", "Don't. Don't go under there.", "I need a minute. Maybe a week."])]);
     [...new Set(met)].slice(-3).forEach(n => L.push([me, SEEN[n]]));
     if (s.metHobo) L.push([me, pick(["And a guy named Carl lives down there! He sold me beans!", "There's a man down there. Carl. He wears a hard hat. He LOVES me.", "Carl. His name is Carl. He warmed beans in his armpit."])]);
@@ -1398,6 +1419,33 @@ GAMES.push({
     L.push([them, pick(['Get in the van.', "Don't tell the customer.", 'I am never letting you live this down.'])]);
     s.talk = { lines: L, i: 0, t: 0 };
   },
+  gainXP(s, n) { s.xp += n; while (s.xp >= s.lvl * 60) { s.xp -= s.lvl * 60; s.lvl++; s.hpMax += 5; s.hp = Math.min(s.hpMax, s.hp + Math.round(s.hpMax * 0.4)); (s.log = s.log || []).push(`LEVEL ${s.lvl}! Max HP +5, hits harder. You feel more... crawly.`); SFX('ui_select'); } },
+  // the bag: stats, items, and resting. B opens it. In a fight, using something takes your turn.
+  bagList(s) { const I2 = s.items, inB = s.bag && s.bag.battle; const L = [
+      { id: 'aid', label: `BAND-AIDS x${I2.aid}`, off: !I2.aid }, { id: 'beans', label: `COLD BEANS x${I2.beans}`, off: !I2.beans }, { id: 'tonic', label: `CARL'S TONIC x${I2.tonic}`, off: !I2.tonic } ];
+    if (inB) L.push({ id: 'poison', label: `RAT POISON x${I2.poison}`, off: !I2.poison });
+    else L.push({ id: 'rest', label: 'REST (+30 MIN)', off: s.hp >= s.hpMax });
+    L.push({ id: 'close', label: 'CLOSE' }); return L; },
+  bagging(s, dt, I) {
+    const B = s.bag, L = this.bagList(s);
+    if (I.Bp && !B.battle) { s.bag = null; return; }
+    if (I.Up || I.Lp) B.sel = (B.sel + L.length - 1) % L.length; if (I.Dp || I.Rp) B.sel = (B.sel + 1) % L.length;
+    let pick = I.Ap ? B.sel : null;
+    if (I.ptr.clicked) for (let i = 0; i < L.length; i++) { const [x, y, w, h] = this.bagBox(i); if (I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h) { B.sel = i; pick = i; } }
+    if (pick === null) return; const it = L[pick];
+    if (it.id === 'close') { s.bag = null; if (B.battle) s.battle.sel = 0; SFX('ui_tap'); return; }
+    if (it.off) { SFX('click'); return; } SFX('ui_select');
+    const heal = n => { const h0 = s.hp; s.hp = Math.min(s.hpMax, s.hp + n); return s.hp - h0; };
+    let msg = '';
+    if (it.id === 'aid') { s.items.aid--; msg = `Band-aids. +${heal(12)} HP.`; s.venom = 0; }
+    if (it.id === 'beans') { s.items.beans--; msg = `Cold beans. +${heal(25)} HP. Armpit-warm.`; }
+    if (it.id === 'tonic') { s.items.tonic--; msg = `Carl's Tonic. +${heal(999)} HP. Your eyes water. You feel AMAZING.`; s.venom = 0; }
+    if (it.id === 'poison') { s.items.poison--; const b = s.battle; msg = `You fling the rat poison. 25 damage!`; b.hp -= 25; b.blink = 0.4; b.dmgT = 0.7; b.dmg = 25; b.pose = 6; b.poseT = 0.6; }
+    if (it.id === 'rest') { s.restMin += 30; if (s.rnd() < 0.3) { msg = `You lie down in the dirt... something is chewing your boot.`; s.bag = null; (s.log = s.log || []).push(msg); this.ambush(s); return; }
+      msg = `You lie down in the muck and rest. +${heal(Math.round(s.hpMax * 0.6))} HP. (+30 min on the job)`; }
+    s.bag = null; (s.log = s.log || []).push(msg);
+    if (B.battle) { const b = s.battle; this.say(s, msg); b.after = () => { if (b.hp <= 0) b.wonFn(); else b.foeTurnFn(); }; } },
+  bagBox(i) { return [178, 30 + i * 22, 140, 18]; },
   endFight(s) { s.battle = null; TRL.bgm(false); },
   say(s, text, fx) { s.battle.q.push({ text, fx, t: 0 }); },
   // turn-based: messages play one at a time (tap / PICK to hurry them), then the menu comes back
@@ -1406,27 +1454,29 @@ GAMES.push({
     b.poseT = Math.max(0, b.poseT - dt); if (b.poseT <= 0 && b.pose !== 7) b.pose = null; if (b.out) b.out += dt;
     if (b.open > 0) { b.open -= dt; return; }
     b.blink = Math.max(0, b.blink - dt); b.dmgT = Math.max(0, b.dmgT - dt);
-    if (b.q.length) { const m = b.q[0]; if (!m.t && m.fx) m.fx(); m.t += dt; if ((m.t > 0.25 && tap) || m.t > 1.6) { (s.log = s.log || []).push(m.text.length > 44 ? m.text.slice(0, 43) + '…' : m.text); b.q.shift(); if (!b.q.length && b.after) { const a = b.after; b.after = null; a(); } } return; }
+    if (b.q.length) { const m = b.q[0]; if (!m.t && m.fx) m.fx(); m.t += dt; if ((m.t > 0.25 && tap) || m.t > 1.6) { (s.log = s.log || []).push(m.text.length > 52 ? m.text.slice(0, 51) + '…' : m.text); b.q.shift(); if (!b.q.length && b.after) { const a = b.after; b.after = null; a(); } } return; }
     const OPTS = this.opts(s);
     if (I.Up || I.Lp) b.sel = (b.sel + OPTS.length - 1) % OPTS.length; if (I.Dp || I.Rp) b.sel = (b.sel + 1) % OPTS.length;
     let pick = I.Ap ? b.sel : null;
-    if (I.ptr.clicked) for (let i = 0; i < OPTS.length; i++) { const [x, y, w, h] = this.optBox(i); if (I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h) { b.sel = i; pick = i; } }
+    if (I.ptr.clicked) for (let i = 0; i < OPTS.length; i++) { const [x, y, w, h] = this.optBox(i, OPTS.length); if (I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h) { b.sel = i; pick = i; } }
     if (pick === null) return;
     const o = OPTS[pick]; if (o.off) { SFX('click'); return; } SFX('ui_select');
     const foeTurn = () => {
       if (b.stun > 0) { b.stun--; this.say(s, `The ${b.F.name} is still seeing spots.`); return; }
       if (b.faking) { b.faking = false; this.say(s, `...The POSSUM gets right back up. It was faking!`, () => { b.pose = 4; b.poseT = 0.6; TRL.cry(b.F); }); return; }
       if (s.rnd() < 0.12) { this.say(s, `The ${b.F.name} lunges... and misses!`, () => { b.pose = 3; b.poseT = 0.5; }); return; }
-      if (b.F.thief && s.crk > 0 && s.rnd() < 0.35) { this.say(s, 'The RACCOON snatches one of your crackers!', () => { s.crk--; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); }); return; }
-      const d = Math.max(1, Math.round((b.F.atk[0] + s.rnd() * (b.F.atk[1] - b.F.atk[0])) * (s.k || 1)));
+      if (b.F.thief && s.crk > 0 && s.rnd() < 0.35) { const n2 = b.F.gary ? Math.min(2, s.crk) : 1; this.say(s, b.F.gary ? `GARY pockets ${n2} of your crackers. In his VEST.` : 'The RACCOON snatches one of your crackers!', () => { s.crk -= n2; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); }); return; }
+      const d = Math.max(1, Math.round((b.F.atk[0] + s.rnd() * (b.F.atk[1] - b.F.atk[0])) * (s.k || 1) * (1 + (b.F.king ? 0 : this.zone(s) * 0.25))) - s.def);   /* your gear soaks some of it */
       this.say(s, b.F.king ? `THE RAT KING rakes you with royal claws! -${d} HP` : b.F.venom ? `The BROWN RECLUSE bites! -${d} HP. That's gonna itch.` : b.F.thief ? `The RACCOON claws you! -${d} HP` : `The ${b.F.name} bites! -${d} HP`,
         () => { s.hp -= d; s.hits++; s.shake = 0.35; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); if (b.F.venom) s.venom = 6; });
       b.after = () => { if (s.hp <= 0) { s.hp = 0; TRL.bgm(false); s.battle = null; this.defeated(s); } };
     };
-    const won = () => { this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { const loot = b.F.king ? 4 : 1 + Math.floor(s.rnd() * 2); s.crk += loot; (s.log = s.log || []).push(`It dropped ${loot} peanut butter cracker${loot > 1 ? 's' : ''}. Where was it keeping those.`); s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
+    const won = () => { this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { const loot = b.F.king ? 4 : b.F.gary ? 5 : 1 + Math.floor(s.rnd() * 2); s.crk += loot; this.gainXP(s, b.F.pts); if (b.F.king) s.kingDone = true; (s.log = s.log || []).push(`It dropped ${loot} peanut butter cracker${loot > 1 ? 's' : ''}. Where was it keeping those.`); s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
+    b.wonFn = won; b.foeTurnFn = foeTurn;
+    if (o.id === 'item') { s.bag = { sel: 0, battle: true }; return; }
     if (o.id === 'whack') {
       if (s.rnd() < 0.1) this.say(s, 'You swing the pipe wrench... and hit a pier. CLANG.', () => SFX('click'));
-      else { const crit = s.rnd() < 0.12, d = Math.round((s.dmg[0] + s.rnd() * (s.dmg[1] - s.dmg[0])) * (crit ? 2 : 1));
+      else { const crit = s.rnd() < 0.12, d = Math.round((s.dmg[0] + s.rnd() * (s.dmg[1] - s.dmg[0]) + s.atkB + (s.lvl - 1)) * (crit ? 2 : 1));
         this.say(s, crit ? `CRITICAL WHACK! ${d} damage!` : `You whack it with the pipe wrench! ${d} damage.`, () => { b.hp -= d; b.blink = 0.4; b.dmgT = 0.7; b.dmg = d; s.shake = 0.12; b.pose = 6; b.poseT = 0.6; b.faking = false; SFX('wrench_hit'); }); }
       b.after = () => { if (b.hp <= 0) won(); else if (b.F.possum && !b.played && b.hp < b.max / 2) { b.played = b.faking = true; this.say(s, 'The POSSUM keels over. ...Is it dead?', () => { b.pose = 7; b.poseT = 99; }); } else foeTurn(); };
     } else if (o.id === 'light') {
@@ -1434,14 +1484,15 @@ GAMES.push({
       if (s.rnd() < (b.F.king ? 0.4 : 0.85)) { b.stun = b.F.king ? 1 : 2; this.say(s, `The ${b.F.name} is blinded!`); } else this.say(s, 'It just squints at you.');
       b.after = () => foeTurn();
     } else if (o.id === 'pb') {
+      if (b.F.princess) { s.crk--; this.say(s, 'You offer the Princess a peanut butter cracker...'); this.say(s, 'She accepts. She knights you with a twig. DEF +1!', () => { s.def++; b.pose = 4; b.poseT = 1; }); this.say(s, 'She drops something shiny as she leaves: CARL\'S TONIC.', () => { s.items.tonic++; this.gainXP(s, b.F.pts); b.out = 0.01; }); b.after = () => this.endFight(s); return; }
       s.crk--; this.say(s, 'You flick a peanut butter cracker down the row...'); this.say(s, `The ${b.F.name} goes for it. You crawl away.`, () => { b.pose = 3; b.poseT = 9; b.out = 0.01; }); b.after = () => this.endFight(s);
     } else if (o.id === 'run') {
       if (s.rnd() < s.runOdds * (b.F.king ? 0.5 : 1)) { this.say(s, 'You scramble away through the muck!'); b.after = () => this.endFight(s); }
       else { this.say(s, "You're stuck in the muck!"); b.after = () => foeTurn(); }
     }
   },
-  opts(s) { return [{ id: 'whack', label: 'WHACK' }, { id: 'light', label: `FLASHLIGHT x${s.lights}`, off: s.lights <= 0 }, { id: 'pb', label: `TOSS A CRACKER x${s.crk}`, off: s.crk <= 0 }, { id: 'run', label: 'RUN' }]; },
-  optBox(i, n = 4) { const h = n > 4 ? 13 : 19, gap = n > 4 ? 14 : 22; return [340, 104 + i * gap, 130, h]; },   /* the command buttons, down the right-hand panel */
+  opts(s) { const K = s.battle && s.battle.F.king; return [{ id: 'whack', label: 'WHACK' }, { id: 'light', label: `FLASHLIGHT x${s.lights}`, off: s.lights <= 0 }, { id: 'item', label: 'BAG' }, { id: 'pb', label: `TOSS A CRACKER x${s.crk}`, off: s.crk <= 0 || K }, { id: 'run', label: 'RUN', off: K }]; },
+  optBox(i, n = 4) { const gap = Math.min(22, Math.floor(86 / n)), h = gap - 2; return [340, 103 + i * gap, 130, h]; },   /* the command buttons, down the right-hand panel */
   render(s) {   // the 3D view: raycast walls, cast floor + ceiling, then the broken joint as a sprite
     const { RW, RH, T: N } = TRL, buf = s.buf, zb = s.zb, tx = TRL.tex;
     const dx = Math.cos(s.va), dy = Math.sin(s.va), pl = 0.66, plx = -dy * pl, ply = dx * pl, px = s.vx, py = s.vy;
@@ -1474,8 +1525,8 @@ GAMES.push({
         for (let x = Math.max(0, x0); x < Math.min(RW, x0 + sh); x++) { if (tY >= zb[x]) continue; const u = Math.min(N - 1, ((x - x0) * N / sh) | 0);
           for (let y = Math.max(0, y0); y < Math.min(RH, y0 + sh); y++) { const c = P[Math.min(N - 1, ((y - y0) * N / sh) | 0) * N + u]; if (c) buf[y * RW + x] = shade(c, Math.min(1, k * lightCol[x])); } } } }
     s.carlScr = null;   /* Carl is drawn from his own sprite on top of the view, hidden behind any wall that's closer */
-    { const sx = s.hobo.c + 0.5 - px, sy = s.hobo.r + 0.5 - py, inv = 1 / (plx * dy - dx * ply), tX = inv * (dy * sx - dx * sy), tY = inv * (-ply * sx + plx * sy);
-      if (tY > 0.2) { const scx = (RW / 2) * (1 + tX / tY), col = Math.max(0, Math.min(RW - 1, Math.round(scx))); if (tY < zb[col] + 0.05) s.carlScr = { x: scx / RW, h: 1 / tY, k: Math.min(1, lit(tY) * 1.6) }; } }
+    for (const cl of s.carls) { const sx = cl.c + 0.5 - px, sy = cl.r + 0.5 - py, inv = 1 / (plx * dy - dx * ply), tX = inv * (dy * sx - dx * sy), tY = inv * (-ply * sx + plx * sy);
+      if (tY > 0.2 && tY < 9) { const scx = (RW / 2) * (1 + tX / tY), col = Math.max(0, Math.min(RW - 1, Math.round(scx))); if (tY < zb[col] + 0.05 && (!s.carlScr || 1 / tY > s.carlScr.h)) s.carlScr = { x: scx / RW, h: 1 / tY, k: Math.min(1, lit(tY) * 1.6) }; } }
     s.cx.putImageData(s.img, 0, 0);
   },
   // Might & Magic style: the 3D view sits in a carved frame, with a side panel, the hero's portrait and a message scroll
@@ -1492,7 +1543,7 @@ GAMES.push({
     const sh = s.shake > 0 ? (Math.random() - 0.5) * 6 * s.shake * 3 : 0;
     g.save(); g.beginPath(); g.rect(VX, VY, VW, VH); g.clip();
     g.imageSmoothingEnabled = false; g.drawImage(s.cv, VX + sh, VY, VW, VH);
-    if (s.carlScr && MG('ut_carl')) { const C2 = s.carlScr, im = MG('ut_carl'), cw = im.width / 4, h = VH * C2.h * 0.82, w = h * cw / im.height, fx = VX + sh + C2.x * VW, fy = VY + VH / 2 + VH * C2.h / 2;
+    if (s.carlScr && MG('ut_carl') && !(b && b.open <= 0)) { const C2 = s.carlScr, im = MG('ut_carl'), cw = im.width / 4, h = VH * C2.h * 0.82, w = h * cw / im.height, fx = VX + sh + C2.x * VW, fy = VY + VH / 2 + VH * C2.h / 2;
       const S2 = s.shop, f = S2 && S2.buyT > 0 ? 3 : S2 && S2.t < 1.6 ? 2 : Math.floor(t * 2.2) % 2;   /* candle flicker · talking · handing it over */
       g.save(); g.filter = `brightness(${C2.k.toFixed(2)})`; g.imageSmoothingEnabled = false; g.drawImage(im, f * cw, 0, cw, im.height, fx - w / 2, fy - h, w, h); g.restore(); }
     if (b && b.open <= 0) {   // the rats stand right there in the corridor, like the old games
@@ -1501,6 +1552,8 @@ GAMES.push({
       if (!blinkOff && (b.hp > 0 || b.q.length || b.pose === 7)) {
         const idle = [0, 0, 1, 0, 2][Math.floor(t / 0.6) % 5], f = b.pose != null ? b.pose : idle, ox = b.out ? b.out * 420 : 0, a = b.out ? Math.max(0, 1 - b.out * 1.5) : 1, h = 120 * b.F.sc;
         if (!TRL.UTS(b.F.spr, f, cx + ox, by, h, false, a)) R(cx - 30, by - 30, 60, 30, '#6a5a4c');
+        if (b.F.princess && b.pose !== 7 && !b.out) { const tx2 = cx + ox + h * 0.32, ty2 = by - h * (f === 4 ? 0.98 : 0.66); g.fillStyle = '#f7d44a'; g.beginPath(); g.moveTo(tx2 - 9, ty2 + 5); g.lineTo(tx2 - 9, ty2 - 2); g.lineTo(tx2 - 4, ty2 + 2); g.lineTo(tx2, ty2 - 6); g.lineTo(tx2 + 4, ty2 + 2); g.lineTo(tx2 + 9, ty2 - 2); g.lineTo(tx2 + 9, ty2 + 5); g.fill(); C(tx2, ty2 - 6, 1.6, '#ff8ad0'); }   /* her tiara */
+        if (b.F.gary && b.pose !== 7 && !b.out) { const vx2 = cx + ox - h * 0.02, vy2 = by - h * (f === 4 ? 0.55 : 0.38); R(vx2 - 12, vy2 - 8, 24, 14, '#3a5a8a'); R(vx2 - 1, vy2 - 8, 2, 14, '#e8dcc0'); C(vx2 + 5, vy2 - 2, 1.2, '#f7d44a'); C(vx2 + 5, vy2 + 2, 1.2, '#f7d44a'); }   /* Gary's tiny vest */
         if (b.stun > 0) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; T('*', cx + Math.cos(a) * 30, by - 70 + Math.sin(a) * 6, '#f7c418', 8, 'center'); }
       }
       if (b.dmgT > 0) T('-' + b.dmg, cx + 50, VY + 60 - (0.7 - b.dmgT) * 30, '#fff', 14, 'center');
@@ -1509,6 +1562,11 @@ GAMES.push({
     }
     if (b && b.open > 0) { const k = b.open / 0.6; for (let i = 0; i < 9; i++) R(VX, VY + i * 20, VW * (1 - k), 20, '#000'); }   // the screen wipe into the fight
     if (s.flash > 0) { g.fillStyle = `rgba(255,250,220,${s.flash})`; g.fillRect(VX, VY, VW, VH); }
+    if (s.bag) { R(VX, VY, VW, VH, 'rgba(10,8,6,.93)'); T('THE BAG', VX + 10, VY + 10, '#e8c86a', 8);
+      const st = [['LEVEL', s.lvl], ['XP', `${s.xp} / ${s.lvl * 60}`], ['HP', `${Math.max(0, s.hp)} / ${s.hpMax}`], ['ATTACK', `${s.dmg[0] + s.atkB + s.lvl - 1}-${s.dmg[1] + s.atkB + s.lvl - 1}`], ['DEFENSE', s.def], ['CRACKERS', s.crk], ['FLASHLIGHTS', s.lights], ['TIME RESTED', `${s.restMin} MIN`]];
+      st.forEach(([k, v], i) => { T(k, VX + 12, VY + 30 + i * 14, '#9fb3d9', 6); T(String(v), VX + 150, VY + 30 + i * 14, '#fff', 6, 'right'); });
+      const GN = { pads: 'KNEE PADS', hat: 'HARD HAT', waders: 'CHEST WADERS', wrench: 'BIGGER WRENCH', cutter: 'PIPE CUTTER' }; T('WEARING: ' + (s.gear.length ? s.gear.map(q => GN[q]).join(', ') : 'NOTHING SPECIAL'), VX + 12, VY + VH - 12, '#c9a46a', 5);
+      this.bagList(s).forEach((o, i) => { const [x, y, w, h] = this.bagBox(i), on = i === s.bag.sel; R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); T(o.label, x + 6, y + h / 2 + 1, o.off ? '#5a5048' : on ? '#f7c418' : '#e8dcc0', 6); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); }); }
     if (s.fixT && s.fixT < 3.4) { R(VX + 20, VY + 70, VW - 40, 40, 'rgba(10,8,6,.85)'); T(s.fixT < 1.2 ? 'THERE IT IS. THE DRIP.' : s.fixT < 2.2 ? 'FERNCO ON...' : 'CLAMPS TIGHT. DONE!', VX + VW / 2, VY + 90, '#7bd65b', 9, 'center'); }
     if (s.talk) { const K = s.talk, [who, line] = K.lines[Math.min(K.i, K.lines.length - 1)];
       const sky = g.createLinearGradient(0, VY, 0, VY + VH); sky.addColorStop(0, '#8fc4ef'); sky.addColorStop(1, '#d8ecf8'); g.fillStyle = sky; g.fillRect(VX, VY, VW, VH); if (!BGI('bg_lawn')) R(VX, VY + VH * 0.62, VW, VH * 0.38, '#5f9a3e');
@@ -1524,24 +1582,24 @@ GAMES.push({
     g.restore();
     // side panel: title, map + compass up top; commands in a fight, stink otherwise
     const PX = 338, PW = 134; bevel(PX, 10, PW, 82);
-    T('UNDER THE', PX + PW / 2, 18, '#e8c86a', 6, 'center'); T('TRAILER', PX + PW / 2, 27, '#e8c86a', 6, 'center');
-    { const Z = Math.min(5, Math.floor(56 / Math.max(s.C, s.R))), mw = s.C * Z, mh = s.R * Z, mx0 = PX + (PW - mw) / 2, my0 = 34 + (54 - mh) / 2;   // automap: only where you've been
-      R(mx0 - 1, my0 - 1, mw + 2, mh + 2, '#16110b');
+    { const z = this.zone(s); T(z < 0.2 ? 'THE ENTRANCE' : z < 0.45 ? 'THE DAMP PART' : z < 0.7 ? 'POSSUM COUNTRY' : z < 0.9 ? 'THE DEEP MUCK' : "THE KING'S HALL", PX + PW / 2, 18, '#e8c86a', 6, 'center'); T(`LV ${s.lvl}  ATK ${s.dmg[0] + s.atkB + s.lvl - 1}-${s.dmg[1] + s.atkB + s.lvl - 1}  DEF ${s.def}`, PX + PW / 2, 27, '#9fb3d9', 5, 'center'); }
+    { const Z = 4, VWc = 29, VHc = 13, oc = Math.max(0, Math.min(s.C - VWc, Math.round(s.vx - VWc / 2))), orr = Math.max(0, Math.min(s.R - VHc, Math.round(s.vy - VHc / 2))), mw = Math.min(s.C, VWc) * Z, mh = Math.min(s.R, VHc) * Z, mx0 = PX + (PW - mw) / 2 - oc * Z, my0 = 35 - orr * Z;   // automap: a window around you, only where you've been
+      R(PX + (PW - mw) / 2 - 1, 34, mw + 2, mh + 2, '#16110b'); g.save(); g.beginPath(); g.rect(PX + (PW - mw) / 2, 35, mw, mh); g.clip();
       for (const k of s.seen) { const c = k % 100, r = Math.floor(k / 100); R(mx0 + c * Z, my0 + r * Z, Z, Z, '#7a6a50');
         for (const [ddx, ddy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (s.map[r + ddy][c + ddx] !== '.') R(mx0 + (c + ddx) * Z, my0 + (r + ddy) * Z, Z, Z, '#3e3a34'); }
-      if (s.metHobo || s.seen.has(s.hobo.r * 100 + s.hobo.c)) R(mx0 + s.hobo.c * Z + 1, my0 + s.hobo.r * Z + 1, Z - 2, Z - 2, '#4a8a3a');   /* Carl */
+      for (const cl of s.carls) if (cl.met || s.seen.has(cl.r * 100 + cl.c)) R(mx0 + cl.c * Z, my0 + cl.r * Z, Z, Z, '#4aa83a');   /* Carl */
       if (s.mapBought && Math.floor(t * 3) % 2) { T('X', mx0 + s.goal.c * Z + Z / 2, my0 + s.goal.r * Z + Z / 2, '#e9665a', 6, 'center'); }   /* his napkin map */
-      const cx = mx0 + s.vx * Z, cy = my0 + s.vy * Z, a = s.va; g.fillStyle = '#f7c418'; g.beginPath(); g.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4); g.lineTo(cx + Math.cos(a + 2.4) * 3, cy + Math.sin(a + 2.4) * 3); g.lineTo(cx + Math.cos(a - 2.4) * 3, cy + Math.sin(a - 2.4) * 3); g.fill(); }
+      const cx = mx0 + s.vx * Z, cy = my0 + s.vy * Z, a = s.va; g.fillStyle = '#f7c418'; g.beginPath(); g.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4); g.lineTo(cx + Math.cos(a + 2.4) * 3, cy + Math.sin(a + 2.4) * 3); g.lineTo(cx + Math.cos(a - 2.4) * 3, cy + Math.sin(a - 2.4) * 3); g.fill(); g.restore(); }
     bevel(PX, 100, PW, 88);
     if (s.shop) { const W2 = this.wares(s); W2.forEach((o, i) => { const [x, y, w, h] = this.optBox(i, W2.length), on = i === s.shop.sel;
       R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); T(o.label, x + 5, y + h / 2 + 1, o.off ? '#5a5048' : on ? '#f7c418' : '#e8dcc0', 5); if (o.price) T(o.price + ' CRK', x + w - 4, y + h / 2 + 1, s.crk >= o.price && !o.off ? '#7bd65b' : '#8a5a50', 5, 'right'); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); }); }
-    else if (b && b.open <= 0 && !b.q.length) this.opts(s).forEach((o, i) => { const [x, y, w, h] = this.optBox(i), on = i === b.sel;
+    else if (b && b.open <= 0 && !b.q.length && !s.bag) this.opts(s).forEach((o, i, A) => { const [x, y, w, h] = this.optBox(i, A.length), on = i === b.sel;
       R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); R(x, y + h - 1, w, 1, '#120e09'); T(o.label, x + 6, y + h / 2 + 1, o.off ? '#5a5048' : on ? '#f7c418' : '#e8dcc0', 6); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); });
     else if (b) T(b.q.length ? '...' : '', PX + PW / 2, 144, '#8a7a60', 7, 'center');
     else { const stink = 1 - s.gd[s.pr][s.pc] / Math.max(1, s.gmax);
       T('STINK', PX + 8, 110, '#c9a46a', 6); BAR(PX + 8, 116, PW - 16, 6, stink, stink > 0.75 ? '#a0d040' : '#8a6a3a');
       if (stink > 0.75 && Math.floor(t * 3) % 2) T('SMELLS CLOSE', PX + PW / 2, 132, '#a0d040', 6, 'center');
-      T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PB CRACKERS x' + s.crk, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
+      T('B = BAG / REST', PX + 8, 138, '#9fd1ff', 5); T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PB CRACKERS x' + s.crk, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
     // bottom bar: the hero's portrait + health, and the message scroll
     bevel(10, 200, 56, 60);
     if (s.shop && MG('ut_carl_face')) { const S = s.shop, tw = Math.floor(t / 3.1) % 3 === 2 && (t % 3.1) < 0.18, f = tw ? 7 : S.flip != null && S.t > 1.1 ? S.flip : S.face;
