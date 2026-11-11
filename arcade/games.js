@@ -1233,6 +1233,11 @@ TRL.tex = (() => {   // little 32x32 textures, painted once
     return 0; });
   return { block, skirt, dirt, ceil, pipe: [pipe(0), pipe(1)] };
 })();
+TRL.faces = {};
+TRL.face = (who, hp) => { const F = TRL.faces, ld = n => { if (F[n] === undefined) { F[n] = null; const im = new Image(); im.onload = () => F[n] = im; im.onerror = () => { F[n] = false; }; im.src = '../assets/' + n + '.png'; } };
+  const n = who + (hp > 0.5 ? '_normal' : hp > 0.25 ? '_tired' : '_panic'); ld(who + '_normal');   /* the hero's real face, looking worse as he gets bitten */
+  if (F[n] === undefined) { F[n] = null; const im = new Image(); im.onload = () => F[n] = im; im.onerror = () => { F[n] = false; }; im.src = '../assets/' + n + '.png'; }
+  return F[n] || F[who + '_normal'] || null; };
 TRL.FOES = [
   { name: 'SEWER RAT', hp: [7, 10], atk: [2, 4], w: 6, sc: 1, pts: 50 },
   { name: "BIG OL' RAT", hp: [13, 17], atk: [3, 6], w: 3, sc: 1.5, pts: 120 },
@@ -1306,7 +1311,7 @@ GAMES.push({
     const b = s.battle, tap = I.Ap || I.ptr.clicked;
     if (b.open > 0) { b.open -= dt; return; }
     b.blink = Math.max(0, b.blink - dt); b.dmgT = Math.max(0, b.dmgT - dt);
-    if (b.q.length) { const m = b.q[0]; if (!m.t && m.fx) m.fx(); m.t += dt; if ((m.t > 0.25 && tap) || m.t > 1.6) { b.q.shift(); if (!b.q.length && b.after) { const a = b.after; b.after = null; a(); } } return; }
+    if (b.q.length) { const m = b.q[0]; if (!m.t && m.fx) m.fx(); m.t += dt; if ((m.t > 0.25 && tap) || m.t > 1.6) { (s.log = s.log || []).push(m.text.length > 44 ? m.text.slice(0, 43) + '…' : m.text); b.q.shift(); if (!b.q.length && b.after) { const a = b.after; b.after = null; a(); } } return; }
     const OPTS = this.opts(s);
     if (I.Up || I.Lp) b.sel = (b.sel + OPTS.length - 1) % OPTS.length; if (I.Dp || I.Rp) b.sel = (b.sel + 1) % OPTS.length;
     let pick = I.Ap ? b.sel : null;
@@ -1338,7 +1343,7 @@ GAMES.push({
     }
   },
   opts(s) { return [{ id: 'whack', label: 'WHACK' }, { id: 'light', label: `FLASHLIGHT x${s.lights}`, off: s.lights <= 0 }, { id: 'pb', label: `PEANUT BUTTER x${s.pb}`, off: s.pb <= 0 }, { id: 'run', label: 'RUN' }]; },
-  optBox(i) { return [16 + (i % 2) * 150, 214 + Math.floor(i / 2) * 22, 144, 20]; },
+  optBox(i) { return [340, 104 + i * 22, 130, 19]; },   /* the command buttons, down the right-hand panel */
   render(s) {   // the 3D view: raycast walls, cast floor + ceiling, then the broken joint as a sprite
     const { RW, RH, T: N } = TRL, buf = s.buf, zb = s.zb, tx = TRL.tex;
     const dx = Math.cos(s.va), dy = Math.sin(s.va), pl = 0.66, plx = -dy * pl, ply = dx * pl, px = s.vx, py = s.vy;
@@ -1371,48 +1376,69 @@ GAMES.push({
           for (let y = Math.max(0, y0); y < Math.min(RH, y0 + sh); y++) { const c = P[Math.min(N - 1, ((y - y0) * N / sh) | 0) * N + u]; if (c) buf[y * RW + x] = shade(c, Math.min(1, k * lightCol[x])); } } } }
     s.cx.putImageData(s.img, 0, 0);
   },
+  // Might & Magic style: the 3D view sits in a carved frame, with a side panel, the hero's portrait and a message scroll
+  frame() {
+    const st = (x, y, w, h) => { R(x, y, w, h, '#3b2f22'); for (let k = 0; k < 40; k++) R(x + (k * 53 % w), y + (k * 29 % h), 3, 2, k % 2 ? '#463829' : '#30261b'); };
+    const bevel = (x, y, w, h) => { R(x - 3, y - 3, w + 6, h + 6, '#c9a24a'); R(x - 2, y - 2, w + 4, h + 4, '#5a4420'); R(x - 1, y - 1, w + 2, h + 2, '#e8c86a'); R(x, y, w, h, '#0a0806');
+      for (const [cx, cy] of [[x - 3, y - 3], [x + w + 1, y - 3], [x - 3, y + h + 1], [x + w + 1, y + h + 1]]) { R(cx - 1, cy - 1, 4, 4, '#e8c86a'); R(cx, cy, 2, 2, '#7a5a20'); } };
+    st(0, 0, W, H); return bevel;
+  },
   draw(s) {
     this.render(s);
+    const bevel = this.frame(), VX = 10, VY = 10, VW = 316, VH = 178, b = s.battle, t = s.t;
+    bevel(VX, VY, VW, VH);
     const sh = s.shake > 0 ? (Math.random() - 0.5) * 6 * s.shake * 3 : 0;
-    g.imageSmoothingEnabled = false; g.drawImage(s.cv, sh, 0, W, H);
-    if (s.flash > 0) { g.fillStyle = `rgba(255,250,220,${s.flash})`; g.fillRect(0, 0, W, H); }
-    if (s.battle) return this.drawFight(s);
-    HUD(s, 'UNDER THE TRAILER', null);
-    // health + stink
-    T('HP', 8, 26, '#fff', 7); BAR(26, 22, 80, 7, s.hp / s.hpMax, s.hp / s.hpMax > 0.5 ? '#7bd65b' : s.hp / s.hpMax > 0.25 ? '#f7c418' : '#e9665a');
-    const stink = 1 - s.gd[s.pr][s.pc] / Math.max(1, s.gmax);
-    T('STINK', 8, 40, '#c9a46a', 7); BAR(48, 36, 58, 7, stink, stink > 0.75 ? '#a0d040' : '#8a6a3a');
-    if (stink > 0.75 && Math.floor(s.t * 3) % 2) T('SMELLS CLOSE...', 8, 54, '#a0d040', 6);
-    // the automap: only what you've crawled through
-    const Z = 5, mx0 = W - s.C * Z - 8, my0 = 22; R(mx0 - 3, my0 - 3, s.C * Z + 6, s.R * Z + 6, 'rgba(10,8,6,.7)');
-    for (const k of s.seen) { const c = k % 100, r = Math.floor(k / 100); R(mx0 + c * Z, my0 + r * Z, Z, Z, '#6a5a44');
-      for (const [ddx, ddy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (s.map[r + ddy][c + ddx] !== '.') R(mx0 + (c + ddx) * Z, my0 + (r + ddy) * Z, Z, Z, '#3a3a38'); }
-    { const cx = mx0 + s.vx * Z, cy = my0 + s.vy * Z, a = s.va; g.fillStyle = '#f7c418'; g.beginPath(); g.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4); g.lineTo(cx + Math.cos(a + 2.4) * 3, cy + Math.sin(a + 2.4) * 3); g.lineTo(cx + Math.cos(a - 2.4) * 3, cy + Math.sin(a - 2.4) * 3); g.fill(); }
-    if (s.steps < 2) T('▲ CRAWL   ◀ ▶ TURN   FOLLOW THE STINK', W / 2, H - 14, '#fff', 7, 'center');
-    if (s.fixT) { R(80, 100, 320, 60, 'rgba(16,21,31,.92)'); T(s.fixT < 1.2 ? 'THERE IT IS. THE DRIP.' : s.fixT < 2.2 ? 'FERNCO ON...' : 'CLAMPS TIGHT. DONE!', W / 2, 130, '#7bd65b', 9, 'center'); }
-    DRAWFX(s);
-  },
-  drawFight(s) {   // the battle screen: a dark box, the rat, and an old-school text window + menu
-    const b = s.battle, t = s.t;
-    if (b.open > 0) { const k = b.open / 0.6; for (let i = 0; i < 12; i++) R(0, i * 23, W * (1 - k) * (i % 2 ? 1 : 1.1), 23, '#000'); return; }   // the classic wipe
-    R(0, 0, W, H, 'rgba(0,0,0,.78)');
-    R(70, 24, 340, 170, '#0a0806'); g.strokeStyle = '#fff'; g.lineWidth = 2; g.strokeRect(71, 25, 338, 168);
-    const cx = 240, by = 170 + Math.sin(t * 3) * 2, blinkOff = b.blink > 0 && Math.floor(t * 20) % 2;
-    if (!blinkOff && b.hp > 0 || b.q.length) {
-      if (b.F.king) { for (const [ox, oy, f] of [[-34, -4, 0], [34, -4, 1], [0, 6, 0]]) { if (!SPI('rat_' + ((Math.floor(t * 4) + (ox > 0 ? 1 : 0)) % 2), cx + ox, by + oy, 2.0, ox > 0)) R(cx + ox - 20, by + oy - 20, 40, 20, '#6a5a4c'); }
-        g.fillStyle = '#f7c418'; g.beginPath(); const kx = cx - 2, ky = by - 70; g.moveTo(kx - 18, ky + 14); g.lineTo(kx - 18, ky); g.lineTo(kx - 9, ky + 8); g.lineTo(kx, ky - 4); g.lineTo(kx + 9, ky + 8); g.lineTo(kx + 18, ky); g.lineTo(kx + 18, ky + 14); g.fill(); C(kx, ky - 4, 2, '#e9665a'); }
-      else if (!SPI('rat_' + (Math.floor(t * 4) % 2), cx, by, 2.4 * b.F.sc, false)) R(cx - 30, by - 30, 60, 30, '#6a5a4c');
-      if (!blinkOff && b.stun > 0) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; T('*', cx + Math.cos(a) * 26, by - 64 + Math.sin(a) * 6, '#f7c418', 8, 'center'); }
+    g.save(); g.beginPath(); g.rect(VX, VY, VW, VH); g.clip();
+    g.imageSmoothingEnabled = false; g.drawImage(s.cv, VX + sh, VY, VW, VH);
+    if (b && b.open <= 0) {   // the rats stand right there in the corridor, like the old games
+      const cx = VX + VW / 2, by = VY + VH - 14 + Math.sin(t * 3) * 1.5, blinkOff = b.blink > 0 && Math.floor(t * 20) % 2;
+      g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(cx, by + 2, 70 * b.F.sc, 9, 0, 0, 7); g.fill();
+      if (!blinkOff && (b.hp > 0 || b.q.length)) {
+        if (b.F.king) { for (const [ox, oy] of [[-44, -6], [44, -6], [0, 4]]) if (!SPI('rat_' + ((Math.floor(t * 4) + (ox > 0 ? 1 : 0)) % 2), cx + ox, by + oy, 2.3, ox > 0)) R(cx + ox - 20, by + oy - 20, 40, 20, '#6a5a4c');
+          g.fillStyle = '#f7c418'; const kx = cx - 2, ky = by - 84; g.beginPath(); g.moveTo(kx - 20, ky + 16); g.lineTo(kx - 20, ky); g.lineTo(kx - 10, ky + 9); g.lineTo(kx, ky - 5); g.lineTo(kx + 10, ky + 9); g.lineTo(kx + 20, ky); g.lineTo(kx + 20, ky + 16); g.fill(); C(kx, ky - 5, 2.5, '#e9665a'); C(kx - 10, ky + 11, 1.5, '#2c6cd6'); C(kx + 10, ky + 11, 1.5, '#2c6cd6'); }
+        else if (!SPI('rat_' + (Math.floor(t * 4) % 2), cx, by, 2.8 * b.F.sc, false)) R(cx - 30, by - 30, 60, 30, '#6a5a4c');
+        if (b.stun > 0) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; T('*', cx + Math.cos(a) * 30, by - 70 + Math.sin(a) * 6, '#f7c418', 8, 'center'); }
+      }
+      if (b.dmgT > 0) T('-' + b.dmg, cx + 50, VY + 60 - (0.7 - b.dmgT) * 30, '#fff', 14, 'center');
+      // the monster's name plate along the top of the view
+      R(cx - 70, VY + 4, 140, 22, 'rgba(10,8,6,.8)'); T(b.F.name, cx, VY + 12, b.F.king ? '#f7c418' : '#fff', 7, 'center'); BAR(cx - 50, VY + 19, 100, 4, b.hp / b.max, '#e9665a');
     }
-    if (b.dmgT > 0) T('-' + b.dmg, cx + 40, 90 - (0.7 - b.dmgT) * 30, '#fff', 12, 'center');
-    T(b.F.name, cx, 38, b.F.king ? '#f7c418' : '#fff', 8, 'center'); BAR(cx - 50, 46, 100, 5, b.hp / b.max, '#e9665a');
-    // the window: message, or the menu
-    R(8, 200, W - 16, 64, '#0a0806'); g.strokeStyle = '#fff'; g.lineWidth = 2; g.strokeRect(9, 201, W - 18, 62);
-    T(`${HERO(s).name}  HP ${Math.max(0, s.hp)}/${s.hpMax}`, W - 20, 210, s.hp / s.hpMax > 0.3 ? '#fff' : '#e9665a', 6, 'right');
-    if (b.q.length) { const m = b.q[0], txt = m.text.slice(0, Math.floor(m.t * 60)); T(txt, 20, 228, '#fff', 8); if (m.t > 0.4 && Math.floor(t * 3) % 2) T('▼', W - 24, 252, '#fff', 7); }
-    else { this.opts(s).forEach((o, i) => { const [x, y, w, h] = this.optBox(i); if (i === b.sel) T('▶', x - 2, y + 10, '#f7c418', 8); T(o.label, x + 10, y + 10, o.off ? '#555' : i === b.sel ? '#f7c418' : '#fff', 7); }); }
+    if (b && b.open > 0) { const k = b.open / 0.6; for (let i = 0; i < 9; i++) R(VX, VY + i * 20, VW * (1 - k), 20, '#000'); }   // the screen wipe into the fight
+    if (s.flash > 0) { g.fillStyle = `rgba(255,250,220,${s.flash})`; g.fillRect(VX, VY, VW, VH); }
+    if (s.fixT) { R(VX + 20, VY + 70, VW - 40, 40, 'rgba(10,8,6,.85)'); T(s.fixT < 1.2 ? 'THERE IT IS. THE DRIP.' : s.fixT < 2.2 ? 'FERNCO ON...' : 'CLAMPS TIGHT. DONE!', VX + VW / 2, VY + 90, '#7bd65b', 9, 'center'); }
+    g.restore();
+    // side panel: title, map + compass up top; commands in a fight, stink otherwise
+    const PX = 338, PW = 134; bevel(PX, 10, PW, 82);
+    T('UNDER THE', PX + PW / 2, 18, '#e8c86a', 6, 'center'); T('TRAILER', PX + PW / 2, 27, '#e8c86a', 6, 'center');
+    { const Z = Math.min(5, Math.floor(56 / Math.max(s.C, s.R))), mw = s.C * Z, mh = s.R * Z, mx0 = PX + (PW - mw) / 2, my0 = 34 + (54 - mh) / 2;   // automap: only where you've been
+      R(mx0 - 1, my0 - 1, mw + 2, mh + 2, '#16110b');
+      for (const k of s.seen) { const c = k % 100, r = Math.floor(k / 100); R(mx0 + c * Z, my0 + r * Z, Z, Z, '#7a6a50');
+        for (const [ddx, ddy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (s.map[r + ddy][c + ddx] !== '.') R(mx0 + (c + ddx) * Z, my0 + (r + ddy) * Z, Z, Z, '#3e3a34'); }
+      const cx = mx0 + s.vx * Z, cy = my0 + s.vy * Z, a = s.va; g.fillStyle = '#f7c418'; g.beginPath(); g.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4); g.lineTo(cx + Math.cos(a + 2.4) * 3, cy + Math.sin(a + 2.4) * 3); g.lineTo(cx + Math.cos(a - 2.4) * 3, cy + Math.sin(a - 2.4) * 3); g.fill(); }
+    bevel(PX, 100, PW, 88);
+    if (b && b.open <= 0 && !b.q.length) this.opts(s).forEach((o, i) => { const [x, y, w, h] = this.optBox(i), on = i === b.sel;
+      R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); R(x, y + h - 1, w, 1, '#120e09'); T(o.label, x + 6, y + h / 2 + 1, o.off ? '#5a5048' : on ? '#f7c418' : '#e8dcc0', 6); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); });
+    else if (b) T(b.q.length ? '...' : '', PX + PW / 2, 144, '#8a7a60', 7, 'center');
+    else { const stink = 1 - s.gd[s.pr][s.pc] / Math.max(1, s.gmax);
+      T('STINK', PX + 8, 110, '#c9a46a', 6); BAR(PX + 8, 116, PW - 16, 6, stink, stink > 0.75 ? '#a0d040' : '#8a6a3a');
+      if (stink > 0.75 && Math.floor(t * 3) % 2) T('SMELLS CLOSE', PX + PW / 2, 132, '#a0d040', 6, 'center');
+      T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PEANUT BUTTER x' + s.pb, PX + 8, 162, '#e8dcc0', 6); T('RATS RUN OFF: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
+    // bottom bar: the hero's portrait + health, and the message scroll
+    bevel(10, 200, 56, 60);
+    { const H = HERO(s), im = TRL.face(H.name === 'ROD' ? 'rod' : 'matt', s.hp / s.hpMax); if (im) { g.imageSmoothingEnabled = true; g.drawImage(im, 10, 200, 56, 60); g.imageSmoothingEnabled = false; } else R(10, 200, 56, 60, '#2a2a36');
+      if (s.shake > 0.2) { g.fillStyle = 'rgba(233,102,90,.45)'; g.fillRect(10, 200, 56, 60); } }
+    bevel(74, 200, 92, 60);
+    T(HERO(s).name, 80, 210, '#e8c86a', 7); T('HP', 80, 226, '#fff', 6); BAR(96, 222, 64, 7, s.hp / s.hpMax, s.hp / s.hpMax > 0.5 ? '#7bd65b' : s.hp / s.hpMax > 0.25 ? '#f7c418' : '#e9665a');
+    T(`${Math.max(0, s.hp)} / ${s.hpMax}`, 160, 240, '#e8dcc0', 6, 'right'); T(s.hp / s.hpMax > 0.5 ? 'GOOD' : s.hp / s.hpMax > 0.25 ? 'BITTEN' : 'BAD SHAPE', 80, 252, s.hp / s.hpMax > 0.5 ? '#7bd65b' : '#e9665a', 6);
+    bevel(174, 200, 298, 60);
+    { const log = s.log || (s.log = []);
+      if (b && b.q.length) { const m = b.q[0], txt = m.text.slice(0, Math.floor(m.t * 60)); log.slice(-1).forEach(l => T(l, 180, 214, '#7a6a50', 6)); { const wr = []; let ln = ''; for (const w of txt.split(' ')) { if ((ln + w).length > 44) { wr.push(ln.trim()); ln = ''; } ln += w + ' '; } wr.push(ln.trim()); wr.slice(0, 2).forEach((l, i) => T(l, 180, 236 + i * 12, '#fff', 6)); }   /* wrapped to fit the scroll */ if (m.t > 0.4 && Math.floor(t * 3) % 2) T('▼', 464, 252, '#e8c86a', 6, 'right'); }
+      else if (b) { log.slice(-3).forEach((l, i) => T(l, 180, 214 + i * 13, i === 2 ? '#e8dcc0' : '#7a6a50', 6)); }
+      else if (s.steps < 2) { T('▲ CRAWL   ▼ BACK   ◀ ▶ TURN', 180, 214, '#e8dcc0', 6); T('Follow your nose. The STINK meter', 180, 230, '#7a6a50', 6); T('tells you when you are close.', 180, 242, '#7a6a50', 6); }
+      else log.slice(-3).forEach((l, i) => T(l, 180, 214 + i * 13, i === 2 ? '#e8dcc0' : '#7a6a50', 6)); }
     DRAWFX(s);
   },
+
 });
 
 // =====================================================================
