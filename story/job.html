@@ -17,12 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794420586"></script>
-<script src="../js/calls.js?v=1794420586"></script>
-<script src="../js/banter.js?v=1794420586"></script>
-<script src="../js/placeholders.js?v=1794420586"></script>
-<script src="../js/music.js?v=1794420586"></script>
-<script src="../js/sfx.js?v=1794420586"></script>
+<script src="../js/state.js?v=1794424919"></script>
+<script src="../js/calls.js?v=1794424919"></script>
+<script src="../js/banter.js?v=1794424919"></script>
+<script src="../js/placeholders.js?v=1794424919"></script>
+<script src="../js/music.js?v=1794424919"></script>
+<script src="../js/sfx.js?v=1794424919"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -467,7 +467,7 @@ SCENES.work = async () => {
 SCENES.after = async () => {
   let mg = null; try { mg = JSON.parse(localStorage.getItem('ddt_mg')); } catch (e) {}
   mg = mg || { win: true, stars: 2 };
-  JS.win = mg.win; JS.stars = mg.stars; saveJS();
+  JS.win = mg.win; JS.stars = mg.stars; JS.carl = !!mg.carl; saveJS();   /* carl: got run out of the crawlspace, the other guy fixed it */
   st.happy = mg.win;
   view = () => { interior(JOB.room, JOB.cust.seed, MONTH, roomArtFor(JOB)); cast(st.happy ? 'happy' : 'upset'); };
   IMG.cust = custPortrait(JOB.cust.seed, mg.win ? 'happy' : 'upset');
@@ -497,8 +497,8 @@ SCENES.payday = async () => {
   const parts = JS.partBill || 0;
   const gearBonus = gearPay(SAVE);   /* the more equipment you run, the bigger the jobs you can take on */
   const pay = broke ? 0 : Math.round((JOB.pay * 1.15 * (REPEAT ? 0.8 : 1) * (0.7 + 0.1 * stars) + (JS.toolRight ? 25 : 0)) * repBonus * gearBonus) + parts;   // jobs pay 15% more than the base rates
-  const rep = broke ? -3 : 1 + (stars === 3 ? 1 : 0) + (JS.toolRight ? 1 : 0) + (JOB.story && !REPEAT ? 2 : 0) + (JS.partBonus ? 1 : 0) - (JS.retries || 0);
-  const hp = broke ? -10 : win ? -5 : -10, sta = -20;   // a job takes it out of you; only food and rest bring it back
+  const rep = JS.carl ? 0 : broke ? -3 : 1 + (stars === 3 ? 1 : 0) + (JS.toolRight ? 1 : 0) + (JOB.story && !REPEAT ? 2 : 0) + (JS.partBonus ? 1 : 0) - (JS.retries || 0);
+  const hp = broke ? -10 : JS.carl ? -10 : win ? -5 : -10, sta = JS.carl ? -40 : -20;   /* nobody believes you, and it took everything out of you */   // a job takes it out of you; only food and rest bring it back
   if (!JS.paid) {
     DDT.apply({ money: pay, rep, health: hp, stamina: sta, time: 75, note: `${JOB.title}: ${JOB.tip}` }); JS.paid = true; saveJS();
     { const sv = DDT.get(), T = sv.stats = sv.stats || {}; T.jobs = (T.jobs || 0) + 1; T.earned = (T.earned || 0) + pay; if (stars === 3) T.perfect = (T.perfect || 0) + 1; if (!win) T.botched = (T.botched || 0) + 1; T.best = Math.max(T.best || 0, pay);
@@ -513,7 +513,7 @@ SCENES.payday = async () => {
     T(JOB.title, 240, 70, '#fff', 6, 'center');
     const rows = [[broke ? 'NOT FIXED' : JS.retries ? `FIXED (TRY ${JS.retries + 1})` : 'FIXED', broke ? '#e9665a' : '#7dffb0'], [broke ? 'NO CHARGE' : `${'*'.repeat(stars)}${'-'.repeat(3 - stars)}`, '#f7c418'],
       [`+$${pay}` + (parts ? `  (INCL. $${parts} PARTS)` : '') + (repBonus !== 1 && !broke ? `  REP ${repBonus > 1 ? '+' : ''}${Math.round((repBonus - 1) * 100)}%` : '') + (gearBonus > 1 && !broke ? `  GEAR +${Math.round((gearBonus - 1) * 100)}%` : ''), '#7dffb0'], [`${rep >= 0 ? '+' : ''}${rep} REPUTATION`, rep >= 0 ? '#7dffb0' : '#e9665a'],
-      [`${hp} HEALTH · ${sta} STAMINA`, '#9fb3d9'], [JS.toolRight ? 'RIGHT GEAR FIRST TRY' : 'WRONG GEAR FIRST', JS.toolRight ? '#7dffb0' : '#e9665a']];
+      [`${hp} HEALTH · ${sta} STAMINA`, '#9fb3d9'], JS.carl ? ['NO REP: NOBODY BELIEVES YOU', '#e9665a'] : [JS.toolRight ? 'RIGHT GEAR FIRST TRY' : 'WRONG GEAR FIRST', JS.toolRight ? '#7dffb0' : '#e9665a']];
     const r0 = SAVE.rep || 0, r1 = r0 + rep, b1 = Math.max(-2, Math.min(10, Math.floor(r1 / 10)));   // every 10 reputation = +5% on every job
     if (Math.floor(r1 / 10) !== Math.floor(r0 / 10)) rows.splice(4, 0, [r1 > r0 ? `REP ${Math.floor(r1 / 10) * 10}! JOBS NOW PAY ${b1 >= 0 ? '+' : ''}${b1 * 5}%` : `REP DOWN: JOBS NOW PAY ${b1 >= 0 ? '+' : ''}${b1 * 5}%`, r1 > r0 ? '#f7c418' : '#e9665a']);
     rows.forEach(([t, c], i) => T(t, 240, 86 + i * 12, c, 6, 'center'));
@@ -522,15 +522,17 @@ SCENES.payday = async () => {
   };
   await fadeIn(400); SND.ding();
   await cancellable(res => { st.waitTap = res; });
-  if (typeof JOB_WIN !== 'undefined' && Math.random() < 0.5) await talk(broke ? JOB_LOSS : JOB_WIN, broke ? 'lossUsed' : 'winUsed');   /* a word between the boys on the way out */
+  if (typeof JOB_WIN !== 'undefined' && !JS.carl && Math.random() < 0.5) await talk(broke ? JOB_LOSS : JOB_WIN, broke ? 'lossUsed' : 'winUsed');   /* a word between the boys on the way out */
   // and then, sometimes, the review comes in. It's about Ron. It's always about Ron.
   const dayKey = `${SAVE.month}-${SAVE.day || 0}`, revSv = DDT.get();
-  if (!(broke || JS.gotName || (Math.random() < 0.3 && revSv.ronReviewDay !== dayKey))) { try { localStorage.removeItem('ddt_job'); } catch (e) {} return; }
-  const rs = broke ? 1 : JS.retries ? 3 : stars >= 2 ? 5 : 4, rtext = broke ? "Still clogged. Ron said he'd make it right. RON, CALL ME BACK." : pickOne(RON_REVIEWS);
+  if (!(broke || JS.carl || JS.gotName || (Math.random() < 0.3 && revSv.ronReviewDay !== dayKey))) { try { localStorage.removeItem('ddt_job'); } catch (e) {} return; }
+  const rs = JS.carl ? 3 : broke ? 1 : JS.retries ? 3 : stars >= 2 ? 5 : 4, rtext = JS.carl ? 'That "plumber" created an elaborate story about a guy who lives under my trailer. 3 stars, only 3 because the other guy went and did the job. Thanks Ron!' : broke ? "Still clogged. Ron said he'd make it right. RON, CALL ME BACK." : pickOne(RON_REVIEWS);
   revSv.ronReviewDay = dayKey; DDT.save(revSv);   // at most one Ron review a day
   view = () => { R(0, 0, W, H, '#0e1118'); reviewCard(rs, JOB.cust.name, rtext); };
   SND.blip(); await wait(700);
-  if (JS.gotName) { await say('ROD', 'rod_angry', `BUT ${JOB.cust.name} REPEATED MY NAME!?`); await say('MATT', 'matt_stare', '...Ron strikes again.'); }
+  if (JS.carl) { const lead = (SAVE.today && SAVE.today.lead) || 'rod', me = lead === 'rod' ? 'ROD' : 'MATT', them = me === 'ROD' ? 'MATT' : 'ROD';
+    await say(me, me === 'ROD' ? 'rod_stare' : 'matt_stare', '...Carl is real.'); await say(them, them === 'ROD' ? 'rod_annoyed' : 'matt_stare', pickOne(['Get in the van.', 'And now Ron gets the credit.', 'Ron did it. Apparently.'])); }
+  else if (JS.gotName) { await say('ROD', 'rod_angry', `BUT ${JOB.cust.name} REPEATED MY NAME!?`); await say('MATT', 'matt_stare', '...Ron strikes again.'); }
   else if (broke) await say('MATT', 'matt_stare', '...Even our one-star reviews go to Ron.');
   else { const [who, port, line] = pickOne(RON_REACT); await say(who, port, line); }
   try { localStorage.removeItem('ddt_job'); } catch (e) {}
