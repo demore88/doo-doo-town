@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794367522"></script>
-<script src="../js/calls.js?v=1794367522"></script>
-<script src="../js/placeholders.js?v=1794367522"></script>
-<script src="../js/music.js?v=1794367522"></script>
-<script src="../js/sfx.js?v=1794367522"></script>
+<script src="../js/state.js?v=1794372289"></script>
+<script src="../js/calls.js?v=1794372289"></script>
+<script src="../js/placeholders.js?v=1794372289"></script>
+<script src="../js/music.js?v=1794372289"></script>
+<script src="../js/sfx.js?v=1794372289"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -488,7 +488,8 @@ SCENES.payday = async () => {
   const win = JS.win !== false, stars = JS.stars ?? 2, broke = !!JS.notFixed;
   const repBonus = 1 + Math.max(-2, Math.min(10, Math.floor((SAVE.rep || 0) / 10))) * 0.05;   // every 10 reputation = 5% more per job (up to +50%)
   const parts = JS.partBill || 0;
-  const pay = broke ? 0 : Math.round((JOB.pay * 1.15 * (REPEAT ? 0.8 : 1) * (0.7 + 0.1 * stars) + (JS.toolRight ? 25 : 0)) * repBonus) + parts;   // jobs pay 15% more than the base rates
+  const gearBonus = gearPay(SAVE);   /* the more equipment you run, the bigger the jobs you can take on */
+  const pay = broke ? 0 : Math.round((JOB.pay * 1.15 * (REPEAT ? 0.8 : 1) * (0.7 + 0.1 * stars) + (JS.toolRight ? 25 : 0)) * repBonus * gearBonus) + parts;   // jobs pay 15% more than the base rates
   const rep = broke ? -3 : 1 + (stars === 3 ? 1 : 0) + (JS.toolRight ? 1 : 0) + (JOB.story && !REPEAT ? 2 : 0) + (JS.partBonus ? 1 : 0) - (JS.retries || 0);
   const hp = broke ? -10 : win ? -5 : -10, sta = -20;   // a job takes it out of you; only food and rest bring it back
   if (!JS.paid) {
@@ -504,7 +505,7 @@ SCENES.payday = async () => {
     T(broke ? 'JOB NOT DONE' : JOB.story ? 'STORY JOB COMPLETE' : 'JOB COMPLETE', 240, 50, broke ? '#e9665a' : '#f7c418', 9, 'center');
     T(JOB.title, 240, 70, '#fff', 6, 'center');
     const rows = [[broke ? 'NOT FIXED' : JS.retries ? `FIXED (TRY ${JS.retries + 1})` : 'FIXED', broke ? '#e9665a' : '#7dffb0'], [broke ? 'NO CHARGE' : `${'*'.repeat(stars)}${'-'.repeat(3 - stars)}`, '#f7c418'],
-      [`+$${pay}` + (parts ? `  (INCL. $${parts} PARTS)` : '') + (repBonus !== 1 && !broke ? `  REP ${repBonus > 1 ? '+' : ''}${Math.round((repBonus - 1) * 100)}%` : ''), '#7dffb0'], [`${rep >= 0 ? '+' : ''}${rep} REPUTATION`, rep >= 0 ? '#7dffb0' : '#e9665a'],
+      [`+$${pay}` + (parts ? `  (INCL. $${parts} PARTS)` : '') + (repBonus !== 1 && !broke ? `  REP ${repBonus > 1 ? '+' : ''}${Math.round((repBonus - 1) * 100)}%` : '') + (gearBonus > 1 && !broke ? `  GEAR +${Math.round((gearBonus - 1) * 100)}%` : ''), '#7dffb0'], [`${rep >= 0 ? '+' : ''}${rep} REPUTATION`, rep >= 0 ? '#7dffb0' : '#e9665a'],
       [`${hp} HEALTH · ${sta} STAMINA`, '#9fb3d9'], [JS.toolRight ? 'RIGHT GEAR FIRST TRY' : 'WRONG GEAR FIRST', JS.toolRight ? '#7dffb0' : '#e9665a']];
     const r0 = SAVE.rep || 0, r1 = r0 + rep, b1 = Math.max(-2, Math.min(10, Math.floor(r1 / 10)));   // every 10 reputation = +5% on every job
     if (Math.floor(r1 / 10) !== Math.floor(r0 / 10)) rows.splice(4, 0, [r1 > r0 ? `REP ${Math.floor(r1 / 10) * 10}! JOBS NOW PAY ${b1 >= 0 ? '+' : ''}${b1 * 5}%` : `REP DOWN: JOBS NOW PAY ${b1 >= 0 ? '+' : ''}${b1 * 5}%`, r1 > r0 ? '#f7c418' : '#e9665a']);

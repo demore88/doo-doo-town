@@ -43,6 +43,7 @@ function custPick(seed) {
 const _cbuild = {};
 function customer(x, y, seed, s = 2, mood = 'normal') {
   { const P = custPick(seed), im = custImg(P.i);
+    if (!im && !customer.giveUp) { customer.wait = (customer.wait || 0) + 1; if (customer.wait < 1200) return; customer.giveUp = true; }   /* the art is still loading: draw nothing rather than the old blocky stand-in */
     if (im) {   // the drawn homeowner
       const B = _cbuild[seed] || (_cbuild[seed] = custBuild(seed)), now = performance.now(), t = now / 1000, q = s / 2;
       const mv = CUST_MV[seed] || (CUST_MV[seed] = { x, mv: 0, dir: 1 }); if (Math.abs(x - mv.x) > 0.05) { mv.mv = now; mv.dir = x > mv.x ? 1 : -1; } mv.x = x;
@@ -157,8 +158,9 @@ function custPortrait(seed, mood = 'normal') {
   if (L.glasses) { k.strokeStyle = '#222'; k.lineWidth = 1; k.strokeRect(13.5, 16.5, 6, 5); k.strokeRect(20.5, 16.5, 6, 5); }
   r(19, 20, 2, 3, '#00000022');
   const big = document.createElement('canvas'); big.width = big.height = 80; const b = big.getContext('2d'); b.imageSmoothingEnabled = false; b.drawImage(c, 0, 0, 80, 80);
-  _ports[key] = big; let tries = 0; const poll = () => { const f = custImg(P.i, true); if (f) paint(big, f); else if (++tries < 40) setTimeout(poll, 150); }; poll();   /* the drawn face paints over this one as soon as it loads */
-  return big;
+  const blank = document.createElement('canvas'); blank.width = blank.height = 80; { const k2 = blank.getContext('2d'), gr = k2.createLinearGradient(0, 0, 0, 80); gr.addColorStop(0, '#34405a'); gr.addColorStop(1, '#1e2638'); k2.fillStyle = gr; k2.fillRect(0, 0, 80, 80); }
+  _ports[key] = blank; let tries = 0; const poll = () => { const f = custImg(P.i, true); if (f) paint(blank, f); else if (++tries < 60) setTimeout(poll, 100); else blank.getContext('2d').drawImage(big, 0, 0); }; poll();   /* an empty frame until the drawn face loads; the old face only if it never does */
+  return blank;
 }
 
 // ---------- art loaded on demand (portraits like ron_smug.png) ----------

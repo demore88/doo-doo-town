@@ -439,6 +439,9 @@ const FITTINGS = [
 ];   // FITTINGS[row][col + 1] names the cell at (col, row)
 
 // ---------- Fernko's Supply ----------
+// better gear = bigger jobs: every major piece of equipment you own adds to what a job pays (up to about +40%)
+function gearPts(s) { const v = (s && s.inv) || {}; return (v.heads ? 1 : 0) + (v.ppe ? 1 : 0) + (v.camera ? 2 : 0) + (v.jetter ? 2 : 0) + (v.waders || v.muckboots ? 0.5 : 0); }
+function gearPay(s) { return 1 + 0.06 * gearPts(s); }
 const SHOP = [
   // parts: used up on jobs that need them, billed to the customer at 3x
   { id: 'fernco125', name: '1-1/4" FERNCO', price: 12, kind: 'part', desc: "Rubber coupling for small drains. BENEFIT on jobs that need it: billed back at 3x, +1 rep, and the job is a level easier.", icon: [0, 0] },

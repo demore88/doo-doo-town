@@ -86,10 +86,14 @@ function drive3d(choice, opts) {
   }
   const FROM = (opts.from || 'BERLIN').toUpperCase(), TO = (opts.to || 'RANDOLPH').toUpperCase();
   let LEGS_HERE = routeLegs(FROM, TO);
+  if (opts.endless) {   /* the Driving Game: wander the real roads leg after leg, as far as you can get */
+    LEGS_HERE = []; let at = 'BERLIN', last = null, mi = 0;
+    while (mi < 220) { const opt = LEGS.filter(L => (L.a === at || L.b === at) && L !== last), L = opt[Math.floor(Math.random() * opt.length)] || LEGS[0], rev = L.a !== at;
+      LEGS_HERE.push({ ...L, rev }); mi += L.mi; at = rev ? L.a : L.b; last = L; } }
   if (!LEGS_HERE || !LEGS_HERE.length) LEGS_HERE = [{ rt: (opts.route || 'Route 16').toUpperCase().replace('ROUTE', 'RT'), name: '', mi: 12, curve: 3.5, hill: 700, heave: 0.2, busy: 1, scene: [] }];
   const TOTAL_MI = LEGS_HERE.reduce((a, L) => a + L.mi, 0);
   const RACE = !!opts.rival;   // racing the Clog Kings: a long open-road run, about two minutes flat out
-  const SEG_PER_MI = RACE ? (125 * TOP * 0.88 / SEG) / TOTAL_MI : Math.max(48, Math.min(110, 1450 / TOTAL_MI));            // short hops still feel like a drive; long hauls don't drag forever
+  const SEG_PER_MI = RACE ? (125 * TOP * 0.88 / SEG) / TOTAL_MI : opts.endless ? 40 : Math.max(48, Math.min(110, 1450 / TOTAL_MI));            // short hops still feel like a drive; long hauls don't drag forever
   const legAt = [];   // which leg each segment belongs to
   add(40, 0, 0); for (let i = 0; i < 40; i++) legAt.push(0);
   LEGS_HERE.forEach((L, li) => {
@@ -452,7 +456,10 @@ function drive3d(choice, opts) {
       inv = Math.max(0, inv - dt); msgT = Math.max(0, msgT - dt); shake = Math.max(0, shake - dt);
       if (window.DRV && DRV.src) DRV.src.playbackRate.value = 0.7 + 0.6 * ratio;
       draw(gas, brake, steer);
-      if (pos >= (N - 40) * SEG) {
+      if (opts.endless) { const mi = pos / SEG / SEG_PER_MI; if (crashes >= 3 || pos >= (N - 40) * SEG) { done = true; removeEventListener('keydown', kd); removeEventListener('keyup', ku); rc.onpointerdown = rc.onpointerup = rc.onpointermove = rc.onpointercancel = null;
+          say(crashes >= 3 ? 'THREE STRIKES. PULL OVER.' : 'YOU DROVE OFF THE MAP!', 2.5); draw(false, true, 0); if (rainSnd) { rainSnd.stop(); rainSnd = null; }
+          setTimeout(() => { rc.style.display = 'none'; res({ crashes, mins: 0, miles: mi }); }, 1400); return; } }   /* the Driving Game: three crashes and you're done */
+      if (!opts.endless && pos >= (N - 40) * SEG) {
         done = true; removeEventListener('keydown', kd); removeEventListener('keyup', ku); rc.onpointerdown = rc.onpointerup = rc.onpointermove = rc.onpointercancel = null;
         const mins = Math.round(opts.leave + play * MIN_PER_S + penalty);
         say('MADE IT!', 2); draw(false, true, 0);
@@ -616,6 +623,7 @@ function drive3d(choice, opts) {
       const mph = Math.round(speed / MPH);
       r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(W - 78, 26, 72, 18); r.fillStyle = speed > TOP * 0.97 ? '#f7c418' : '#7bd65b'; r.textAlign = 'right'; r.fillText(mph + ' MPH', W - 10, 35); r.textAlign = 'left';
       if (crashes) { r.fillStyle = '#e9665a'; r.textAlign = 'right'; r.fillText('CRASHES ' + crashes, W - 6, 52); r.textAlign = 'left'; }
+      if (opts.endless) { r.fillStyle = '#7dffb0'; r.textAlign = 'center'; r.fillText(`${(pos / SEG / SEG_PER_MI).toFixed(1)} MI   STRIKES ${'X'.repeat(Math.min(3, crashes))}${'-'.repeat(Math.max(0, 3 - crashes))}`, W / 2, 52); r.textAlign = 'left'; }   /* the Driving Game score */
       // phone buttons (also show what the keys do)
       if (true) {   // brake in both corners, gas = both thumbs (keyboard: ▲)
         r.fillStyle = brake ? 'rgba(233,102,90,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40); r.fillRect(W - 96, H - 46, 92, 40);

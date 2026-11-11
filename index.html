@@ -137,6 +137,7 @@
       <button class="btn" data-a="new">NEW GAME</button>
       <button class="btn" data-a="arcade">MINI-GAMES</button>
       <button class="btn" data-a="superron">SUPER RON</button>
+      <button class="btn" data-a="drivegame">DRIVING GAME<span id="bestdrive" style="display:block;font-size:.55em;color:#7dffb0;margin-top:3px"></span></button>
       <button class="btn" data-a="how">HOW TO PLAY</button>
       <button class="btn" data-a="credits">CREDITS</button>
       <button class="btn dev" data-a="scenes">CUTSCENES (DEV)</button>
@@ -183,10 +184,10 @@
 
 <audio id="music" src="assets/doo_doo_town.mp3" loop preload="auto"></audio>
 <audio id="call" src="assets/call_fluffernutter.mp3" preload="auto"></audio>
-<script src="js/state.js?v=1794367522"></script>
-<script src="js/sfx.js?v=1794367522"></script>
-<script src="js/drive3d.js?v=1794367522"></script>
-<script src="js/music.js?v=1794367522"></script>
+<script src="js/state.js?v=1794372289"></script>
+<script src="js/sfx.js?v=1794372289"></script>
+<script src="js/drive3d.js?v=1794372289"></script>
+<script src="js/music.js?v=1794372289"></script>
 <script>
 const W = 480, H = 270, LOOP_W = 6688;           // strip loop width at 270px tall
 const cv = document.getElementById('c'), g = cv.getContext('2d');
@@ -287,6 +288,7 @@ document.querySelectorAll('#menu .btn').forEach(b => b.onclick = () => {
   }
   if (a === 'continue') { DDT.nav('play.html'); return; }
   if (a === 'arcade') { DDT.nav('arcade/index.html'); return; }
+  if (a === 'drivegame') { DDT.nav('index.html?drive=1&endless=1&from=BERLIN&to=CONWAY&route=' + encodeURIComponent('Route 16') + '&leave=420&due=1200&mode=1&ret=index.html'); return; }   // drive the real roads until your third crash
   if (a === 'superron') { DDT.nav('arcade/index.html?play=superron&diff=1&solo=1&ret=index.html'); return; }   // Ron's own platformer, playable on its own
   if (a === 'how') showPanel(`<h3>HOW TO PLAY</h3>
     Run the truck for a full year of real North Country calls.<br>
@@ -737,6 +739,7 @@ function vanBackground() {
 
 // dev-only: the CUTSCENES list
 if (!DDT.DEV) { const b = document.querySelector('[data-a="scenes"]'); if (b) b.style.display = 'none'; }
+{ let best = 0; try { best = +localStorage.getItem('ddt_best_drive') || 0; } catch (e) {} const el = document.getElementById('bestdrive'); if (el) el.textContent = best ? `LONGEST DRIVE: ${best.toFixed(1)} MI` : 'HOW FAR CAN YOU GET?'; }   // your longest drive, right under the button
 
 // ---------- campaign embeds ----------
 if (DDT.load()) { const s = DDT.load(); $('#contbtn').style.display = ''; $('#contbtn').textContent = `CONTINUE · ${(s.month < 12 ? ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][s.month] : 'DONE')}`; }
@@ -757,9 +760,13 @@ async function embedDrive() {
     ['TAKE IT SLOW AND STEADY', 'DRIVE LIKE NORMAL', 'FOOT ON THE GAS']);
   if (soundOn) DDTMusic.radioOn('van');   // the van radio keeps playing the same song it was on
   DDTSfx.play('engine_start', { vol: 0.7 }); window.DRV = DDTSfx.loop('van_drive_loop');
-  const ARC = DDT.param('arcade') === '1';   // the Clog Kings race, played from the mini-game menu: no money, rep or record changes
-  const r = await drive3d(c, { arcade: ARC, leave: LEAVE, due: DUE, from: typeof from !== 'undefined' ? from : 'BERLIN', to: typeof to !== 'undefined' ? to : 'RANDOLPH', route: typeof route !== 'undefined' ? route : 'Route 2', clock, rival: DDT.param('rival') === '1' });
+  const END = DDT.param('endless') === '1', ARC = DDT.param('arcade') === '1' || END;   // the Clog Kings race or the Driving Game, played from a menu: no money, rep or record changes
+  const r = await drive3d(c, { endless: END, arcade: ARC, leave: LEAVE, due: DUE, from: typeof from !== 'undefined' ? from : 'BERLIN', to: typeof to !== 'undefined' ? to : 'RANDOLPH', route: typeof route !== 'undefined' ? route : 'Route 2', clock, rival: DDT.param('rival') === '1' });
   DRV.stop(); DDTMusic.handoff();   /* hand the radio to the next screen (in the app it just keeps playing) */
+  if (END) { const mi = r.miles || 0; let best = 0; try { best = +localStorage.getItem('ddt_best_drive') || 0; if (mi > best) localStorage.setItem('ddt_best_drive', mi.toFixed(1)); } catch (e) {}
+    $('#card').innerHTML = `${mi > best ? '<span style="color:#7dffb0">NEW LONGEST DRIVE!</span><br>' : ''}${mi.toFixed(1)} MILES<br><span style="color:#9fb3d9">BEST ${Math.max(mi, best).toFixed(1)} MI</span>`;
+    $('#card').style.opacity = 1; await new Promise(res => setTimeout(res, 900)); await new Promise(res => { const f = () => { removeEventListener('pointerdown', f, true); res(); }; addEventListener('pointerdown', f, true); setTimeout(f, 6000); });
+    DDT.nav(DDT.back('index.html')); return; }
   if (ARC) { const won = !r.rivalWon; try { const k = 'ddt_race_' + (won ? 'wins' : 'losses'); localStorage.setItem(k, (+localStorage.getItem(k) || 0) + 1); } catch (e) {}
     $('#card').innerHTML = won ? `<span style="color:#7dffb0">YOU BEAT THE CLOG KINGS!</span><br>${r.crashes ? r.crashes + ' CRASH' + (r.crashes > 1 ? 'ES' : '') : 'CLEAN RUN'}` : `<span style="color:#e9665a">THE CLOG KINGS GOT THERE FIRST</span><br>TAP TO GO BACK`;
     $('#card').style.opacity = 1; await new Promise(res => setTimeout(res, 900)); await new Promise(res => { const f = () => { removeEventListener('pointerdown', f, true); res(); }; addEventListener('pointerdown', f, true); setTimeout(f, 6000); });
