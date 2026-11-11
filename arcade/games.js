@@ -1304,6 +1304,7 @@ GAMES.push({
     s.t += dt; FX(s, dt); s.flash = Math.max(0, s.flash - dt); s.shake = Math.max(0, (s.shake || 0) - dt);
     if (s.fixT) { s.fixT += dt * (s.fixT > 3.4 && (I.Ap || I.ptr.clicked) ? 6 : 1); if (s.fixT > 9.4) { const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.t < 50 + s.gmax * 2, f >= 0.3), line: s.epi[1] }); } return; }
     if (!s.battle) { TRL.music.atick = performance.now(); TRL.amb(true); } else TRL.amb(false);
+    if (s.talk) { const K = s.talk; K.t += dt; if ((K.t > 0.4 && (I.Ap || I.ptr.clicked)) || K.t > 4.5) { K.i++; K.t = 0; if (K.i >= K.lines.length) { const me = HERO(s).name, them = me === 'ROD' ? 'Matt' : 'Rod'; s.talk.i = K.lines.length - 1; s.end = { win: true, stars: 1, line: `${them} fixed it. ${me === 'ROD' ? 'Rod' : 'Matt'} is still talking about Carl.` }; } } return; }
     if (s.shop) return this.shopping(s, dt, I);
     if (s.battle) return this.fight(s, dt, I);
     const H = HERO(s), dur = 0.26 / H.spd;
@@ -1355,9 +1356,10 @@ GAMES.push({
     { id: 'beans', label: 'COLD BEANS', price: 5, go: () => s.hp = Math.min(s.hpMax, s.hp + 20), line: '+20 HP. He warmed them in his armpit.' },
     { id: 'map', label: 'HIS MAP', price: 4, go: () => { s.mapBought = true; }, line: 'An X on a napkin marks the drip.', off: s.mapBought },
     { id: 'bye', label: 'LEAVE', price: 0 } ]; },
-  openShop(s) { s.shop = { sel: 0, say: this.HOBO_HI[Math.floor(s.rnd() * this.HOBO_HI.length)], t: 0 }; s.metHobo = true; },
+  mood(s, list) { const S = s.shop; if (!S) return; S.face = list[Math.floor(s.rnd() * list.length)]; S.flip = s.rnd() < 0.35 ? [5, 1, 7, 3][Math.floor(s.rnd() * 4)] : null; S.t = 0; },   /* ...and sometimes he flips mid-sentence */
+  openShop(s) { s.shop = { sel: 0, say: this.HOBO_HI[Math.floor(s.rnd() * this.HOBO_HI.length)], t: 0, buyT: 0 }; s.metHobo = true; this.mood(s, [0, 6, 4]); },
   shopping(s, dt, I) {
-    const S = s.shop, W2 = this.wares(s); S.t += dt;
+    const S = s.shop, W2 = this.wares(s); S.t += dt; S.buyT = Math.max(0, S.buyT - dt);
     if (I.Up || I.Lp) S.sel = (S.sel + W2.length - 1) % W2.length; if (I.Dp || I.Rp) S.sel = (S.sel + 1) % W2.length;
     let pick = I.Ap ? S.sel : null;
     if (I.ptr.clicked) for (let i = 0; i < W2.length; i++) { const [x, y, w, h] = this.optBox(i, W2.length); if (I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h) { S.sel = i; pick = i; } }
@@ -1365,9 +1367,26 @@ GAMES.push({
     if (pick === null) return;
     const it = W2[pick];
     if (it.id === 'bye') { (s.log = s.log || []).push('CARL: ' + this.HOBO_BYE[Math.floor(s.rnd() * this.HOBO_BYE.length)]); s.shop = null; SFX('ui_select'); return; }
-    if (it.off) { S.say = "You already have it. Do you not like it? ...You don't like it."; SFX('click'); return; }
-    if (s.cash < it.price) { S.say = this.HOBO_BROKE[Math.floor(s.rnd() * this.HOBO_BROKE.length)]; SFX('click'); return; }
-    s.cash -= it.price; it.go(); S.say = this.HOBO_BUY[Math.floor(s.rnd() * this.HOBO_BUY.length)] + '  (' + it.line + ')'; SFX('ui_select');
+    if (it.off) { S.say = "You already have it. Do you not like it? ...You don't like it."; this.mood(s, [3]); S.flip = 5; SFX('click'); return; }
+    if (s.cash < it.price) { S.say = this.HOBO_BROKE[Math.floor(s.rnd() * this.HOBO_BROKE.length)]; this.mood(s, [2, 5]); SFX('click'); return; }
+    s.cash -= it.price; it.go(); S.say = this.HOBO_BUY[Math.floor(s.rnd() * this.HOBO_BUY.length)] + '  (' + it.line + ')'; this.mood(s, [1, 6]); S.buyT = 1.2; SFX('ui_select');
+  },
+  // knocked out of the crawlspace: he tells the other guy everything. The other guy doesn't buy a word of it, goes down, and fixes it.
+  defeated(s) {
+    const me = HERO(s).name, them = me === 'ROD' ? 'MATT' : 'ROD', met = s.met || [], pick = a => a[Math.floor(s.rnd() * a.length)], L = [];
+    const SEEN = { 'SEWER RAT': 'Rats. A LOT of rats.', 'BIG BUFF RAT': "One of the rats was JACKED. Like it LIFTS.", 'POSSUM': 'A possum faked its own death at me. Then it got back UP.', 'RACCOON': 'A raccoon took my peanut butter. Right out of my hand.', 'BROWN RECLUSE': 'A brown recluse came down on a string. I can still feel it.', 'THE RAT KING': 'There is a KING down there. A RAT king. He had a CAPE.' };
+    L.push([me, pick(["I'm out. I'm not going back down there.", "Don't. Don't go under there.", "I need a minute. Maybe a week."])]);
+    [...new Set(met)].slice(-3).forEach(n => L.push([me, SEEN[n]]));
+    if (s.metHobo) L.push([me, pick(["And a guy named Carl lives down there! He sold me beans!", "There's a man down there. Carl. He wears a hard hat. He LOVES me.", "Carl. His name is Carl. He warmed beans in his armpit."])]);
+    L.push([them, pick(['Uh huh.', 'Sure, bud.', 'Right.', "You've been under a trailer for twenty minutes."])]);
+    L.push([them, pick(["I'll just go do it then, scaredy cat.", "Gimme the Fernco. I'll do it, scaredy cat.", "Move. I'll go do it, scaredy cat."])]);
+    L.push(['', '* TWENTY MINUTES LATER *']);
+    L.push([them, pick(['Done. Pipe was right there.', 'Fernco on, clamps tight. Easy.', "Took five minutes. Didn't even get dirty."])]);
+    L.push([me, pick(['...Did you see them?', '...And the rats?', '...Did you see the KING?'])]);
+    L.push([them, s.metHobo ? pick(["There's no Carl. There's nobody down there.", 'Who is Carl.', "There's a candle. And a can of beans. That's it."]) : pick(['What rats?', 'I saw a spider web.', 'There was a candle down there, weird. That was it.'])]);
+    L.push([me, s.metHobo ? "...He's real." : '...They were THERE.']);
+    L.push([them, pick(['Get in the van.', "Don't tell the customer.", 'I am never letting you live this down.'])]);
+    s.talk = { lines: L, i: 0, t: 0 };
   },
   endFight(s) { s.battle = null; TRL.bgm(false); },
   say(s, text, fx) { s.battle.q.push({ text, fx, t: 0 }); },
@@ -1392,7 +1411,7 @@ GAMES.push({
       const d = Math.max(1, Math.round((b.F.atk[0] + s.rnd() * (b.F.atk[1] - b.F.atk[0])) * (s.k || 1)));
       this.say(s, b.F.king ? `THE RAT KING rakes you with royal claws! -${d} HP` : b.F.venom ? `The BROWN RECLUSE bites! -${d} HP. That's gonna itch.` : b.F.thief ? `The RACCOON claws you! -${d} HP` : `The ${b.F.name} bites! -${d} HP`,
         () => { s.hp -= d; s.hits++; s.shake = 0.35; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); if (b.F.venom) s.venom = 6; });
-      b.after = () => { if (s.hp <= 0) { s.hp = 0; TRL.bgm(false); s.end = { win: false, stars: 0, line: 'The rats own this crawlspace. We are coming back with traps.' }; } };
+      b.after = () => { if (s.hp <= 0) { s.hp = 0; TRL.bgm(false); s.battle = null; this.defeated(s); } };
     };
     const won = () => { this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { const loot = b.F.king ? 6 : 1 + Math.floor(s.rnd() * 3); s.cash += loot; (s.log = s.log || []).push(`Found $${loot} in loose change.`); s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
     if (o.id === 'whack') {
@@ -1439,11 +1458,14 @@ GAMES.push({
       for (let y = top; y < bot; y++) { const tY = Math.min(N - 1, ((y - half + lh / 2) * N / lh) | 0), c = T2[tY * N + tX]; buf[y * RW + x] = (c & 0xffffff) === 0xfaf0c8 /* the daylight crack doesn't dim */ ? c : shade(c, k); }
     }
     // the broken joint (a billboard)
-    const BB = [[s.goal, tx.pipe[Math.floor(s.t * 3) % 2]], [s.hobo, tx.hobo[Math.floor(s.t * 5) % 2]]].map(([o, P]) => { const sx = o.c + 0.5 - px, sy = o.r + 0.5 - py; return { o, P, d: sx * sx + sy * sy }; }).sort((a, b2) => b2.d - a.d);
+    const BB = [[s.goal, tx.pipe[Math.floor(s.t * 3) % 2]]].map(([o, P]) => { const sx = o.c + 0.5 - px, sy = o.r + 0.5 - py; return { o, P, d: sx * sx + sy * sy }; }).sort((a, b2) => b2.d - a.d);
     for (const { o, P: PP } of BB) { const sx = o.c + 0.5 - px, sy = o.r + 0.5 - py, inv = 1 / (plx * dy - dx * ply), tX = inv * (dy * sx - dx * sy), tY = inv * (-ply * sx + plx * sy);
       if (tY > 0.1) { const scx = (RW / 2) * (1 + tX / tY), sh = Math.abs(RH / tY), x0 = Math.floor(scx - sh / 2), y0 = Math.floor(half - sh / 2), P = PP, k = lit(tY) * 1.2 + (PP === tx.hobo[0] || PP === tx.hobo[1] ? 0.4 : 0);
         for (let x = Math.max(0, x0); x < Math.min(RW, x0 + sh); x++) { if (tY >= zb[x]) continue; const u = Math.min(N - 1, ((x - x0) * N / sh) | 0);
           for (let y = Math.max(0, y0); y < Math.min(RH, y0 + sh); y++) { const c = P[Math.min(N - 1, ((y - y0) * N / sh) | 0) * N + u]; if (c) buf[y * RW + x] = shade(c, Math.min(1, k * lightCol[x])); } } } }
+    s.carlScr = null;   /* Carl is drawn from his own sprite on top of the view, hidden behind any wall that's closer */
+    { const sx = s.hobo.c + 0.5 - px, sy = s.hobo.r + 0.5 - py, inv = 1 / (plx * dy - dx * ply), tX = inv * (dy * sx - dx * sy), tY = inv * (-ply * sx + plx * sy);
+      if (tY > 0.2) { const scx = (RW / 2) * (1 + tX / tY), col = Math.max(0, Math.min(RW - 1, Math.round(scx))); if (tY < zb[col] + 0.05) s.carlScr = { x: scx / RW, h: 1 / tY, k: Math.min(1, lit(tY) * 1.6) }; } }
     s.cx.putImageData(s.img, 0, 0);
   },
   // Might & Magic style: the 3D view sits in a carved frame, with a side panel, the hero's portrait and a message scroll
@@ -1460,6 +1482,9 @@ GAMES.push({
     const sh = s.shake > 0 ? (Math.random() - 0.5) * 6 * s.shake * 3 : 0;
     g.save(); g.beginPath(); g.rect(VX, VY, VW, VH); g.clip();
     g.imageSmoothingEnabled = false; g.drawImage(s.cv, VX + sh, VY, VW, VH);
+    if (s.carlScr && MG('ut_carl')) { const C2 = s.carlScr, im = MG('ut_carl'), cw = im.width / 4, h = VH * C2.h * 0.82, w = h * cw / im.height, fx = VX + sh + C2.x * VW, fy = VY + VH / 2 + VH * C2.h / 2;
+      const S2 = s.shop, f = S2 && S2.buyT > 0 ? 3 : S2 && S2.t < 1.6 ? 2 : Math.floor(t * 2.2) % 2;   /* candle flicker · talking · handing it over */
+      g.save(); g.filter = `brightness(${C2.k.toFixed(2)})`; g.imageSmoothingEnabled = false; g.drawImage(im, f * cw, 0, cw, im.height, fx - w / 2, fy - h, w, h); g.restore(); }
     if (b && b.open <= 0) {   // the rats stand right there in the corridor, like the old games
       const cx = VX + VW / 2, by = VY + VH - 14 + Math.sin(t * 3) * 1.5, blinkOff = b.blink > 0 && Math.floor(t * 20) % 2;
       g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(cx, by + 2, 70 * b.F.sc, 9, 0, 0, 7); g.fill();
@@ -1475,6 +1500,10 @@ GAMES.push({
     if (b && b.open > 0) { const k = b.open / 0.6; for (let i = 0; i < 9; i++) R(VX, VY + i * 20, VW * (1 - k), 20, '#000'); }   // the screen wipe into the fight
     if (s.flash > 0) { g.fillStyle = `rgba(255,250,220,${s.flash})`; g.fillRect(VX, VY, VW, VH); }
     if (s.fixT && s.fixT < 3.4) { R(VX + 20, VY + 70, VW - 40, 40, 'rgba(10,8,6,.85)'); T(s.fixT < 1.2 ? 'THERE IT IS. THE DRIP.' : s.fixT < 2.2 ? 'FERNCO ON...' : 'CLAMPS TIGHT. DONE!', VX + VW / 2, VY + 90, '#7bd65b', 9, 'center'); }
+    if (s.talk) { const K = s.talk, [who, line] = K.lines[Math.min(K.i, K.lines.length - 1)];
+      const sky = g.createLinearGradient(0, VY, 0, VY + VH); sky.addColorStop(0, '#8fc4ef'); sky.addColorStop(1, '#d8ecf8'); g.fillStyle = sky; g.fillRect(VX, VY, VW, VH); if (!BGI('bg_lawn')) R(VX, VY + VH * 0.62, VW, VH * 0.38, '#5f9a3e');
+      if (!who) { R(VX, VY, VW, VH, 'rgba(0,0,0,.85)'); T(line, VX + VW / 2, VY + VH / 2, '#e8c86a', 8, 'center'); }
+      else { R(VX + 12, VY + VH - 50, VW - 24, 40, 'rgba(10,8,6,.88)'); T(who + ':', VX + 22, VY + VH - 38, '#e8c86a', 7); const wr = []; let ln = ''; for (const w of line.split(' ')) { if ((ln + w).length > 40) { wr.push(ln.trim()); ln = ''; } ln += w + ' '; } wr.push(ln.trim()); wr.slice(0, 2).forEach((l, i) => T(l, VX + 22, VY + VH - 26 + i * 10, '#fff', 6)); if (K.t > 0.4 && Math.floor(t * 3) % 2) T('▼', VX + VW - 20, VY + VH - 16, '#e8c86a', 6); } }
     if (s.fixT >= 3.4) {   // crawled back out into daylight
       const k = Math.min(1, (s.fixT - 3.4) / 0.6), sky = g.createLinearGradient(0, VY, 0, VY + VH); sky.addColorStop(0, '#8fc4ef'); sky.addColorStop(1, '#d8ecf8'); g.globalAlpha = k; g.fillStyle = sky; g.fillRect(VX, VY, VW, VH);
       if (!BGI('bg_lawn')) { R(VX, VY + VH * 0.62, VW, VH * 0.38, '#5f9a3e'); } g.globalAlpha = 1;
@@ -1505,7 +1534,9 @@ GAMES.push({
       T('$' + s.cash, PX + PW - 8, 110, '#7bd65b', 6, 'right'); T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PEANUT BUTTER x' + s.pb, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
     // bottom bar: the hero's portrait + health, and the message scroll
     bevel(10, 200, 56, 60);
-    { const H = HERO(s), other = s.fixT > 6.2, im = TRL.face((H.name === 'ROD') !== other ? 'rod' : 'matt', other ? 1 : s.hp / s.hpMax); if (im) { g.imageSmoothingEnabled = true; g.drawImage(im, 10, 200, 56, 60); g.imageSmoothingEnabled = false; } else R(10, 200, 56, 60, '#2a2a36');
+    if (s.shop && MG('ut_carl_face')) { const S = s.shop, tw = Math.floor(t / 3.1) % 3 === 2 && (t % 3.1) < 0.18, f = tw ? 7 : S.flip != null && S.t > 1.1 ? S.flip : S.face;
+      R(10, 200, 56, 60, '#0a0806'); g.imageSmoothingEnabled = true; g.drawImage(MG('ut_carl_face'), f * 96, 0, 96, 96, 10, 202, 56, 56); g.imageSmoothingEnabled = false; }
+    else { const H = HERO(s), sp = s.talk ? s.talk.lines[s.talk.i][0] : null, other = s.fixT > 6.2, im = TRL.face(sp ? sp.toLowerCase() : (H.name === 'ROD') !== other ? 'rod' : 'matt', sp || other ? 1 : s.hp / s.hpMax); if (im) { g.imageSmoothingEnabled = true; g.drawImage(im, 10, 200, 56, 60); g.imageSmoothingEnabled = false; } else R(10, 200, 56, 60, '#2a2a36');
       if (s.shake > 0.2) { g.fillStyle = 'rgba(233,102,90,.45)'; g.fillRect(10, 200, 56, 60); } }
     bevel(74, 200, 92, 60);
     T(HERO(s).name, 80, 210, '#e8c86a', 7); T('HP', 80, 226, '#fff', 6); BAR(96, 222, 64, 7, s.hp / s.hpMax, s.hp / s.hpMax > 0.5 ? '#7bd65b' : s.hp / s.hpMax > 0.25 ? '#f7c418' : '#e9665a');
