@@ -17,11 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794372784"></script>
-<script src="js/calls.js?v=1794372784"></script>
-<script src="js/placeholders.js?v=1794372784"></script>
-<script src="js/music.js?v=1794372784"></script>
-<script src="js/sfx.js?v=1794372784"></script>
+<script src="js/state.js?v=1794380565"></script>
+<script src="js/calls.js?v=1794380565"></script>
+<script src="js/banter.js?v=1794380565"></script>
+<script src="js/placeholders.js?v=1794380565"></script>
+<script src="js/music.js?v=1794380565"></script>
+<script src="js/sfx.js?v=1794380565"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -371,6 +372,17 @@ async function ronBanter(chance = 0.45) {
   st.billboard = RON_BANTER[i].some(l => /BILLBOARD/i.test(l[2])) ? 0.001 : 0;   // this one comes with the actual billboard rolling by
   for (const [w, p, l] of RON_BANTER[i]) await say(w, p, l);
   st.billboard = 0;
+}
+// the boys shooting the breeze between calls: this month's talk first, then anything; never the same one until they've all come up
+async function vanTalk() {
+  if (typeof VAN_TALK === 'undefined') return;
+  const sv = DDT.get(), m = Math.min(11, sv.month || 0), used = sv.talkUsed || [];
+  const pool = [...(VAN_MONTH[m] || []).map((_, i) => 'm' + m + '_' + i), ...VAN_TALK.map((_, i) => 'g' + i)];
+  let fresh = pool.filter(k => !used.includes(k)); if (!fresh.length) { fresh = pool; sv.talkUsed = []; }
+  const month = fresh.filter(k => k[0] === 'm'), k = month.length && Math.random() < 0.55 ? month[Math.floor(Math.random() * month.length)] : fresh[Math.floor(Math.random() * fresh.length)];
+  sv.talkUsed = [...(sv.talkUsed || []), k]; DDT.save(sv);
+  const conv = k[0] === 'm' ? VAN_MONTH[m][+k.split('_')[1]] : VAN_TALK[+k.slice(1)];
+  for (const [w, p, l] of conv) await say(w, p, l);
 }
 // Ron's billboard, sliding past the passenger window
 function ronBillboard() {
@@ -1064,7 +1076,7 @@ SCENES.hub = async () => {
         s = DDT.get(); s.superRon = 'done'; s.chatDone = true; DDT.save(s);
       }
       s = DDT.get();
-      if (!s.chatDone) { s.chatDone = true; DDT.save(s); await ronBanter(0.6); }
+      if (!s.chatDone) { s.chatDone = true; DDT.save(s); if (Math.random() < 0.3) await ronBanter(1); else await vanTalk(); }   /* the boys talk on the way: Ron now and then, mostly everything else */
       setStep('board'); continue;
     }
 

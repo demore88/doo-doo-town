@@ -17,11 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794372784"></script>
-<script src="../js/calls.js?v=1794372784"></script>
-<script src="../js/placeholders.js?v=1794372784"></script>
-<script src="../js/music.js?v=1794372784"></script>
-<script src="../js/sfx.js?v=1794372784"></script>
+<script src="../js/state.js?v=1794380565"></script>
+<script src="../js/calls.js?v=1794380565"></script>
+<script src="../js/banter.js?v=1794380565"></script>
+<script src="../js/placeholders.js?v=1794380565"></script>
+<script src="../js/music.js?v=1794380565"></script>
+<script src="../js/sfx.js?v=1794380565"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -358,6 +359,12 @@ const saveJS = () => { try { localStorage.setItem('ddt_job', JSON.stringify(JS))
 if (JS.id !== JOB.id) { for (const k in JS) delete JS[k]; JS.id = JOB.id; saveJS(); }
 const PORT = { ROD: 'rod_normal', MATT: 'matt_normal', CUST: 'cust' };
 const sayL = (who, text, port) => say(who === 'CUST' ? JOB.cust.name : who, port || PORT[who], text);
+// play one conversation from a pool, never repeating one until the whole pool has come up
+async function talk(pool, key) {
+  const sv = DDT.get(), used = sv[key] || []; let fresh = pool.map((_, i) => i).filter(i => !used.includes(i)); if (!fresh.length) { fresh = pool.map((_, i) => i); sv[key] = []; }
+  const i = fresh[Math.floor(Math.random() * fresh.length)]; sv[key] = [...(sv[key] || []), i]; DDT.save(sv);
+  for (const [w, p, l] of pool[i]) { if (w === 'CUST') await sayL('CUST', l); else await say(w, p, l); }
+}
 async function lines(list) {
   for (const [w, t, x] of list) {
     if (w === 'CARD') { const v = view; await card([t, x], 1800); view = v; continue; }   // a time-skip card mid-scene
@@ -423,7 +430,7 @@ SCENES.arrive = async () => {
   } else if (Math.random() < 0.35) {
     await sayL('CUST', pick2([`You must be ${wrongName()}!`, `Oh good, ${wrongName()}'s here!`, `${wrongName()}! Thank goodness.`]));
     await sayL('ROD', rodsReply(), 'rod_annoyed');
-    if (Math.random() < 0.4) await say('MATT', 'matt_happy', "I'm Matt. Nobody ever gets mine wrong.");
+    if (Math.random() < 0.5 && typeof MATT_NAME !== 'undefined') await talk(MATT_NAME, 'nameUsed');   /* Matt weighs in (different every time) */
   }
   await lines(JOB.intro);
   st.upset = false;
@@ -515,6 +522,7 @@ SCENES.payday = async () => {
   };
   await fadeIn(400); SND.ding();
   await cancellable(res => { st.waitTap = res; });
+  if (typeof JOB_WIN !== 'undefined' && Math.random() < 0.5) await talk(broke ? JOB_LOSS : JOB_WIN, broke ? 'lossUsed' : 'winUsed');   /* a word between the boys on the way out */
   // and then, sometimes, the review comes in. It's about Ron. It's always about Ron.
   const dayKey = `${SAVE.month}-${SAVE.day || 0}`, revSv = DDT.get();
   if (!(broke || JS.gotName || (Math.random() < 0.3 && revSv.ronReviewDay !== dayKey))) { try { localStorage.removeItem('ddt_job'); } catch (e) {} return; }
