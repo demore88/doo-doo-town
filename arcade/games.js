@@ -595,7 +595,7 @@ GAMES.push({
       if (dn) { s.snag = 0; s.push = 0; }
     }
     s.v += (want - s.v) * Math.min(1, dt * 4);
-    const before = s.d; s.d = Math.max(0, s.d + s.v * dt); if (s.d > s.CLOG - 1.2) { s.d = s.CLOG - 1.2; if (s.v > 2 && !s.wall) { s.shake = 0.25; SFX('clog', { vol: 0.5 }); say('HEAD IS UP AGAINST IT. TAG IT!', 1.4); } s.wall = 1; s.v = Math.min(s.v, 0); } else s.wall = 0;   /* the clog is a wall: you can't push past it */
+    const before = s.d; s.d = Math.max(0, s.d + s.v * dt); if (s.d > s.CLOG - 1.2) { s.d = s.CLOG - 1.2; if (s.v > 2 && !s.wall) { s.shake = 0.25; say('HEAD IS UP AGAINST IT. TAG IT!', 1.4); } s.wall = 1; s.v = Math.min(s.v, 0); } else s.wall = 0;   /* the clog is a wall: you can't push past it */
     for (const o of s.def) if (o.kind === 'offset' && before < o.d - 0.8 && s.d >= o.d - 0.8 && !o.popped) {   // every offset joint catches the head
       o.popped = true; s.d = o.d - 0.85; s.v = 0; s.snag = 1; s.push = 0; s.snags++; s.shake = 0.3; SFX('clog', { vol: 0.5 }); say('OFFSET JOINT! PUSH HARD (TAP ▲ ▲ ▲)', 1.8); }
     // TAG
@@ -1293,7 +1293,7 @@ GAMES.push({
   },
   arrive(s) {
     s.seen.add(s.pr * 100 + s.pc); s.steps++; s.since++;
-    if (s.pc === s.goal.c && s.pr === s.goal.r) { s.fixT = 0.01; s.score += 500; SFX('drill_stop'); return; }
+    if (s.pc === s.goal.c && s.pr === s.goal.r) { s.fixT = 0.01; s.score += 500; return; }
     const chance = [0.09, 0.12, 0.15][s.diff];
     if (s.since > 3 && s.gd[s.pr][s.pc] > 1 && s.rnd() < chance) this.ambush(s);
   },
@@ -1302,7 +1302,7 @@ GAMES.push({
     let r = s.rnd() * pool.reduce((a, f) => a + f.w, 0), F = pool[0]; for (const f of pool) { if ((r -= f.w) <= 0) { F = f; break; } }
     if (F.king) s.kingSeen = true;
     const hp = F.hp[0] + Math.floor(s.rnd() * (F.hp[1] - F.hp[0] + 1));
-    s.battle = { F, hp, max: hp, sel: 0, q: [], stun: 0, open: 0.6, blink: 0, dmgT: 0 }; s.since = 0; s.fights++; s.flash = 0.6; SFX('clog');
+    s.battle = { F, hp, max: hp, sel: 0, q: [], stun: 0, open: 0.6, blink: 0, dmgT: 0 }; s.since = 0; s.fights++; s.flash = 0.6;
     this.say(s, F.king ? 'THE RAT KING rises from the muck!' : `A ${F.name} jumps out of the dark!`);
   },
   say(s, text, fx) { s.battle.q.push({ text, fx, t: 0 }); },
@@ -1322,14 +1322,14 @@ GAMES.push({
       if (b.stun > 0) { b.stun--; this.say(s, `The ${b.F.name} is still seeing spots.`); return; }
       if (s.rnd() < 0.12) { this.say(s, `The ${b.F.name} lunges... and misses!`); return; }
       const d = Math.max(1, Math.round((b.F.atk[0] + s.rnd() * (b.F.atk[1] - b.F.atk[0])) * (s.k || 1)));
-      this.say(s, b.F.king ? `THE RAT KING bites all at once! -${d} HP` : `The ${b.F.name} bites! -${d} HP`, () => { s.hp -= d; s.hits++; s.shake = 0.35; SFX('squish'); });
+      this.say(s, b.F.king ? `THE RAT KING bites all at once! -${d} HP` : `The ${b.F.name} bites! -${d} HP`, () => { s.hp -= d; s.hits++; s.shake = 0.35; });
       b.after = () => { if (s.hp <= 0) { s.hp = 0; s.end = { win: false, stars: 0, line: 'The rats own this crawlspace. We are coming back with traps.' }; } };
     };
     const won = () => { this.say(s, `The ${b.F.name} runs off squeaking! +${b.F.pts} PTS`, () => { s.score += b.F.pts; s.won++; SFX('ui_select'); }); b.after = () => { s.battle = null; }; };
     if (o.id === 'whack') {
       if (s.rnd() < 0.1) this.say(s, 'You swing the pipe wrench... and hit a pier. CLANG.', () => SFX('click'));
       else { const crit = s.rnd() < 0.12, d = Math.round((s.dmg[0] + s.rnd() * (s.dmg[1] - s.dmg[0])) * (crit ? 2 : 1));
-        this.say(s, crit ? `CRITICAL WHACK! ${d} damage!` : `You whack it with the pipe wrench! ${d} damage.`, () => { b.hp -= d; b.blink = 0.4; b.dmgT = 0.7; b.dmg = d; s.shake = 0.12; SFX('drill_stop', { vol: 0.5 }); }); }
+        this.say(s, crit ? `CRITICAL WHACK! ${d} damage!` : `You whack it with the pipe wrench! ${d} damage.`, () => { b.hp -= d; b.blink = 0.4; b.dmgT = 0.7; b.dmg = d; s.shake = 0.12; }); }
       b.after = () => { if (b.hp <= 0) won(); else { foeTurn(); } };
     } else if (o.id === 'light') {
       s.lights--; this.say(s, 'You blast it with the flashlight!', () => { s.flash = 0.35; SFX('click'); });
