@@ -686,7 +686,7 @@ function drive3d(choice, opts) {
       r.fillStyle = '#f7c418'; r.fillText('DUE ' + opts.clock(opts.due).replace(/ ?[AP]M/, ''), 82, 10);
       r.fillStyle = '#fff'; r.fillText(from.slice(0, 8), 166, 10); r.textAlign = 'right'; r.fillText(to.slice(0, 9), 474, 10); r.textAlign = 'left'; }
       const prog = Math.min(1, pos / ((N - 40) * SEG));
-      { const L = LEGS_HERE[(segAt(pos) || {}).leg || 0]; if (L) { r.font = '6px "Press Start 2P", monospace'; r.textAlign = 'left'; r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(4, 24, 8 + (L.rt + '  ' + L.name).length * 6, 12); r.fillStyle = '#f7c418'; r.fillText(L.rt + '  ' + L.name, 8, 30); r.font = '8px "Press Start 2P", monospace'; } }
+      if (!opts.endless) { const L = LEGS_HERE[(segAt(pos) || {}).leg || 0]; if (L) { r.font = '6px "Press Start 2P", monospace'; r.textAlign = 'left'; r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(4, 24, 8 + (L.rt + '  ' + L.name).length * 6, 12); r.fillStyle = '#f7c418'; r.fillText(L.rt + '  ' + L.name, 8, 30); r.font = '8px "Press Start 2P", monospace'; } }
       if (RIVAL) { const rp = Math.min(1, rz / ((N - 40) * SEG)); r.fillStyle = '#e9665a'; r.fillRect(236 + 150 * rp, 3, 4, 14);
         r.font = '6px "Press Start 2P", monospace'; r.textAlign = 'center'; r.fillStyle = rz > pos + PZ ? '#e9665a' : '#7bd65b';
         r.fillText(rz > pos + PZ ? `CLOG KINGS AHEAD ${Math.round((rz - pos - PZ) / SEG)}` : 'YOU LEAD!', 313, 28); r.font = '8px "Press Start 2P", monospace'; r.textAlign = 'left'; }
@@ -694,9 +694,11 @@ function drive3d(choice, opts) {
       // speedometer
       const mph = Math.round(speed / MPH);
       r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(W - 78, 26, 72, 18); r.fillStyle = speed > TOP * 0.97 ? '#f7c418' : '#7bd65b'; r.textAlign = 'right'; r.fillText(mph + ' MPH', W - 10, 35); r.textAlign = 'left';
-      if (crashes) { r.fillStyle = '#e9665a'; r.textAlign = 'right'; r.fillText('CRASHES ' + crashes, W - 6, 52); r.textAlign = 'left'; }
-      if (opts.endless) { const mi = pos / SEG / SEG_PER_MI; r.fillStyle = 'rgba(16,21,31,.72)'; r.fillRect(W / 2 - 92, 43, 184, 36); r.fillStyle = '#7dffb0'; r.textAlign = 'center'; r.fillText(`${mi.toFixed(1)} MI   SCORE ${(score + Math.floor(distPts)).toLocaleString()}`, W / 2, 52);   /* the Driving Game score */
-        r.fillStyle = 'rgba(0,0,0,.55)'; r.fillRect(W / 2 - 50, 58, 100, 6); r.fillStyle = crashes > 14 ? '#e9665a' : crashes > 8 ? '#f7c418' : '#7dffb0'; r.fillRect(W / 2 - 50, 58, 100 * (1 - crashes / 20), 6); r.fillStyle = '#fff'; r.font = r.font; r.fillText(`VAN ${20 - crashes}/20`, W / 2, 72); r.textAlign = 'left'; }
+      if (crashes && !opts.endless) { r.fillStyle = '#e9665a'; r.textAlign = 'right'; r.fillText('CRASHES ' + crashes, W - 6, 52); r.textAlign = 'left'; }
+      if (opts.endless) { const mi = pos / SEG / SEG_PER_MI, box = (x, w, txt, col, al) => { r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(x, 26, w, 18); r.fillStyle = col; r.textAlign = al || 'center'; r.fillText(txt, al === 'left' ? x + 6 : x + w / 2, 35); r.textAlign = 'left'; };   /* same panels as the MPH */
+        { const x = 6, w = 132; r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(x, 26, w, 18); const f = 1 - crashes / 20; r.fillStyle = '#2c3326'; r.fillRect(x + 6, 31, w - 52, 8); r.fillStyle = crashes > 14 ? '#e9665a' : crashes > 8 ? '#f7c418' : '#7bd65b'; r.fillRect(x + 6, 31, (w - 52) * f, 8); r.fillStyle = '#fff'; r.textAlign = 'right'; r.fillText(`${20 - crashes}`, x + w - 6, 35); r.textAlign = 'left'; }   /* van health, top left */
+        box(150, 84, `${mi.toFixed(1)} MI`, '#7bd65b'); box(242, 150, `${(score + Math.floor(distPts)).toLocaleString()} PTS`, '#f7c418'); }
+
       // phone buttons (also show what the keys do)
       if (true) {   // brake in both corners, gas = both thumbs (keyboard: ▲)
         r.fillStyle = brake ? 'rgba(233,102,90,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40); r.fillRect(W - 96, H - 46, 92, 40);
