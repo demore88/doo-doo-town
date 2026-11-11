@@ -134,7 +134,8 @@ function drive3d(choice, opts) {
       P(x, top, 1, h, '#dfe6ee'); P(x, top, 1, 2, '#ffffff'); P(x, 22 - h * 0.35, 1, h * 0.35, '#c4cfdb'); if (x % 7 === 0) P(x, 20, 2, 2, '#8a8f94'); } });
   const MAILBOX = art(10, 22, (k, P) => { P(4, 8, 2, 14, '#5a3e26'); P(0, 2, 10, 7, '#2a2a2a'); P(8, 0, 2, 4, '#c0392b'); });
   function sign(lines, bg = '#1e6b3a') { return art(64, 40, (k, P) => { P(10, 26, 3, 14, '#777'); P(51, 26, 3, 14, '#777'); P(0, 0, 64, 28, '#fff'); P(1, 1, 62, 26, bg);
-    k.fillStyle = '#fff'; k.font = '6px "Press Start 2P", monospace'; k.textAlign = 'center'; k.textBaseline = 'middle'; lines.forEach((l, i) => k.fillText(l, 32, 8 + i * 10 + (lines.length === 1 ? 5 : 0))); }); }
+    k.fillStyle = '#fff'; k.textAlign = 'center'; k.textBaseline = 'middle'; const L = Math.max(...lines.map(l => l.length)), fs = Math.max(3, Math.min(6, Math.floor(58 / (L * 1.05)))); k.font = fs + 'px "Press Start 2P", monospace';   /* shrink to fit the sign so nothing gets cut off */
+    lines.forEach((l, i) => k.fillText(l, 32, 14 + (i - (lines.length - 1) / 2) * (fs + 4))); }); }
   const HOUSES_ART = ['#e8e4d8', '#c0392b', '#2a5ab0', '#f2c12e', '#7f8c8d'].map(col => art(40, 34, (k, P) => {   // little roadside houses/shops for town stretches
     P(4, 12, 32, 22, col); P(0, 10, 40, 4, '#4a3a2e'); k.fillStyle = '#4a3a2e'; k.beginPath(); k.moveTo(2, 12); k.lineTo(20, 0); k.lineTo(38, 12); k.fill();
     P(8, 17, 7, 6, '#2b3a48'); P(25, 17, 7, 6, '#2b3a48'); P(17, 22, 6, 12, '#5a3e26'); if (SNOW) { P(2, 9, 36, 2, '#fff'); k.fillStyle = '#fff'; k.beginPath(); k.moveTo(6, 10); k.lineTo(20, 1); k.lineTo(34, 10); k.lineTo(30, 10); k.lineTo(20, 4); k.lineTo(10, 10); k.fill(); } }));
@@ -341,7 +342,8 @@ function drive3d(choice, opts) {
     p.sx = W / 2 + sc * (p.wx - camX) * W / 2; p.sy = H / 2 - sc * (p.y - camY) * H / 2 + (HORIZON - H / 2); p.sw = sc * ROADW * W / 2; p.sc = sc;   /* exact, not rounded: rounding each strip on its own made the lines stair-step */
   }
   const segAt = z => segs[((Math.floor((z || 0) / SEG) % N) + N) % N];
-  function poly(x1, y1, w1, x2, y2, w2, col, ov) {   /* ov: stretch the strip a little past both ends ALONG its own slope, so big fills meet with no seams; painted lines don't need it */
+  function poly(x1, y1, w1, x2, y2, w2, col, ov, line) {   /* line: w is the thickness across the line, however steep or flat it runs */
+    if (line) { const dy = Math.max(0.05, y1 - y2), f = Math.min(10, Math.sqrt(1 + ((x2 - x1) / dy) ** 2)); w1 *= f; w2 *= f; }   /* ov: stretch the strip a little past both ends ALONG its own slope, so big fills meet with no seams; painted lines don't need it */
     if (ov) { const dy = y1 - y2; if (dy > 0.05) { const kx = (x2 - x1) / dy, kw = (w2 - w1) / dy; x1 -= kx * ov; w1 -= kw * ov; y1 += ov; x2 += kx * ov; w2 += kw * ov; y2 -= ov; } }
     r.fillStyle = col; r.beginPath(); r.moveTo(x1 - w1, y1); r.lineTo(x2 - w2, y2); r.lineTo(x2 + w2, y2); r.lineTo(x1 + w1, y1); r.closePath(); r.fill(); }
 
@@ -547,12 +549,13 @@ function drive3d(choice, opts) {
       for (const L of LINES) { const { p1, p2, rt, lt } = L, cc = (rt + lt) / 2, hh = (rt - lt) / 2; poly(p1.sx + cc * p1.sw, p1.sy, p1.sw * hh, p2.sx + cc * p2.sw, p2.sy, p2.sw * hh, '#4f5258', 0.8); }   /* the asphalt */
       // the painted lines, in one pass on top of the finished pavement: continuous, never chopped into beads
       for (const L of LINES) { const { sg, p1, p2, lt, rt } = L, lane = w => w * 0.022; if (p1.sw < 3) continue;   /* too far away to paint cleanly: leave it */
-        r.save(); r.beginPath(); r.rect(-10, -10, W + 20, L.clip + 1); r.clip();
-        for (const e of [lt + 0.05, rt - 0.05]) poly(p1.sx + e * p1.sw, p1.sy, Math.max(0.5, p1.sw * 0.012), p2.sx + e * p2.sw, p2.sy, Math.max(0.5, p2.sw * 0.012), '#dfe2e5', 0.6);   // solid white edge lines
-        { const yx = w => -w / 3;   // double yellow: oncoming lane on the left
-          poly(p1.sx + yx(p1.sw) - lane(p1.sw) * 1.4, p1.sy, lane(p1.sw) * 0.6, p2.sx + yx(p2.sw) - lane(p2.sw) * 1.4, p2.sy, lane(p2.sw) * 0.6, '#e9bd34', 0.6);
-          poly(p1.sx + yx(p1.sw) + lane(p1.sw) * 1.4, p1.sy, lane(p1.sw) * 0.6, p2.sx + yx(p2.sw) + lane(p2.sw) * 1.4, p2.sy, lane(p2.sw) * 0.6, '#e9bd34', 0.6);
-          if (Math.floor(sg.i / 3) % 4 === 0) for (let lx = lt < -1.5 ? -1 : 1 / 3; lx < rt - 0.2; lx += lx < 0 ? 4 / 3 : 2 / 3) poly(p1.sx + p1.sw * lx, p1.sy, lane(p1.sw) * 0.8, p2.sx + p2.sw * lx, p2.sy, lane(p2.sw) * 0.8, '#e2e5e8', 0.6); }   /* dashed white between lanes going our way */
+        r.save(); r.beginPath(); r.rect(-10, -10, W + 20, L.clip + 2); r.clip();
+        for (const e of [lt + 0.05, rt - 0.05]) poly(p1.sx + e * p1.sw, p1.sy, Math.max(0.75, p1.sw * 0.012), p2.sx + e * p2.sw, p2.sy, Math.max(0.75, p2.sw * 0.012), '#dfe2e5', 0.6, true);   /* never thinner than a pixel, so it can't flicker into dashes */   // solid white edge lines
+        { const yx = w => -w / 3, yw = w => Math.max(0.6, lane(w) * 0.6);   // double yellow: oncoming lane on the left
+          if (lane(p1.sw) * 1.4 < 1.2) poly(p1.sx + yx(p1.sw), p1.sy, Math.max(0.75, lane(p1.sw) * 2), p2.sx + yx(p2.sw), p2.sy, Math.max(0.75, lane(p2.sw) * 2), '#e9bd34', 0.6, true);   /* far away the pair reads as one solid line */
+          else { poly(p1.sx + yx(p1.sw) - lane(p1.sw) * 1.4, p1.sy, yw(p1.sw), p2.sx + yx(p2.sw) - lane(p2.sw) * 1.4, p2.sy, yw(p2.sw), '#e9bd34', 0.6, true);
+          poly(p1.sx + yx(p1.sw) + lane(p1.sw) * 1.4, p1.sy, yw(p1.sw), p2.sx + yx(p2.sw) + lane(p2.sw) * 1.4, p2.sy, yw(p2.sw), '#e9bd34', 0.6, true); }
+          if (Math.floor(sg.i / 3) % 4 === 0) for (let lx = lt < -1.5 ? -1 : 1 / 3; lx < rt - 0.2; lx += lx < 0 ? 4 / 3 : 2 / 3) poly(p1.sx + p1.sw * lx, p1.sy, lane(p1.sw) * 0.8, p2.sx + p2.sw * lx, p2.sy, lane(p2.sw) * 0.8, '#e2e5e8', 0.6, true); }   /* dashed white between lanes going our way */
         r.restore(); }
       // the plow berm: a continuous 3D snowbank along both shoulders, far to near, its height rolling with the road
       if (SNOW) {   /* the plow berm, one smooth shape per side: no pieces, so no seams or stripes */
@@ -692,7 +695,7 @@ function drive3d(choice, opts) {
       const mph = Math.round(speed / MPH);
       r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(W - 78, 26, 72, 18); r.fillStyle = speed > TOP * 0.97 ? '#f7c418' : '#7bd65b'; r.textAlign = 'right'; r.fillText(mph + ' MPH', W - 10, 35); r.textAlign = 'left';
       if (crashes) { r.fillStyle = '#e9665a'; r.textAlign = 'right'; r.fillText('CRASHES ' + crashes, W - 6, 52); r.textAlign = 'left'; }
-      if (opts.endless) { const mi = pos / SEG / SEG_PER_MI; r.fillStyle = '#7dffb0'; r.textAlign = 'center'; r.fillText(`${mi.toFixed(1)} MI   SCORE ${(score + Math.floor(distPts)).toLocaleString()}`, W / 2, 52);   /* the Driving Game score */
+      if (opts.endless) { const mi = pos / SEG / SEG_PER_MI; r.fillStyle = 'rgba(16,21,31,.72)'; r.fillRect(W / 2 - 92, 43, 184, 36); r.fillStyle = '#7dffb0'; r.textAlign = 'center'; r.fillText(`${mi.toFixed(1)} MI   SCORE ${(score + Math.floor(distPts)).toLocaleString()}`, W / 2, 52);   /* the Driving Game score */
         r.fillStyle = 'rgba(0,0,0,.55)'; r.fillRect(W / 2 - 50, 58, 100, 6); r.fillStyle = crashes > 14 ? '#e9665a' : crashes > 8 ? '#f7c418' : '#7dffb0'; r.fillRect(W / 2 - 50, 58, 100 * (1 - crashes / 20), 6); r.fillStyle = '#fff'; r.font = r.font; r.fillText(`VAN ${20 - crashes}/20`, W / 2, 72); r.textAlign = 'left'; }
       // phone buttons (also show what the keys do)
       if (true) {   // brake in both corners, gas = both thumbs (keyboard: ▲)
