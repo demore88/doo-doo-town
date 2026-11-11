@@ -17,9 +17,9 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794419792"></script>
-<script src="../js/music.js?v=1794419792"></script>
-<script src="../js/sfx.js?v=1794419792"></script>
+<script src="../js/state.js?v=1794420586"></script>
+<script src="../js/music.js?v=1794420586"></script>
+<script src="../js/sfx.js?v=1794420586"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('spooky');
@@ -120,6 +120,10 @@ function cancelAll() { pend.forEach(h => h.rej('skip')); pend.clear(); tweens = 
 const wait = ms => cancellable(res => setTimeout(res, ms));
 const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 function tween(o, k, to, ms, fn = ease) { return cancellable(res => tweens.push({ o, k, from: o[k], to, ms, t: 0, fn, res })); }
+function alienSay(ids, labels = null) {   /* the alien's lines go in the dialog box like everyone else's, and wait for a tap */
+  SND.chirp(ids.length + 1);
+  return cancellable(res => { dialog = { name: '???', port: 'alien', text: '#'.repeat(ids.length * 5), glyphs: ids, labels, shown: 0, sel: 0, res }; });
+}
 function say(name, port, text, opts) { return cancellable(res => { dialog = { name, port, text, shown: 0, opts, sel: 0, res }; }); }
 function play(gm) { return cancellable(res => { game = gm; gm.done = v => { game = null; res(v); }; gm.init && gm.init(); }); }
 async function card(lines, ms = 2200, col = '#f7c418') { st.card = lines; st.cardCol = col; await tween(st, 'cardA', 1, 400); await wait(ms); await tween(st, 'cardA', 0, 400); }
@@ -128,6 +132,7 @@ const fadeIn = (ms = 600) => tween(st, 'fade', 0, ms), fadeOut = (ms = 600) => t
 const ORDER = ['window', 'beam', 'lang', 'toilet', 'cable', 'reveal', 'dropoff'];
 const NAMES = { window: 'THE WINDOW', beam: 'BEAM ME UP', lang: 'LEARN THE LINGO', toilet: 'THE SPACE TOILET', cable: 'CABLE THE HOSE', reveal: 'THE CULPRIT', dropoff: 'THE DROP-OFF' };
 let cur = 0, score = { wrong: 0, retries: 0, snags: 0 };
+try { const k = JSON.parse(sessionStorage.getItem('ddt_alien_score') || 'null'); if (k && /scene=reveal/.test(location.search)) score = k; } catch (e) {}   /* carried across the trip to the arcade */
 async function runFrom(i) {
   cancelAll(); const tok = ++RUN;
   for (; i < ORDER.length; i++) {
@@ -273,15 +278,17 @@ function shipRoom() {
   if (bg('bg_ship')) return;
   R(0, 0, W, H, '#1e1638'); R(0, 207, W, 63, '#141026');
 }
-function sparkPanel(x, y) {   /* open wall panel: sparks pop every so often and fall to the floor */
-  const t = performance.now() / 1000, c = t % 1.7, on = c < 0.5;
+function sparkPanel(x, y) {
+  if (sparkPanel.next === undefined) { sparkPanel.next = performance.now() / 1000 + 2.5; sparkPanel.at = -9; }   /* open wall panel: sparks pop every so often and fall to the floor */
+  const t = performance.now() / 1000; if (t > sparkPanel.next) { sparkPanel.at = t; sparkPanel.next = t + 5 + Math.random() * 6; } const c = t - sparkPanel.at, on = c < 0.5;   /* a burst every 5-11 seconds */
   spr('toilet', on ? 5 : 4, x, y, 44, { mid: true });
   if (c < 0.5) spr('sparks', Math.min(5, Math.floor(c / 0.5 * 6)), x + 6, 226, 226 - y + 6);
 }
 function toiletDoor(x) {}   /* the door is in bg_ship */
-function toolBag(x, y) { R(x - 14, y - 12, 28, 12, '#c0392b'); R(x - 10, y - 16, 20, 4, '#1a1a1a'); R(x - 12, y - 8, 24, 2, '#8b2a1f'); R(x + 4, y - 22, 3, 10, '#aaa'); }
+const TOOLBOX = new Image(); TOOLBOX.src = '../assets/mg/sr2_toolbox.png';   /* the same toolbox as SUPER RON */
+function toolBag(x, y) { if (TOOLBOX.complete && TOOLBOX.naturalWidth) { g.save(); g.imageSmoothingEnabled = true; const w = 24, h = w * TOOLBOX.height / TOOLBOX.width; g.drawImage(TOOLBOX, x - w / 2, y - h, w, h); g.restore(); return; } R(x - 14, y - 12, 28, 12, '#c0392b'); }
 function spaceToilet(x, y, hoseT = 0, clogged = false) {   /* 0 idle · 1/2 hose wiggling · 3 clogged */
-  const f = hoseT > 0 ? 1 + Math.floor(performance.now() / 140) % 2 : clogged ? 3 : 0;
+  const f = clogged ? 3 : hoseT > 0 ? 1 + Math.floor(performance.now() / 160) % 2 : 0;   /* broken = sits there clogged */
   if (spr('toilet', f, x, y, 54)) return;
   R(x - 10, y - 30, 20, 30, '#c9ced6'); E(x, y - 36, 22, 9, '#e8ecf2');
 }
@@ -296,16 +303,17 @@ function drawDialog() {
   d.shown = Math.min(d.text.length, d.shown + 1.1);
   // two compact boxes: the speaker's portrait, and a text box sized to the words (so the scene behind stays visible)
   const top = st.dialogTop || window.DIALOG_TOP;
-  const all = wrap(d.text, 352, 8), n = Math.max(1, all.length), done = d.shown >= d.text.length;
+  const all = d.glyphs ? [''] : wrap(d.text, 352, 8), n = d.glyphs ? (d.labels ? 3 : 2) : Math.max(1, all.length), done = d.shown >= d.text.length;
   const padOn = TOUCHDEV && d.opts && done;
   const optH = d.opts ? d.opts.length * 13 + 2 : 0, th = 24 + n * 13 + optH, PS = 62;
   const TOPY = 30, tx = 6 + PS + 4, tw = W - tx - 6, ty = top ? TOPY : H - 6 - th, py = top ? TOPY : H - 6 - PS;   // up top it sits under the MENU and SKIP buttons, with a gap
   const frame = (x, y, w, h, c) => { R(x, y, w, h, c); R(x, y, w, 2, '#fff'); R(x, y + h - 2, w, 2, '#fff'); R(x, y, 2, h, '#fff'); R(x + w - 2, y, 2, h, '#fff'); };
   const p = d.port === 'alien' ? IMG.alienP : (IMG[d.port] || portLoad(d.port));
-  if (!padOn) { frame(6, py, PS, PS, '#2a3346'); if (p) g.drawImage(p, 8, py + 2, PS - 4, PS - 4); }
+  if (!padOn) { frame(6, py, PS, PS, '#2a3346'); if (d.port === 'alien' && spr('port', st.anger >= 2 ? 1 : st.happy ? 2 : 0, 6 + PS / 2, py + PS / 2, PS - 4, { mid: true })) {} else if (p) g.drawImage(p, 8, py + 2, PS - 4, PS - 4); }
   frame(tx, ty, tw, th, 'rgba(16,21,31,.94)');
   T(d.name, tx + 8, ty + 11, '#f7c418', 8);
-  wrap(d.text.slice(0, Math.floor(d.shown)), 352, 8).forEach((l, i) => T(l, tx + 8, ty + 26 + i * 13, '#fff', 8));
+  if (d.glyphs) { const k = Math.ceil(d.shown / 5); d.glyphs.slice(0, k).forEach((id, i) => { glyph(id, tx + 10 + i * 34, ty + 20, 4); if (d.labels && d.labels[i]) T(d.labels[i], tx + 20 + i * 34, ty + 50, '#f7c418', 5, 'center', false); }); }
+  else wrap(d.text.slice(0, Math.floor(d.shown)), 352, 8).forEach((l, i) => T(l, tx + 8, ty + 26 + i * 13, '#fff', 8));
   if (done && d.opts) {
     const oy = ty + 20 + n * 13;
     d.boxes = d.opts.map((o, i) => [tx + 4, oy + i * 13, tw - 8, 12]);
@@ -387,8 +395,8 @@ SCENES.beam = async () => {
     // ship
     const sx = 290, sy = st.shipY, t = performance.now() / 1000;
     if (st.beam > 0) { g.fillStyle = `rgba(125,255,176,${0.18 * st.beam + 0.05 * Math.sin(t * 20) * st.beam})`; g.beginPath(); g.moveTo(sx - 14, sy + 20); g.lineTo(sx + 14, sy + 20); g.lineTo(sx + 46, 244); g.lineTo(sx - 46, 244); g.fill(); }
+    rod(st.rodX, st.rodY, st.rodY < 232 ? 0 : 6, st.rodS, st.rodA);   /* behind the ship, so he vanishes up into it */
     if (!spr('ufo', Math.floor(t * 6) % 3, sx, sy, 58, { mid: true })) { E(sx, sy, 56, 13, '#7c8698'); E(sx, sy - 9, 24, 13, '#a6d8ff'); }
-    rod(st.rodX, st.rodY, st.rodY < 232 ? 0 : 6, st.rodS, st.rodA);
   };
   amb('alien_ship');
   await fadeIn(700);
@@ -398,7 +406,7 @@ SCENES.beam = async () => {
   await tween(st, 'rodX', 290, 2200, t => t);
   SND.beam(); await tween(st, 'beam', 1, 500);
   await wait(400);
-  await Promise.all([tween(st, 'rodY', 108, 2200), tween(st, 'rodS', 1, 2200)]);
+  await Promise.all([tween(st, 'rodY', 92, 2400), tween(st, 'rodS', 0.45, 2400)]);
   await tween(st, 'rodA', 0, 300);
   await tween(st, 'beam', 0, 300);
   await tween(st, 'shipY', -80, 900);
@@ -433,8 +441,8 @@ function shipLangRoom() {
 async function demo(list) {
   for (const id of list) {
     const w = WORDS.find(v => v.id === id);
-    st.point = id === 'me' ? null : w.at; st.mark = w.at; st.words = [id]; st.labels = null; SND.chirp(2);
-    await wait(1700); st.point = null; st.mark = null; st.words = null; await wait(250);
+    st.point = id === 'me' ? null : w.at; st.mark = w.at;
+    await alienSay([id]); st.point = null; st.mark = null; await wait(200);
   }
 }
 const MatchGame = {
@@ -479,7 +487,7 @@ SCENES.lang = async () => {
   amb('inside_alien_ship');
   view = shipLangRoom; st.tilt = 0;
   await fadeIn(700);
-  SND.chirp(5); st.words = ['me', 'no', 'you']; await wait(1400); st.words = null;
+  await alienSay(['me', 'no', 'you']);
   await say('ROD', 'rod_confused', "Buddy, I don't speak... whatever that is.");
   await say('ROD', 'rod_normal', 'Point at stuff. I can work with pointing.');
   for (;;) {
@@ -489,19 +497,19 @@ SCENES.lang = async () => {
     if (r === 'fail') { score.retries++; st.anger = 3; SND.chirp(3); await say('ROD', 'rod_shocked', 'Whoa whoa whoa! Okay! One more time. Slower.'); st.anger = 0; }
   }
   SND.ding(); st.anger = 0;
-  st.words = ['me', 'toilet', 'broken']; st.labels = ['ME', 'TOILET', 'BROKEN']; SND.chirp(3); await wait(2200);
+  await alienSay(['me', 'toilet', 'broken'], ['ME', 'TOILET', 'BROKEN']);
   await say('ROD', 'rod_normal', "Your toilet's broken?");
-  st.words = null; st.labels = null; st.tilt = 0.2; SND.chirp(6); await wait(500); st.tilt = -0.2; await wait(300); st.tilt = 0;
-  st.words = ['you', 'fix', 'toilet', 'home']; st.labels = ['YOU', 'FIX', 'TOILET', 'HOME']; SND.chirp(4); await wait(1800);
+  st.tilt = 0.2; SND.chirp(4); await wait(500); st.tilt = -0.2; await wait(300); st.tilt = 0;
+  await alienSay(['you', 'fix', 'toilet', 'home'], ['YOU', 'FIX', 'TOILET', 'HOME']);
   for (;;) {
     const c = await say('ROD', 'rod_normal', "So you're saying...", ['"YOU FIX TOILET. THEN YOU GO HOME."', '"YOU ARE MY TOILET NOW."', '"TAKE ME TO YOUR LEADER."']);
     if (c === 0) break;
     score.wrong++;
-    if (c === 1) { st.words = ['no', 'no', 'no']; st.labels = null; st.anger = 3; SND.bad(); await wait(1400); await say('ROD', 'rod_shocked', '...Okay. Good. Not that. NOT that.'); }
-    if (c === 2) { st.words = ['me']; st.labels = ['ME']; st.anger = 1; SND.chirp(2); await wait(1200); await say('ROD', 'rod_normal', "You're the leader? Of a ship with a broken toilet?"); }
-    st.tilt = 0; st.anger = 0; st.words = ['you', 'fix', 'toilet', 'home']; st.labels = ['YOU', 'FIX', 'TOILET', 'HOME'];
+    if (c === 1) { st.anger = 3; SND.bad(); await alienSay(['no', 'no', 'no']); await say('ROD', 'rod_shocked', '...Okay. Good. Not that. NOT that.'); }
+    if (c === 2) { st.anger = 1; await alienSay(['me'], ['ME']); await say('ROD', 'rod_normal', "You're the leader? Of a ship with a broken toilet?"); }
+    st.tilt = 0; st.anger = 0; await alienSay(['you', 'fix', 'toilet', 'home'], ['YOU', 'FIX', 'TOILET', 'HOME']);
   }
-  st.words = null; st.labels = null; st.happy = true; SND.chirp(3);
+  st.happy = true; SND.chirp(3);
   await say('ROD', 'rod_happy', "Deal. Show me the toilet.");
   st.happy = false;
   await fadeOut(600);
@@ -581,24 +589,19 @@ const CableGame = {
     if (this.ready > 0) { R(120, 96, 240, 70, '#10151fee'); T('STEER THE CABLE TO THE CLOG', 240, 114, '#f7c418', 7, 'center'); T('UP / DOWN  ·  OR HOLD WHERE YOU WANT IT', 240, 134, '#fff', 5, 'center'); T("DON'T SNAG THE WALLS OR THE JUNK", 240, 150, '#fff', 5, 'center'); if (Math.floor(this.t * 2.5) % 2) T('TAP TO START', 240, 176, '#f7c418', 7, 'center'); }
   },
 };
-SCENES.cable = async () => {
-  amb('inside_alien_ship');
-  view = () => {};
-  await fadeIn(300);
-  for (;;) {
-    const r = await play(CableGame);
-    if (r === 'ok') break;
-    score.retries++; view = () => R(0, 0, W, H, '#120d24');
-    await say('ROD', 'rod_normal', 'Kinked it. Pull it back and feed it again.');
-    view = () => {};
-  }
-  await fadeOut(500);
+SCENES.cable = async () => {   /* the real SNAKE THE LINE mini-game (flex shaft + chain knocker), then back here for the reveal */
+  amb();
+  await fadeOut(300);
+  try { sessionStorage.setItem('ddt_alien_score', JSON.stringify(score)); } catch (e) {}
+  const back = 'story/alien.html?scene=reveal' + (DDT.param('ret') ? '&ret=' + encodeURIComponent(DDT.param('ret')) : '');
+  DDT.nav(`../arcade/index.html?play=cable&diff=1&job=${encodeURIComponent('OUT OF THIS WORLD')}&lead=rod&ret=${encodeURIComponent(back)}`);
+  await new Promise(() => {});   /* leaving the page */
 };
 
 SCENES.reveal = async () => {
   Object.assign(st, { cableUp: 0, holo: 0, rodF: 6, happy: false }); amb('inside_alien_ship');
   view = () => {
-    shipRoom(); spaceToilet(300, 226, 0, !st.happy);
+    shipRoom(); spaceToilet(300, 226, st.happy ? 1 : 0, !st.happy);
     rod(196, 226, st.rodF);
     if (st.cableUp > 0) {
       const tx = 288, ty = 150 - st.cableUp * 24;
@@ -631,13 +634,13 @@ SCENES.reveal = async () => {
 };
 
 SCENES.dropoff = async () => {   /* dropped back off in the front yard at sunrise, just before the alarm */
-  Object.assign(st, { shipY: -60, shipX: 290, beam: 0, rodX: 290, rodY: 108, rodA: 0, rodF: 0 }); if (window.RAIN) RAIN.stop(); amb('alien_ship');
+  Object.assign(st, { shipY: -60, shipX: 290, beam: 0, rodX: 290, rodY: 92, rodS: 0.45, rodA: 0, rodF: 0 }); if (window.RAIN) RAIN.stop(); amb('alien_ship');
   view = () => {
     if (!bg('bg_yard_dawn')) { R(0, 0, W, H, '#f2a65a'); R(0, 236, W, 34, '#2f5a2a'); }
     if (IMG.van) { const fw = (IMG.van.width / Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35)))), vh = 112 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.drawImage(IMG.van, 0, 0, fw, IMG.van.height, 352, 258 - vh, 112, vh); g.imageSmoothingEnabled = false; }
     const sx = st.shipX, sy = st.shipY, t = performance.now() / 1000;
     if (st.beam > 0) { g.fillStyle = `rgba(125,255,176,${0.2 * st.beam + 0.05 * Math.sin(t * 20) * st.beam})`; g.beginPath(); g.moveTo(sx - 14, sy + 20); g.lineTo(sx + 14, sy + 20); g.lineTo(sx + 46, 244); g.lineTo(sx - 46, 244); g.fill(); }
-    rod(st.rodX, st.rodY, st.rodF, 2, st.rodA);
+    rod(st.rodX, st.rodY, st.rodF, st.rodS, st.rodA);
     spr('ufo', Math.floor(t * 6) % 3, sx, sy, 58, { mid: true });
   };
   await fadeIn(700);
@@ -645,7 +648,7 @@ SCENES.dropoff = async () => {   /* dropped back off in the front yard at sunris
   await tween(st, 'shipY', 70, 1600);
   SND.beam(); await tween(st, 'beam', 1, 400);
   await tween(st, 'rodA', 1, 300);
-  await tween(st, 'rodY', 240, 1800);   /* lowered down onto the lawn */
+  await Promise.all([tween(st, 'rodY', 240, 2000), tween(st, 'rodS', 1, 2000)]);   /* lowered down onto the lawn */
   await tween(st, 'beam', 0, 400);
   SND.chirp(3); await wait(300);
   await Promise.all([tween(st, 'shipX', 560, 900, t => t * t), tween(st, 'shipY', -60, 900, t => t * t)]);   /* and gone */
