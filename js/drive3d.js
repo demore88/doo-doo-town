@@ -303,7 +303,7 @@ function drive3d(choice, opts) {
   let grip = 0, gripSide = 1;   /* a raccoon on the glass */
   let glass = 0; if (!opts.arcade) try { glass = (DDT.get() || {}).glass || 0; } catch (e) {}   /* menu drives start with clean glass */
   // the Driving Game: score, near misses, and toolboxes on the road that patch the van back up
-  let score = 0, combo = 0, comboT = 0, distPts = 0, slowT = 0; const KITS = [], KIT_IMG = new Image(); KIT_IMG.src = (typeof ART !== 'undefined' ? ART : 'assets/') + 'mg/sr2_toolbox.png';
+  let score = 0, combo = 0, comboT = 0, distPts = 0, slowT = 0; const DS = { kits: 0, kitsUsed: 0, near: 0, bestCombo: 0, rear: 0 };   /* the Driving Game record */ const KITS = [], KIT_IMG = new Image(); KIT_IMG.src = (typeof ART !== 'undefined' ? ART : 'assets/') + 'mg/sr2_toolbox.png';
   if (opts.endless) for (let z = rnd(12, 22) * SEG_PER_MI * SEG; z < (N - 80) * SEG; z += rnd(15, 25) * SEG_PER_MI * SEG) {   /* a toolbox every 20 miles or so */ const n = ourLanes(z); KITS.push({ z, off: LANE[1 + Math.floor(Math.random() * n)], got: false }); }
   const STATS = { cars: 0, trucks: 0, headons: 0, deer: 0, moose: 0, turkeys: 0, peeper: 0, lost: 0, cracks: 0 };   // this drive's tally, added to the player's record at the end
   let DEERINS = false; try { DEERINS = !!((DDT.get() || {}).inv || {}).deerins; } catch (e) {}
@@ -404,7 +404,7 @@ function drive3d(choice, opts) {
         if (c.off !== c.tgt) { const d = c.tgt - c.off; c.off += Math.sign(d) * Math.min(Math.abs(d), dt * 0.55); }
         const VAN_HW = 0.16;   // the van, measured the same way as the cars it can hit
         if (opts.endless && live && c.prevAhead > 0 && ahead <= 0 && !c.nm) { const gap = Math.abs(px - c.off) - (c.hw + VAN_HW); c.nm = 1;
-          if (gap > -0.02 && gap < 0.2 && inv <= 0) { combo = comboT > 0 ? combo + 1 : 1; comboT = 2.5; const pts = 100 * combo * (c.onc ? 2 : 1); score += pts; say(`${c.onc ? 'WHOA! ' : ''}NEAR MISS +${pts}${combo > 1 ? ` (x${combo})` : ''}`, 1); } }   /* threading the needle pays */
+          if (gap > -0.02 && gap < 0.2 && inv <= 0) { combo = comboT > 0 ? combo + 1 : 1; comboT = 2.5; DS.near++; DS.bestCombo = Math.max(DS.bestCombo, combo); const pts = 100 * combo * (c.onc ? 2 : 1); score += pts; say(`${c.onc ? 'WHOA! ' : ''}NEAR MISS +${pts}${combo > 1 ? ` (x${combo})` : ''}`, 1); } }   /* threading the needle pays */
         c.prevAhead = ahead;
         if (live && inv <= 0 && ahead > -SEG * 0.6 && ahead < SEG * (c.truck ? 1.6 : 1.1) && Math.abs(px - c.off) < c.hw + VAN_HW - 0.03) {
           bursts.push({ t: 0, side: Math.max(-1, Math.min(1, (c.off - px) * 2.5)), big: c.onc || c.truck }); crashes++; inv = 1.4; shake = c.onc ? 0.6 : 0.35; hurtGlass(glassFor[c.onc ? 'onc' : c.truck ? 'truck' : 'car']);
@@ -419,7 +419,7 @@ function drive3d(choice, opts) {
         if (have > want + 1) { const far = cars.filter(c => !c.parked && c.z - (pos + PZ) > DRAW * 0.7 * SEG); if (far[0]) { far[0].z = -1e12; far[0].parked = true; far[0].retry = 0; } }
         if (have < want && Math.random() < dt * 2) { const inOnc = px < -1 / 3, z = pos + PZ + rnd(DRAW * 0.85, DRAW) * SEG, n = addCar(z, Math.random() < (inOnc ? 0.75 : 0.5)); if (n.onc && inOnc && Math.random() < 0.6) { n.lane = px < -1 && oncLanes(z) > 1 ? 5 : 0; n.off = n.tgt = LANE[n.lane]; }   /* camping in the oncoming lane brings oncoming traffic */ if (!cars.some(o => !o.parked && o.lane === n.lane && Math.abs(o.z - z) < 4 * SEG)) cars.push(n); }   /* more lanes, more traffic */
         comboT = Math.max(0, comboT - dt);
-        for (const k of KITS) if (!k.got && live && Math.abs(k.z - (pos + PZ)) < SEG * 0.7 && Math.abs(px - k.off) < 0.3) { k.got = true; const fix = Math.min(1, crashes); crashes -= fix; glass = Math.max(0, glass - 3); score += 250; sfx('horn'); say(fix ? 'TOOLBOX! PATCHED A DENT +250' : 'TOOLBOX! +250', 1.4); }
+        for (const k of KITS) if (!k.got && live && Math.abs(k.z - (pos + PZ)) < SEG * 0.7 && Math.abs(px - k.off) < 0.3) { k.got = true; const fix = Math.min(1, crashes); DS.kits++; DS.kitsUsed += fix; crashes -= fix; glass = Math.max(0, glass - 3); score += 250; sfx('horn'); say(fix ? 'TOOLBOX! PATCHED A DENT +250' : 'TOOLBOX! +250', 1.4); }
       }
       if (opts.endless && live) {
         slowT = speed < TOP * 0.45 ? slowT + dt : Math.max(0, slowT - dt * 2);
@@ -427,7 +427,7 @@ function drive3d(choice, opts) {
           const n = addCar(pos + PZ - rnd(18, 26) * SEG, false); n.lane = LANE.indexOf(lane); n.off = n.tgt = lane; n.speed = rnd(34, 42) * MPH; n.tailgater = true; if (!cars.some(o => !o.parked && Math.abs(o.off - lane) < 0.3 && Math.abs(o.z - n.z) < 3 * SEG)) { cars.push(n); if (slowT < 4) say('SOMEONE IS COMING UP BEHIND YOU!', 1.2); } }
         for (const c of cars) { if (c.parked || c.onc || c.spin > 0) continue; const behind = (pos + PZ) - c.z;
           if (behind > 0 && behind < SEG * 0.9 && Math.abs(px - c.off) < c.hw + 0.13 && c.speed > speed + 2 * MPH && inv <= 0) {   /* REAR-ENDED */
-            crashes++; inv = 1.4; shake = 0.45; hurtGlass(1); speed = Math.min(TOP, speed + 6 * MPH); c.z = pos + PZ - SEG * 1.4; { const nl = c.lane === 1 ? 2 : 1; c.blink = 0.4; c.next = nl; c.prev = c.lane; c.tailgater = false; }   /* they bump you, then swing out and go around */
+            crashes++; DS.rear++; inv = 1.4; shake = 0.45; hurtGlass(1); speed = Math.min(TOP, speed + 6 * MPH); c.z = pos + PZ - SEG * 1.4; { const nl = c.lane === 1 ? 2 : 1; c.blink = 0.4; c.next = nl; c.prev = c.lane; c.tailgater = false; }   /* they bump you, then swing out and go around */
             bursts.push({ t: 0, side: 0, big: false }); sfx('horn_angry'); say('REAR-ENDED!', 1.2); } }
       }
       // ---- no car can ever be inside another car ----
@@ -513,7 +513,7 @@ function drive3d(choice, opts) {
       draw(gas, brake, steer);
       if (opts.endless) { const mi = pos / SEG / SEG_PER_MI; if (crashes >= 20 || pos >= (N - 40) * SEG) { done = true; removeEventListener('keydown', kd); removeEventListener('keyup', ku); rc.onpointerdown = rc.onpointerup = rc.onpointermove = rc.onpointercancel = null;
           say(crashes >= 20 ? 'THE VAN IS TOTALED.' : 'YOU DROVE OFF THE MAP!', 2.5); draw(false, true, 0); if (rainSnd) { rainSnd.stop(); rainSnd = null; }
-          setTimeout(() => { rc.style.display = 'none'; res({ crashes, mins: 0, miles: mi, score: score + Math.floor(distPts) }); }, 1400); return; } }   /* the Driving Game: three crashes and you're done */
+          setTimeout(() => { rc.style.display = 'none'; res({ crashes, mins: 0, miles: mi, score: score + Math.floor(distPts), rec: { ...DS, cars: STATS.cars, trucks: STATS.trucks, headons: STATS.headons, deer: STATS.deer || 0, moose: STATS.moose || 0, turkeys: STATS.turkeys || 0, squirrel: STATS.squirrel || 0, raccoon: STATS.raccoon || 0 } }); }, 1400); return; } }   /* the Driving Game: three crashes and you're done */
       if (!opts.endless && pos >= (N - 40) * SEG) {
         done = true; removeEventListener('keydown', kd); removeEventListener('keyup', ku); rc.onpointerdown = rc.onpointerup = rc.onpointermove = rc.onpointercancel = null;
         const mins = Math.round(opts.leave + play * MIN_PER_S + penalty);
