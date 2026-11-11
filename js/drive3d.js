@@ -580,17 +580,19 @@ function drive3d(choice, opts) {
         for (const L of LINES) { const { sg, p1, p2, lt, rt } = L; if (Math.floor(sg.i / 3) % 4 !== 0) continue;   /* dashed white between lanes going our way */
           for (let lx = lt < -1.5 ? -1 : 1 / 3; lx < rt - 0.2; lx += lx < 0 ? 4 / 3 : 2 / 3) poly(p1.sx + p1.sw * lx, p1.sy, Math.max(0.22, lane(p1.sw) * 0.8), p2.sx + p2.sw * lx, p2.sy, Math.max(0.22, lane(p2.sw) * 0.8), '#e2e5e8', 0.6, true); } }   /* dashes taper with distance too */
       // the plow berm: a continuous 3D snowbank along both shoulders, far to near, its height rolling with the road
-      if (SNOW) {   /* the plow berm, one smooth shape per side: no pieces, so no seams or stripes */
+      if (SNOW) {   /* the plow berm: one smooth shape per side for each stretch of road you can actually see; a stretch past a hill crest is cut off at the crest so it can't show through the road */
         const bh = (i, side) => 0.11 + 0.05 * Math.sin(i * 0.031 + side) + 0.035 * Math.sin(i * 0.117 + side * 2);
-        const ok = drawn.filter(sg => sg.s1 && sg.s1.sc > 0 && sg.s1.z - camZ > DEPTH && sg.s1.sy < H + 60);
-        for (const side of [-1, 1]) {
-          const base = [], crest = [], outer = [];
-          for (const sg of ok) { const a = sg.s1, b0 = side < 0 ? (sg.lt || -1) - 0.16 : (sg.rt || 1) + 0.16, h = bh(sg.i, side);
-            base.push([a.sx + b0 * a.sw, a.sy]); crest.push([a.sx + (b0 + side * 0.34) * a.sw, a.sy - h * a.sw]); outer.push([a.sx + (b0 + side * 1.05) * a.sw, a.sy]); }
-          if (crest.length < 2) continue;
-          const fill = (A, B, col) => { r.fillStyle = col; r.beginPath(); A.forEach((p, k) => k ? r.lineTo(p[0], p[1]) : r.moveTo(p[0], p[1])); for (let k = B.length - 1; k >= 0; k--) r.lineTo(B[k][0], B[k][1]); r.closePath(); r.fill(); };
-          fill(crest, outer, side < 0 ? '#e6edf3' : '#d2dce6');   /* back slope */
-          fill(base, crest, side < 0 ? '#d3dde7' : '#eaf0f5'); } }   /* the face toward the road */
+        const runs = []; let cur = null, prev = null;
+        for (const L of LINES) { if (!prev || L.sg.i !== (prev.sg.i + 1) % N) { cur = []; runs.push(cur); } cur.push(L); prev = L; }
+        for (let ri = runs.length - 1; ri >= 0; ri--) { const run = runs[ri], clipY = run[0].clip;
+          r.save(); r.beginPath(); r.rect(-10, -10, W + 20, clipY + 10); r.clip();
+          for (const side of [-1, 1]) { const base = [], crest = [], outer = [];
+            for (const L of run) for (const a of (L === run[run.length - 1] ? [L.p1, L.p2] : [L.p1])) { const b0 = side < 0 ? (L.lt || -1) - 0.16 : (L.rt || 1) + 0.16, h = bh(L.sg.i, side);
+              base.push([a.sx + b0 * a.sw, a.sy]); crest.push([a.sx + (b0 + side * 0.34) * a.sw, a.sy - h * a.sw]); outer.push([a.sx + (b0 + side * 1.05) * a.sw, a.sy]); }
+            if (crest.length < 2) continue;
+            const fill = (A, B, col) => { r.fillStyle = col; r.beginPath(); A.forEach((p, k) => k ? r.lineTo(p[0], p[1]) : r.moveTo(p[0], p[1])); for (let k = B.length - 1; k >= 0; k--) r.lineTo(B[k][0], B[k][1]); r.closePath(); r.fill(); };
+            fill(crest, outer, side < 0 ? '#e6edf3' : '#d2dce6'); fill(base, crest, side < 0 ? '#d3dde7' : '#eaf0f5'); }
+          r.restore(); } }
       // sprites, cars, critters back to front
       const S = (img, sc, sx, sy, off, sw, clip, rot) => {
         const wpx = img.width * sc * sw / 160, hpx = img.height * sc * sw / 160, X = sx + sw * off - wpx / 2, Y = sy - hpx;
