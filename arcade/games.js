@@ -1382,7 +1382,7 @@ GAMES.push({
   },
   open(s, c, r) { return s.map[r] && s.map[r][c] === '.'; },
   update(s, dt, I) {
-    s.t += dt; FX(s, dt); s.flash = Math.max(0, s.flash - dt); s.shake = Math.max(0, (s.shake || 0) - dt); s.swing = Math.max(0, (s.swing || 0) - dt); s.guard = Math.max(0, (s.guard || 0) - dt);
+    s.t += dt; FX(s, dt); s.flash = Math.max(0, s.flash - dt); s.shake = Math.max(0, (s.shake || 0) - dt); s.swing = Math.max(0, (s.swing || 0) - dt); s.guard = Math.max(0, (s.guard || 0) - dt); if (s.lvlUp && (s.lvlUp.t += dt) > 3.2) s.lvlUp = null;
     if (s.fixT) { s.fixT += dt * (s.fixT > 3.4 && (I.Ap || I.ptr.clicked) ? 6 : 1); if (s.fixT > 9.4) { const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.t < 50 + s.gmax * 2, f >= 0.3), line: s.epi[1] + (s.restMin ? ` (Rested ${s.restMin} min.)` : ''), extraTime: s.restMin }); } return; }
     if (s.wed) { TRL.music.wtick = performance.now(); TRL.wedM(true); TRL.amb(false); } else { TRL.wedM(false); if (!s.battle) { TRL.music.atick = performance.now(); TRL.amb(true); } else TRL.amb(false); }   /* the wedding gets its own music */
     if (s.talk) { const K = s.talk; K.t += dt; if ((K.t > 0.4 && (I.Ap || I.ptr.clicked)) || K.t > TRL.hold(K.lines[Math.min(K.i, K.lines.length - 1)][1])) { K.i++; K.t = 0; if (K.i >= K.lines.length) { const me = HERO(s).name, them = me === 'ROD' ? 'Matt' : 'Rod'; s.talk.i = K.lines.length - 1; s.end = { win: true, stars: 1, carl: true, extraTime: s.restMin, line: `${them} fixed it. ${me === 'ROD' ? 'Rod' : 'Matt'} is still talking about Carl.` }; } } return; }
@@ -1499,7 +1499,7 @@ GAMES.push({
     s.talk = { lines: L, i: 0, t: 0 };
   },
   weapon(s) { const G2 = s.gear; return G2.includes('cutter') ? 'pipe cutter' : G2.includes('wrench') ? 'monkey wrench' : G2.includes('pipewrench') ? 'pipe wrench' : 'fists'; },
-  gainXP(s, n) { s.xp += n; while (s.xp >= s.lvl * 60) { s.xp -= s.lvl * 60; s.lvl++; SFX('ut_levelup'); s.hpMax += 5; s.hp = Math.min(s.hpMax, s.hp + Math.round(s.hpMax * 0.4)); (s.log = s.log || []).push(`LEVEL ${s.lvl}! Max HP +5, hits harder. You feel more... crawly.`); SFX('ui_select'); } },
+  gainXP(s, n) { s.xp += n; while (s.xp >= s.lvl * 60) { s.xp -= s.lvl * 60; s.lvl++; SFX('ut_levelup'); s.lvlUp = { t: 0, lvl: s.lvl }; s.hpMax += 5; s.hp = Math.min(s.hpMax, s.hp + Math.round(s.hpMax * 0.4)); (s.log = s.log || []).push(`LEVEL ${s.lvl}! Max HP +5, hits harder. You feel more... crawly.`); SFX('ui_select'); } },
   // the bag: stats, items, and resting. B opens it. In a fight, using something takes your turn.
   bagList(s) { const I2 = s.items, inB = s.bag && s.bag.battle; const L = [
       { id: 'aid', label: `BAND-AIDS x${I2.aid}`, off: !I2.aid }, { id: 'beans', label: `COLD BEANS x${I2.beans}`, off: !I2.beans }, { id: 'tonic', label: `CARL'S TONIC x${I2.tonic}`, off: !I2.tonic } ];
@@ -1753,6 +1753,11 @@ GAMES.push({
       st.forEach(([k, v], i) => { T(k, VX + 12, VY + 30 + i * 14, '#9fb3d9', 6); T(String(v), VX + 150, VY + 30 + i * 14, '#fff', 6, 'right'); });
       const GN = { pipewrench: 'PIPE WRENCH', lid: 'TRASH CAN LID', crown: 'POSSUM CROWN', pads: 'KNEE PADS', hat: 'HARD HAT', waders: 'CHEST WADERS', wrench: 'BIGGER WRENCH', cutter: 'PIPE CUTTER' }; { const wt = 'WEARING: ' + (s.gear.length ? s.gear.map(q => GN[q]).join(', ') : 'NOTHING SPECIAL'), L2 = WRAP(wt, 0, null, VW - 24, '#c9a46a', 5, 8); WRAP(wt, VX + 12, VY + VH - 6 - L2.length * 8, VW - 24, '#c9a46a', 5, 8); }
       this.bagList(s).forEach((o, i) => { const [x, y, w, h] = this.bagBox(i), on = i === s.bag.sel; R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); T(o.label, x + 6, y + h / 2 + 1, o.off ? '#5a5048' : on ? '#f7c418' : '#e8dcc0', 6); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); }); }
+    if (s.lvlUp) { const L = s.lvlUp, a = Math.min(1, L.t * 4, (3.2 - L.t) * 2), sc = 1 + Math.max(0, 0.25 - L.t) * 2;   /* LEVEL UP! pops up over the view */
+      g.save(); g.globalAlpha = a; R(VX + 50, VY + 40, VW - 100, 70, 'rgba(10,8,6,.9)'); R(VX + 50, VY + 40, VW - 100, 2, '#f7c418'); R(VX + 50, VY + 108, VW - 100, 2, '#f7c418');
+      for (let i = 0; i < 10; i++) { const an = i / 10 * 6.28 + L.t * 2, rr = 70 + L.t * 30; T('✦', VX + VW / 2 + Math.cos(an) * rr, VY + 75 + Math.sin(an) * rr * 0.45, '#f7c418', 6, 'center'); }
+      g.translate(VX + VW / 2, VY + 62); g.scale(sc, sc); T('LEVEL UP!', 0, 0, '#f7c418', 12, 'center'); g.setTransform(3, 0, 0, 3, 0, 0);
+      T(`LEVEL ${L.lvl}  ·  MAX HP +5  ·  HITS HARDER`, VX + VW / 2, VY + 88, '#e8dcc0', 5, 'center'); T('HEALED SOME, TOO', VX + VW / 2, VY + 99, '#7bd65b', 5, 'center'); g.restore(); }
     if (s.fixT && s.fixT < 3.4) { R(VX + 20, VY + 70, VW - 40, 40, 'rgba(10,8,6,.85)'); T(s.fixT < 1.2 ? 'THERE IT IS. THE DRIP.' : s.fixT < 2.2 ? 'FERNCO ON...' : 'CLAMPS TIGHT. DONE!', VX + VW / 2, VY + 90, '#7bd65b', 9, 'center'); }
     if (s.talk) { const K = s.talk, [who, line] = K.lines[Math.min(K.i, K.lines.length - 1)];
       const sky = g.createLinearGradient(0, VY, 0, VY + VH); sky.addColorStop(0, '#8fc4ef'); sky.addColorStop(1, '#d8ecf8'); g.fillStyle = sky; g.fillRect(VX, VY, VW, VH); if (!BGI('bg_lawn')) R(VX, VY + VH * 0.62, VW, VH * 0.38, '#5f9a3e');
@@ -1831,7 +1836,7 @@ GAMES.push({
 });
 /* SAVE + RESUME for Under the Trailer: it's a long crawl, so your spot is kept if the phone locks or the page reloads */
 (() => {
-  const G = GAMES.find(q => q.id === 'crawl'), SKIP = new Set(['cv', 'cx', 'img', 'buf', 'zb', 'battle', 'talk', 'shop', 'bag', 'wake', 'wed', 'rnd', 'props', 'carlScr', 'end', 'ask', 'saveT', 'fx', 'pops', 'parts']);
+  const G = GAMES.find(q => q.id === 'crawl'), SKIP = new Set(['cv', 'cx', 'img', 'buf', 'zb', 'battle', 'talk', 'shop', 'bag', 'wake', 'wed', 'rnd', 'props', 'carlScr', 'end', 'ask', 'saveT', 'lvlUp', 'fx', 'pops', 'parts']);
   const KEY = s => 'ddt_crawl_' + (new URLSearchParams(location.search).get('job') || 'arcade') + '_' + s.diff;
   const save = s => { try { const o = {}; for (const k in s) { if (SKIP.has(k) || typeof s[k] === 'function') continue; o[k] = s[k] instanceof Set ? { __set: [...s[k]] } : s[k]; } localStorage.setItem(KEY(s), JSON.stringify(o)); } catch (e) {} };
   const load = s => { try { const o = JSON.parse(localStorage.getItem(KEY(s)) || 'null'); return o && o.map ? o : null; } catch (e) { return null; } };
