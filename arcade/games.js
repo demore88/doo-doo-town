@@ -2068,13 +2068,69 @@ GAMES.push({
     T('LEFT ' + s.foes.filter(f => f.st !== 'gone').length, W - 6, 26, '#f7c418', 6, 'right');
   },
 });
-// 20b. BEAD BOBBLE — the water bead call, same trick: blow a jetter bubble around a swollen bead, then pop it.
-{ const BUB = GAMES.find(q => q.id === 'bubble');
-  GAMES.push(Object.assign({}, BUB, {
-    id: 'beads', name: 'BEAD BOBBLE', tag: 'Water beads · the whole system · two buckets',
-    how: ["The kids dumped a whole bag of water beads down the tub. They swelled up and they're bouncing all over the basement.", 'Blow a jetter bubble (SPACE) to trap a bead, then run into it to POP it. Wait too long and it breaks out, angrier.', 'Jump with ▲, up through the shelves. More beads rain down from the tub upstairs: do not step on them.', 'Pop them all. Every pop is a bucket of beads.'],
-    init(st) { BUB.init.call(this, st); st.beads = true; st.buckets = 0; st.fryers = []; st.vents = []; st.foes.forEach(f => { f.kind = 'bead'; f.hue = st.rnd(); }); },
-  })); }
+// 20b. WATER BEADS — a wall of swollen water beads plugging the sewer, seen from the jetter nozzle.
+// Every second you spray, the beads drink the well dry. Pop the ones on the bottom and the rest come down with them.
+GAMES.push({
+  id: 'beads', name: 'WATER BEADS', tag: 'The bead wall · a dry well · let gravity help',
+  how: ["The kids' water beads swelled up and packed the sewer solid. You're looking down the line from the nozzle.", 'Aim with the stick (or drag), HOLD SPACE (or hold the screen) to spray. A bead pops after a good soak.', "The beads drank the customer's well dry. All you've got is ONE BUCKET in the jetter tank, and it only goes down while you spray.", 'Pop the beads on the BOTTOM and everything stacked on them falls down the line. Clear the pipe before the well runs dry.'],
+  dpad: 'omni', ctl: 'STICK = AIM  ·  HOLD SPACE = SPRAY', act: 'SPRAY', phone: 'hold where you want to spray.',
+  init(s) {
+    s.oy = 0.22; s.f = 8.2; const [cx, cy, cr] = TUNNEL.proj(s.f, 0, 0, 0, s.oy); s.cx = cx; s.cy = cy; s.cr = cr * 0.93;
+    s.br = s.cr * [0.13, 0.115, 0.1][s.diff]; s.beads = []; const dx = s.br * 2.02, dy = s.br * 1.98;   /* stacked in columns, so knocking out the bottom one brings the column down */
+    for (let row = 0, y = s.cy + s.cr - s.br; y > s.cy - s.cr + s.br * 0.6; row++, y -= dy) for (let x = s.cx - s.cr + s.br; x < s.cx + s.cr; x += dx) {
+      const xx = x + (s.rnd() - 0.5) * 3; if (Math.hypot(xx - s.cx, y - s.cy) < s.cr - s.br * 0.75) s.beads.push({ x: xx, y, hue: s.rnd(), hp: 1, soak: 0, st: 'stuck', vy: 0, r: s.br * (0.92 + s.rnd() * 0.16) }); }
+    s.N0 = s.beads.length; s.ax = s.cx; s.ay = s.cy + s.cr * 0.55; s.p = 100; s.popped = 0; s.dropped = 0; s.combo = 0; s.spray = false; s.done = 0;
+    s.DRAIN = [9, 11, 13][s.diff];   /* pressure per second while spraying */
+  },
+  floorAt(s, x) { const d = x - s.cx; return s.cy + Math.sqrt(Math.max(0, s.cr * s.cr - d * d)); },
+  settle(s) {   // anything with nothing under it falls
+    const stuck = s.beads.filter(b => b.st === 'stuck').sort((a, b) => b.y - a.y), held = new Set();
+    for (const b of stuck) { if (b.y + b.r >= this.floorAt(s, b.x) - b.r * 0.9 || (Math.hypot(b.x - s.cx, b.y - s.cy) + b.r > s.cr - b.r * 0.35 && b.y < s.cy + s.cr * 0.2)) { held.add(b); continue; }   /* jammed against the pipe wall, or sitting on the bottom */
+      if (stuck.some(o => held.has(o) && o.y > b.y + b.r * 0.4 && o.y - b.y < (o.r + b.r) * 1.2 && Math.abs(o.x - b.x) < (o.r + b.r) * 0.45)) held.add(b); }
+    let n = 0; for (const b of stuck) if (!held.has(b)) { b.st = 'fall'; b.vy = 20 + Math.random() * 30; n++; }
+    if (n) { s.dropped += n; s.combo = n; POP(s, s.ax, s.ay - 30, n > 1 ? `${n} CAME DOWN!` : 'DOWN IT GOES', '#7dffb0'); SFX('splash', { vol: 0.4 }); }
+  },
+  update(s, dt, I) {
+    s.t += dt; FX(s, dt);
+    if (s.done) { s.done += dt; if (s.done > 2.4) { const left = s.beads.filter(b => b.st === 'stuck').length; s.end = s.win2 ? { win: true, stars: stars3(s.p > 40, s.p > 15), line: `Line's open. ${s.popped} popped, ${s.dropped} knocked loose, ${Math.round(s.p)}% of the bucket left.` } : { win: false, stars: 0, line: `Bucket's empty, well's dry. ${left} beads still packed in there, drinking.` }; } return; }
+    let mx = (I.R ? 1 : 0) - (I.L ? 1 : 0), my = (I.D ? 1 : 0) - (I.U ? 1 : 0);
+    if (I.ptr.down) { s.ax += (I.ptr.x - s.ax) * Math.min(1, dt * 10); s.ay += (I.ptr.y - s.ay) * Math.min(1, dt * 10); }
+    s.ax = clamp(s.ax + mx * 160 * HERO(s).spd * dt, s.cx - s.cr, s.cx + s.cr); s.ay = clamp(s.ay + my * 160 * HERO(s).spd * dt, s.cy - s.cr, s.cy + s.cr);
+    s.spray = (I.A || I.ptr.down) && s.p > 0;
+    if (s.spray) { s.p = Math.max(0, s.p - s.DRAIN * dt);
+      const hit = s.beads.filter(b => b.st === 'stuck' && Math.hypot(b.x - s.ax, b.y - s.ay) < b.r * 1.1).sort((a, b) => Math.hypot(a.x - s.ax, a.y - s.ay) - Math.hypot(b.x - s.ax, b.y - s.ay))[0];
+      if (hit) { hit.soak += dt * (2.2 / (0.8 + 0.2 * s.diff)) * HERO(s).grip; hit.r = Math.min(s.br * 1.35, hit.r + dt * 2.5);   /* it drinks, it swells */
+        if (hit.soak >= 1) { hit.st = 'pop'; hit.pt = 0; s.popped++; PUFF(s, hit.x, hit.y, `hsl(${hit.hue * 360},80%,65%)`, 14, 120); SFX('squish', { vol: 0.5 }); this.settle(s); } } }
+    for (const b of s.beads) { if (b.st === 'fall') { b.vy += 520 * dt; b.y += b.vy * dt; b.x += (s.cx - b.x) * dt * 0.6; if (b.y > s.cy + s.cr + b.r * 3) b.st = 'gone'; } else if (b.st === 'pop') { b.pt += dt; if (b.pt > 0.3) b.st = 'gone'; } }
+    const left = s.beads.filter(b => b.st === 'stuck').length;
+    if (left <= Math.max(1, s.N0 * 0.04)) { s.done = 0.01; s.win2 = true; s.beads.filter(b => b.st === 'stuck').forEach(b => { b.st = 'fall'; b.vy = 60; }); SFX('drain'); POP(s, 240, 80, 'IT ALL LETS GO!', '#7dffb0'); }
+    else if (s.p <= 0) { s.done = 0.01; s.win2 = false; POP(s, 240, 80, 'OUT OF WATER', '#e9665a'); }
+  },
+  draw(s) {
+    R(0, 0, W, H, '#050605');
+    TUNNEL.draw({ D: 0, t: s.t, pvc: false, ox: 0, oy: s.oy, plugs: [], water: 0.22, flow: -1, light: 1 }, 0, 0);
+    // the bead wall
+    for (const b of s.beads) { if (b.st === 'gone') continue; const pop = b.st === 'pop', k = pop ? 1 + b.pt * 3 : 1, a = pop ? Math.max(0, 1 - b.pt / 0.3) : 1;
+      g.globalAlpha = 0.92 * a; C(b.x, b.y, b.r * k, `hsl(${b.hue * 360},${70 + b.soak * 20}%,${48 + b.soak * 14}%)`); g.globalAlpha = a;
+      C(b.x - b.r * 0.32, b.y - b.r * 0.35, b.r * 0.28, 'rgba(255,255,255,.7)'); C(b.x + b.r * 0.3, b.y + b.r * 0.3, b.r * 0.18, 'rgba(255,255,255,.2)');
+      g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 1; g.beginPath(); g.arc(b.x, b.y, b.r * k, 0, 7); g.stroke(); g.globalAlpha = 1; }
+    TUNNEL.vignette(0.45);
+    // the nozzle and the stream
+    const nx = 240, ny = 232;
+    g.strokeStyle = '#1e1e22'; g.lineWidth = 14; g.beginPath(); g.moveTo(240, H + 10); g.lineTo(nx, ny + 8); g.stroke();
+    R(nx - 9, ny - 6, 18, 14, '#b8862e'); R(nx - 9, ny - 6, 18, 3, '#e0b45a'); R(nx - 5, ny - 11, 10, 6, '#9a6e22');
+    if (s.spray) { const pw = s.p / 100; for (let i = 0; i < 4 + pw * 6; i++) { g.strokeStyle = `rgba(170,215,255,${0.3 + Math.random() * 0.45})`; g.lineWidth = 1 + Math.random() * 2.5 * pw; g.beginPath(); g.moveTo(nx + (Math.random() - 0.5) * 6, ny - 10); g.lineTo(s.ax + (Math.random() - 0.5) * 10, s.ay + (Math.random() - 0.5) * 8); g.stroke(); }
+      for (let i = 0; i < 8; i++) { const a = Math.random() * 6.28, rr = Math.random() * 14; R(s.ax + Math.cos(a) * rr, s.ay + Math.sin(a) * rr * 0.7, 2, 2, '#e8f6ff'); } }
+    g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 1; g.beginPath(); g.arc(s.ax, s.ay, 7, 0, 7); g.moveTo(s.ax - 11, s.ay); g.lineTo(s.ax + 11, s.ay); g.moveTo(s.ax, s.ay - 11); g.lineTo(s.ax, s.ay + 11); g.stroke();
+    HUD(s, 'WATER BEADS', null);
+    const left = s.beads.filter(b => b.st === 'stuck').length;
+    T('JETTER TANK · 1 BUCKET', 10, 26, '#9fd1ff', 6); BAR(10, 31, 150, 7, s.p / 100, s.p > 40 ? '#4aa8ff' : s.p > 15 ? '#f7c418' : '#e9665a');
+    T('BEADS LEFT ' + left, W - 8, 26, '#f7c418', 6, 'right'); BAR(W - 158, 31, 150, 7, 1 - left / s.N0, '#7dffb0');
+    if (s.t < 5 && !s.spray) { T('ONE BUCKET OF WATER. USE IT WISELY.', 240, 56, '#9fd1ff', 7, 'center'); T('POP THE ONES HOLDING THE REST UP', 240, 70, '#fff', 7, 'center'); }
+    if (s.done) T(s.win2 ? 'LINE IS OPEN!' : 'TANK IS EMPTY...', 240, 70, s.win2 ? '#7dffb0' : '#e9665a', 12, 'center');
+    DRAWFX(s);
+  },
+});
 
 
 // =====================================================================

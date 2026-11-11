@@ -111,9 +111,9 @@
   <div class="scr" id="result"><div class="box" id="resbox"></div></div>
 </div></div>
 <audio id="music" src="../assets/doo_doo_town.mp3" loop preload="auto"></audio>
-<script src="../js/state.js?v=1794425719"></script>
-<script src="../js/sfx.js?v=1794425719"></script>
-<script src="games.js?v=1794425719"></script>
+<script src="../js/state.js?v=1794426025"></script>
+<script src="../js/sfx.js?v=1794426025"></script>
+<script src="games.js?v=1794426025"></script>
 <script>
 const cv = document.getElementById('c'); g = cv.getContext('2d'); const SCALE = 3; g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
 const $ = s => document.querySelector(s);
@@ -232,7 +232,7 @@ addEventListener('resize', () => { if (phase === 'intro') fitIntro(); });
 function toMenu() { phase = 'menu'; screen('menu'); $('#quit').style.display = 'none'; showPad(); buildGrid(); }
 function quit() { if (SOLO) return DDT.nav(DDT.back('index.html')); openIntro(cur); }
 $('#quit').onclick = quit;
-const NO_K = new Set(['kitty', 'septic', 'pour', 'stairs', 'crawl', 'detective', 'flush', 'poop', 'superron', 'steamer']);   // games with no speed knob of their own: their clock runs a little faster instead
+const NO_K = new Set(['kitty', 'beads', 'septic', 'pour', 'stairs', 'crawl', 'detective', 'flush', 'poop', 'superron', 'steamer']);   // games with no speed knob of their own: their clock runs a little faster instead
 function start() {
   const G = GAMES[cur];
   s = { hero, H: HEROES[hero], diff, k: DIFF_K[diff], rnd: rng((Date.now() ^ (cur * 7919)) >>> 0), t: 0, shake: 0, room: DDT.param('room') || '', camera: DDT.param('cam') === '1', item: DDT.param('item') || '' };   // room: kitchen = black grease, not brown
