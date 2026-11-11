@@ -1377,7 +1377,7 @@ GAMES.push({
     s.hobo = s.carls[0];
     s.shop = null; s.maps = [false, false, false]; s.scrib = []; s.big = null;
     { const free = []; for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) if (m[r][c] === '.' && !(c === 1 && r === 1) && !(c === best[0] && r === best[1]) && !s.carls.some(q => q.c === c && q.r === r) && !(s.kingdom && s.kingdom.c === c && s.kingdom.r === r)) free.push([c, r]);
-      s.traps = []; for (let i = 0; i < [12, 11, 10][s.diff] && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.traps.push({ c, r }); } s.gloves = []; for (let i = 0; i < 3 && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.gloves.push({ c, r }); } }   /* rat traps, baited with the good crackers */
+      s.traps = []; for (let i = 0; i < [16, 15, 14][s.diff] && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.traps.push({ c, r }); } s.gloves = []; for (let i = 0; i < 3 && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.gloves.push({ c, r }); } }   /* rat traps, baited with the good crackers */
     s.pc = 1; s.pr = 1; s.dir = m[1][2] === '.' ? 0 : 1; s.vx = 1.5; s.vy = 1.5; s.va = s.dir * Math.PI / 2; s.mv = 0;
     s.seen = new Set([101]); s.steps = 0; s.since = 0;
     const H = HERO(s), rod = H.name === 'ROD';
@@ -1422,7 +1422,7 @@ GAMES.push({
     s.pc = nc; s.pr = nr; s.mv = s.mvD = cmd === 'B' ? dur * 1.3 : dur; s.arrived = true;   /* crawling is silent: the ambience covers it */
   },
   arrive(s) {
-    s.seen.add(s.pr * 100 + s.pc); s.steps++; s.since++;
+    const fresh = !s.seen.has(s.pr * 100 + s.pc); s.seen.add(s.pr * 100 + s.pc); s.steps++; s.since++;
     { const gl = (s.gloves || []).find(q => !q.got && q.c === s.pc && q.r === s.pr); if (gl) { gl.got = true; (s.log = s.log || []).push(['A muddy work glove. ...Carl\'s? It\'s warm.', 'Somebody\'s glove. Blue. Crunchy.', 'A glove. You do not put it on.'][Math.floor(s.rnd() * 3)]); } }
     { const k = (s.traps || []).findIndex(q => !q.got && q.c === s.pc && q.r === s.pr); if (k >= 0) { s.traps[k].got = true; s.crk++; s.shake = 0.15; SFX('click'); SFX('ut_get', { vol: 0.6 }); (s.log = s.log || []).push(['You slide a peanut butter cracker off a rat trap... SNAP! Missed your fingers.', 'A rat trap with a little cracker on it. Mine now.', 'Peanut butter cracker off a trap. Slightly chewed.'][Math.floor(s.rnd() * 3)]); } }
     if (s.venom > 0) { s.venom--; if (s.hp > 1) { s.hp--; (s.log = s.log || []).push('The spider bite itches. -1 HP'); } }
@@ -1433,8 +1433,8 @@ GAMES.push({
       s.epi = [brag, nope[Math.floor(s.rnd() * nope.length)]]; if (s.carls.every(c => c.met)) s.epi[1] = "...Hey. Whose blue Econoline is that? It's been out front for fifteen years."; return; }
     if (s.gd[s.pr][s.pc] === 1 && !s.kingDone) { this.ambush(s, TRL.FOES.find(f => f.king)); return; }   /* he guards the drip */
     this.carlHint(s);
-    const chance = [0.11, 0.13, 0.15][s.diff];
-    if (s.since > 3 && s.gd[s.pr][s.pc] > 2 && s.rnd() < chance) this.ambush(s);
+    const chance = [0.07, 0.08, 0.09][s.diff] * (fresh ? 1 : 0.4);   /* fewer fights, and backtracking through places you've cleared is calmer */
+    if (s.since > 6 && s.gd[s.pr][s.pc] > 2 && s.rnd() < chance) this.ambush(s);
   },
   zone(s) { return s.d0[s.pr][s.pc] / s.dmax; },
   carlHint(s) {   // close to a Carl you haven't met: you hear him, and which way
@@ -1449,7 +1449,7 @@ GAMES.push({
     const z = this.zone(s), pool = TRL.FOES.filter(f => !f.king && f.z <= z && !(f.once && (s.met || []).includes(f.name)));
     let r = s.rnd() * pool.reduce((a, f) => a + f.w, 0), F = force || pool[0]; if (!force) for (const f of pool) { if ((r -= f.w) <= 0) { F = f; break; } }
     if (F.king) s.kingSeen = true;
-    const hp = Math.round((F.hp[0] + Math.floor(s.rnd() * (F.hp[1] - F.hp[0] + 1))) * (F.king ? [1.1, 1.4, 1.7][s.diff] : 1.5 + this.zone(s) * 0.6));   /* deeper ones are tougher */
+    const hp = Math.round((F.hp[0] + Math.floor(s.rnd() * (F.hp[1] - F.hp[0] + 1))) * (F.king ? [1.0, 1.2, 1.45][s.diff] : 1.5 + this.zone(s) * 0.6));   /* deeper ones are tougher */
     s.battle = { F, hp, max: hp, sel: 4, q: [], stun: 0, open: 0.6, blink: 0, dmgT: 0, pose: 2, poseT: 0.8, out: 0 }; s.since = 0; s.fights++; s.flash = 0.6; (s.met = s.met || []).push(F.name); TRL.bgm(true); TRL.cry(F, true);
     this.say(s, F.princess ? 'THE POSSUM PRINCESS blocks your way. She expects tribute.' : F.gary ? 'It is GARY. Gary is a raccoon in a tiny vest. Gary has done this before.' : F.king ? 'THE RAT KING rises from the muck, cape and all!' : F.name === 'BIG BUFF RAT' ? 'A BIG BUFF RAT flexes at you. It has been working out.' : F.venom ? 'A BROWN RECLUSE drops down from a joist!' : F.thief ? 'A RACCOON was already down here. It is not happy.' : F.possum ? 'A POSSUM hisses at you from behind a pier!' : `A ${F.name} jumps out of the dark!`);
   },
@@ -1641,8 +1641,8 @@ GAMES.push({
       if (b.faking) { b.faking = false; this.say(s, `...The POSSUM gets right back up. It was faking!`, () => { b.pose = 4; b.poseT = 0.6; TRL.cry(b.F); }); return; }
       if (s.rnd() < 0.12) { this.say(s, `The ${b.F.name} lunges... and misses!`, () => { b.pose = 3; b.poseT = 0.5; }); return; }
       if (b.F.thief && s.crk > 0 && s.rnd() < 0.35) { const n2 = b.F.gary ? Math.min(2, s.crk) : 1; this.say(s, b.F.gary ? `GARY pockets ${n2} of your crackers. In his VEST.` : 'The RACCOON snatches one of your crackers!', () => { s.crk -= n2; b.stolen = (b.stolen || 0) + n2; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); }); return; }
-      const gn = b.guards > 0 ? b.guards * (1 + Math.floor(s.rnd() * 2)) : 0;   /* each guard gets a nip in */
-      const d = Math.max(1, Math.round((b.F.atk[0] + s.rnd() * (b.F.atk[1] - b.F.atk[0])) * (s.k || 1) * (b.ph2 ? 1.3 : 1) * (1 + (b.F.king ? 0 : this.zone(s) * 0.25))) - s.def) + gn;   /* your gear soaks some of it */
+      const gn = b.guards > 0 ? b.guards : 0;   /* each guard gets a nip in */
+      const d = Math.max(1, Math.round((b.F.atk[0] + s.rnd() * (b.F.atk[1] - b.F.atk[0])) * (s.k || 1) * (b.ph2 ? 1.15 : 1) * (1 + (b.F.king ? 0 : this.zone(s) * 0.25))) - s.def) + gn;   /* your gear soaks some of it */
       this.say(s, b.F.king ? (gn ? `The King AND his guards get you! -${d} HP` : b.ph2 ? `THE FURIOUS RAT KING mauls you! -${d} HP` : `THE RAT KING rakes you with royal claws! -${d} HP`) : b.F.venom ? `The BROWN RECLUSE bites! -${d} HP. That's gonna itch.` : b.F.thief ? `The RACCOON claws you! -${d} HP` : `The ${b.F.name} bites! -${d} HP`,
         () => { s.hp -= d; s.hits++; s.shake = 0.35; s.guard = 0.6; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); if (b.F.venom) s.venom = 6; });
       b.after = () => { if (s.hp <= 0) { s.hp = 0; TRL.bgm(false); s.battle = null; if (s.lives > 0) this.respawn(s); else this.defeated(s); } };
@@ -1651,8 +1651,8 @@ GAMES.push({
       if (b.F.princess) {   /* beat her in a fair fight and she's smitten anyway: the escort (and the wedding) still happen */
         this.say(s, 'THE POSSUM PRINCESS stops. She has never lost before.', () => { b.pose = 4; b.poseT = 1.2; });
         this.say(s, 'She is... impressed. She bats her eyes at you.');
-        this.say(s, 'She takes your hand. She would like to go HOME now. (A crown on your map marks her kingdom.)', () => { this.gainXP(s, b.F.pts); s.score += b.F.pts; s.won++; s.escort = true; b.out = 0.01; });
-        b.after = () => this.endFight(s); return; } this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { const loot = b.F.king ? 4 : b.F.gary ? 3 : s.rnd() < [0.55, 0.48, 0.42][s.diff] ? 1 : 0;   /* most critters aren't carrying crackers */ s.crk += loot + (b.stolen || 0); if (b.stolen) (s.log = s.log || []).push(`You get your ${b.stolen} stolen cracker${b.stolen > 1 ? 's' : ''} back, too.`); this.gainXP(s, b.F.pts); if (b.F.king) s.kingDone = true; if (loot) (s.log = s.log || []).push(`It dropped ${loot} peanut butter cracker${loot > 1 ? 's' : ''}. Where was it keeping those.`); s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
+        this.say(s, 'She takes your hand. She would like to go HOME now. (A crown on your map marks her kingdom.)', () => { this.gainXP(s, Math.round(b.F.pts * 1.7)); s.score += b.F.pts; s.won++; s.escort = true; b.out = 0.01; });
+        b.after = () => this.endFight(s); return; } this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { const loot = b.F.king ? 4 : b.F.gary ? 3 : s.rnd() < [0.85, 0.78, 0.7][s.diff] ? 1 : 0;   /* most critters aren't carrying crackers */ s.crk += loot + (b.stolen || 0); if (b.stolen) (s.log = s.log || []).push(`You get your ${b.stolen} stolen cracker${b.stolen > 1 ? 's' : ''} back, too.`); this.gainXP(s, Math.round(b.F.pts * 1.7)); if (b.F.king) s.kingDone = true; if (loot) (s.log = s.log || []).push(`It dropped ${loot} peanut butter cracker${loot > 1 ? 's' : ''}. Where was it keeping those.`); s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
     b.wonFn = won; b.foeTurnFn = foeTurn;
     if (o.id === 'item') { s.bag = { sel: 0, battle: true }; return; }
     if (o.id === 'whack' && b.guards > 0) {   /* the guards are in the way: you have to get through them first */
@@ -1669,7 +1669,7 @@ GAMES.push({
       if (s.rnd() < (b.F.king ? 0.4 : 0.85)) { b.stun = b.F.king ? 1 : 2; this.say(s, `The ${b.F.name} is blinded!`); } else this.say(s, 'It just squints at you.');
       b.after = () => foeTurn();
     } else if (o.id === 'pb') {
-      if (b.F.princess) { s.crk--; this.say(s, 'You offer the Princess a peanut butter cracker...'); this.say(s, 'She accepts. She knights you with a twig. DEF +1!', () => { SFX('ut_knight', { vol: 0.7 }); s.def++; b.pose = 4; b.poseT = 1; }); this.say(s, 'She takes your hand. She would like to go HOME now. (A crown on your map marks her kingdom.)', () => { this.gainXP(s, b.F.pts); s.escort = true; b.out = 0.01; }); b.after = () => this.endFight(s); return; }
+      if (b.F.princess) { s.crk--; this.say(s, 'You offer the Princess a peanut butter cracker...'); this.say(s, 'She accepts. She knights you with a twig. DEF +1!', () => { SFX('ut_knight', { vol: 0.7 }); s.def++; b.pose = 4; b.poseT = 1; }); this.say(s, 'She takes your hand. She would like to go HOME now. (A crown on your map marks her kingdom.)', () => { this.gainXP(s, Math.round(b.F.pts * 1.7)); s.escort = true; b.out = 0.01; }); b.after = () => this.endFight(s); return; }
       s.crk--; this.say(s, 'You flick a peanut butter cracker down the row...'); this.say(s, `The ${b.F.name} goes for it. You crawl away.`, () => { b.pose = 3; b.poseT = 9; b.out = 0.01; }); b.after = () => this.endFight(s);
     } else if (o.id === 'run') {
       if (s.rnd() < s.runOdds * (b.F.king ? 0.5 : 1)) { this.say(s, 'You scramble away through the muck!', () => SFX('ut_flee', { vol: 0.6 })); b.after = () => this.endFight(s); }
