@@ -13,9 +13,9 @@
   @font-face{font-family:'Press Start 2P';src:url('../assets/PressStart2P.ttf') format('truetype');font-display:block}
   html,body{margin:0;height:100%;background:#0b0e15;color:#fff;font-family:'Press Start 2P',monospace;overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:manipulation}
   #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
-  #stage{position:relative;aspect-ratio:16/9;width:min(100vw,calc(100vh*16/9));width:min(100vw,calc(100dvh*16/9))}
+  #stage{position:relative;aspect-ratio:16/9;container-type:size;width:min(100vw,calc(100vh*16/9));width:min(100vw,calc(100dvh*16/9))}
   canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;touch-action:none}
-  .scr{position:absolute;inset:0;display:none;overflow:auto;background:#0b0e15f2;font-size:clamp(7px,1.15vw,13px);line-height:1.9}
+  .scr{position:absolute;inset:0;display:none;overflow:auto;background:#0b0e15f2;font-size:clamp(7px,1.15cqw,13px);line-height:1.9}
   .scr.on{display:block}
   html.embedboot #menu{display:none !important}   /* on a job: never flash the arcade's game list */
   h1{color:#f7c418;font-size:2em;text-align:center;margin:3% 0 .4em;text-shadow:3px 3px 0 #2c6cd6}
@@ -46,7 +46,7 @@
   .box li{margin:.35em 0}
   .ctl{color:#7bd65b;margin:1em 0}
   /* the how-to fills the whole screen: two columns, no scrolling */
-  #introbox{position:absolute;inset:3% 2.5%;margin:0;max-width:none;box-sizing:border-box;padding:2.2% 3%;overflow:hidden;display:grid;grid-template-columns:2fr 1fr;grid-template-rows:auto 1fr;column-gap:4%;font-size:clamp(7px,1.55vw,16px);line-height:1.45}
+  #introbox{position:absolute;inset:3% 2.5%;margin:0;max-width:none;box-sizing:border-box;padding:2.2% 3%;overflow:hidden;display:grid;grid-template-columns:2fr 1fr;grid-template-rows:auto 1fr;column-gap:4%;font-size:clamp(7px,1.55cqw,16px);line-height:1.45}
   #introbox .head{grid-column:1 / -1}
   #introbox .head h2{font-size:1.7em;margin:.1em 0 .25em}
   #introbox .head .tag{margin-bottom:.4em}
@@ -60,9 +60,9 @@
   .stars{font-size:2em;text-align:center;color:#f7c418;letter-spacing:.2em}
   #pad{position:absolute;inset:0;pointer-events:none;display:none}
   #pad.on{display:block}
-  #pad button{pointer-events:auto;position:absolute;font:inherit;font-size:clamp(10px,2.4vw,22px);background:rgba(16,21,31,.35);color:#fff;border:2px solid rgba(255,255,255,.5);border-radius:10px;width:9%;aspect-ratio:1;touch-action:none}
+  #pad button{pointer-events:auto;position:absolute;font:inherit;font-size:clamp(10px,2.4cqw,22px);background:rgba(16,21,31,.35);color:#fff;border:2px solid rgba(255,255,255,.5);border-radius:10px;width:9%;aspect-ratio:1;touch-action:none}
   #pad button.dn{background:rgba(247,196,24,.6)}
-  #pad .A{right:3%;bottom:8%;width:15%;border-radius:50%;border-color:#f7c418;font-size:clamp(8px,1.6vw,16px)}
+  #pad .A{right:3%;bottom:8%;width:15%;border-radius:50%;border-color:#f7c418;font-size:clamp(8px,1.6cqw,16px)}
   #pad.nodp .dp{display:none}
   /* floating thumbstick: put your thumb down anywhere in the left half and slide; it follows your thumb */
   #pad.stick .dp{display:none} #stickzone{display:none;position:absolute;left:0;bottom:0;width:48%;height:72%;pointer-events:auto;touch-action:none}
@@ -76,14 +76,14 @@
   #pad .A{right:4%;bottom:12%}
   #pad.lr .A{right:15%;left:auto;bottom:28%;width:13%}
   /* left-handed: everything mirrors */
-  #pad .B{display:none;left:4%;bottom:52%;width:13%;border-radius:50%;border-color:#9fd1ff;font-size:clamp(8px,1.5vw,15px)}
+  #pad .B{display:none;left:4%;bottom:52%;width:13%;border-radius:50%;border-color:#9fd1ff;font-size:clamp(8px,1.5cqw,15px)}
   #pad.b2 .B{display:block} #pad.lr .B{left:15%;bottom:28%}   /* the second button: the same action on the left (SPIN), or a left-thumb action (HOLD BREATH) */
   #pad.lefty .A{right:auto;left:4%}
   #pad.lefty.lr .A{left:15%;right:auto}
   #pad.lefty:not(.lr) .dp[data-k=L]{left:auto !important;right:22%}#pad.lefty:not(.lr) .dp[data-k=R]{left:auto !important;right:2%}
   #pad.lefty:not(.lr) .dp[data-k=U]{left:auto !important;right:12%}#pad.lefty:not(.lr) .dp[data-k=D]{left:auto !important;right:12%}
   #top{position:absolute;top:.4%;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:5}
-  #top button{font:inherit;font-size:clamp(5px,.8vw,9px);background:#10151fcc;color:#fff;border:1px solid #9fb3d9;padding:.35em .55em;cursor:pointer}
+  #top button{font:inherit;font-size:clamp(5px,.8cqw,9px);background:#10151fcc;color:#fff;border:1px solid #9fb3d9;padding:.35em .55em;cursor:pointer}
 </style>
 </head>
 <body>
@@ -110,9 +110,9 @@
   <div class="scr" id="result"><div class="box" id="resbox"></div></div>
 </div></div>
 <audio id="music" src="../assets/doo_doo_town.mp3" loop preload="auto"></audio>
-<script src="../js/state.js?v=1794420586"></script>
-<script src="../js/sfx.js?v=1794420586"></script>
-<script src="games.js?v=1794420586"></script>
+<script src="../js/state.js?v=1794278080"></script>
+<script src="../js/sfx.js?v=1794278080"></script>
+<script src="games.js?v=1794278080"></script>
 <script>
 const cv = document.getElementById('c'); g = cv.getContext('2d'); const SCALE = 3; g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
 const $ = s => document.querySelector(s);

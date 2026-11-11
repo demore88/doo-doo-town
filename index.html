@@ -13,24 +13,24 @@
   @font-face{font-family:'Press Start 2P';src:url('assets/PressStart2P.ttf') format('truetype');font-display:block}
   html,body{margin:0;height:100%;background:#0e1118;overflow:hidden;font-family:'Press Start 2P',monospace;color:#fff}
   #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
-  #stage{position:relative;aspect-ratio:16/9;width:min(100vw,calc(100vh*16/9));width:min(100vw,calc(100dvh*16/9))}
+  #stage{position:relative;aspect-ratio:16/9;container-type:size;width:min(100vw,calc(100vh*16/9));width:min(100vw,calc(100dvh*16/9))}
   canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
   html.embedboot #ui, html.embedboot #press, html.embedboot #watch, html.embedboot #sound{display:none !important}
   #ui{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;pointer-events:none}
-  .pre{margin-top:2.2%;font-size:clamp(7px,1.3vw,14px);color:#fff;text-align:center;background:#10151fd9;padding:.55em .9em;border:2px solid #f7c418;
+  .pre{margin-top:2.2%;font-size:clamp(7px,1.3cqw,14px);color:#fff;text-align:center;background:#10151fd9;padding:.55em .9em;border:2px solid #f7c418;
     text-shadow:2px 2px 0 #000}
-  .title{margin-top:1.4%;text-align:center;line-height:1.2;font-size:clamp(16px,4.2vw,46px);color:#f7c418;
+  .title{margin-top:1.4%;text-align:center;line-height:1.2;font-size:clamp(16px,4.2cqw,46px);color:#f7c418;
     text-shadow:0.08em 0.08em 0 #2c6cd6,0.16em 0.16em 0 #10151f;letter-spacing:.04em}
-  .sub{margin-top:1%;font-size:clamp(7px,1.3vw,14px);color:#fff;text-align:center;background:#10151fd9;padding:.55em .9em;
+  .sub{margin-top:1%;font-size:clamp(7px,1.3cqw,14px);color:#fff;text-align:center;background:#10151fd9;padding:.55em .9em;
     text-shadow:2px 2px 0 #000}
-  #press{margin-top:3%;font-size:clamp(8px,1.8vw,18px);color:#fff;background:#10151fd9;padding:.6em 1em;text-shadow:2px 2px 0 #000;animation:blink 1s steps(2) infinite;pointer-events:auto;cursor:pointer}
+  #press{margin-top:3%;font-size:clamp(8px,1.8cqw,18px);color:#fff;background:#10151fd9;padding:.6em 1em;text-shadow:2px 2px 0 #000;animation:blink 1s steps(2) infinite;pointer-events:auto;cursor:pointer}
   @keyframes blink{50%{opacity:0}}
-  #press{position:absolute;top:2%;left:1.5%;margin:0;font-size:clamp(6px,1vw,11px);white-space:nowrap;display:none;border:2px solid #fff}
-  #drivecol{position:absolute;right:3%;top:40%;width:clamp(120px,22vw,250px);display:flex;flex-direction:column;gap:.5em;pointer-events:auto} #drivestats{font-size:clamp(6px,1vw,11px);padding:.5em}
+  #press{position:absolute;top:2%;left:1.5%;margin:0;font-size:clamp(6px,1cqw,11px);white-space:nowrap;display:none;border:2px solid #fff}
+  #drivecol{position:absolute;right:3%;top:40%;width:clamp(120px,22cqw,250px);display:flex;flex-direction:column;gap:.5em;pointer-events:auto} #drivestats{font-size:clamp(6px,1cqw,11px);padding:.5em}
   #drivebtn{width:100%;padding:.4em;display:flex;flex-direction:column;align-items:center;gap:.35em;pointer-events:auto}
   #drivebtn img{width:100%;image-rendering:pixelated;border:2px solid #10151f;display:block} #drivebtn b{font-size:1.15em;color:#f7c418} #drivebtn span{font-size:.6em;color:#7dffb0;text-align:center;line-height:1.5}
-  #menu{position:absolute;left:3%;top:43%;display:flex;flex-direction:column;gap:clamp(4px,1vw,10px);pointer-events:auto}
-  .btn{font:inherit;font-size:clamp(7px,1.25vw,14px);background:#10151fcc;color:#fff;border:3px solid #f7c418;padding:.6em 1.2em;cursor:pointer;
+  #menu{position:absolute;left:3%;top:43%;display:flex;flex-direction:column;gap:clamp(4px,1cqw,10px);pointer-events:auto}
+  .btn{font:inherit;font-size:clamp(7px,1.25cqw,14px);background:#10151fcc;color:#fff;border:3px solid #f7c418;padding:.6em 1.2em;cursor:pointer;
     box-shadow:4px 4px 0 #10151f;text-align:center;min-width:12em}
   /* bottom-right stack on the menu: screensaver (bottom), full screen (the shell's button, middle), music (top) */
   #watch{position:fixed;right:10px;width:44px;height:44px;border-radius:10px;border:2px solid #f7c418;background:rgba(16,21,31,.85);color:#fff;font:inherit;font-size:9px;line-height:1.2;padding:0;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;pointer-events:auto;z-index:8;bottom:10px}
@@ -38,26 +38,26 @@
   .btn:hover,.btn:focus-visible{background:#2c6cd6;outline:none}
   .btn.sel{background:#2c6cd6}
   #panel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(70%,640px);background:#10151fee;border:3px solid #f7c418;
-    box-shadow:6px 6px 0 #000;padding:2.2%;font-size:clamp(7px,1.15vw,12px);line-height:1.9;display:none;pointer-events:auto}
+    box-shadow:6px 6px 0 #000;padding:2.2%;font-size:clamp(7px,1.15cqw,12px);line-height:1.9;display:none;pointer-events:auto}
   #panel h3{margin:0 0 .8em;color:#f7c418;font-size:1.3em}
   #panel .btn{margin-top:1em;min-width:auto}
   #toast{position:absolute;left:50%;bottom:17%;transform:translateX(-50%);background:#10151fee;border:3px solid #f7c418;padding:.8em 1.2em;
-    font-size:clamp(7px,1.2vw,13px);display:none;text-align:center;white-space:nowrap}
+    font-size:clamp(7px,1.2cqw,13px);display:none;text-align:center;white-space:nowrap}
   #footer{pointer-events:none} body.embed #footer,body.cutting #footer{display:none}   /* the phone numbers show on the main menu only */   /* just a sign: taps go through it to the game (the drive's brake corners live under it) */
-  #footer{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:clamp(7px,1.35vw,15px);color:#fff;background:#10151fe6;
+  #footer{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:clamp(7px,1.35cqw,15px);color:#fff;background:#10151fe6;
     border-top:3px solid #f7c418;padding:.7em 0;text-shadow:2px 2px 0 #000;letter-spacing:.03em}
   #footer b{color:#f7c418;font-weight:normal}
   #sound{position:fixed;right:10px;width:44px;height:44px;border-radius:10px;border:2px solid #f7c418;background:rgba(16,21,31,.85);color:#fff;font:inherit;font-size:9px;line-height:1.2;padding:0;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;pointer-events:auto;z-index:8;bottom:114px;font-size:16px}
   #sound.off{color:#e9665a;text-decoration:line-through}
 
   /* ---------- opening call cutscene ---------- */
-  #cut{position:absolute;inset:0;background:#0b0e15f2;display:none;pointer-events:auto;font-size:clamp(7px,1.25vw,14px)}
+  #cut{position:absolute;inset:0;background:#0b0e15f2;display:none;pointer-events:auto;font-size:clamp(7px,1.25cqw,14px)}
   #cut.on{display:block}
   #vanbg{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;display:none}
   body.vancall #vanbg{display:block} body.vancall #cut{background:#0b0e1555} body.vancall #footer{display:none} body.vancall.ringing #card{display:none}
   /* incoming-call screen (campaign) */
   /* the Poop Phone: a beat-up Samsung S23 */
-  #callui .phonebody{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-3deg);height:88%;aspect-ratio:9/19.5;background:#0d0d10;border-radius:12%/5.5%;border:clamp(4px,.7vw,8px) solid #2b2b31;box-shadow:0 0 0 2px #6a6a72 inset,0 12px 30px #000c}
+  #callui .phonebody{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-3deg);height:88%;aspect-ratio:9/19.5;background:#0d0d10;border-radius:12%/5.5%;border:clamp(4px,.7cqw,8px) solid #2b2b31;box-shadow:0 0 0 2px #6a6a72 inset,0 12px 30px #000c}
   #callui .screen{position:absolute;inset:2.5%;border-radius:10%/4.6%;background:linear-gradient(170deg,#24476e,#0f1a2c 60%,#0a0f19);overflow:hidden}
   #callui .cam{position:absolute;top:3%;left:50%;width:4.5%;aspect-ratio:1;border-radius:50%;background:#000;box-shadow:0 0 0 2px #222;transform:translateX(-50%)}
   #callui .screen .sbar{position:absolute;top:2.5%;left:7%;right:7%;display:flex;justify-content:space-between;font-size:.62em;color:#cfd8e8}
@@ -84,15 +84,15 @@
   #callui .cid small{color:#9fb3d9}
   #callui .btns{position:absolute;bottom:20%;left:0;right:0;display:flex;justify-content:center;gap:22%}
   #callui .cb{display:flex;flex-direction:column;align-items:center;gap:.6em;font-size:.8em;color:#cfd8e8}
-  #callui button{width:clamp(34px,5.5vw,62px);height:clamp(34px,5.5vw,62px);border-radius:50%;border:none;cursor:pointer;display:grid;place-items:center;box-shadow:0 4px 0 #0006}
+  #callui button{width:clamp(34px,5.5cqw,62px);height:clamp(34px,5.5cqw,62px);border-radius:50%;border:none;cursor:pointer;display:grid;place-items:center;box-shadow:0 4px 0 #0006}
   #callui button svg{width:50%;height:50%;fill:#fff}
   #callui #decline{background:#e5383b} #callui #decline svg{transform:rotate(135deg)}
   #callui #accept{background:#2fbf5b;animation:pulse 1.1s infinite}
-  #callui .up{width:clamp(14px,2vw,22px);fill:#2fbf5b;animation:bob 1s ease-in-out infinite}
+  #callui .up{width:clamp(14px,2cqw,22px);fill:#2fbf5b;animation:bob 1s ease-in-out infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 #2fbf5baa}70%{box-shadow:0 0 0 18px #2fbf5b00}100%{box-shadow:0 0 0 0 #2fbf5b00}}
   @keyframes bob{50%{transform:translateY(-6px)}}
   #callui .nag{position:absolute;bottom:4%;left:50%;transform:translateX(-50%);width:min(80%,640px);display:none;align-items:center;gap:1em;background:#10151f;border:3px solid #fff;padding:.6em;text-align:left;font-size:.95em;line-height:1.6}
-  #callui .nag img{width:clamp(40px,7vw,72px);image-rendering:pixelated;border:2px solid #f7c418}
+  #callui .nag img{width:clamp(40px,7cqw,72px);image-rendering:pixelated;border:2px solid #f7c418}
   #cut .next.big{right:auto;left:50%;transform:translateX(-50%);bottom:24%;font-size:1.5em;padding:.8em 1.4em;border-color:#f7c418;color:#f7c418;animation:blink 1s steps(2) infinite}
   body.cutting #ui, body.cutting #watch, body.cutting #press{visibility:hidden}
   #cut .card{position:absolute;top:8%;left:50%;transform:translateX(-50%);color:#f7c418;font-size:1.25em;text-align:center;line-height:1.8}
@@ -123,7 +123,7 @@
   #panel .grp{color:#f7c418;margin-top:.8em}
   body.saver #ui, body.saver #press, body.saver #footer, body.saver #sound, body.saver #watch, body.saver #toast, body.saver #panel{display:none !important}
   body.saver{cursor:none}
-  #saverhint{position:absolute;bottom:3%;left:50%;transform:translateX(-50%);font-size:clamp(6px,1vw,11px);color:#fff;background:#10151fcc;padding:.6em 1em;display:none;pointer-events:none;text-shadow:2px 2px 0 #000}
+  #saverhint{position:absolute;bottom:3%;left:50%;transform:translateX(-50%);font-size:clamp(6px,1cqw,11px);color:#fff;background:#10151fcc;padding:.6em 1em;display:none;pointer-events:none;text-shadow:2px 2px 0 #000}
   body.saver #saverhint{display:block;animation:hintfade 3.5s forwards}
   @keyframes hintfade{0%,70%{opacity:1}100%{opacity:0}}
 </style>
@@ -143,7 +143,7 @@
       <button class="btn" data-a="credits">CREDITS</button>
       <button class="btn dev" data-a="scenes">CUTSCENES (DEV)</button>
     </div>
-    <div id="drivecol"><button id="drivebtn" class="btn"><img src="assets/drive_thumb.png" alt=""><b>DRIVE</b><span id="bestdrive"></span></button><button id="drivestats" class="btn">DRIVE RECORD</button><button id="tiltbtn" class="btn" style="font-size:clamp(6px,1vw,11px);padding:.5em">TILT STEER: OFF</button></div>
+    <div id="drivecol"><button id="drivebtn" class="btn"><img src="assets/drive_thumb.png" alt=""><b>DRIVE</b><span id="bestdrive"></span></button><button id="drivestats" class="btn">DRIVE RECORD</button><button id="tiltbtn" class="btn" style="font-size:clamp(6px,1cqw,11px);padding:.5em">TILT STEER: OFF</button></div>
   </div>
   <button id="sound" title="Music on/off">♪</button>
   <button id="watch" title="Screensaver">ZZ<br>SAVER</button>
