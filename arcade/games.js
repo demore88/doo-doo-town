@@ -201,7 +201,7 @@ GAMES.push({
 //    TP rolls to grab and toolboxes to bust open.
 GAMES.push({
   id: 'sprinkler', name: 'CLEANOUT BLOWOUT', tag: 'Run the yard · jump, slide, dodge · grab the TP',
-  how: ['The whole line backed up and every cleanout in the yard blew its cap. RUN FOR THE VAN.', 'JUMP the brown jets. Tap for a hop, HOLD for a big jump (the tall blasts and the long septic holes need a big one).', 'SLIDE under the HIGH blasts (hold ▼ or the SLIDE button). Yellow ▲ arrows on the grass = JUMP. Blue ▼ arrows = SLIDE.', 'When a cleanout shoots STRAIGHT UP, turds and corn rain down: watch the SHADOWS and steer clear. Dodge rolling trash cans and hose reels.', 'GRAB the sparkly stuff: TP rolls (25 = a spare pair of pants) and toolboxes. AVOID anything brown.'],
+  how: ['The whole line backed up and every cleanout in the yard blew its cap. RUN FOR THE VAN.', 'JUMP the brown jets. Tap for a hop, HOLD for a big jump (the tall blasts and the long septic holes need a big one).', 'SLIDE under the HIGH blasts that come out of the tall pipes (hold ▼ or the SLIDE button).', 'When a cleanout shoots STRAIGHT UP, turds and corn rain down: watch the SHADOWS and steer clear. Dodge rolling trash cans and hose reels.', 'GRAB the sparkly stuff: TP rolls (25 = a spare pair of pants) and toolboxes. AVOID anything brown.'],
   dpad: 'stick', stickH: true,
   ctl: '◀ ▶ STEER · ▲/SPACE JUMP (HOLD = HIGHER) · ▼/SHIFT SLIDE',
   act: 'JUMP', act2: 'SLIDE',
@@ -287,7 +287,6 @@ GAMES.push({
     else { const sky = g.createLinearGradient(0, 0, 0, HY); sky.addColorStop(0, '#7fb6e6'); sky.addColorStop(1, '#cfe6f4'); g.fillStyle = sky; g.fillRect(-6, 0, W + 12, HY); }
     for (let y = HY; y < H; y += 2) { const rel = D * (FY - HY) / Math.max(0.5, y - HY) - D, k = Math.floor((s.z + rel) / 3) % 2, f = Math.min(1, (y - HY) / (H - HY)), c0 = [168, 164, 70], c1 = [112, 128, 44], m = (a, b2) => Math.round(a + (b2 - a) * f) - (k ? 10 : 0);
       R(-6, y, W + 12, 2, `rgb(${m(c0[0], c1[0])},${m(c0[1], c1[1])},${m(c0[2], c1[2])})`); }   /* late-summer lawn, mowing stripes rushing at you */
-    for (const lx of [-1.5, -0.5, 0.5, 1.5]) { const a = this.P(s, 60, lx), b2 = this.P(s, -1, lx); g.strokeStyle = 'rgba(90,70,20,.25)'; g.lineWidth = 1; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b2.x, b2.y); g.stroke(); }
     { const rel = s.DIST - s.z + 4; if (rel < 75 && IMG.van_back) { const p = this.P(s, rel, 0), im = IMG.van_back, fw = im.width / 6, h = 2.6 * this.U * p.sc, w = h * fw / im.height; g.imageSmoothingEnabled = true; g.drawImage(im, 0, 0, fw, im.height, p.x - w / 2, p.y - h, w, h); g.imageSmoothingEnabled = false; } }
     // holes first (they're IN the ground)
     for (const o of s.objs) if (o.k === 'hole') { const rel = o.wz - s.z, a = this.P(s, Math.max(-0.5, rel), -1.6), b2 = this.P(s, Math.max(-0.5, rel), 1.6), c = this.P(s, Math.max(-0.5, rel - o.len), 1.6), d = this.P(s, Math.max(-0.5, rel - o.len), -1.6);
@@ -298,10 +297,6 @@ GAMES.push({
       g.fillStyle = '#6b4a2a'; g.beginPath(); g.moveTo(a.x - 4, a.y + 2); g.lineTo(b2.x + 4, b2.y + 2); g.lineTo(c.x + 4, c.y - 2); g.lineTo(d.x - 4, d.y - 2); g.fill();
       g.fillStyle = '#1e140b'; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b2.x, b2.y); g.lineTo(c.x, c.y); g.lineTo(d.x, d.y); g.fill();
       g.fillStyle = 'rgba(110,80,30,.6)'; g.beginPath(); g.moveTo((a.x * 3 + d.x) / 4, (a.y * 3 + d.y) / 4); g.lineTo((b2.x * 3 + c.x) / 4, (b2.y * 3 + c.y) / 4); g.lineTo((b2.x + c.x * 3) / 4, (b2.y + c.y * 3) / 4); g.lineTo((a.x + d.x * 3) / 4, (a.y + d.y * 3) / 4); g.fill(); }   /* the muck at the bottom */
-    for (const o of s.objs) { if (o.k !== 'jet' && o.k !== 'hole') continue; const slideIt = o.kind === 'jetH', big = o.kind === 'jetT' || (o.k === 'hole' && o.len > 4.5), col = slideIt ? '#5ab4ff' : '#ffd23a';   /* painted arrows: YELLOW ▲ jump · BLUE ▼ slide */
-      for (let k = 0; k < (big ? 2 : 1); k++) { const zr = o.wz - s.z - 3.2 - k * 1.6; if (zr < 0.3 || zr > 55) continue; const up = !slideIt, A = (x, dz) => this.P(s, zr + dz, x);
-        g.fillStyle = col; g.globalAlpha = 0.85; for (const cx of [-1, 0, 1]) { const tip = A(cx, up ? 0.9 : -0.1), l = A(cx - 0.32, up ? 0 : 0.8), r2 = A(cx + 0.32, up ? 0 : 0.8), l2 = A(cx - 0.32, up ? 0.35 : 0.45), r3 = A(cx + 0.32, up ? 0.35 : 0.45), mid = A(cx, up ? 0.55 : 0.25);
-          g.beginPath(); g.moveTo(tip.x, tip.y); g.lineTo(r2.x, r2.y); g.lineTo(r3.x, r3.y); g.lineTo(mid.x, mid.y); g.lineTo(l2.x, l2.y); g.lineTo(l.x, l.y); g.fill(); } g.globalAlpha = 1; } }
     const L = s.objs.filter(o => o.k !== 'hole' && !o.gone && o.wz - s.z > -1).sort((a, b) => (b.wz - s.z) - (a.wz - s.z));
     for (const o of L) { const rel = o.wz - s.z;
       if ((o.k === 'pipe' || o.k === 'gey') && MG('cb_pipe')) { const p = this.P(s, rel, o.x), ph = 1.0 * this.U * p.sc, lift = ((o.tall || 0.9) - 0.9) * this.U * p.sc, pw = ph * 0.42;
@@ -324,10 +319,7 @@ GAMES.push({
           g.save(); g.imageSmoothingEnabled = true; g.translate(o.side > 0 ? x1 : x0, cy); if (o.side > 0) g.scale(-1, 1); g.drawImage(im, 0, -hh / 2, x1 - x0, hh); g.restore(); }   /* narrow at the pipe, fanning out across the path */
         else { g.strokeStyle = o.kind === 'jetH' ? '#5a3618' : '#6e4420'; g.lineWidth = th; g.lineCap = 'round'; g.beginPath(); g.moveTo(a.x, a.y); for (let i = 1; i <= 8; i++) { const f = i / 8; g.lineTo(a.x + (b2.x - a.x) * f, a.y + (b2.y - a.y) * f + Math.sin(t * 18 + o.wob + i) * th * 0.2 + f * f * th * 0.5); } g.stroke();
         g.strokeStyle = '#9a6634'; g.lineWidth = th * 0.4; g.stroke(); g.lineCap = 'butt';
-        for (let i = 0; i < 5; i++) { const f = ((t * 2.2 + i * 0.2 + o.wob) % 1); R(a.x + (b2.x - a.x) * f, a.y + (b2.y - a.y) * f - th * 0.7, 2 * a.sc + 1, 2 * a.sc + 1, '#f2c12e'); } }
-        if (rel < 45 && rel > 2) { const sl = o.kind === 'jetH', tag = sl ? 'SLIDE' : o.kind === 'jetT' ? 'BIG JUMP' : 'JUMP', col = sl ? '#5ab4ff' : '#ffd23a', p0 = this.P(s, rel, 0, sl ? o.c + 0.75 : o.c + 0.9), r2 = Math.max(5, 15 * p0.sc);   /* a road sign floating over it */
-          C(p0.x, p0.y, r2 + 1.5, '#1a1408'); C(p0.x, p0.y, r2, col); g.fillStyle = '#1a1408'; g.beginPath(); if (sl) { g.moveTo(p0.x - r2 * 0.5, p0.y - r2 * 0.25); g.lineTo(p0.x + r2 * 0.5, p0.y - r2 * 0.25); g.lineTo(p0.x, p0.y + r2 * 0.5); } else { g.moveTo(p0.x - r2 * 0.5, p0.y + r2 * 0.25); g.lineTo(p0.x + r2 * 0.5, p0.y + r2 * 0.25); g.lineTo(p0.x, p0.y - r2 * 0.5); } g.fill();
-          T(tag, p0.x, p0.y - r2 - Math.max(4, 7 * p0.sc), col, Math.max(5, Math.round(8 * p0.sc)), 'center'); } }
+        for (let i = 0; i < 5; i++) { const f = ((t * 2.2 + i * 0.2 + o.wob) % 1); R(a.x + (b2.x - a.x) * f, a.y + (b2.y - a.y) * f - th * 0.7, 2 * a.sc + 1, 2 * a.sc + 1, '#f2c12e'); } } }
       if (o.k === 'reel' && MG('cb_reel')) { const p = this.P(s, rel, o.x); this.img('cb_reel', p.x, p.y, 1.0 * this.U * p.sc); continue; }
       if (o.k === 'reel') { const p = this.P(s, rel, o.x), r2 = 0.42 * this.U * p.sc; R(p.x - r2 * 1.1, p.y - r2 * 0.2, r2 * 2.2, r2 * 0.2, '#3a3a3a'); C(p.x, p.y - r2, r2, '#2d6b2a'); C(p.x, p.y - r2, r2 * 0.7, '#3f8a3a'); C(p.x, p.y - r2, r2 * 0.25, '#d0d0c0'); R(p.x - r2 * 1.1, p.y - r2 * 1.9, r2 * 0.2, r2 * 1.9, '#555'); R(p.x + r2 * 0.9, p.y - r2 * 1.9, r2 * 0.2, r2 * 1.9, '#555'); }   /* hose reel */
       if (o.k === 'can' && MG('cb_can')) { const p = this.P(s, rel, o.x); g.fillStyle = 'rgba(30,40,20,.35)'; g.beginPath(); g.ellipse(p.x, p.y, 0.5 * this.U * p.sc, 0.1 * this.U * p.sc, 0, 0, 7); g.fill(); this.img('cb_can', p.x, p.y + 2, 0.75 * this.U * p.sc * (1 + Math.abs(Math.sin(o.spin)) * 0.04), false, 0.5, Math.sin(o.spin * 0.5) * 0.12); continue; }   /* rolling at you, rocking */
@@ -363,7 +355,7 @@ GAMES.push({
     { const x0 = W - 60, y0 = 28; if (!this.img('cb_tp', x0 - 2, y0 + 10, 22)) { g.fillStyle = '#f4f2ea'; g.fillRect(x0 - 6, y0 - 7, 10, 14); } T('x' + s.tp, x0 + 10, y0, '#fff', 8); }   /* TP count */
     if (s.sayT > 0) T(s.say, 240, 60, s.say === 'INCOMING!' ? '#f7c418' : '#e9665a', 12, 'center');
     s.pops.forEach((p, i) => T(p.txt, 240, 84 - p.t * 20 - i * 12, p.col, 9, 'center'));
-    if (s.t < 5) { R(80, 30, 320, 34, 'rgba(16,21,31,.75)'); T('✦ SPARKLY = GRAB IT    BROWN = AVOID IT', 240, 40, '#fff4a0', 6, 'center'); T('YELLOW ▲ = JUMP (HOLD = BIG)    BLUE ▼ = SLIDE', 240, 54, '#9fd1ff', 6, 'center'); }
+    if (s.t < 5) { R(80, 30, 320, 34, 'rgba(16,21,31,.75)'); T('✦ SPARKLY = GRAB IT    BROWN = AVOID IT', 240, 40, '#fff4a0', 6, 'center'); T('TAP JUMP = HOP  ·  HOLD = BIG JUMP  ·  SLIDE UNDER', 240, 54, '#e8dcc0', 6, 'center'); }
   },
 });
 
