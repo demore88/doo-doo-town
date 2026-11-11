@@ -1231,7 +1231,18 @@ TRL.tex = (() => {   // little 32x32 textures, painted once
     const dy = 16 + ((f * 9 + 0) % 14); if (x >= 15 && x <= 16 && y >= dy && y <= dy + 2) return TRL.rgb(120, 86, 40);   // the drip
     if (y >= 28 && Math.abs(x - 16) < 7 - (31 - y)) return TRL.rgb(96, 70, 34);   // puddle
     return 0; });
-  return { block, skirt, dirt, ceil, pipe: [pipe(0), pipe(1)] };
+  const hobo = f => mk((x, y) => {
+    const fl = f ? 1 : 0;
+    if (x >= 25 && x <= 26 && y >= 25 && y <= 30) return TRL.rgb(236, 230, 210);   /* candle stub */
+    if (x >= 25 && x <= 26 && y >= 21 - fl && y <= 24) return y < 23 - fl ? TRL.rgb(255, 240, 150) : TRL.rgb(255, 160, 40);   /* flame */
+    if (y >= 4 && y <= 8 && x >= 11 && x <= 20 && !(y === 4 && (x < 13 || x > 18))) return y === 8 ? TRL.rgb(150, 30, 30) : TRL.rgb(190, 44, 40);   /* red beanie */
+    if (y >= 9 && y <= 15 && x >= 12 && x <= 19) { if (y >= 12) return TRL.rgb(170 + (x % 2) * 20, 166 + (x % 2) * 20, 156); if (y === 10 && (x === 14 || x === 17)) return TRL.rgb(30, 24, 20); if (y === 11 && x >= 13 && x <= 18) return TRL.rgb(200, 120, 100); return TRL.rgb(214, 160, 120); }   /* face, big grey beard */
+    if (y >= 16 && y <= 17 && x >= 14 && x <= 17) return TRL.rgb(170, 166, 156);
+    if (y >= 16 && y <= 30 && x >= 6 && x <= 23 && Math.abs(x - 14.5) <= 5 + (y - 16) * 0.6) { const plaid = ((x >> 1) + (y >> 1)) % 2; return plaid ? TRL.rgb(70, 96, 60) : TRL.rgb(54, 76, 46); }   /* wrapped in a green blanket */
+    if (y === 31 && x >= 4 && x <= 27) return TRL.rgb(40, 32, 22);
+    if (x >= 1 && x <= 4 && y >= 22 && y <= 30) return x === 1 || y === 22 ? TRL.rgb(140, 110, 70) : TRL.rgb(110, 84, 50);   /* his crate */
+    return 0; });
+  return { block, skirt, dirt, ceil, pipe: [pipe(0), pipe(1)], hobo: [hobo(0), hobo(1)] };
 })();
 TRL.faces = {};
 TRL.face = (who, hp) => { const F = TRL.faces, ld = n => { if (F[n] === undefined) { F[n] = null; const im = new Image(); im.onload = () => F[n] = im; im.onerror = () => { F[n] = false; }; im.src = '../assets/' + n + '.png'; } };
@@ -1240,11 +1251,11 @@ TRL.face = (who, hp) => { const F = TRL.faces, ld = n => { if (F[n] === undefine
   return F[n] || F[who + '_normal'] || null; };
 TRL.FOES = [   /* spr: 8-frame strip (0 idle 1 sniff 2 stalk 3 run 4 rear up 5 attack 6 hurt 7 down) */
   { name: 'SEWER RAT', spr: 'ut_rat', snd: 'rat_screech', hp: [7, 10], atk: [2, 4], w: 5, sc: 1, pts: 50 },
-  { name: "BIG OL' RAT", spr: 'ut_rat', snd: 'rat_screech', hp: [13, 17], atk: [3, 6], w: 3, sc: 1.35, pts: 120 },
+  { name: 'BIG BUFF RAT', spr: 'ut_buffrat', snd: 'rat_screech', hp: [13, 17], atk: [3, 6], w: 3, sc: 1.3, pts: 120 },
   { name: 'POSSUM', spr: 'ut_possum', snd: 'possum_hiss', hp: [10, 13], atk: [2, 5], w: 2, sc: 1.05, pts: 90, possum: true },
   { name: 'RACCOON', spr: 'ut_raccoon', snd: 'raccoon', off: 2.5, hp: [12, 15], atk: [3, 5], w: 2, sc: 1.1, pts: 110, thief: true },
   { name: 'BROWN RECLUSE', spr: 'ut_spider', snd: 'spider', hp: [5, 8], atk: [2, 3], w: 2, sc: 0.8, pts: 80, venom: true },
-  { name: 'THE RAT KING', spr: 'ut_rat', snd: 'rat_screech', hp: [22, 26], atk: [4, 7], w: 1, sc: 0.95, king: true, pts: 300 },
+  { name: 'THE RAT KING', spr: 'ut_ratking', snd: 'rat_screech', hp: [22, 26], atk: [4, 7], w: 1, sc: 1.45, king: true, pts: 300 },
 ];
 TRL.cry = (F, long) => SFX(F.snd, { offset: F.off || 0, dur: long ? 1.6 : 1.0 });   /* each critter's own noise */
 TRL.UTS = (n, f, cx, by, h, flip, a) => { const im = MG(n); if (!im) return false; const cw = im.width / 8, w = h * cw / im.height;   /* one frame of a creature strip */
@@ -1256,7 +1267,7 @@ setInterval(() => { const M = TRL.music, n = performance.now(); if (M.h && n - M
 
 GAMES.push({
   id: 'crawl', name: 'UNDER THE TRAILER', tag: 'Dark crawlspace · detached pipe · rats',
-  how: ['Somewhere under this trailer the sewer pipe came apart. Crawl through the dark and find it. Rats, possums, raccoons and brown recluses live down there.', '▲ crawl forward, ▼ back up, ◀ ▶ turn. On the phone you can also tap the left / middle / right of the view.', 'Follow the STINK meter: the stronger it gets, the closer you are. The map in the corner fills in as you go.', 'Rats jump you in the dark. Pick WHACK, FLASHLIGHT, PEANUT BUTTER or RUN, then press the action button. Out of health and you crawl out.'],
+  how: ['Somewhere under this trailer the sewer pipe came apart. Crawl through the dark and find it. Rats, possums, raccoons and brown recluses live down there. So does Crawlspace Carl: beat critters for loose change and buy his stuff.', '▲ crawl forward, ▼ back up, ◀ ▶ turn. On the phone you can also tap the left / middle / right of the view.', 'Follow the STINK meter: the stronger it gets, the closer you are. The map in the corner fills in as you go.', 'Rats jump you in the dark. Pick WHACK, FLASHLIGHT, PEANUT BUTTER or RUN, then press the action button. Out of health and you crawl out.'],
   dpad: true,
   ctl: '▲ ▼ CRAWL · ◀ ▶ TURN · SPACE = PICK',
   act: 'PICK', phone: 'd-pad to crawl and turn (or tap the view), PICK in fights.',
@@ -1273,6 +1284,13 @@ GAMES.push({
       while (q.length) { const [c, r] = q.shift(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = c + dx, y = r + dy; if (m[y][x] === '.' && D[y][x] < 0) { D[y][x] = D[r][c] + 1; q.push([x, y]); } } } return D; };
     const D0 = dist(1, 1); let best = [1, 1]; for (let r = 0; r < R_; r++) for (let c = 0; c < C; c++) if (D0[r][c] > D0[best[1]][best[0]]) best = [c, r];
     s.goal = { c: best[0], r: best[1] }; s.gd = dist(best[0], best[1]); s.gmax = s.gd[1][1];
+    { const spots = []; for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) { if (m[r][c] !== '.' || (c === best[0] && r === best[1]) || (c === 1 && r === 1)) continue;
+        const ways = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b2]) => m[r + b2][c + a] === '.').length, f = D0[r][c] / D0[best[1]][best[0]]; if (ways === 1) spots.push([c, r, f > 0.2 && f < 0.85 ? 3 : 1]); }   /* a dead end partway in, if there is one */
+      const mid = spots.filter(q => q[2] === 3), dead = mid.length ? mid : spots, pick = dead.length ? dead[Math.floor(s.rnd() * dead.length)] : (() => {   /* no dead end? knock a nook into a pier for him */
+        for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) if (m[r][c] === '#' && !(c === best[0] && r === best[1])) { const ws = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b2]) => m[r + b2][c + a] === '.'); if (ws.length === 1) { m[r][c] = '.'; return [c, r]; } }
+        return [-9, -9]; })();   /* only in a dead end, so he never blocks the way */
+      s.hobo = { c: pick[0], r: pick[1] }; }
+    s.cash = 3; s.shop = null; s.mapBought = false;
     s.pc = 1; s.pr = 1; s.dir = m[1][2] === '.' ? 0 : 1; s.vx = 1.5; s.vy = 1.5; s.va = s.dir * Math.PI / 2; s.mv = 0;
     s.seen = new Set([101]); s.steps = 0; s.since = 0;
     const H = HERO(s), rod = H.name === 'ROD';
@@ -1285,6 +1303,7 @@ GAMES.push({
     s.t += dt; FX(s, dt); s.flash = Math.max(0, s.flash - dt); s.shake = Math.max(0, (s.shake || 0) - dt);
     if (s.fixT) { s.fixT += dt * (s.fixT > 3.4 && (I.Ap || I.ptr.clicked) ? 6 : 1); if (s.fixT > 9.4) { const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.t < 50 + s.gmax * 2, f >= 0.3), line: s.epi[1] }); } return; }
     if (!s.battle) { TRL.music.atick = performance.now(); TRL.amb(true); } else TRL.amb(false);
+    if (s.shop) return this.shopping(s, dt, I);
     if (s.battle) return this.fight(s, dt, I);
     const H = HERO(s), dur = 0.26 / H.spd;
     if (s.mv > 0) {   // gliding to the next square / turning
@@ -1300,14 +1319,15 @@ GAMES.push({
     s.fx0 = s.vx; s.fy0 = s.vy; s.fa0 = s.va; s.ta = s.va; s.mvD = dur;
     if (cmd === 'L' || cmd === 'R') { s.ta = s.va + (cmd === 'L' ? -1 : 1) * Math.PI / 2; s.dir = (s.dir + (cmd === 'L' ? 3 : 1)) % 4; s.mv = s.mvD = dur * 0.8; return; }
     const v = [[1, 0], [0, 1], [-1, 0], [0, -1]][s.dir], sg = cmd === 'F' ? 1 : -1, nc = s.pc + v[0] * sg, nr = s.pr + v[1] * sg;
-    if (!this.open(s, nc, nr)) { s.shake = 0.15; if (!s.bonk || s.t - s.bonk > 0.6) { s.bonk = s.t; SFX('click', { vol: 0.4 }); } return; }
+    if (nc === s.hobo.c && nr === s.hobo.r && cmd === 'F') { this.openShop(s); return; }   /* crawl up to Carl: he's sitting right there */
+    if (!this.open(s, nc, nr) || (nc === s.hobo.c && nr === s.hobo.r)) { s.shake = 0.15; if (!s.bonk || s.t - s.bonk > 0.6) { s.bonk = s.t; SFX('click', { vol: 0.4 }); } return; }
     s.pc = nc; s.pr = nr; s.mv = s.mvD = cmd === 'B' ? dur * 1.3 : dur; s.arrived = true; SFX('ui_tap', { vol: 0.12 });
   },
   arrive(s) {
     s.seen.add(s.pr * 100 + s.pc); s.steps++; s.since++;
     if (s.venom > 0) { s.venom--; if (s.hp > 1) { s.hp--; (s.log = s.log || []).push('The spider bite itches. -1 HP'); } }
     if (s.pc === s.goal.c && s.pr === s.goal.r) { s.fixT = 0.01; s.score += 500;
-      const met = s.met || [], big = ['THE RAT KING', 'BROWN RECLUSE', 'RACCOON', "BIG OL' RAT", 'POSSUM', 'SEWER RAT'].find(n => met.includes(n));   /* ...and then nobody believes you */
+      const met = s.met || [], big = ['THE RAT KING', 'BROWN RECLUSE', 'RACCOON', 'BIG BUFF RAT', 'POSSUM', 'SEWER RAT'].find(n => met.includes(n));   /* ...and then nobody believes you */
       const brag = !met.length ? 'Just a drip. Easy one.' : big === 'THE RAT KING' ? 'There was a RAT KING down there. With a CROWN.' : big === 'BROWN RECLUSE' ? 'I fought a brown recluse. Hand to hand.' : big === 'RACCOON' ? 'A raccoon jumped me. We went three rounds.' : met.length > 2 ? `I fought ${met.length} things down there.` : `I had to fight a ${big.toLowerCase()} down there.`;
       const nope = !met.length ? ["That's what I like to hear.", 'Good. Now get in the van.'] : ['Sure you did, bud.', 'Uh huh. Get in the van.', "You were under there twenty minutes. Fixing a Fernco.", 'Was it the same raccoon as last time?', "Sure. And I'm the Rat King.", "You smell like you did, I'll give you that.", "Nobody's gonna believe that.", "Don't tell the customer that."];
       s.epi = [brag, nope[Math.floor(s.rnd() * nope.length)]]; return; }
@@ -1320,7 +1340,32 @@ GAMES.push({
     if (F.king) s.kingSeen = true;
     const hp = F.hp[0] + Math.floor(s.rnd() * (F.hp[1] - F.hp[0] + 1));
     s.battle = { F, hp, max: hp, sel: 0, q: [], stun: 0, open: 0.6, blink: 0, dmgT: 0, pose: 2, poseT: 0.8, out: 0 }; s.since = 0; s.fights++; s.flash = 0.6; (s.met = s.met || []).push(F.name); TRL.bgm(true); TRL.cry(F, true);
-    this.say(s, F.king ? 'THE RAT KING rises from the muck!' : F.venom ? 'A BROWN RECLUSE drops down from a joist!' : F.thief ? 'A RACCOON was already down here. It is not happy.' : F.possum ? 'A POSSUM hisses at you from behind a pier!' : `A ${F.name} jumps out of the dark!`);
+    this.say(s, F.king ? 'THE RAT KING rises from the muck, cape and all!' : F.name === 'BIG BUFF RAT' ? 'A BIG BUFF RAT flexes at you. It has been working out.' : F.venom ? 'A BROWN RECLUSE drops down from a joist!' : F.thief ? 'A RACCOON was already down here. It is not happy.' : F.possum ? 'A POSSUM hisses at you from behind a pier!' : `A ${F.name} jumps out of the dark!`);
+  },
+  // CRAWLSPACE CARL: lives down here. Has for years. Sells what he's got.
+  HOBO_HI: ["Evenin'. Or mornin'. Hard to tell down here.", "Don't mind me. I'm just the guy who lives here.", "You're the plumber? About time. That drip keeps me up.", "Buy somethin' or keep crawlin'.", "Watch out for the raccoon. He's got a temper."],
+  HOBO_BUY: ["Pleasure doin' business.", "Don't spend it all in one crawlspace.", "No refunds.", "That one's fresh. Mostly."],
+  HOBO_BYE: ["Tell the landlord I said nothin'.", "Mind the spider.", "Come back anytime. I'll be here."],
+  wares(s) { return [
+    { id: 'bat', label: 'BATTERIES', price: 2, go: () => s.lights++, line: 'Flashlight +1' },
+    { id: 'pb', label: 'PEANUT BUTTER', price: 2, go: () => s.pb++, line: 'Peanut butter +1' },
+    { id: 'aid', label: 'BAND-AIDS', price: 3, go: () => s.hp = Math.min(s.hpMax, s.hp + 8), line: '+8 HP' },
+    { id: 'beans', label: 'COLD BEANS', price: 5, go: () => s.hp = Math.min(s.hpMax, s.hp + 20), line: '+20 HP. Do not ask where he got them.' },
+    { id: 'map', label: 'HIS MAP', price: 4, go: () => { s.mapBought = true; }, line: 'An X on a napkin marks the drip.', off: s.mapBought },
+    { id: 'bye', label: 'LEAVE', price: 0 } ]; },
+  openShop(s) { s.shop = { sel: 0, say: this.HOBO_HI[Math.floor(s.rnd() * this.HOBO_HI.length)], t: 0 }; s.metHobo = true; },
+  shopping(s, dt, I) {
+    const S = s.shop, W2 = this.wares(s); S.t += dt;
+    if (I.Up || I.Lp) S.sel = (S.sel + W2.length - 1) % W2.length; if (I.Dp || I.Rp) S.sel = (S.sel + 1) % W2.length;
+    let pick = I.Ap ? S.sel : null;
+    if (I.ptr.clicked) for (let i = 0; i < W2.length; i++) { const [x, y, w, h] = this.optBox(i, W2.length); if (I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h) { S.sel = i; pick = i; } }
+    if (I.D && !I.Dp && false) {}
+    if (pick === null) return;
+    const it = W2[pick];
+    if (it.id === 'bye') { (s.log = s.log || []).push('CARL: ' + this.HOBO_BYE[Math.floor(s.rnd() * this.HOBO_BYE.length)]); s.shop = null; SFX('ui_select'); return; }
+    if (it.off) { S.say = "Already sold you that one."; SFX('click'); return; }
+    if (s.cash < it.price) { S.say = ["You're short, pal.", "Come back with more change.", "I don't take IOUs. Not anymore."][Math.floor(s.rnd() * 3)]; SFX('click'); return; }
+    s.cash -= it.price; it.go(); S.say = this.HOBO_BUY[Math.floor(s.rnd() * this.HOBO_BUY.length)] + '  (' + it.line + ')'; SFX('ui_select');
   },
   endFight(s) { s.battle = null; TRL.bgm(false); },
   say(s, text, fx) { s.battle.q.push({ text, fx, t: 0 }); },
@@ -1343,11 +1388,11 @@ GAMES.push({
       if (s.rnd() < 0.12) { this.say(s, `The ${b.F.name} lunges... and misses!`, () => { b.pose = 3; b.poseT = 0.5; }); return; }
       if (b.F.thief && s.pb > 0 && s.rnd() < 0.35) { this.say(s, 'The RACCOON swipes a jar of peanut butter!', () => { s.pb--; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); }); return; }
       const d = Math.max(1, Math.round((b.F.atk[0] + s.rnd() * (b.F.atk[1] - b.F.atk[0])) * (s.k || 1)));
-      this.say(s, b.F.king ? `THE RAT KING bites all at once! -${d} HP` : b.F.venom ? `The BROWN RECLUSE bites! -${d} HP. That's gonna itch.` : b.F.thief ? `The RACCOON claws you! -${d} HP` : `The ${b.F.name} bites! -${d} HP`,
+      this.say(s, b.F.king ? `THE RAT KING rakes you with royal claws! -${d} HP` : b.F.venom ? `The BROWN RECLUSE bites! -${d} HP. That's gonna itch.` : b.F.thief ? `The RACCOON claws you! -${d} HP` : `The ${b.F.name} bites! -${d} HP`,
         () => { s.hp -= d; s.hits++; s.shake = 0.35; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); if (b.F.venom) s.venom = 6; });
       b.after = () => { if (s.hp <= 0) { s.hp = 0; TRL.bgm(false); s.end = { win: false, stars: 0, line: 'The rats own this crawlspace. We are coming back with traps.' }; } };
     };
-    const won = () => { this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
+    const won = () => { this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { const loot = b.F.king ? 6 : 1 + Math.floor(s.rnd() * 3); s.cash += loot; (s.log = s.log || []).push(`Found $${loot} in loose change.`); s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
     if (o.id === 'whack') {
       if (s.rnd() < 0.1) this.say(s, 'You swing the pipe wrench... and hit a pier. CLANG.', () => SFX('click'));
       else { const crit = s.rnd() < 0.12, d = Math.round((s.dmg[0] + s.rnd() * (s.dmg[1] - s.dmg[0])) * (crit ? 2 : 1));
@@ -1365,7 +1410,7 @@ GAMES.push({
     }
   },
   opts(s) { return [{ id: 'whack', label: 'WHACK' }, { id: 'light', label: `FLASHLIGHT x${s.lights}`, off: s.lights <= 0 }, { id: 'pb', label: `PEANUT BUTTER x${s.pb}`, off: s.pb <= 0 }, { id: 'run', label: 'RUN' }]; },
-  optBox(i) { return [340, 104 + i * 22, 130, 19]; },   /* the command buttons, down the right-hand panel */
+  optBox(i, n = 4) { const h = n > 4 ? 13 : 19, gap = n > 4 ? 14 : 22; return [340, 104 + i * gap, 130, h]; },   /* the command buttons, down the right-hand panel */
   render(s) {   // the 3D view: raycast walls, cast floor + ceiling, then the broken joint as a sprite
     const { RW, RH, T: N } = TRL, buf = s.buf, zb = s.zb, tx = TRL.tex;
     const dx = Math.cos(s.va), dy = Math.sin(s.va), pl = 0.66, plx = -dy * pl, ply = dx * pl, px = s.vx, py = s.vy;
@@ -1392,8 +1437,9 @@ GAMES.push({
       for (let y = top; y < bot; y++) { const tY = Math.min(N - 1, ((y - half + lh / 2) * N / lh) | 0), c = T2[tY * N + tX]; buf[y * RW + x] = (c & 0xffffff) === 0xfaf0c8 /* the daylight crack doesn't dim */ ? c : shade(c, k); }
     }
     // the broken joint (a billboard)
-    { const sx = s.goal.c + 0.5 - px, sy = s.goal.r + 0.5 - py, inv = 1 / (plx * dy - dx * ply), tX = inv * (dy * sx - dx * sy), tY = inv * (-ply * sx + plx * sy);
-      if (tY > 0.1) { const scx = (RW / 2) * (1 + tX / tY), sh = Math.abs(RH / tY), x0 = Math.floor(scx - sh / 2), y0 = Math.floor(half - sh / 2), P = tx.pipe[Math.floor(s.t * 3) % 2], k = lit(tY) * 1.2;
+    const BB = [[s.goal, tx.pipe[Math.floor(s.t * 3) % 2]], [s.hobo, tx.hobo[Math.floor(s.t * 5) % 2]]].map(([o, P]) => { const sx = o.c + 0.5 - px, sy = o.r + 0.5 - py; return { o, P, d: sx * sx + sy * sy }; }).sort((a, b2) => b2.d - a.d);
+    for (const { o, P: PP } of BB) { const sx = o.c + 0.5 - px, sy = o.r + 0.5 - py, inv = 1 / (plx * dy - dx * ply), tX = inv * (dy * sx - dx * sy), tY = inv * (-ply * sx + plx * sy);
+      if (tY > 0.1) { const scx = (RW / 2) * (1 + tX / tY), sh = Math.abs(RH / tY), x0 = Math.floor(scx - sh / 2), y0 = Math.floor(half - sh / 2), P = PP, k = lit(tY) * 1.2 + (PP === tx.hobo[0] || PP === tx.hobo[1] ? 0.4 : 0);
         for (let x = Math.max(0, x0); x < Math.min(RW, x0 + sh); x++) { if (tY >= zb[x]) continue; const u = Math.min(N - 1, ((x - x0) * N / sh) | 0);
           for (let y = Math.max(0, y0); y < Math.min(RH, y0 + sh); y++) { const c = P[Math.min(N - 1, ((y - y0) * N / sh) | 0) * N + u]; if (c) buf[y * RW + x] = shade(c, Math.min(1, k * lightCol[x])); } } } }
     s.cx.putImageData(s.img, 0, 0);
@@ -1417,9 +1463,7 @@ GAMES.push({
       g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(cx, by + 2, 70 * b.F.sc, 9, 0, 0, 7); g.fill();
       if (!blinkOff && (b.hp > 0 || b.q.length || b.pose === 7)) {
         const idle = [0, 0, 1, 0, 2][Math.floor(t / 0.6) % 5], f = b.pose != null ? b.pose : idle, ox = b.out ? b.out * 420 : 0, a = b.out ? Math.max(0, 1 - b.out * 1.5) : 1, h = 120 * b.F.sc;
-        if (b.F.king) { for (const [kx, ky, k] of [[-62, -4, 1], [62, -4, 2], [0, 6, 0]]) TRL.UTS(b.F.spr, b.pose != null ? f : [0, 1, 2][(Math.floor(t / 0.5) + k) % 3], cx + kx + ox, by + ky, h, kx < 0, a);
-          if (!b.out) { g.fillStyle = '#f7c418'; const kx = cx + 22, ky = by - h * 0.62; g.beginPath(); g.moveTo(kx - 16, ky + 13); g.lineTo(kx - 16, ky); g.lineTo(kx - 8, ky + 7); g.lineTo(kx, ky - 5); g.lineTo(kx + 8, ky + 7); g.lineTo(kx + 16, ky); g.lineTo(kx + 16, ky + 13); g.fill(); C(kx, ky - 5, 2.5, '#e9665a'); C(kx - 8, ky + 9, 1.5, '#2c6cd6'); C(kx + 8, ky + 9, 1.5, '#2c6cd6'); } }
-        else if (!TRL.UTS(b.F.spr, f, cx + ox, by, h, false, a)) R(cx - 30, by - 30, 60, 30, '#6a5a4c');
+        if (!TRL.UTS(b.F.spr, f, cx + ox, by, h, false, a)) R(cx - 30, by - 30, 60, 30, '#6a5a4c');
         if (b.stun > 0) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; T('*', cx + Math.cos(a) * 30, by - 70 + Math.sin(a) * 6, '#f7c418', 8, 'center'); }
       }
       if (b.dmgT > 0) T('-' + b.dmg, cx + 50, VY + 60 - (0.7 - b.dmgT) * 30, '#fff', 14, 'center');
@@ -1444,15 +1488,19 @@ GAMES.push({
       R(mx0 - 1, my0 - 1, mw + 2, mh + 2, '#16110b');
       for (const k of s.seen) { const c = k % 100, r = Math.floor(k / 100); R(mx0 + c * Z, my0 + r * Z, Z, Z, '#7a6a50');
         for (const [ddx, ddy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (s.map[r + ddy][c + ddx] !== '.') R(mx0 + (c + ddx) * Z, my0 + (r + ddy) * Z, Z, Z, '#3e3a34'); }
+      if (s.metHobo || s.seen.has(s.hobo.r * 100 + s.hobo.c)) R(mx0 + s.hobo.c * Z + 1, my0 + s.hobo.r * Z + 1, Z - 2, Z - 2, '#4a8a3a');   /* Carl */
+      if (s.mapBought && Math.floor(t * 3) % 2) { T('X', mx0 + s.goal.c * Z + Z / 2, my0 + s.goal.r * Z + Z / 2, '#e9665a', 6, 'center'); }   /* his napkin map */
       const cx = mx0 + s.vx * Z, cy = my0 + s.vy * Z, a = s.va; g.fillStyle = '#f7c418'; g.beginPath(); g.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4); g.lineTo(cx + Math.cos(a + 2.4) * 3, cy + Math.sin(a + 2.4) * 3); g.lineTo(cx + Math.cos(a - 2.4) * 3, cy + Math.sin(a - 2.4) * 3); g.fill(); }
     bevel(PX, 100, PW, 88);
-    if (b && b.open <= 0 && !b.q.length) this.opts(s).forEach((o, i) => { const [x, y, w, h] = this.optBox(i), on = i === b.sel;
+    if (s.shop) { const W2 = this.wares(s); W2.forEach((o, i) => { const [x, y, w, h] = this.optBox(i, W2.length), on = i === s.shop.sel;
+      R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); T(o.label, x + 5, y + h / 2 + 1, o.off ? '#5a5048' : on ? '#f7c418' : '#e8dcc0', 5); if (o.price) T('$' + o.price, x + w - 4, y + h / 2 + 1, s.cash >= o.price && !o.off ? '#7bd65b' : '#8a5a50', 5, 'right'); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); }); }
+    else if (b && b.open <= 0 && !b.q.length) this.opts(s).forEach((o, i) => { const [x, y, w, h] = this.optBox(i), on = i === b.sel;
       R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); R(x, y + h - 1, w, 1, '#120e09'); T(o.label, x + 6, y + h / 2 + 1, o.off ? '#5a5048' : on ? '#f7c418' : '#e8dcc0', 6); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); });
     else if (b) T(b.q.length ? '...' : '', PX + PW / 2, 144, '#8a7a60', 7, 'center');
     else { const stink = 1 - s.gd[s.pr][s.pc] / Math.max(1, s.gmax);
       T('STINK', PX + 8, 110, '#c9a46a', 6); BAR(PX + 8, 116, PW - 16, 6, stink, stink > 0.75 ? '#a0d040' : '#8a6a3a');
       if (stink > 0.75 && Math.floor(t * 3) % 2) T('SMELLS CLOSE', PX + PW / 2, 132, '#a0d040', 6, 'center');
-      T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PEANUT BUTTER x' + s.pb, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
+      T('$' + s.cash, PX + PW - 8, 110, '#7bd65b', 6, 'right'); T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PEANUT BUTTER x' + s.pb, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
     // bottom bar: the hero's portrait + health, and the message scroll
     bevel(10, 200, 56, 60);
     { const H = HERO(s), other = s.fixT > 6.2, im = TRL.face((H.name === 'ROD') !== other ? 'rod' : 'matt', other ? 1 : s.hp / s.hpMax); if (im) { g.imageSmoothingEnabled = true; g.drawImage(im, 10, 200, 56, 60); g.imageSmoothingEnabled = false; } else R(10, 200, 56, 60, '#2a2a36');
@@ -1462,7 +1510,8 @@ GAMES.push({
     T(`${Math.max(0, s.hp)} / ${s.hpMax}`, 160, 240, '#e8dcc0', 6, 'right'); T(s.venom > 0 ? 'ITCHY' : s.hp / s.hpMax > 0.5 ? 'GOOD' : s.hp / s.hpMax > 0.25 ? 'BITTEN' : 'BAD SHAPE', 80, 252, s.venom > 0 ? '#c080e0' : s.hp / s.hpMax > 0.5 ? '#7bd65b' : '#e9665a', 6);
     bevel(174, 200, 298, 60);
     { const log = s.log || (s.log = []);
-      if (b && b.q.length) { const m = b.q[0], txt = m.text.slice(0, Math.floor(m.t * 60)); log.slice(-1).forEach(l => T(l, 180, 214, '#7a6a50', 6)); { const wr = []; let ln = ''; for (const w of txt.split(' ')) { if ((ln + w).length > 44) { wr.push(ln.trim()); ln = ''; } ln += w + ' '; } wr.push(ln.trim()); wr.slice(0, 2).forEach((l, i) => T(l, 180, 236 + i * 12, '#fff', 6)); }   /* wrapped to fit the scroll */ if (m.t > 0.4 && Math.floor(t * 3) % 2) T('▼', 464, 252, '#e8c86a', 6, 'right'); }
+      if (s.shop) { T('CRAWLSPACE CARL:', 180, 212, '#e8c86a', 6); const wr = []; let ln = ''; for (const w of s.shop.say.split(' ')) { if ((ln + w).length > 44) { wr.push(ln.trim()); ln = ''; } ln += w + ' '; } wr.push(ln.trim()); wr.slice(0, 2).forEach((l, i) => T(l, 180, 228 + i * 12, '#fff', 6)); T('YOUR CHANGE: $' + s.cash, 464, 252, '#7bd65b', 6, 'right'); }
+      else if (b && b.q.length) { const m = b.q[0], txt = m.text.slice(0, Math.floor(m.t * 60)); log.slice(-1).forEach(l => T(l, 180, 214, '#7a6a50', 6)); { const wr = []; let ln = ''; for (const w of txt.split(' ')) { if ((ln + w).length > 44) { wr.push(ln.trim()); ln = ''; } ln += w + ' '; } wr.push(ln.trim()); wr.slice(0, 2).forEach((l, i) => T(l, 180, 236 + i * 12, '#fff', 6)); }   /* wrapped to fit the scroll */ if (m.t > 0.4 && Math.floor(t * 3) % 2) T('▼', 464, 252, '#e8c86a', 6, 'right'); }
       else if (b) { log.slice(-3).forEach((l, i) => T(l, 180, 214 + i * 13, i === 2 ? '#e8dcc0' : '#7a6a50', 6)); }
       else if (s.steps < 2) { T('▲ CRAWL   ▼ BACK   ◀ ▶ TURN', 180, 214, '#e8dcc0', 6); T('Follow your nose. The STINK meter', 180, 230, '#7a6a50', 6); T('tells you when you are close.', 180, 242, '#7a6a50', 6); }
       else log.slice(-3).forEach((l, i) => T(l, 180, 214 + i * 13, i === 2 ? '#e8dcc0' : '#7a6a50', 6)); }
