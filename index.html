@@ -143,7 +143,7 @@
       <button class="btn" data-a="credits">CREDITS</button>
       <button class="btn dev" data-a="scenes">CUTSCENES (DEV)</button>
     </div>
-    <div id="drivecol"><button id="drivebtn" class="btn"><img src="assets/drive_thumb.png" alt=""><b>DRIVE</b><span id="bestdrive"></span></button><button id="drivestats" class="btn">DRIVE RECORD</button></div>
+    <div id="drivecol"><button id="drivebtn" class="btn"><img src="assets/drive_thumb.png" alt=""><b>DRIVE</b><span id="bestdrive"></span></button><button id="drivestats" class="btn">DRIVE RECORD</button><button id="tiltbtn" class="btn" style="font-size:clamp(6px,1vw,11px);padding:.5em">TILT STEER: OFF</button></div>
   </div>
   <button id="sound" title="Music on/off">♪</button>
   <button id="watch" title="Screensaver">ZZ<br>SAVER</button>
@@ -752,6 +752,11 @@ document.getElementById('drivestats').onclick = () => { let R = {}; try { R = JS
     row('TOOLBOXES', n(o.kits)) + row('TOOLBOXES USED', n(o.kitsUsed)) + row('CRASHES', n(cars(o)), '#e9665a') + row('&nbsp; CARS', n(o.cars)) + row('&nbsp; LOG TRUCKS', n(o.trucks)) + row('&nbsp; HEAD-ONS', n(o.headons)) + row('&nbsp; REAR-ENDED', n(o.rear)) +
     row('ANIMALS HIT', n(animals(o)), '#e9665a') + row('&nbsp; DEER', n(o.deer)) + row('&nbsp; MOOSE', n(o.moose)) + row('&nbsp; TURKEYS', n(o.turkeys)) + row('&nbsp; SQUIRRELS', n(o.squirrel)) + row('&nbsp; RACCOONS', n(o.raccoon))}</table></div>`;
   showPanel(`<h3>DRIVE RECORD</h3>${T.runs ? `<div style="display:flex;gap:16px;flex-wrap:wrap">${B ? col(B, 'BEST RUN' + (B.when ? ' · ' + B.when : '')) : ''}${col(T, 'ALL TIME · ' + n(T.runs) + ' DRIVE' + (T.runs > 1 ? 'S' : ''))}</div>` : 'No drives yet. Hit DRIVE and see how far you get.'}`); };
+{ const tb = document.getElementById('tiltbtn'), get = () => { try { return localStorage.getItem('ddt_tilt') === '1'; } catch (e) { return false; } };
+  const show = () => { tb.textContent = 'TILT STEER: ' + (get() ? 'ON' : 'OFF'); tb.style.color = get() ? '#7dffb0' : ''; }; show();
+  tb.onclick = async () => { const on = !get();
+    if (on && typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) { try { if (await DeviceOrientationEvent.requestPermission() !== 'granted') return; } catch (e) { return; } }   /* iPhones ask first */
+    try { localStorage.setItem('ddt_tilt', on ? '1' : '0'); } catch (e) {} show(); }; }
 document.getElementById('drivebtn').onclick = () => DDT.nav('index.html?drive=1&endless=1&from=BERLIN&to=CONWAY&route=' + encodeURIComponent('Route 16') + '&leave=420&due=1200&mode=1&ret=index.html');
 
 // ---------- campaign embeds ----------

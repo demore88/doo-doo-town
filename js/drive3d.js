@@ -261,6 +261,7 @@ function drive3d(choice, opts) {
   if (typeof DDT !== 'undefined' && DDT.DEV) { window.__kidsmom = () => startKidsMomCall(); window.__yukon = () => { let n; for (let i = 0; i < 400; i++) { n = addCar(pos + PZ + 12 * SEG, false); if (n.yukon) break; } cars.push(n); }; }
   if (typeof DDT !== 'undefined' && DDT.DEV) { window.__kidsmom = () => startKidsMomCall(); window.__yukon = () => { const n = addCar(pos + PZ + 12 * SEG, false); for (let i = 0; i < 300 && !n.yukon; i++) Object.assign(n, addCar(pos + PZ + 12 * SEG, false)); cars.push(n); }; }
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__jump = mi => { pos = mi * SEG_PER_MI * SEG; };   /* dev: jump down the road */
+  if (typeof DDT !== 'undefined' && DDT.DEV) window.__px = () => px;   /* dev: where the van is across the road */
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__critter = (kind, ahead) => critters.push({ seg: Math.floor((pos + PZ) / SEG) + (ahead || 30), kind, off: ahead < 4 ? px : px + 1.2, dir: ahead < 4 ? 1 : 0, hit: false, snap: 0, flash: 0 });   /* dev: drop an animal ahead */   // dev: lets the test harness check for overlaps
   const respawn = (c, base) => {   // reappear far up the road (out at the horizon), in a lane with room, and never in the last stretch before town
     if (opts.endless) { c.z = -1e12; c.parked = true; c.retry = 0; return; }   /* the Driving Game refills each side from its own budget instead */
@@ -296,8 +297,24 @@ function drive3d(choice, opts) {
   function zone(e) { const b = rc.getBoundingClientRect(), x = (e.clientX - b.left) / b.width, y = (e.clientY - b.top) / b.height;
     if (y > 0.74 && (x < 0.22 || x > 0.78)) return 'D'; return x < 0.5 ? 'L' : 'R'; }   // brake in both bottom corners, steer with either side
   // phone: one thumb steers. Both thumbs down (left AND right) = gas. No thumbs = cruise.
-  function retouch() { touch.L = touch.R = touch.U = touch.D = 0; for (const z of pts.values()) touch[z] = 1; if (touch.L && touch.R && !touch.D) touch.U = 1; }
+  function retouch() { touch.L = touch.R = touch.U = touch.D = 0; for (const z of pts.values()) touch[z] = 1; if (TILT) { touch.U = (touch.L || touch.R) && !touch.D ? 1 : 0; touch.L = touch.R = 0; return; } if (touch.L && touch.R && !touch.D) touch.U = 1; }
   const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  /* TILT STEER (menu toggle): turn the phone like a steering wheel. Hold anywhere = gas, bottom corners = brake.
+     Works out which way is "down" on the screen from the phone's orientation, so it doesn't matter how far back you hold it. */
+  let TILT = false; try { TILT = TOUCH && localStorage.getItem('ddt_tilt') === '1'; } catch (e) {}
+  let tiltRoll = null, tiltZero = null;
+  if (TILT) addEventListener('deviceorientation', e => {
+    if (e.beta == null || e.gamma == null) return;
+    const b = e.beta * Math.PI / 180, gm = e.gamma * Math.PI / 180, gx = Math.sin(gm) * Math.cos(b), gy = -Math.sin(b);   /* gravity in the phone's own x/y */
+    const a = ((screen.orientation && screen.orientation.angle) ?? window.orientation ?? 0) * Math.PI / 180;
+    const sx = gx * Math.cos(a) - gy * Math.sin(a), sup = gx * Math.sin(a) + gy * Math.cos(a);   /* ...turned into screen right / screen up */
+    if (Math.hypot(sx, sup) < 0.12) return;   /* lying flat: no idea which way is down, keep the last reading */
+    tiltRoll = Math.atan2(sx, -sup);
+  });
+  const tiltSteer = () => { if (tiltRoll === null) return 0; if (tiltZero === null) tiltZero = tiltRoll;
+    let d = tiltRoll - tiltZero; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI;
+    const deg = d * 180 / Math.PI, dead = 3; if (Math.abs(deg) < dead) return 0;
+    return Math.max(-1, Math.min(1, (deg - Math.sign(deg) * dead) / 22)); };   /* about 25 degrees = full lock */
   rc.onpointerdown = e => { e.preventDefault(); if (e.isPrimary) pts.clear(); /* a fresh touch: forget any finger the phone never told us was lifted */ pts.set(e.pointerId, zone(e)); try { rc.setPointerCapture(e.pointerId); } catch (_) {} retouch(); };
   rc.onpointermove = e => { if (pts.has(e.pointerId)) { pts.set(e.pointerId, zone(e)); retouch(); } };
   rc.onpointerup = rc.onpointercancel = rc.onlostpointercapture = e => { pts.delete(e.pointerId); retouch(); };
@@ -388,7 +405,7 @@ function drive3d(choice, opts) {
       if (last === null) last = ms;
       const dt = Math.min(0.05, (ms - last) / 1000); last = ms; if (vanReady() && artReady()) { if (!artOK) { artOK = true; for (const c of cars) c.hw = (c.img.width || 44) * c.sc / 320; } t += dt; }   /* the clock doesn't start until the art is in */
       const live = t > 1.2;   /* hands on the wheel at GO, not before */
-      if (live && !wasLive) { wasLive = true; pts.clear(); retouch(); }   /* forget any tap from before GO: you start with no fingers down */
+      if (live && !wasLive) { wasLive = true; pts.clear(); retouch(); tiltZero = tiltRoll; }   /* however you're holding it at GO is straight ahead */   /* forget any tap from before GO: you start with no fingers down */
       if (t > 2 && !helpSeen) { helpSeen = true; try { localStorage.setItem('ddt_drive_help2', '1'); } catch (e) {} }
       if (typeof DDT !== 'undefined' && DDT.DEV && key.skip) pos = (N - 40) * SEG;   // dev shortcut: ] jumps to the finish
       const L = key.L || touch.L, Rr = key.R || touch.R, gas = live && (key.U || touch.U), brake = live && (key.D || touch.D);
@@ -397,7 +414,8 @@ function drive3d(choice, opts) {
       const target = !live ? 0 : brake ? 0 : gas ? BOOST : CRUISE;
       speed += (target - speed) * Math.min(1, dt * (brake ? 2.6 : target > speed ? 0.7 : 0.9)); speed = Math.max(0, speed);
       // steering + the curve trying to throw you off the road
-      const steer = live ? (Rr ? 1 : 0) - (L ? 1 : 0) : 0;
+      let steer = live ? (Rr ? 1 : 0) - (L ? 1 : 0) : 0;
+      if (TILT && live && !key.L && !key.R) steer = tiltSteer();
       px += steer * dt * 2.1 * (0.35 + 0.65 * ratio);
       px -= seg.curve * ratio * ratio * dt * 0.42;
       // off the road: grass (or a snowbank) slows you down hard
@@ -658,7 +676,7 @@ function drive3d(choice, opts) {
       // our van
       if (!(inv > 0 && Math.floor(t * 10) % 2)) {
         const vx = W / 2 - 36 + steer * 6, vy = H - 58 - bounce * 6 + (Math.abs(px) > 1 ? (Math.random() - .5) * 3 : 0);
-        if (VANS.complete && VANS.naturalWidth) { const fi = (brake ? 3 : 0) + (steer > 0 ? 2 : steer < 0 ? 1 : 0);   /* right turn shows the van's right side */
+        if (VANS.complete && VANS.naturalWidth) { const fi = (brake ? 3 : 0) + (steer > 0.3 ? 2 : steer < -0.3 ? 1 : 0);   /* right turn shows the van's right side */
           r.drawImage(VANS, fi * VANS.width / 6, 0, VANS.width / 6, VANS.height, Math.round(vx + 36 - VCW / 2), Math.round(vy + 52 - VCH), VCW, VCH); }
         else if (vanFail) { r.save(); r.translate(vx + 36, vy + 52); r.rotate(steer * 0.04); r.scale(1.35, 1.35); r.drawImage(brake ? VANBRAKE : VAN, -36, -52); r.restore(); }
         if (gas && speed > CRUISE * 0.9) { r.fillStyle = 'rgba(200,200,205,.6)'; for (let i = 0; i < 3; i++) r.fillRect(vx + 20 + Math.random() * 4, vy + 50 + i * 3, 3, 2); }
@@ -790,7 +808,7 @@ function drive3d(choice, opts) {
       } else if (t < 2.0) {
         r.fillStyle = 'rgba(16,21,31,.9)'; r.fillRect(110, 70, 260, 90);
         r.fillStyle = '#f7c418'; r.textAlign = 'center'; r.fillText((opts.route || 'ROUTE 2').toUpperCase(), 240, 86);
-        r.fillStyle = '#fff'; r.fillText(TOUCH ? 'ONE THUMB STEERS · BOTH = GAS' : '◀ ▶ STEER   ▲ GAS   ▼ BRAKE', 240, 106);
+        r.fillStyle = '#fff'; r.fillText(TILT ? 'TILT TO STEER · HOLD = GAS' : TOUCH ? 'ONE THUMB STEERS · BOTH = GAS' : '◀ ▶ STEER   ▲ GAS   ▼ BRAKE', 240, 106);
         if (RIVAL) { r.fillStyle = '#e9665a'; r.fillText('RACE THE CLOG KINGS!', 240, 96); }
         r.fillStyle = '#9fb3d9'; r.fillText(`${DRIVER === 'matt' ? 'MATT' : 'ROD'} DRIVES · TOP ${opts.endless ? 50 : DRIVER === 'matt' ? 60 : 40} MPH`, 240, 124); r.fillText('WATCH FOR BLINKERS + MOOSE', 240, 138);
         r.fillStyle = '#f7c418'; r.font = '12px "Press Start 2P", monospace'; r.fillText(t < 1.2 ? 'READY' : 'GO!', 240, 154); r.textAlign = 'left';
