@@ -1350,10 +1350,15 @@ GAMES.push({
   init(s) {
     const [w, h] = [[17, 12], [19, 13], [21, 14]][s.diff], C = w * 2 + 1, R_ = h * 2 + 1;   /* a BIG crawlspace: this is a long job */
     const m = Array.from({ length: R_ }, (_, r) => Array.from({ length: C }, (_, c) => (r === 0 || c === 0 || r === R_ - 1 || c === C - 1) ? 'S' : '#'));
-    const st = [[1, 1]]; m[1][1] = '.';   // carve a maze between the piers...
-    while (st.length) { const [c, r] = st[st.length - 1], nb = [[2, 0], [-2, 0], [0, 2], [0, -2]].map(([dx, dy]) => [c + dx, r + dy, dx, dy]).filter(([x, y]) => x > 0 && y > 0 && x < C - 1 && y < R_ - 1 && m[y][x] === '#');
-      if (!nb.length) { st.pop(); continue; } const [x, y, dx, dy] = nb[Math.floor(s.rnd() * nb.length)]; m[r + dy / 2][c + dx / 2] = '.'; m[y][x] = '.'; st.push([x, y]); }
-    for (let i = 0; i < w * h * 0.35; i++) { const c = 1 + Math.floor(s.rnd() * (C - 2)), r = 1 + Math.floor(s.rnd() * (R_ - 2)); if (m[r][c] === '#' && (c % 2) !== (r % 2)) m[r][c] = '.'; }   // ...with a few loops, so it isn't one long hallway
+    /* FOUR ZONES, left to right. Each is its own little maze, and there's exactly ONE gap into the next one, so you go through every zone in order: the drip is in zone 4. */
+    const band = c => Math.min(3, Math.floor(((c - 1) >> 1) * 4 / w)); s.W4 = w;
+    for (let z = 0; z < 4; z++) { const c0 = 1 + 2 * Math.ceil(z * w / 4), st = [[c0, 1]]; m[1][c0] = '.';
+      while (st.length) { const [c, r] = st[st.length - 1], nb = [[2, 0], [-2, 0], [0, 2], [0, -2]].map(([dx, dy]) => [c + dx, r + dy, dx, dy]).filter(([x, y]) => x > 0 && y > 0 && x < C - 1 && y < R_ - 1 && m[y][x] === '#' && band(x) === z);
+        if (!nb.length) { st.pop(); continue; } const [x, y, dx, dy] = nb[Math.floor(s.rnd() * nb.length)]; m[r + dy / 2][c + dx / 2] = '.'; m[y][x] = '.'; st.push([x, y]); } }
+    for (let i = 0; i < w * h * 0.35; i++) { const c = 1 + Math.floor(s.rnd() * (C - 2)), r = 1 + Math.floor(s.rnd() * (R_ - 2));   // a few loops inside each zone, so it isn't one long hallway
+      if (m[r][c] === '#' && (c % 2) !== (r % 2) && (c % 2 === 1 || band(c - 1) === band(c + 1))) m[r][c] = '.'; }
+    s.gates = []; for (let z = 0; z < 3; z++) { const cw = 2 * Math.ceil((z + 1) * w / 4), r = 1 + 2 * Math.floor(s.rnd() * h); m[r][cw] = '.'; s.gates.push({ c: cw, r }); }   /* the one way through */
+    s.band = band;
     s.map = m; s.C = C; s.R = R_;
     // the broken joint: the farthest spot from the access hatch
     const dist = (c0, r0) => { const D = Array.from({ length: R_ }, () => Array(C).fill(-1)), q = [[c0, r0]]; D[r0][c0] = 0;
@@ -1361,15 +1366,16 @@ GAMES.push({
     const D0 = dist(1, 1); let best = [1, 1]; for (let r = 0; r < R_; r++) for (let c = 0; c < C; c++) if (D0[r][c] > D0[best[1]][best[0]]) best = [c, r];
     s.goal = { c: best[0], r: best[1] }; s.gd = dist(best[0], best[1]); s.gmax = s.gd[1][1];
     s.d0 = D0; s.dmax = D0[best[1]][best[0]];
-    { const deadAt = (zt, taken) => { let pickC = null, bd = 1e9;   /* Carl lives in a dead end near this depth: near the start, halfway, and right before the King */
-        for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) { if (m[r][c] !== '.' || (c === best[0] && r === best[1]) || (c === 1 && r === 1) || taken.some(q => q.c === c && q.r === r)) continue;
+    { const deadAt = (z, ft, taken) => { let pickC = null, bd = 1e9, lo = 1e9, hi = -1;   /* Carl lives in a dead end in each of the first three zones */
+        for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) if (m[r][c] === '.' && band(c) === z && c % 2) { lo = Math.min(lo, D0[r][c]); hi = Math.max(hi, D0[r][c]); }
+        for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) { if (m[r][c] !== '.' || c % 2 === 0 || band(c) !== z || (c === best[0] && r === best[1]) || (c === 1 && r === 1) || taken.some(q => q.c === c && q.r === r)) continue;
           if ([[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b2]) => m[r + b2][c + a] === '.').length !== 1) continue;
-          const dd = Math.abs(D0[r][c] / s.dmax - zt); if (dd < bd) { bd = dd; pickC = { c, r }; } } return pickC; };
-      s.carls = []; [[0.08, 1], [0.5, 2], [0.88, 3]].forEach(([zt, tier]) => { const q = deadAt(zt, s.carls); if (q) s.carls.push({ ...q, tier, met: false }); });
-      s.kingdom = deadAt(0.42, s.carls); }
+          const dd = Math.abs(D0[r][c] - (lo + ft * (hi - lo))); if (dd < bd) { bd = dd; pickC = { c, r }; } } return pickC; };
+      s.carls = []; [[0, 0.25, 1], [1, 0.6, 2], [2, 0.75, 3]].forEach(([z, ft, tier]) => { const q = deadAt(z, ft, s.carls); if (q) s.carls.push({ ...q, tier, met: false }); });
+      s.kingdom = deadAt(1, 0.3, s.carls); }
     if ((s.carls.length < 3 || !s.kingdom) && (s.regen = (s.regen || 0) + 1) < 12) return this.init(s);   /* not enough nooks for Carl: roll a new crawlspace */
     s.hobo = s.carls[0];
-    s.shop = null; s.mapBought = false;
+    s.shop = null; s.maps = [false, false, false]; s.scrib = []; s.big = null;
     { const free = []; for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) if (m[r][c] === '.' && !(c === 1 && r === 1) && !(c === best[0] && r === best[1]) && !s.carls.some(q => q.c === c && q.r === r) && !(s.kingdom && s.kingdom.c === c && s.kingdom.r === r)) free.push([c, r]);
       s.traps = []; for (let i = 0; i < [22, 26, 30][s.diff] && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.traps.push({ c, r }); } s.gloves = []; for (let i = 0; i < 3 && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.gloves.push({ c, r }); } }   /* rat traps, baited with the good crackers */
     s.pc = 1; s.pr = 1; s.dir = m[1][2] === '.' ? 0 : 1; s.vx = 1.5; s.vy = 1.5; s.va = s.dir * Math.PI / 2; s.mv = 0;
@@ -1391,6 +1397,8 @@ GAMES.push({
     if (s.bag) return this.bagging(s, dt, I);
     if (s.shop) return this.shopping(s, dt, I);
     if (s.battle) return this.fight(s, dt, I);
+    if (s.big) return this.bigStep(s, dt, I);
+    if (I.ptr.clicked && I.ptr.x > 338 && I.ptr.x < 472 && I.ptr.y > 10 && I.ptr.y < 92 && !s.mv) { s.big = { stroke: null }; I.ptr.clicked = false; SFX('ui_tap'); return; }   /* tap the little map: the big one */
     { const [x, y, w, h] = this.bagBtn(), tap = I.ptr.clicked && I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h; if ((I.Bp || tap) && !s.mv) { s.bag = { sel: 0, battle: false }; SFX('ui_tap'); return; } if (tap) I.ptr.clicked = false; }
     const H = HERO(s), dur = 0.26 / H.spd;
     if (s.mv > 0) {   // gliding to the next square / turning
@@ -1409,8 +1417,8 @@ GAMES.push({
     if (s.escort && !s.married && s.kingdom && nc === s.kingdom.c && nr === s.kingdom.r && cmd === 'F') { this.wedding(s); return; }   /* you brought her home */
     const carlHere = s.carls.find(q => q.c === nc && q.r === nr);
     if (carlHere && cmd === 'F') { this.openShop(s, carlHere); return; }   /* crawl up to Carl: he's sitting right there */
-    if (!this.open(s, nc, nr) || carlHere || (s.kingdom && nc === s.kingdom.c && nr === s.kingdom.r)) { s.shake = 0.15; if (!s.bonk || s.t - s.bonk > 0.6) { s.bonk = s.t; SFX('click', { vol: 0.4 }); } return; }
-    s.pc = nc; s.pr = nr; s.mv = s.mvD = cmd === 'B' ? dur * 1.3 : dur; s.arrived = true; SFX('ui_tap', { vol: 0.12 });
+    if (!this.open(s, nc, nr) || carlHere || (s.kingdom && nc === s.kingdom.c && nr === s.kingdom.r)) { s.shake = 0.15; return; }   /* bumping a pier: just a shake, no sound */
+    s.pc = nc; s.pr = nr; s.mv = s.mvD = cmd === 'B' ? dur * 1.3 : dur; s.arrived = true;   /* crawling is silent: the ambience covers it */
   },
   arrive(s) {
     s.seen.add(s.pr * 100 + s.pc); s.steps++; s.since++;
@@ -1452,11 +1460,40 @@ GAMES.push({
   HOBO_BROKE: ["No crackers? ...No crackers. That's okay. I'll love you anyway.", "Come back when you have the little ones.", "You don't have enough. That's okay. I'll love you anyway.", "Short? Stay a while. We could just... sit.", "I can't take IOUs. Not since the last one broke my heart."],
   wares(s) { const t = (s.shop && s.shop.tier) || 1, I2 = s.items, gear = (id, label, price, k, v, line) => ({ id, label, price, go: () => { s.gear.push(id); if (k === 'def') s.def += v; else if (k === 'atk') s.atkB += v; else { s.hpMax += v; s.hp += v; } }, line, off: s.gear.includes(id) });
     const L = [{ id: 'bat', label: 'BATTERIES', price: 1, go: () => s.lights++, line: 'Flashlight +1' }, { id: 'aid', label: 'BAND-AIDS', price: 1, go: () => I2.aid++, line: 'Into the bag. +12 HP when you use them.' }];
-    if (t === 1) L.push(gear('pipewrench', 'PIPE WRENCH', 3, 'atk', 3, 'ATK +3. Finally, a weapon.'), gear('lid', 'TRASH CAN LID', 3, 'def', 2, 'DEF +2. Strapped to your arm. Smells.'), gear('pads', 'KNEE PADS', 2, 'def', 1, 'DEF +1. Still warm.'), { id: 'map', label: 'HIS MAP', price: 3, go: () => { s.mapBought = true; }, line: 'An X on a napkin marks the drip.', off: s.mapBought });
+    if (t === 1) L.push(gear('pipewrench', 'PIPE WRENCH', 3, 'atk', 3, 'ATK +3. Finally, a weapon.'), gear('lid', 'TRASH CAN LID', 3, 'def', 2, 'DEF +2. Strapped to your arm. Smells.'), gear('pads', 'KNEE PADS', 2, 'def', 1, 'DEF +1. Still warm.'));
     if (t >= 2) L.push({ id: 'beans', label: 'COLD BEANS', price: 2, go: () => I2.beans++, line: '+25 HP. He warmed them in his armpit.' }, gear(t === 2 ? 'hat' : 'waders', t === 2 ? 'HARD HAT' : 'CHEST WADERS', t === 2 ? 5 : 7, 'def', t === 2 ? 2 : 3, t === 2 ? "DEF +2. It's his old one." : 'DEF +3. Mostly waterproof.'), gear(t === 2 ? 'wrench' : 'cutter', t === 2 ? 'MONKEY WRENCH' : 'PIPE CUTTER', t === 2 ? 6 : 8, 'atk', t === 2 ? 2 : 3, t === 2 ? 'ATK +2. 24 inches of truth.' : 'ATK +3. Do not ask what else he cut with it.'));
-    if (t === 2) L.push({ id: 'map', label: 'HIS MAP', price: 2, go: () => { s.mapBought = true; }, line: 'An X on a napkin marks the drip.', off: s.mapBought });
+    L.push({ id: 'map', label: t < 3 ? 'NAPKIN MAP' : 'MAP TO THE DRIP', price: t < 3 ? 2 : 3, go: () => { s.maps[t - 1] = true; }, line: t < 3 ? "An X on a napkin: Carl's next hidey-hole. Tap your map to look." : 'An X on a napkin marks the DRIP. Tap your map to look.', off: s.maps[t - 1] });   /* each Carl sells the way to the next one; the last one sells the way to the drip */
     if (t === 3) L.push({ id: 'tonic', label: "CARL'S TONIC", price: 3, go: () => I2.tonic++, line: 'Full health. Smells like gasoline and love.' }, { id: 'poison', label: 'RAT POISON', price: 4, go: () => I2.poison++, line: '25 damage to anything with a tail. Including Kings.' });
     return [...L, { id: 'bye', label: 'LEAVE', price: 0 } ]; },
+  xs(s) { const M = s.maps || []; return [M[0] && s.carls[1], M[1] && s.carls[2], M[2] && s.goal].filter(Boolean); },   /* where Carl's napkin maps point */
+  bigBox() { return { x: 14, y: 26, w: 384, h: 236 }; },
+  bigBtns() { return [['CLOSE', 406, 30], ['UNDO', 406, 74], ['CLEAR', 406, 118]].map(([l, x, y]) => ({ l, x, y, w: 64, h: 34 })); },
+  bigStep(s, dt, I) {   /* the big map: look at it, and scribble on it in brown */
+    const B = s.big, bx = this.bigBox(), Z = Math.min(bx.w / s.C, (bx.h - 10) / s.R), ox = bx.x + (bx.w - s.C * Z) / 2, oy = bx.y + (bx.h - 10 - s.R * Z) / 2, P = I.ptr;
+    if (I.Ap || I.Bp) { s.big = null; SFX('ui_tap'); return; }
+    if (P.clicked) for (const b of this.bigBtns()) if (P.x > b.x && P.x < b.x + b.w && P.y > b.y && P.y < b.y + b.h) {
+      SFX('ui_tap'); if (b.l === 'CLOSE') s.big = null; else if (b.l === 'UNDO') s.scrib.pop(); else s.scrib = []; B.stroke = null; return; }
+    const inside = P.x > ox && P.x < ox + s.C * Z && P.y > oy && P.y < oy + s.R * Z;
+    if (P.down && inside) { const pt = [+((P.x - ox) / Z).toFixed(2), +((P.y - oy) / Z).toFixed(2)];
+      if (!B.stroke) { B.stroke = [pt]; s.scrib.push(B.stroke); } else { const l = B.stroke[B.stroke.length - 1]; if (Math.hypot(pt[0] - l[0], pt[1] - l[1]) > 0.15) B.stroke.push(pt); } }
+    else B.stroke = null; },
+  drawBig(s, t) {
+    const bx = this.bigBox(), Z = Math.min(bx.w / s.C, (bx.h - 10) / s.R), ox = bx.x + (bx.w - s.C * Z) / 2, oy = bx.y + (bx.h - 10 - s.R * Z) / 2;
+    R(0, 0, W, H, 'rgba(8,6,4,.92)'); R(bx.x - 4, bx.y - 4, bx.w + 8, bx.h + 8, '#cdb88c'); R(bx.x, bx.y, bx.w, bx.h, '#e6d6ae');   /* a greasy napkin */
+    T("CARL'S NAPKIN  ·  DRAW ON IT WITH YOUR FINGER", bx.x + bx.w / 2, 14, '#e8c86a', 6, 'center');
+    for (const k of s.seen) { const c = k % 100, r = Math.floor(k / 100); R(ox + c * Z, oy + r * Z, Z + 0.4, Z + 0.4, '#b8a074');   /* +0.4: no hairline seams between squares */
+      for (const [ddx, ddy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (s.map[r + ddy][c + ddx] !== '.') R(ox + (c + ddx) * Z, oy + (r + ddy) * Z, Z + 0.4, Z + 0.4, '#6e5a3c'); }
+    for (let z = 0; z < 4; z++) { const x0 = ox + (2 * Math.ceil(z * s.W4 / 4)) * Z + Z / 2, x1 = z < 3 ? ox + (2 * Math.ceil((z + 1) * s.W4 / 4)) * Z + Z / 2 : ox + (s.C - 1) * Z;   /* the four zones */
+      if (z) { g.strokeStyle = 'rgba(200,60,40,.55)'; g.setLineDash([4, 3]); g.lineWidth = 1; g.beginPath(); g.moveTo(x0, oy); g.lineTo(x0, oy + s.R * Z); g.stroke(); g.setLineDash([]); }
+      R((x0 + x1) / 2 - 20, oy + s.R * Z + 1, 40, 8, '#cdb88c'); T('ZONE ' + (z + 1), (x0 + x1) / 2, oy + s.R * Z + 5, '#6e5a3c', 5, 'center'); }
+    s.carls.forEach((cl, i) => { if (cl.met || s.seen.has(cl.r * 100 + cl.c)) { R(ox + cl.c * Z, oy + cl.r * Z, Z, Z, '#4aa83a'); T('CARL', ox + cl.c * Z + Z / 2, oy + cl.r * Z - 4, '#2e6a24', 4, 'center'); } });
+    if (s.escort && s.kingdom) T('♛', ox + s.kingdom.c * Z + Z / 2, oy + s.kingdom.r * Z + Z / 2, '#c9a000', 7, 'center');
+    this.xs(s).forEach(q => { const on = Math.floor(t * 3) % 2; T('X', ox + q.c * Z + Z / 2, oy + q.r * Z + Z / 2, on ? '#c0392b' : '#8a2a1e', 9, 'center'); });
+    g.strokeStyle = '#6b3f1d'; g.lineWidth = 2; g.lineCap = g.lineJoin = 'round'; for (const st of s.scrib) { g.beginPath(); st.forEach(([x, y], i) => i ? g.lineTo(ox + x * Z, oy + y * Z) : g.moveTo(ox + x * Z, oy + y * Z)); if (st.length === 1) g.lineTo(ox + st[0][0] * Z + 0.5, oy + st[0][1] * Z); g.stroke(); }
+    const cx = ox + s.vx * Z, cy = oy + s.vy * Z, a = s.va, k2 = Math.max(4, Z * 0.8); g.fillStyle = '#d4402a'; g.beginPath(); g.moveTo(cx + Math.cos(a) * k2, cy + Math.sin(a) * k2); g.lineTo(cx + Math.cos(a + 2.4) * k2 * 0.7, cy + Math.sin(a + 2.4) * k2 * 0.7); g.lineTo(cx + Math.cos(a - 2.4) * k2 * 0.7, cy + Math.sin(a - 2.4) * k2 * 0.7); g.fill();
+    T('YOU', cx, cy - k2 - 4, '#d4402a', 4, 'center');
+    this.bigBtns().forEach(b => { R(b.x, b.y, b.w, b.h, '#241c13'); R(b.x, b.y, b.w, 1, '#8a6a30'); T(b.l, b.x + b.w / 2, b.y + b.h / 2 + 1, '#e8dcc0', 6, 'center'); });
+    [['X = GO HERE', '#e9665a'], ['GREEN = CARL', '#4aa83a'], ['BROWN =', '#a07040'], ['YOUR NOTES', '#a07040']].forEach(([l, c], i) => T(l, 438, 172 + i * 11, c, 5, 'center')); },
   mood(s, list) { const S = s.shop; if (!S) return; S.face = list[Math.floor(s.rnd() * list.length)]; S.flip = s.rnd() < 0.35 ? [5, 1, 7, 3][Math.floor(s.rnd() * 4)] : null; S.t = 0; },   /* ...and sometimes he flips mid-sentence */
   HOBO_T2: "YOU! You came back! ...Different Carl? There's only one Carl. I get around. Crackers?",
   HOBO_T3: "Shhh. He's right through there. The KING. You're gonna want everything Carl's got. Everything. For the little crackers.",
@@ -1784,14 +1821,15 @@ GAMES.push({
           if (priced) T(o.price + ' CRK', x + w - 4, y + h / 2 + 1, s.crk >= o.price && !o.off ? '#7bd65b' : '#8a5a50', 5, 'right'); }); } }
     else {
       bevel(PX, 10, PW, 82);
-    { const z = this.zone(s); T(z < 0.2 ? 'THE ENTRANCE' : z < 0.45 ? 'THE DAMP PART' : z < 0.7 ? 'POSSUM COUNTRY' : z < 0.9 ? 'THE DEEP MUCK' : "THE KING'S HALL", PX + PW / 2, 18, '#e8c86a', 6, 'center'); T(`LV ${s.lvl}  ATK ${s.dmg[0] + s.atkB + s.lvl - 1}-${s.dmg[1] + s.atkB + s.lvl - 1}  DEF ${s.def}`, PX + PW / 2, 27, '#9fb3d9', 5, 'center'); }
+    { const z = this.zone(s); const zi = s.band ? s.band(s.pc) : 0; T(['THE ENTRANCE', 'POSSUM COUNTRY', 'THE DEEP MUCK', "THE KING'S HALL"][zi], PX + PW / 2, 18, '#e8c86a', 6, 'center'); if (!s.battle) T('TAP MAP', PX + PW - 6, 88, '#5a5048', 4, 'right'); T(`LV ${s.lvl}  ATK ${s.dmg[0] + s.atkB + s.lvl - 1}-${s.dmg[1] + s.atkB + s.lvl - 1}  DEF ${s.def}`, PX + PW / 2, 27, '#9fb3d9', 5, 'center'); }
     { const Z = 4, VWc = 29, VHc = 13, oc = Math.max(0, Math.min(s.C - VWc, Math.round(s.vx - VWc / 2))), orr = Math.max(0, Math.min(s.R - VHc, Math.round(s.vy - VHc / 2))), mw = Math.min(s.C, VWc) * Z, mh = Math.min(s.R, VHc) * Z, mx0 = PX + (PW - mw) / 2 - oc * Z, my0 = 35 - orr * Z;   // automap: a window around you, only where you've been
       R(PX + (PW - mw) / 2 - 1, 34, mw + 2, mh + 2, '#16110b'); g.save(); g.beginPath(); g.rect(PX + (PW - mw) / 2, 35, mw, mh); g.clip();
       for (const k of s.seen) { const c = k % 100, r = Math.floor(k / 100); R(mx0 + c * Z, my0 + r * Z, Z, Z, '#7a6a50');
         for (const [ddx, ddy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (s.map[r + ddy][c + ddx] !== '.') R(mx0 + (c + ddx) * Z, my0 + (r + ddy) * Z, Z, Z, '#3e3a34'); }
       for (const cl of s.carls) if (cl.met || s.seen.has(cl.r * 100 + cl.c)) R(mx0 + cl.c * Z, my0 + cl.r * Z, Z, Z, '#4aa83a');   /* Carl */
       if (s.escort && s.kingdom && Math.floor(t * 3) % 2) R(mx0 + s.kingdom.c * Z, my0 + s.kingdom.r * Z, Z, Z, '#f7d44a');   /* her kingdom */
-      if (s.mapBought && Math.floor(t * 3) % 2) { T('X', mx0 + s.goal.c * Z + Z / 2, my0 + s.goal.r * Z + Z / 2, '#e9665a', 6, 'center'); }   /* his napkin map */
+      if (Math.floor(t * 3) % 2) this.xs(s).forEach(q => T('X', mx0 + q.c * Z + Z / 2, my0 + q.r * Z + Z / 2, '#e9665a', 6, 'center'));   /* his napkin maps */
+      if (s.scrib) { g.strokeStyle = '#8a5a2a'; g.lineWidth = 1; for (const st of s.scrib) { g.beginPath(); st.forEach(([x, y], i) => i ? g.lineTo(mx0 + x * Z, my0 + y * Z) : g.moveTo(mx0 + x * Z, my0 + y * Z)); g.stroke(); } }
       const cx = mx0 + s.vx * Z, cy = my0 + s.vy * Z, a = s.va; g.fillStyle = '#f7c418'; g.beginPath(); g.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4); g.lineTo(cx + Math.cos(a + 2.4) * 3, cy + Math.sin(a + 2.4) * 3); g.lineTo(cx + Math.cos(a - 2.4) * 3, cy + Math.sin(a - 2.4) * 3); g.fill(); g.restore(); }
       bevel(PX, 100, PW, 88);
       const stink = 1 - s.gd[s.pr][s.pc] / Math.max(1, s.gmax);
@@ -1831,12 +1869,13 @@ GAMES.push({
       else if (s.steps < 2 && !b) { T('▲ CRAWL   ▼ BACK   ◀ ▶ TURN', 180, 214, '#e8dcc0', 6); WRAP('Follow your nose. The STINK meter tells you when you are close.', 180, 230, MW, '#7a6a50', 6, 11); }
       else scroll(log.slice(-3)); }
     DRAWFX(s);
+    if (s.big) this.drawBig(s, t);
   },
 
 });
 /* SAVE + RESUME for Under the Trailer: it's a long crawl, so your spot is kept if the phone locks or the page reloads */
 (() => {
-  const G = GAMES.find(q => q.id === 'crawl'), SKIP = new Set(['cv', 'cx', 'img', 'buf', 'zb', 'battle', 'talk', 'shop', 'bag', 'wake', 'wed', 'rnd', 'props', 'carlScr', 'end', 'ask', 'saveT', 'lvlUp', 'fx', 'pops', 'parts']);
+  const G = GAMES.find(q => q.id === 'crawl'), SKIP = new Set(['cv', 'cx', 'img', 'buf', 'zb', 'battle', 'talk', 'shop', 'bag', 'wake', 'wed', 'rnd', 'props', 'carlScr', 'end', 'ask', 'saveT', 'lvlUp', 'big', 'fx', 'pops', 'parts']);
   const KEY = s => 'ddt_crawl_' + (new URLSearchParams(location.search).get('job') || 'arcade') + '_' + s.diff;
   const save = s => { try { const o = {}; for (const k in s) { if (SKIP.has(k) || typeof s[k] === 'function') continue; o[k] = s[k] instanceof Set ? { __set: [...s[k]] } : s[k]; } localStorage.setItem(KEY(s), JSON.stringify(o)); } catch (e) {} };
   const load = s => { try { const o = JSON.parse(localStorage.getItem(KEY(s)) || 'null'); return o && o.map ? o : null; } catch (e) { return null; } };
