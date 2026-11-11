@@ -1731,8 +1731,9 @@ GAMES.push({
       g.fillStyle = `rgba(255,190,120,${0.12 + 0.05 * Math.sin(t * 7)})`; g.fillRect(VX, VY, VW, VH);
       { const L2 = WRAP(line, 0, null, VW - 32, '#fff', 6, 10); R(VX + 8, VY + 6, VW - 16, 20 + L2.length * 10, 'rgba(10,8,6,.88)'); if (!who) WRAP(line, VX + VW / 2, VY + 18, VW - 32, '#e8c86a', 6, 10, 0, 'center'); else { T(who + ':', VX + 14, VY + 14, '#e8c86a', 6); WRAP(line, VX + 14, VY + 26, VW - 32, '#fff', 6, 10); } } }
     if (s.wed) { const W2 = s.wed, [who, line] = W2.lines[W2.i], k = W2.i;
-      const grd = g.createLinearGradient(0, VY, 0, VY + VH); grd.addColorStop(0, '#2a1a12'); grd.addColorStop(1, '#5a3a22'); g.fillStyle = grd; g.fillRect(VX, VY, VW, VH);
-      for (let i = 0; i < 6; i++) { const fx = VX + 20 + i * 56; R(fx, VY + 52, 3, 12, '#e8dcc0'); C(fx + 1.5, VY + 49 + Math.sin(t * 9 + i) * 1, 2.5, '#ffd27a'); }   /* candles on the dirt wall */
+      if (MG('ut_wed_bg')) { g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(MG('ut_wed_bg'), VX, VY, VW, VH); g.fillStyle = `rgba(255,170,80,${0.04 + 0.03 * Math.sin(t * 7)})`; g.fillRect(VX, VY, VW, VH); g.restore(); }   /* the crawlspace chapel, candles flickering */
+      else { const grd = g.createLinearGradient(0, VY, 0, VY + VH); grd.addColorStop(0, '#2a1a12'); grd.addColorStop(1, '#5a3a22'); g.fillStyle = grd; g.fillRect(VX, VY, VW, VH);
+      for (let i = 0; i < 6; i++) { const fx = VX + 20 + i * 56; R(fx, VY + 52, 3, 12, '#e8dcc0'); C(fx + 1.5, VY + 49 + Math.sin(t * 9 + i) * 1, 2.5, '#ffd27a'); } }   /* candles on the dirt wall */
       const crown = (x, y, sz) => { g.fillStyle = '#f7d44a'; g.beginPath(); g.moveTo(x - sz, y + sz * 0.6); g.lineTo(x - sz, y - sz * 0.2); g.lineTo(x - sz * 0.45, y + sz * 0.25); g.lineTo(x, y - sz * 0.7); g.lineTo(x + sz * 0.45, y + sz * 0.25); g.lineTo(x + sz, y - sz * 0.2); g.lineTo(x + sz, y + sz * 0.6); g.fill(); C(x, y - sz * 0.7, sz * 0.18, '#ff8ad0'); };
       const dead = k >= 13 && k <= 13, sad = k >= 16, base = VY + VH - 18;
       if (MG('ut_royals')) { const kf = dead ? 3 : k >= 14 ? 2 : [1, 3, 6, 9, 11].includes(k) ? 1 : 0, qf = dead ? 7 : k >= 15 ? 6 : [2, 5, 14].includes(k) ? 5 : 4;
