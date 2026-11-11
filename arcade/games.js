@@ -1337,7 +1337,8 @@ TRL.imgTex = (n, w) => {   /* turn a sprite into a 32x32 billboard texture, sitt
 TRL.music = { h: null, tick: 0, amb: null, atick: 0 };
 TRL.bgm = on => { const M = TRL.music; if (on && !M.h && typeof DDTSfx !== 'undefined') M.h = DDTSfx.loop('ut_battle'); if (!on && M.h) { M.h.stop(); M.h = null; } };
 TRL.amb = on => { const M = TRL.music; if (on && !M.amb && typeof DDTSfx !== 'undefined') M.amb = [DDTSfx.loop('ut_amb_a'), DDTSfx.loop('ut_amb_b')]; if (!on && M.amb) { M.amb.forEach(h => h.stop()); M.amb = null; } };   /* the two crawlspace tracks, layered */
-setInterval(() => { const M = TRL.music, n = performance.now(); if (M.h && n - M.tick > 400) TRL.bgm(false); if (M.amb && n - M.atick > 400) TRL.amb(false); }, 300);   /* game paused, quit or over: the battle music stops */
+TRL.wedM = on => { const M = TRL.music; if (on && !M.wed && typeof DDTSfx !== 'undefined') M.wed = DDTSfx.loop('ut_wedding'); if (!on && M.wed) { M.wed.stop(); M.wed = null; } };
+setInterval(() => { const M = TRL.music, n = performance.now(); if (M.h && n - M.tick > 400) TRL.bgm(false); if (M.amb && n - M.atick > 400) TRL.amb(false); if (M.wed && n - (M.wtick || 0) > 400) TRL.wedM(false); }, 300);   /* game paused, quit or over: the battle music stops */
 
 GAMES.push({
   id: 'crawl', name: 'UNDER THE TRAILER', tag: 'A long crawl · rats, possums, a King · Crawlspace Carl',
@@ -1382,7 +1383,7 @@ GAMES.push({
   update(s, dt, I) {
     s.t += dt; FX(s, dt); s.flash = Math.max(0, s.flash - dt); s.shake = Math.max(0, (s.shake || 0) - dt); s.swing = Math.max(0, (s.swing || 0) - dt); s.guard = Math.max(0, (s.guard || 0) - dt);
     if (s.fixT) { s.fixT += dt * (s.fixT > 3.4 && (I.Ap || I.ptr.clicked) ? 6 : 1); if (s.fixT > 9.4) { const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.t < 50 + s.gmax * 2, f >= 0.3), line: s.epi[1] + (s.restMin ? ` (Rested ${s.restMin} min.)` : ''), extraTime: s.restMin }); } return; }
-    if (!s.battle) { TRL.music.atick = performance.now(); TRL.amb(true); } else TRL.amb(false);
+    if (s.wed) { TRL.music.wtick = performance.now(); TRL.wedM(true); TRL.amb(false); } else { TRL.wedM(false); if (!s.battle) { TRL.music.atick = performance.now(); TRL.amb(true); } else TRL.amb(false); }   /* the wedding gets its own music */
     if (s.talk) { const K = s.talk; K.t += dt; if ((K.t > 0.4 && (I.Ap || I.ptr.clicked)) || K.t > 4.5) { K.i++; K.t = 0; if (K.i >= K.lines.length) { const me = HERO(s).name, them = me === 'ROD' ? 'Matt' : 'Rod'; s.talk.i = K.lines.length - 1; s.end = { win: true, stars: 1, carl: true, extraTime: s.restMin, line: `${them} fixed it. ${me === 'ROD' ? 'Rod' : 'Matt'} is still talking about Carl.` }; } } return; }
     if (s.wake) return this.wakeStep(s, dt, I);
     if (s.wed) return this.wedStep(s, dt, I);
