@@ -285,7 +285,7 @@ function drive3d(choice, opts) {
   let glass = 0; try { glass = (DDT.get() || {}).glass || 0; } catch (e) {}
   const STATS = { cars: 0, trucks: 0, headons: 0, deer: 0, moose: 0, turkeys: 0, peeper: 0, lost: 0, cracks: 0 };   // this drive's tally, added to the player's record at the end
   let DEERINS = false; try { DEERINS = !!((DDT.get() || {}).inv || {}).deerins; } catch (e) {}
-  const hurtGlass = n => { if (!n) return; STATS.cracks += n; glass = Math.min(14, glass + n); try { const s = DDT.get(); s.glass = glass; DDT.save(s); } catch (e) {} };
+  const hurtGlass = n => { if (!n) return; STATS.cracks += n; glass = Math.min(14, glass + n); if (!opts.arcade) try { const s = DDT.get(); s.glass = glass; DDT.save(s); } catch (e) {} };
   const rng = seed => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
   // where each new crack lands, in order: around the edges first, so the road ahead stays readable longest
   const CRACK_AT = [[408, 64], [66, 84], [446, 168], [34, 206], [338, 42], [132, 46], [462, 236], [18, 132], [292, 58], [196, 52], [424, 112], [70, 244], [244, 40], [372, 222]];
@@ -442,9 +442,9 @@ function drive3d(choice, opts) {
         }
         if (live && !cr.hit && inv <= 0 && Math.abs(dz - PZ) < SEG * 1.1 && Math.abs(px - cr.off) < CW[cr.kind] + 0.1) {
           const covered = cr.kind === 'deer' && DEERINS;   // deer insurance: no lost time, no cracked glass
-          cr.hit = true; crashes++; STATS[cr.kind] = (STATS[cr.kind] || 0) + 1; if (!covered) { hurtGlass(glassFor[cr.kind]); penalty += PEN[cr.kind]; STATS.lost += PEN[cr.kind]; } inv = 1.4; shake = cr.kind === 'moose' ? 0.7 : 0.3; speed *= cr.kind === 'moose' ? 0.1 : covered ? 0.75 : 0.4;
+          cr.hit = true; if (!covered) crashes++; STATS[cr.kind] = (STATS[cr.kind] || 0) + 1; if (!covered) { hurtGlass(glassFor[cr.kind]); penalty += PEN[cr.kind]; STATS.lost += PEN[cr.kind]; } inv = 1.4; shake = cr.kind === 'moose' ? 0.7 : 0.3; speed *= cr.kind === 'moose' ? 0.1 : covered ? 0.92 : 0.4;
           cr.dir = Math.sign(cr.off - px) || 1; cr.snap = 0;
-          if (cr.kind !== 'moose') { cr.fly = 0.001; cr.flyDir = cr.dir; } else cr.react = 0.001;   // up and over the roof
+          if (cr.kind !== 'moose') { cr.fly = 0.001; cr.flyDir = cr.dir; }   /* up and over the roof; the moose just keeps walking */
           sfx(cr.kind === 'moose' ? 'horn_angry' : 'horn');
           say({ moose: 'HIT THE MOOSE! +20 MIN', deer: covered ? 'OH DEER. INSURANCE HAS IT!' : 'OH DEER. +12 MIN', turkeys: 'FEATHERS! +5 MIN', peeper: 'SLAMMED THE BRAKES! +8 MIN' }[cr.kind]);
         }
@@ -456,7 +456,7 @@ function drive3d(choice, opts) {
         done = true; removeEventListener('keydown', kd); removeEventListener('keyup', ku); rc.onpointerdown = rc.onpointerup = rc.onpointermove = rc.onpointercancel = null;
         const mins = Math.round(opts.leave + play * MIN_PER_S + penalty);
         say('MADE IT!', 2); draw(false, true, 0);
-        try { const sv = DDT.get(), T = sv.stats = sv.stats || {}; for (const k in STATS) T[k] = (T[k] || 0) + STATS[k]; T.drives = (T.drives || 0) + 1; T.miles = (T.miles || 0) + Math.round(TOTAL_MI); if (RIVAL) T[rivalWon ? 'racesLost' : 'racesWon'] = (T[rivalWon ? 'racesLost' : 'racesWon'] || 0) + 1; DDT.save(sv); } catch (e) {}
+        if (!opts.arcade) try { const sv = DDT.get(), T = sv.stats = sv.stats || {}; for (const k in STATS) T[k] = (T[k] || 0) + STATS[k]; T.drives = (T.drives || 0) + 1; T.miles = (T.miles || 0) + Math.round(TOTAL_MI); if (RIVAL) T[rivalWon ? 'racesLost' : 'racesWon'] = (T[rivalWon ? 'racesLost' : 'racesWon'] || 0) + 1; DDT.save(sv); } catch (e) {}
         if (rainSnd) { rainSnd.stop(); rainSnd = null; } setTimeout(() => { rc.style.display = 'none'; res({ crashes, mins, rivalWon }); }, 700); return;
       }
       requestAnimationFrame(frame);
