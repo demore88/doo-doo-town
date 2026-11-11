@@ -22,9 +22,9 @@ function drive3d(choice, opts) {
   // who's driving decides the top speed: Rod tops out at 40, Matt at 60
   const DRIVER = (opts.driver || ((DDT.get() || {}).today || {}).lead || 'rod') === 'matt' ? 'matt' : 'rod', TOP = (DRIVER === 'matt' ? 60 : 40) * MPH;
   // slow & steady = relaxed but long · normal = normal · hammer down = hard (more traffic, more critters, everyone's in a hurry)
-  const MODE = [{ cruise: 0.72, cars: 6, onc: 0.35, crit: 3, blink: 0.015, trucks: 0.15 },     // cars = how many are around you at once
-                { cruise: 0.86, cars: 9, onc: 0.4, crit: 5, blink: 0.03, trucks: 0.25 },
-                { cruise: 1.0, cars: 10, onc: 0.4, crit: 8, blink: 0.05, trucks: 0.3 }][choice];
+  const MODE = [{ cruise: 0.72, cars: 6, onc: 0.35, crit: 3, blink: 0.015, trucks: 0.02 },     // cars = how many are around you at once
+                { cruise: 0.86, cars: 9, onc: 0.4, crit: 5, blink: 0.03, trucks: 0.02 },
+                { cruise: 1.0, cars: 10, onc: 0.4, crit: 8, blink: 0.05, trucks: 0.02 }][choice];   /* log trucks: about 1 in 50 */
   const CRUISE = MODE.cruise * TOP * (choice === 2 ? 0.92 : 1), BOOST = TOP;
   const LANE = [-2 / 3, 0, 2 / 3, 4 / 3, 2, -4 / 3];   /* 0 and 5 come at you (5 only where the road opens up); 1-4 go your way (3 and 4 only where it opens up) */                           // left lane = oncoming · the two on the right go our way
   const TRACK = 1450;                                        // ~35-65 s depending on driver and mode
@@ -170,7 +170,9 @@ function drive3d(choice, opts) {
   const MREACT = DI('moose_react'), MFR = [];   // the moose, unimpressed (6 frames, faces left)
   const mooseFrame = i => { if (!(MREACT.complete && MREACT.naturalWidth)) return null; if (!MFR.length) { const fw = MREACT.width / 6; for (let k = 0; k < 6; k++) { const c = document.createElement('canvas'); c.width = fw; c.height = MREACT.height; c.getContext('2d').drawImage(MREACT, k * fw, 0, fw, MREACT.height, 0, 0, fw, MREACT.height); MFR.push(c); } } return MFR[i]; };   // bumper-hit burst (6 frames, 2x sheet)
   const bursts = [];   // the turkey family, all at once (6 frames, 2x sheet)   // the deer, face on the windshield (6 frames, sliding down)
-  const ANIM = { moose: [DI('moose_0'), DI('moose_1')], deer: [DI('deer_0'), DI('deer_1')], turkeys: [DI('turkey_0'), DI('turkey_1')] };
+  const MGI = n => { const i = new Image(); i.src = DROOT.replace(/drive\/$/, 'mg/') + n + '.png'; return i; };
+  const ANIM = { moose: [DI('moose_0'), DI('moose_1')], deer: [DI('deer_0'), DI('deer_1')], turkeys: [DI('turkey_0'), DI('turkey_1')], squirrel: [MGI('squirrel_0'), MGI('squirrel_1')], raccoon: [MGI('raccoon_0'), MGI('raccoon_1')] };
+  const GRIP = DI('raccoon_grip');   /* the raccoon hanging onto the windshield (8 frames); a stand-in is drawn until the art exists */
   const artReady = () => DL.every(i => i.failed || (i.complete && i.naturalWidth > 0));
   const flipC = new Map(), flipped = img => { if (!img.width) return img; let c = flipC.get(img); if (!c) { c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const k = c.getContext('2d'); k.scale(-1, 1); k.drawImage(img, -img.width, 0); flipC.set(img, c); } return c; };
   const MOOSE = art(56, 44, (k, P) => { P(10, 12, 34, 18, '#3a2416'); P(12, 30, 4, 14, '#2a180e'); P(20, 30, 4, 14, '#2a180e'); P(32, 30, 4, 14, '#2a180e'); P(40, 30, 4, 14, '#2a180e'); P(42, 8, 10, 12, '#3a2416'); P(48, 16, 6, 6, '#4a3020'); P(38, 2, 18, 4, '#d9c8a0'); P(36, 0, 3, 4, '#d9c8a0'); P(54, 0, 2, 4, '#d9c8a0'); });
@@ -252,7 +254,8 @@ function drive3d(choice, opts) {
   if (RACE) { MODE.cars = Math.max(2, Math.round(MODE.cars * 0.45)); MODE.crit = Math.max(1, Math.round(MODE.crit * 0.5)); }   // less traffic in the way of the race
   for (let i = 0; i < (opts.endless ? 4 : Math.round(MODE.cars * Math.min(1, Math.max(0.6, BUSY_MAX)))); i++) { let c, tries = 0; do { c = addCar(rnd(14, DRAW) * SEG, Math.random() < MODE.onc); tries++; } while (tries < 10 && cars.some(o => o.lane === c.lane && Math.abs(o.z - c.z) < 4 * SEG)); cars.push(c); }
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__cars = cars;
-  if (typeof DDT !== 'undefined' && DDT.DEV) window.__jump = mi => { pos = mi * SEG_PER_MI * SEG; };   /* dev: jump down the road */   // dev: lets the test harness check for overlaps
+  if (typeof DDT !== 'undefined' && DDT.DEV) window.__jump = mi => { pos = mi * SEG_PER_MI * SEG; };   /* dev: jump down the road */
+  if (typeof DDT !== 'undefined' && DDT.DEV) window.__critter = (kind, ahead) => critters.push({ seg: Math.floor((pos + PZ) / SEG) + (ahead || 30), kind, off: ahead < 4 ? px : px + 1.2, dir: ahead < 4 ? 1 : 0, hit: false, snap: 0, flash: 0 });   /* dev: drop an animal ahead */   // dev: lets the test harness check for overlaps
   const respawn = (c, base) => {   // reappear far up the road (out at the horizon), in a lane with room, and never in the last stretch before town
     const z = base + rnd(DRAW * 0.85, DRAW) * SEG;
     if (z > (N - 60) * SEG) { c.z = -1e12; c.parked = true; return; }
@@ -263,17 +266,17 @@ function drive3d(choice, opts) {
     Object.assign(c, n, { parked: false, nm: 0, prevAhead: undefined });
   };
   const critters = [];
-  const CK = FALL ? ['peeper', 'peeper', 'moose', 'deer', 'turkeys'] : ['moose', 'deer', 'turkeys', 'moose'];
+  const CK = FALL ? ['peeper', 'peeper', 'moose', 'deer', 'turkeys', 'squirrel', 'raccoon'] : ['moose', 'deer', 'turkeys', 'moose', 'squirrel', 'raccoon'];
   if (!opts.endless) for (let i = 0; i < MODE.crit; i++) critters.push({ seg: Math.floor(rnd(0.12, 0.92) * N), kind: CK[Math.floor(Math.random() * CK.length)], off: Math.random() < .5 ? -1.6 : 1.6, dir: 0, hit: false, snap: 0, flash: 0 });
   else for (let mi = 2; mi < N / SEG_PER_MI - 1; mi += 1) {   /* the Driving Game: it gets harder every 20 miles */
     const tier = Math.floor(mi / 20), chance = Math.min(0.9, 0.08 + 0.06 * tier);   /* the odds of an animal in any given mile */
     if (Math.random() > chance) continue;
-    const pool = mi < 30 ? ['turkeys'] : mi < 60 ? ['turkeys', 'turkeys', 'deer'] : mi < 100 ? ['turkeys', 'deer', 'deer', 'moose'] : ['turkeys', 'deer', 'deer', 'moose', 'moose'];
+    const pool = mi < 20 ? ['turkeys', 'squirrel', 'squirrel'] : mi < 30 ? ['turkeys', 'squirrel', 'raccoon'] : mi < 60 ? ['turkeys', 'squirrel', 'raccoon', 'deer'] : mi < 100 ? ['turkeys', 'squirrel', 'raccoon', 'deer', 'deer', 'moose'] : ['turkeys', 'raccoon', 'deer', 'deer', 'moose', 'moose'];
     const sg0 = Math.floor((mi + Math.random()) * SEG_PER_MI), sgo = segs[sg0] || {}, kind = pool[Math.floor(Math.random() * pool.length)];
     critters.push({ seg: sg0, kind, spd: kind === 'deer' ? Math.min(1.6, 1 + tier * 0.06) : 1, off: Math.random() < .5 ? (sgo.lt || -1) - 0.6 : (sgo.rt || 1) + 0.6, dir: 0, hit: false, snap: 0, flash: 0 }); }   /* deer get a little quicker every 20 miles, topping out at 1.6x */
-  const CIMG = { moose: ANIM.moose[0], deer: ANIM.deer[0], turkeys: ANIM.turkeys[0], peeper: PEEPER }, CW = { moose: 0.36, deer: 0.18, turkeys: 0.1, peeper: 0.08 },   // half-widths, matching how big they're drawn
+  const CIMG = { moose: ANIM.moose[0], deer: ANIM.deer[0], turkeys: ANIM.turkeys[0], peeper: PEEPER, squirrel: ANIM.squirrel[0], raccoon: ANIM.raccoon[0] }, CW = { moose: 0.36, deer: 0.18, turkeys: 0.1, peeper: 0.08, squirrel: 0.06, raccoon: 0.1 },   // half-widths, matching how big they're drawn
        
-        CSPD = { moose: 0.25, deer: 0.9, turkeys: 0.3, peeper: 0.35 }, PEN = { moose: 20, deer: 12, turkeys: 5, peeper: 8 };
+        CSPD = { moose: 0.25, deer: 0.9, turkeys: 0.3, peeper: 0.35, squirrel: 1.5, raccoon: 0.4 }, PEN = { moose: 20, deer: 12, turkeys: 5, peeper: 8, squirrel: 0, raccoon: 3 };
 
   // ---------- state + input ----------
   let artOK = false, wasLive = false, offT = 0, pos = 0, speed = 0, px = LANE[2], t = 0, play = 0, crashes = 0, penalty = 0, inv = 0, shake = 0, msg = '', msgT = 0, done = false, last = null, bounce = 0, skyX = 0;
@@ -296,6 +299,7 @@ function drive3d(choice, opts) {
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__moose = () => { const c = { kind: 'moose', seg: Math.floor((pos + PZ) / SEG), off: px, dir: -1, hit: true, react: 0.001 }; critters.push(c); }; window.__crash = () => bursts.push({ t: 0, side: 0.3, big: false }); window.__turk = () => critters.push({ kind: 'turkeys', seg: 0, off: 0, dir: 1, hit: true, fly: 0.001, flyDir: 1 }); window.__deer = (d = 1) => critters.push({ kind: 'deer', seg: 0, off: 0, dir: d, hit: true, fly: 0.001, flyDir: d });   // dev: test the windshield deer
   const sfx = (n, o) => { if (window.DDTSfx) DDTSfx.play(n, o); };
   // ---------- the windshield: cracks that stick around (and grow with every hit), bugs, mud, and now and then some weather ----------
+  let grip = 0, gripSide = 1;   /* a raccoon on the glass */
   let glass = 0; if (!opts.arcade) try { glass = (DDT.get() || {}).glass || 0; } catch (e) {}   /* menu drives start with clean glass */
   // the Driving Game: score, near misses, and toolboxes on the road that patch the van back up
   let score = 0, combo = 0, comboT = 0; const KITS = [], KIT_IMG = new Image(); KIT_IMG.src = (typeof ART !== 'undefined' ? ART : 'assets/') + 'mg/sr2_toolbox.png';
@@ -329,7 +333,7 @@ function drive3d(choice, opts) {
     muds.push({ blobs, t: 0 }); sfx('splash', { vol: 0.7 }); say('MUD!', 1); }
   let glassT = 0;
   if (typeof DDT !== 'undefined' && DDT.DEV) { window.__bug = () => splatBug(); window.__mud = () => splatMud(); window.__glass = n => { glass = n; }; }
-  const glassFor = { car: 1, truck: 2, onc: 3, moose: 3, deer: 2, turkeys: 1, peeper: 0 };
+  const glassFor = { car: 1, truck: 2, onc: 3, moose: 3, deer: 2, turkeys: 1, peeper: 0, squirrel: 0, raccoon: 0 };
 
   // ---------- projection ----------
   function project(p, camX, camY, camZ) {
@@ -411,7 +415,7 @@ function drive3d(choice, opts) {
         if (have > want + 1) { const far = cars.filter(c => !c.parked && c.z - (pos + PZ) > DRAW * 0.7 * SEG); if (far[0]) { far[0].z = -1e12; far[0].parked = true; far[0].retry = 0; } }
         if (have < want && Math.random() < dt * 2) { const z = pos + PZ + rnd(DRAW * 0.85, DRAW) * SEG, n = addCar(z, Math.random() < MODE.onc); if (!cars.some(o => !o.parked && o.lane === n.lane && Math.abs(o.z - z) < 4 * SEG)) cars.push(n); }   /* more lanes, more traffic */
         comboT = Math.max(0, comboT - dt);
-        for (const k of KITS) if (!k.got && live && Math.abs(k.z - (pos + PZ)) < SEG * 0.7 && Math.abs(px - k.off) < 0.3) { k.got = true; const fix = Math.min(2, crashes); crashes -= fix; glass = Math.max(0, glass - 3); score += 250; sfx('horn'); say(fix ? `TOOLBOX! PATCHED ${fix} DENT${fix > 1 ? 'S' : ''} +250` : 'TOOLBOX! +250', 1.4); }
+        for (const k of KITS) if (!k.got && live && Math.abs(k.z - (pos + PZ)) < SEG * 0.7 && Math.abs(px - k.off) < 0.3) { k.got = true; const fix = Math.min(1, crashes); crashes -= fix; glass = Math.max(0, glass - 3); score += 250; sfx('horn'); say(fix ? 'TOOLBOX! PATCHED A DENT +250' : 'TOOLBOX! +250', 1.4); }
       }
       // ---- no car can ever be inside another car ----
       // anything sharing a lane with a car just ahead of it is held back a safe gap and matches its speed;
@@ -462,13 +466,18 @@ function drive3d(choice, opts) {
       // critters wander onto the road when you get close
       for (const cr of critters) {
         const dz = cr.seg * SEG - pos;
-        if (!cr.dir && dz > 0 && dz < 60 * SEG) { cr.dir = -Math.sign(cr.off); say({ moose: 'MOOSE!', deer: 'DEER!', turkeys: 'TURKEYS!', peeper: 'LEAF PEEPER IN THE ROAD!' }[cr.kind]); }
+        if (!cr.dir && dz > 0 && dz < 60 * SEG) { cr.dir = -Math.sign(cr.off); say({ moose: 'MOOSE!', deer: 'DEER!', turkeys: 'TURKEYS!', peeper: 'LEAF PEEPER IN THE ROAD!', squirrel: 'SQUIRREL!', raccoon: 'RACCOON!' }[cr.kind]); }
         if (cr.fly > 0) { cr.fly += dt; continue; }
         if (cr.react > 0) { cr.react += dt; if (cr.react < 2.6) continue; }   // the moose takes its time
         if (cr.dir) {
           if (cr.kind === 'peeper' && !cr.snapped && Math.abs(cr.off) < 0.4) { cr.snapped = true; cr.snap = 1.6; }
           if (cr.snap > 0) { cr.snap -= dt; cr.flash = (cr.flash + dt) % 0.4; } else cr.off += cr.dir * CSPD[cr.kind] * (cr.spd || 1) * dt * 1.4;
         }
+        if (live && !cr.hit && (cr.kind === 'squirrel' || cr.kind === 'raccoon') && Math.abs(dz - PZ) < SEG * 1.1 && Math.abs(px - cr.off) < CW[cr.kind] + 0.1) {
+          cr.hit = true; cr.gone = true; STATS[cr.kind] = (STATS[cr.kind] || 0) + 1;
+          if (cr.kind === 'squirrel') { sfx('squish'); say('SQUISH.', 0.9); }   /* no damage, just guilt */
+          else { grip = 3.4; gripSide = Math.sign(cr.off - px) || 1; shake = 0.3; speed *= 0.85; penalty += PEN.raccoon; sfx('squish', { rate: 0.7 }); say('A RACCOON IS ON THE WINDSHIELD!', 1.6); }   /* it grabs on and won't let go */
+          continue; }
         if (live && !cr.hit && inv <= 0 && Math.abs(dz - PZ) < SEG * 1.1 && Math.abs(px - cr.off) < CW[cr.kind] + 0.1) {
           const covered = cr.kind === 'deer' && DEERINS;   // deer insurance: no lost time, no cracked glass
           cr.hit = true; if (!covered) crashes++; STATS[cr.kind] = (STATS[cr.kind] || 0) + 1; if (!covered) { hurtGlass(glassFor[cr.kind]); penalty += PEN[cr.kind]; STATS.lost += PEN[cr.kind]; } inv = 1.4; shake = cr.kind === 'moose' ? 0.7 : 0.3; speed *= cr.kind === 'moose' ? 0.1 : covered ? 0.92 : 0.4;
@@ -478,7 +487,7 @@ function drive3d(choice, opts) {
           say({ moose: 'HIT THE MOOSE! +20 MIN', deer: covered ? 'OH DEER. INSURANCE HAS IT!' : 'OH DEER. +12 MIN', turkeys: 'FEATHERS! +5 MIN', peeper: 'SLAMMED THE BRAKES! +8 MIN' }[cr.kind]);
         }
       }
-      inv = Math.max(0, inv - dt); msgT = Math.max(0, msgT - dt); shake = Math.max(0, shake - dt);
+      inv = Math.max(0, inv - dt); msgT = Math.max(0, msgT - dt); shake = Math.max(0, shake - dt); grip = Math.max(0, grip - dt);
       if (window.DRV && DRV.src) DRV.src.playbackRate.value = 0.7 + 0.6 * ratio;
       draw(gas, brake, steer);
       if (opts.endless) { const mi = pos / SEG / SEG_PER_MI; if (crashes >= 20 || pos >= (N - 40) * SEG) { done = true; removeEventListener('keydown', kd); removeEventListener('keyup', ku); rc.onpointerdown = rc.onpointerup = rc.onpointermove = rc.onpointercancel = null;
@@ -561,9 +570,9 @@ function drive3d(choice, opts) {
         for (const c of cars) if (!c.parked && segAt(c.z) === sg) { const b = S(c.img, c.sc, p.sx, p.sy, c.off, p.sw, sg.clip, c.rot);
           if (b && c.blink > 0 && Math.floor(t * 4) % 2) { const bw = Math.max(2, b.w * 0.16), bh = Math.max(2, b.w * 0.1), bx = c.next < c.lane ? b.X - bw * 0.3 : b.X + b.w - bw * 0.7;
             r.fillStyle = '#ffb020'; r.fillRect(bx, b.Y + b.h * 0.5, bw, bh); r.fillStyle = 'rgba(255,176,32,.35)'; r.fillRect(bx - bw * 0.5, b.Y + b.h * 0.5 - bh * 0.5, bw * 2, bh * 2); } }
-        for (const cr of critters) if (!cr.fly && cr.seg === sg.i && Math.abs(cr.off) < 3) {
+        for (const cr of critters) if (!cr.fly && !cr.gone && cr.seg === sg.i && Math.abs(cr.off) < 3) {
           { let im = ANIM[cr.kind] ? ANIM[cr.kind][cr.dir && !cr.snap ? Math.floor(t * 6) % 2 : 0] : CIMG[cr.kind]; if (cr.dir < 0 && ANIM[cr.kind]) im = flipped(im);   // walk cycle, facing the way it's going
-            let sc = cr.kind === 'moose' ? 2.1 : cr.kind === 'turkeys' ? 0.9 : 1.5;
+            let sc = cr.kind === 'moose' ? 2.1 : cr.kind === 'turkeys' ? 0.9 : cr.kind === 'squirrel' ? 0.75 : cr.kind === 'raccoon' ? 1.25 : 1.5;
             if (cr.react > 0 && cr.react < 2.6 && mooseFrame(0)) continue;   // drawn up close, in front of the van, below
             S(im, sc, p.sx, p.sy, cr.off, p.sw, sg.clip); }
           if (cr.kind === 'peeper' && cr.snap > 0 && cr.flash < 0.15) S(FLASH, 1, p.sx, p.sy - p.sw * 0.1, cr.off + 0.08, p.sw, sg.clip);
@@ -583,6 +592,12 @@ function drive3d(choice, opts) {
         else if (vanFail) { r.save(); r.translate(vx + 36, vy + 52); r.rotate(steer * 0.04); r.scale(1.35, 1.35); r.drawImage(brake ? VANBRAKE : VAN, -36, -52); r.restore(); }
         if (gas && speed > CRUISE * 0.9) { r.fillStyle = 'rgba(200,200,205,.6)'; for (let i = 0; i < 3; i++) r.fillRect(vx + 20 + Math.random() * 4, vy + 50 + i * 3, 3, 2); }
       }
+      if (grip > 0) { const e = 3.4 - grip, off = grip < 0.5 ? (0.5 - grip) * 260 : 0, wob = Math.sin(t * 9) * 4, cx = W / 2 + gripSide * 40 + wob, cy = H / 2 - 10 + off;   /* the raccoon, spread-eagled on the glass, then sliding off */
+        if (GRIP.complete && GRIP.naturalWidth) { const fw = GRIP.width / 8, fh = GRIP.height, fi = grip < 0.6 ? 7 : e < 0.25 ? 0 : 1 + Math.floor(e * 4) % 6, dh = 210, dw = fw * dh / fh;
+          r.save(); r.translate(cx, cy); if (gripSide < 0) r.scale(-1, 1); r.drawImage(GRIP, fi * fw, 0, fw, fh, -dw / 2, -dh / 2, dw, dh); r.restore(); }
+        else { const im = ANIM.raccoon[0]; if (im.complete && im.naturalWidth) { const sc = 5.2; r.save(); r.translate(cx, cy); r.rotate(-0.25 * gripSide + Math.sin(t * 7) * 0.06); r.drawImage(im, -im.width * sc / 2, -im.height * sc / 2, im.width * sc, im.height * sc); r.restore();
+          r.fillStyle = '#2a2420'; for (const [dx, dy] of [[-80, -40], [80, -36], [-70, 40], [74, 44]]) r.fillRect(cx + dx, cy + dy, 12, 8); } }   /* stand-in until the grip art arrives: the road raccoon, huge, with paws on the glass */
+        r.fillStyle = 'rgba(255,255,255,.7)'; for (let k = 0; k < 4; k++) r.fillRect(cx - 60 + k * 32, cy + 70 + off, 2, 10 + k % 2 * 6); }   /* claw streaks */
       for (const cr of critters) if (cr.kind === 'deer' && cr.fly > 0 && cr.fly < 3.8) {   // the deer: spins up over the hood and lands face-first on the windshield
         const img = CIMG.deer, f = cr.fly, HIT = 0.75, side = cr.flyDir < 0 ? -1 : 1;
         if (f < HIT) {   // tumbling up and toward us, getting huge
