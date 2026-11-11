@@ -466,13 +466,19 @@ function drive3d(choice, opts) {
       // critters wander onto the road when you get close
       for (const cr of critters) {
         const dz = cr.seg * SEG - pos;
-        if (!cr.dir && dz > 0 && dz < (cr.kind === 'moose' ? 110 : 60) * SEG) { cr.dir = -Math.sign(cr.off); if (cr.kind === 'moose') { const sg = segs[cr.seg] || {}, nl = Math.max(2, Math.round(((sg.rt || 1)) / (2 / 3)) + 1); cr.stopAt = LANE[1 + Math.floor(Math.random() * Math.min(nl, 4))] + (Math.random() - 0.5) * 0.15; } say({ moose: 'MOOSE!', deer: 'DEER!', turkeys: 'TURKEYS!', peeper: 'LEAF PEEPER IN THE ROAD!', squirrel: 'SQUIRREL!', raccoon: 'RACCOON!' }[cr.kind]); }
+        if (!cr.dir && dz > 0 && dz < (cr.kind === 'moose' ? 110 : 60) * SEG) { cr.dir = -Math.sign(cr.off); if (cr.kind === 'squirrel') { const sg = segs[cr.seg] || {}, L0 = sg.lt || -1, R0 = sg.rt || 1, far = cr.dir > 0 ? R0 + 0.3 : L0 - 0.3, mid = () => L0 + 0.2 + Math.random() * (R0 - L0 - 0.4), r = Math.random();
+          cr.turns = r < 0.3 ? [] : r < 0.55 ? [far] : r < 0.8 ? [mid()] : [mid(), mid(), far]; cr.pause = Math.random() < 0.4 ? 0.3 + Math.random() * 0.5 : 0; }   /* straight across · across and right back · turn around partway · freeze and zig-zag */
+        if (cr.kind === 'moose') { const sg = segs[cr.seg] || {}, nl = Math.max(2, Math.round(((sg.rt || 1)) / (2 / 3)) + 1); cr.stopAt = LANE[1 + Math.floor(Math.random() * Math.min(nl, 4))] + (Math.random() - 0.5) * 0.15; } say({ moose: 'MOOSE!', deer: 'DEER!', turkeys: 'TURKEYS!', peeper: 'LEAF PEEPER IN THE ROAD!', squirrel: 'SQUIRREL!', raccoon: 'RACCOON!' }[cr.kind]); }
         if (cr.fly > 0) { cr.fly += dt; continue; }
         if (cr.react > 0) { cr.react += dt; if (cr.react < 2.6) continue; }   // the moose takes its time
         if (cr.dir) {
           if (cr.kind === 'peeper' && !cr.snapped && Math.abs(cr.off) < 0.4) { cr.snapped = true; cr.snap = 1.6; }
           if (cr.snap > 0) { cr.snap -= dt; cr.flash = (cr.flash + dt) % 0.4; } else if (cr.stopAt != null && Math.abs(cr.off - cr.stopAt) < 0.05) { /* the moose has planted itself in the road: it isn't moving for you */ }
           else if (cr.stopAt != null) cr.off += Math.sign(cr.stopAt - cr.off) * Math.min(Math.abs(cr.stopAt - cr.off), 0.9 * dt);
+          else if (cr.kind === 'squirrel' && cr.turns) {   /* squirrels can't make up their minds */
+            if (cr.pause > 0) cr.pause -= dt;
+            else { cr.off += cr.dir * CSPD.squirrel * (0.8 + 0.4 * Math.sin(t * 13 + cr.seg)) * dt * 1.4;
+              const tgt = cr.turns[0]; if (tgt != null && (cr.dir > 0 ? cr.off >= tgt : cr.off <= tgt)) { cr.turns.shift(); cr.dir = -cr.dir; cr.pause = Math.random() < 0.5 ? 0.15 + Math.random() * 0.45 : 0; } } }
           else cr.off += cr.dir * CSPD[cr.kind] * (cr.spd || 1) * dt * 1.4;
         }
         if (live && !cr.hit && (cr.kind === 'squirrel' || cr.kind === 'raccoon') && Math.abs(dz - PZ) < SEG * 1.1 && Math.abs(px - cr.off) < CW[cr.kind] + 0.1) {
