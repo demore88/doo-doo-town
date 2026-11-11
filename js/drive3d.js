@@ -301,7 +301,7 @@ function drive3d(choice, opts) {
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__moose = () => { const c = { kind: 'moose', seg: Math.floor((pos + PZ) / SEG), off: px, dir: -1, hit: true, react: 0.001 }; critters.push(c); }; window.__crash = () => bursts.push({ t: 0, side: 0.3, big: false }); window.__turk = () => critters.push({ kind: 'turkeys', seg: 0, off: 0, dir: 1, hit: true, fly: 0.001, flyDir: 1 }); window.__deer = (d = 1) => critters.push({ kind: 'deer', seg: 0, off: 0, dir: d, hit: true, fly: 0.001, flyDir: d });   // dev: test the windshield deer
   const sfx = (n, o) => { if (typeof DDTSfx !== 'undefined') DDTSfx.play(n, o); };   /* DDTSfx is a top-level const: it's never on window */
   // ---------- the windshield: cracks that stick around (and grow with every hit), bugs, mud, and now and then some weather ----------
-  let grip = 0, gripSide = 1, sqCall = null;
+  let grip = 0, gripSide = 1, sqCall = null, racSnd = null;
   // the squirrel's family calls the van. Each caller has an avatar (assets/drive/sq_<who>.png; a squirrel stand-in until the art exists).
   const SQ = window.SQ_CALLERS || {}, SQ_SEEN = (() => { try { return JSON.parse(localStorage.getItem('ddt_sq_seen') || '{}'); } catch (e) { return {}; } })();
   const SQ_IMG = {}; const sqImg = (w, n) => { const k = w + '_' + (n || 0); return SQ_IMG[k] || (SQ_IMG[k] = DI('sq_' + k)); };
@@ -508,7 +508,7 @@ function drive3d(choice, opts) {
         if (live && !cr.hit && (cr.kind === 'squirrel' || cr.kind === 'raccoon') && Math.abs(dz - PZ) < SEG * 1.1 && Math.abs(px - cr.off) < CW[cr.kind] + 0.1) {
           cr.hit = true; cr.gone = true; STATS[cr.kind] = (STATS[cr.kind] || 0) + 1;
           if (cr.kind === 'squirrel') { sfx('squirrel_death_' + (1 + Math.floor(Math.random() * 3))); say('SQUISH.', 0.9); if (!sqCall && Math.random() < 0.01) setTimeout(() => startSqCall(), 1400); }   /* 1 in 100: the family calls */   /* no damage, just guilt */
-          else { grip = 3.4; gripSide = Math.sign(cr.off - px) || 1; shake = 0.3; speed *= 0.85; penalty += PEN.raccoon; sfx(Math.random() < 0.5 ? 'animal_hit' : 'animal_hit_2'); say('A RACCOON IS ON THE WINDSHIELD!', 1.6); }   /* it grabs on and won't let go */
+          else { grip = 3.4; gripSide = Math.sign(cr.off - px) || 1; shake = 0.3; speed *= 0.85; penalty += PEN.raccoon; sfx(Math.random() < 0.5 ? 'animal_hit' : 'animal_hit_2'); if (racSnd) racSnd.stop(); racSnd = typeof DDTSfx !== 'undefined' ? DDTSfx.play('raccoon') : null; say('A RACCOON IS ON THE WINDSHIELD!', 1.6); }   /* it hisses and scrabbles until it lets go */   /* it grabs on and won't let go */
           continue; }
         if (live && !cr.hit && inv <= 0 && Math.abs(dz - PZ) < SEG * 1.1 && Math.abs(px - cr.off) < CW[cr.kind] + 0.1) {
           const covered = cr.kind === 'deer' && DEERINS;   // deer insurance: no lost time, no cracked glass
@@ -519,7 +519,7 @@ function drive3d(choice, opts) {
           say({ moose: 'HIT THE MOOSE! +20 MIN', deer: covered ? 'OH DEER. INSURANCE HAS IT!' : 'OH DEER. +12 MIN', turkeys: 'FEATHERS! +5 MIN', peeper: 'SLAMMED THE BRAKES! +8 MIN' }[cr.kind]);
         }
       }
-      inv = Math.max(0, inv - dt); msgT = Math.max(0, msgT - dt); shake = Math.max(0, shake - dt); grip = Math.max(0, grip - dt); if (sqCall) { if (sqCall.ring > 0) sqCall.ring -= dt; else { sqCall.t += dt; if (sqCall.t > sqCall.c.lines.length * 2.8 + 0.6) sqCall = null; } }
+      inv = Math.max(0, inv - dt); msgT = Math.max(0, msgT - dt); shake = Math.max(0, shake - dt); grip = Math.max(0, grip - dt); if (grip <= 0 && racSnd) { racSnd.stop(); racSnd = null; } if (sqCall) { if (sqCall.ring > 0) sqCall.ring -= dt; else { sqCall.t += dt; if (sqCall.t > sqCall.c.lines.length * 2.8 + 0.6) sqCall = null; } }
       if (window.DRV && DRV.src) DRV.src.playbackRate.value = 0.7 + 0.6 * ratio;
       draw(gas, brake, steer);
       if (opts.endless) { const mi = pos / SEG / SEG_PER_MI; if (crashes >= 20 || pos >= (N - 40) * SEG) { done = true; removeEventListener('keydown', kd); removeEventListener('keyup', ku); rc.onpointerdown = rc.onpointerup = rc.onpointermove = rc.onpointercancel = null;
