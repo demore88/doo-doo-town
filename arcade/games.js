@@ -201,9 +201,9 @@ GAMES.push({
 //    TP rolls to grab and toolboxes to bust open.
 GAMES.push({
   id: 'sprinkler', name: 'CLEANOUT BLOWOUT', tag: 'Run the yard · jump, slide, dodge · grab the TP',
-  how: ['The whole line backed up and every cleanout in the yard blew its cap. RUN FOR THE VAN.', 'JUMP the brown jets. Tap for a hop, HOLD for a big jump (the tall blasts and the long septic holes need a big one).', 'SLIDE under the high blasts and the dogs leaping at your head (hold ▼ or the SLIDE button).', 'When a cleanout shoots STRAIGHT UP, turds and corn rain down: watch the SHADOWS and steer clear. Dodge rolling trash cans and hose reels.', 'Grab TP rolls. 25 rolls = a spare pair of pants. Bust toolboxes open for more.'],
-  dpad: 'omni',
-  ctl: 'STICK STEER · ▲/SPACE JUMP (HOLD = HIGHER) · ▼/SHIFT SLIDE',
+  how: ['The whole line backed up and every cleanout in the yard blew its cap. RUN FOR THE VAN.', 'JUMP the brown jets. Tap for a hop, HOLD for a big jump (the tall blasts and the long septic holes need a big one).', 'SLIDE under the HIGH blasts (hold ▼ or the SLIDE button). Yellow ▲ arrows on the grass = JUMP. Blue ▼ arrows = SLIDE.', 'When a cleanout shoots STRAIGHT UP, turds and corn rain down: watch the SHADOWS and steer clear. Dodge rolling trash cans and hose reels.', 'GRAB the sparkly stuff: TP rolls (25 = a spare pair of pants) and toolboxes. AVOID anything brown.'],
+  dpad: 'stick', stickH: true,
+  ctl: '◀ ▶ STEER · ▲/SPACE JUMP (HOLD = HIGHER) · ▼/SHIFT SLIDE',
   act: 'JUMP', act2: 'SLIDE',
   init(s) {
     s.DIST = [520, 620, 720][s.diff]; s.z = 0; s.v = 0; s.x = 0; s.tx = null; s.jy = 0; s.jv = 0; s.hold = 0; s.slide = 0; s.objs = []; s.next = 24; s.n = 0;
@@ -217,11 +217,11 @@ GAMES.push({
   touch(s, o, lo, hi, half) { const [a, b2] = this.body(s); return Math.abs((o.x || 0) - s.x) < (half || 0.45) && a < hi && b2 > lo; },
   piece(s, z, ramp) {   /* one set piece of the yard, Crash style. Returns how far until the next one. */
     const O = s.objs, R2 = () => s.rnd(), lane = () => Math.floor(R2() * 3) - 1, tpLine = (z0, x, n, h, dz) => { for (let i = 0; i < n; i++) { O.push({ k: 'tp', wz: z0 + i * (dz || 1.6), x, h: typeof h === 'function' ? h(i) : h }); s.tpAll++; } };
-    const opts = [['jet', 5], ['jetT', 2 + ramp * 3], ['jetH', 2 + ramp * 2], ['dog', 2 + ramp * 3], ['hole', 2 + ramp * 3], ['can', 2 + ramp * 2], ['reel', 3], ['box', 2]];
+    const opts = [['jet', 5], ['jetT', 2 + ramp * 3], ['jetH', 2 + ramp * 2], ['hole', 2 + ramp * 3], ['can', 2 + ramp * 2], ['reel', 3], ['box', 2]];
     if (s.n > 2) opts.push(['gey', 3 + ramp * 2]);
     let tot = opts.reduce((q, o) => q + o[1], 0), r = R2() * tot, k = opts[0][0]; for (const o of opts) { if ((r -= o[1]) <= 0) { k = o[0]; break; } }
     const side = R2() < 0.5 ? -1 : 1;
-    if (k === 'jet' || k === 'jetT' || k === 'jetH') { const h = k === 'jet' ? 0.38 : k === 'jetT' ? 0.85 : 1.45, th = k === 'jetT' ? 0.75 : 0.45;   /* low: hop · tall: big jump · high: slide under */
+    if (k === 'jet' || k === 'jetT' || k === 'jetH') { const h = k === 'jet' ? 0.28 : k === 'jetT' ? 0.7 : 1.45, th = k === 'jetT' ? 0.9 : 0.45;   /* low ones hug the grass, tall ones are a WALL of it */   /* low: hop · tall: big jump · high: slide under */
       O.push({ k: 'jet', wz: z, side, c: h, th, wob: R2() * 6, kind: k }, { k: 'pipe', wz: z, x: side * 2.1, tall: k === 'jetH' ? 1.7 : 0.75 });
       if (k !== 'jetH') tpLine(z - 3, 0, 4, i => (k === 'jetT' ? 1.6 : 1.2) * Math.sin((i / 3) * Math.PI) + 0.4, 2); else tpLine(z - 2, lane(), 3, 0.3, 1.5);
       return k === 'jetT' ? 16 : 13; }
@@ -282,16 +282,21 @@ GAMES.push({
   draw(s) {
     const { HY, FY, D } = this, sh = s.shake > 0 ? (Math.random() - 0.5) * 6 : 0, t = s.t;
     g.save(); g.translate(sh, s.fall > 0 ? 6 : 0);
-    const sky = g.createLinearGradient(0, 0, 0, HY); sky.addColorStop(0, '#7fb6e6'); sky.addColorStop(1, '#cfe6f4'); g.fillStyle = sky; g.fillRect(-6, 0, W + 12, HY);
-    for (let i = 0; i < 9; i++) { const x = ((i * 71 - s.z * 0.3) % 560 + 560) % 560 - 40; C(x, HY - 8, 16 + (i % 3) * 5, '#4f7a3c'); C(x + 14, HY - 12, 12, '#5d8a46'); }
-    for (let y = HY; y < H; y += 2) { const rel = D * (FY - HY) / Math.max(0.5, y - HY) - D, k = Math.floor((s.z + rel) / 3) % 2; R(-6, y, W + 12, 2, k ? '#5e9c48' : '#68a852'); }
-    for (const lx of [-1.5, -0.5, 0.5, 1.5]) { const a = this.P(s, 60, lx), b2 = this.P(s, -1, lx); g.strokeStyle = 'rgba(60,90,40,.3)'; g.lineWidth = 1; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b2.x, b2.y); g.stroke(); }
+    if (IMG.bg_yard3) { g.imageSmoothingEnabled = true; g.drawImage(IMG.bg_yard3, 0, 165 - HY - 4, 480, HY + 4, -6, 0, W + 12, HY + 4); g.imageSmoothingEnabled = false; }   /* the mountains past the stone wall */
+    else { const sky = g.createLinearGradient(0, 0, 0, HY); sky.addColorStop(0, '#7fb6e6'); sky.addColorStop(1, '#cfe6f4'); g.fillStyle = sky; g.fillRect(-6, 0, W + 12, HY); }
+    for (let y = HY; y < H; y += 2) { const rel = D * (FY - HY) / Math.max(0.5, y - HY) - D, k = Math.floor((s.z + rel) / 3) % 2, f = Math.min(1, (y - HY) / (H - HY)), c0 = [168, 164, 70], c1 = [112, 128, 44], m = (a, b2) => Math.round(a + (b2 - a) * f) - (k ? 10 : 0);
+      R(-6, y, W + 12, 2, `rgb(${m(c0[0], c1[0])},${m(c0[1], c1[1])},${m(c0[2], c1[2])})`); }   /* late-summer lawn, mowing stripes rushing at you */
+    for (const lx of [-1.5, -0.5, 0.5, 1.5]) { const a = this.P(s, 60, lx), b2 = this.P(s, -1, lx); g.strokeStyle = 'rgba(90,70,20,.25)'; g.lineWidth = 1; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b2.x, b2.y); g.stroke(); }
     { const rel = s.DIST - s.z + 4; if (rel < 75 && IMG.van_back) { const p = this.P(s, rel, 0), im = IMG.van_back, fw = im.width / 6, h = 2.6 * this.U * p.sc, w = h * fw / im.height; g.imageSmoothingEnabled = true; g.drawImage(im, 0, 0, fw, im.height, p.x - w / 2, p.y - h, w, h); g.imageSmoothingEnabled = false; } }
     // holes first (they're IN the ground)
     for (const o of s.objs) if (o.k === 'hole') { const rel = o.wz - s.z, a = this.P(s, Math.max(-0.5, rel), -1.6), b2 = this.P(s, Math.max(-0.5, rel), 1.6), c = this.P(s, Math.max(-0.5, rel - o.len), 1.6), d = this.P(s, Math.max(-0.5, rel - o.len), -1.6);
       if (rel - o.len > 60) continue; g.fillStyle = '#6b4a2a'; g.beginPath(); g.moveTo(a.x - 4, a.y + 2); g.lineTo(b2.x + 4, b2.y + 2); g.lineTo(c.x + 4, c.y - 2); g.lineTo(d.x - 4, d.y - 2); g.fill();
       g.fillStyle = '#1e140b'; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b2.x, b2.y); g.lineTo(c.x, c.y); g.lineTo(d.x, d.y); g.fill();
       g.fillStyle = 'rgba(110,80,30,.6)'; g.beginPath(); g.moveTo((a.x * 3 + d.x) / 4, (a.y * 3 + d.y) / 4); g.lineTo((b2.x * 3 + c.x) / 4, (b2.y * 3 + c.y) / 4); g.lineTo((b2.x + c.x * 3) / 4, (b2.y + c.y * 3) / 4); g.lineTo((a.x + d.x * 3) / 4, (a.y + d.y * 3) / 4); g.fill(); }   /* the muck at the bottom */
+    for (const o of s.objs) { if (o.k !== 'jet' && o.k !== 'hole') continue; const slideIt = o.kind === 'jetH', big = o.kind === 'jetT' || (o.k === 'hole' && o.len > 4.5), col = slideIt ? '#5ab4ff' : '#ffd23a';   /* painted arrows: YELLOW ▲ jump · BLUE ▼ slide */
+      for (let k = 0; k < (big ? 2 : 1); k++) { const zr = o.wz - s.z - 3.2 - k * 1.6; if (zr < 0.3 || zr > 55) continue; const up = !slideIt, A = (x, dz) => this.P(s, zr + dz, x);
+        g.fillStyle = col; g.globalAlpha = 0.85; for (const cx of [-1, 0, 1]) { const tip = A(cx, up ? 0.9 : -0.1), l = A(cx - 0.32, up ? 0 : 0.8), r2 = A(cx + 0.32, up ? 0 : 0.8), l2 = A(cx - 0.32, up ? 0.35 : 0.45), r3 = A(cx + 0.32, up ? 0.35 : 0.45), mid = A(cx, up ? 0.55 : 0.25);
+          g.beginPath(); g.moveTo(tip.x, tip.y); g.lineTo(r2.x, r2.y); g.lineTo(r3.x, r3.y); g.lineTo(mid.x, mid.y); g.lineTo(l2.x, l2.y); g.lineTo(l.x, l.y); g.fill(); } g.globalAlpha = 1; } }
     const L = s.objs.filter(o => o.k !== 'hole' && !o.gone && o.wz - s.z > -1).sort((a, b) => (b.wz - s.z) - (a.wz - s.z));
     for (const o of L) { const rel = o.wz - s.z;
       if (o.k === 'pipe' || o.k === 'gey') { const p = this.P(s, rel, o.x), w = 0.42 * this.U * p.sc, h = (o.tall || 0.75) * this.U * p.sc;
@@ -302,18 +307,24 @@ GAMES.push({
           for (let i = 0; i < 10; i++) { const yy = p.y - h - ((t * 260 + i * 37) % (p.y - h - top)), xx = p.x + Math.sin(t * 13 + i * 2.1) * cw * 0.8; if (i % 3) C(xx, yy, Math.max(2, 4 * p.sc), `rgba(110,68,28,${a2})`); else R(xx, yy, 3, 3, '#f2c12e'); } }
         if (o.k === 'gey' && !o.fired && rel < 45 && Math.floor(t * 10) % 2) T('!', p.x, p.y - h - 10 * p.sc - 4, '#e9665a', Math.max(6, Math.round(12 * p.sc)), 'center'); }
       if (o.k === 'jet') { const a = this.P(s, rel, o.side * 2.1, o.c), b2 = this.P(s, rel, -o.side * 3.2, o.c * 0.85), th = o.th * this.U * a.sc;
+        { const ga = this.P(s, rel, o.side * 2.1, 0), gb = this.P(s, rel, -o.side * 3.2, 0); g.strokeStyle = `rgba(40,30,10,${o.c > 1 ? 0.35 : 0.2})`; g.lineWidth = Math.max(2, th * 0.6); g.beginPath(); g.moveTo(ga.x, ga.y); g.lineTo(gb.x, gb.y); g.stroke(); }   /* its shadow on the grass */
+        if (o.c > 1) for (let i = 0; i < 6; i++) { const f = (i + 0.5) / 6, x0 = a.x + (b2.x - a.x) * f, y0 = a.y + (b2.y - a.y) * f, fall = ((t * 2.5 + i * 0.37) % 1); R(x0, y0 + fall * (this.P(s, rel, 0, 0).y - y0), Math.max(1, 2 * a.sc), Math.max(2, 4 * a.sc), 'rgba(110,68,28,.8)'); }   /* drips: there's room under it */
         g.strokeStyle = o.kind === 'jetH' ? '#5a3618' : '#6e4420'; g.lineWidth = th; g.lineCap = 'round'; g.beginPath(); g.moveTo(a.x, a.y); for (let i = 1; i <= 8; i++) { const f = i / 8; g.lineTo(a.x + (b2.x - a.x) * f, a.y + (b2.y - a.y) * f + Math.sin(t * 18 + o.wob + i) * th * 0.2 + f * f * th * 0.5); } g.stroke();
         g.strokeStyle = '#9a6634'; g.lineWidth = th * 0.4; g.stroke(); g.lineCap = 'butt';
         for (let i = 0; i < 5; i++) { const f = ((t * 2.2 + i * 0.2 + o.wob) % 1); R(a.x + (b2.x - a.x) * f, a.y + (b2.y - a.y) * f - th * 0.7, 2 * a.sc + 1, 2 * a.sc + 1, '#f2c12e'); }
-        if (rel < 40 && rel > 3) { const tag = o.kind === 'jetH' ? 'SLIDE' : o.kind === 'jetT' ? 'BIG JUMP' : null; if (tag) T(tag, 240 + o.side * 0.0, a.y - th - 8 * a.sc - 2, o.kind === 'jetH' ? '#9fd1ff' : '#f7c418', Math.max(5, Math.round(9 * a.sc)), 'center'); } }
+        if (rel < 45 && rel > 2) { const sl = o.kind === 'jetH', tag = sl ? 'SLIDE' : o.kind === 'jetT' ? 'BIG JUMP' : 'JUMP', col = sl ? '#5ab4ff' : '#ffd23a', p0 = this.P(s, rel, 0, sl ? o.c + 0.75 : o.c + 0.9), r2 = Math.max(5, 15 * p0.sc);   /* a road sign floating over it */
+          C(p0.x, p0.y, r2 + 1.5, '#1a1408'); C(p0.x, p0.y, r2, col); g.fillStyle = '#1a1408'; g.beginPath(); if (sl) { g.moveTo(p0.x - r2 * 0.5, p0.y - r2 * 0.25); g.lineTo(p0.x + r2 * 0.5, p0.y - r2 * 0.25); g.lineTo(p0.x, p0.y + r2 * 0.5); } else { g.moveTo(p0.x - r2 * 0.5, p0.y + r2 * 0.25); g.lineTo(p0.x + r2 * 0.5, p0.y + r2 * 0.25); g.lineTo(p0.x, p0.y - r2 * 0.5); } g.fill();
+          T(tag, p0.x, p0.y - r2 - Math.max(4, 7 * p0.sc), col, Math.max(5, Math.round(8 * p0.sc)), 'center'); } }
       if (o.k === 'reel') { const p = this.P(s, rel, o.x), r2 = 0.42 * this.U * p.sc; R(p.x - r2 * 1.1, p.y - r2 * 0.2, r2 * 2.2, r2 * 0.2, '#3a3a3a'); C(p.x, p.y - r2, r2, '#2d6b2a'); C(p.x, p.y - r2, r2 * 0.7, '#3f8a3a'); C(p.x, p.y - r2, r2 * 0.25, '#d0d0c0'); R(p.x - r2 * 1.1, p.y - r2 * 1.9, r2 * 0.2, r2 * 1.9, '#555'); R(p.x + r2 * 0.9, p.y - r2 * 1.9, r2 * 0.2, r2 * 1.9, '#555'); }   /* hose reel */
       if (o.k === 'can') { const p = this.P(s, rel, o.x), r2 = 0.42 * this.U * p.sc;   /* a metal trash can rolling at you, bottom-first, garbage flying out */
         g.fillStyle = 'rgba(30,40,20,.35)'; g.beginPath(); g.ellipse(p.x, p.y, r2, r2 * 0.25, 0, 0, 7); g.fill();
         C(p.x, p.y - r2, r2, '#8a9096'); C(p.x, p.y - r2, r2 * 0.82, '#6b7177'); g.save(); g.translate(p.x, p.y - r2); g.rotate(o.spin); g.strokeStyle = '#4e5358'; g.lineWidth = Math.max(1, r2 * 0.12);
         for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(i * Math.PI / 2) * r2 * 0.8, Math.sin(i * Math.PI / 2) * r2 * 0.8); g.stroke(); } g.restore(); C(p.x, p.y - r2, r2 * 0.2, '#4e5358');
         for (let i = 0; i < 3; i++) { const f = (t * 3 + i * 0.33) % 1; R(p.x + Math.sin(i * 2 + o.wz) * r2 * 1.2, p.y - r2 * 2 - f * r2 * 1.5, 3, 2, ['#e8dcc0', '#c9a46a', '#7bd65b'][i]); } }
-      if (o.k === 'box') { const p = this.P(s, rel, o.x), sz = 0.75 * this.U * p.sc; if (!(o.gold && Math.floor(t * 6) % 2 === 0 && false)) { if (MG('sr_toolbox')) { const im = MG('sr_toolbox'), w = sz * 1.3, h = w * im.height / im.width; g.imageSmoothingEnabled = true; if (o.gold) g.filter = 'sepia(1) saturate(4) brightness(1.25)'; g.drawImage(im, p.x - w / 2, p.y - h, w, h); g.filter = 'none'; g.imageSmoothingEnabled = false; } else R(p.x - sz / 2, p.y - sz, sz, sz, o.gold ? '#f7c418' : '#c0392b'); } }
-      if (o.k === 'tp') { const p = this.P(s, rel, o.x, o.h), r2 = Math.max(2, 0.2 * this.U * p.sc), bob = Math.sin(t * 6 + o.wz) * r2 * 0.2;   /* a roll of TP, spinning */
+      if (o.k === 'box') { const p0 = this.P(s, rel, o.x), sz = 0.75 * this.U * p0.sc, p = { x: p0.x, y: p0.y - Math.abs(Math.sin(t * 4 + o.wz)) * sz * 0.15, sc: p0.sc };
+        C(p.x, p.y - sz * 0.45, sz * 0.9, o.gold ? 'rgba(255,215,60,.35)' : 'rgba(255,230,120,.22)'); for (let i = 0; i < 3; i++) { const an = t * 3 + i * 2.1; T('✦', p.x + Math.cos(an) * sz * 0.9, p.y - sz * 0.45 + Math.sin(an) * sz * 0.7, '#fff4a0', Math.max(5, Math.round(8 * p.sc)), 'center'); } if (!(o.gold && Math.floor(t * 6) % 2 === 0 && false)) { if (MG('sr_toolbox')) { const im = MG('sr_toolbox'), w = sz * 1.3, h = w * im.height / im.width; g.imageSmoothingEnabled = true; if (o.gold) g.filter = 'sepia(1) saturate(4) brightness(1.25)'; g.drawImage(im, p.x - w / 2, p.y - h, w, h); g.filter = 'none'; g.imageSmoothingEnabled = false; } else R(p.x - sz / 2, p.y - sz, sz, sz, o.gold ? '#f7c418' : '#c0392b'); } }
+      if (o.k === 'tp') { const p = this.P(s, rel, o.x, o.h), r2 = Math.max(2, 0.2 * this.U * p.sc), bob = Math.sin(t * 6 + o.wz) * r2 * 0.2;
+        C(p.x, p.y + bob, r2 * 2.1, 'rgba(255,230,120,.28)'); for (let i = 0; i < 2; i++) { const an = t * 4 + i * Math.PI + o.wz; T('✦', p.x + Math.cos(an) * r2 * 1.8, p.y + bob + Math.sin(an) * r2 * 1.8, '#fff4a0', Math.max(5, Math.round(7 * p.sc)), 'center'); }   /* sparkly = GRAB IT */   /* a roll of TP, spinning */
         const ww = r2 * (0.6 + 0.4 * Math.abs(Math.cos(t * 4 + o.wz))); g.fillStyle = '#f4f2ea'; g.fillRect(p.x - ww, p.y - r2 * 1.2 + bob, ww * 2, r2 * 2.4); g.fillStyle = '#d8d4c6'; g.fillRect(p.x - ww, p.y - r2 * 1.2 + bob, ww * 0.4, r2 * 2.4); C(p.x, p.y - r2 * 1.2 + bob, Math.max(1, ww * 0.35), '#a08a60'); }
       if (o.k === 'dog') { const p = this.P(s, rel, o.x, 0.6 + (o.air || 0) * 0.9), im = MG('dog_' + (Math.floor(o.f * 8) % 2)), h = 0.9 * this.U * p.sc;   /* leaping at your head, mouth open */
         const gp = this.P(s, rel, o.x, 0); g.fillStyle = 'rgba(30,40,20,.3)'; g.beginPath(); g.ellipse(gp.x, gp.y, h * 0.5, h * 0.12, 0, 0, 7); g.fill();
@@ -336,7 +347,7 @@ GAMES.push({
     { const x0 = W - 60, y0 = 28; g.fillStyle = '#f4f2ea'; g.fillRect(x0 - 6, y0 - 7, 10, 14); C(x0 - 1, y0 - 7, 3, '#a08a60'); T('x' + s.tp, x0 + 8, y0, '#fff', 8); }   /* TP count */
     if (s.sayT > 0) T(s.say, 240, 60, s.say === 'INCOMING!' ? '#f7c418' : '#e9665a', 12, 'center');
     s.pops.forEach((p, i) => T(p.txt, 240, 84 - p.t * 20 - i * 12, p.col, 9, 'center'));
-    if (s.t < 3.5) T('HOLD JUMP = BIGGER JUMP  ·  HOLD ▼ = SLIDE', 240, 40, '#fff', 6, 'center');
+    if (s.t < 5) { R(80, 30, 320, 34, 'rgba(16,21,31,.75)'); T('✦ SPARKLY = GRAB IT    BROWN = AVOID IT', 240, 40, '#fff4a0', 6, 'center'); T('YELLOW ▲ = JUMP (HOLD = BIG)    BLUE ▼ = SLIDE', 240, 54, '#9fd1ff', 6, 'center'); }
   },
 });
 

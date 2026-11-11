@@ -151,13 +151,14 @@ document.querySelectorAll('#pad button').forEach(b => {
   const up = () => { held[k] = 0; b.classList.remove('dn'); };
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
 });
-let STICK_OMNI = false;
+let STICK_OMNI = false, STICK_H = false;   /* STICK_H: the stick only steers left/right (no up/down) */
 { // the thumbstick: origin is wherever your thumb lands; direction is how far you slide from there
   const z = $('#stickzone'), base = $('#stickbase'), knob = $('#stickknob'); let id = null, ox = 0, oy = 0;
   const setK = (k, on) => { if (on && !held[k]) edge[k] = 1; held[k] = on ? 1 : 0; };
   const move = e => { if (e.pointerId !== id) return; const r = z.getBoundingClientRect(), dx = e.clientX - ox, dy = e.clientY - oy, m = Math.hypot(dx, dy), lim = 34, k = m > lim ? lim / m : 1;
     knob.style.transform = `translate(${dx * k}px,${dy * k}px)`;
     if (STICK_OMNI) { setK('L', dx < -12 && -dx > Math.abs(dy) * 0.45); setK('R', dx > 12 && dx > Math.abs(dy) * 0.45); setK('U', dy < -12 && -dy > Math.abs(dx) * 0.45); setK('D', dy > 12 && dy > Math.abs(dx) * 0.45); return; }   /* 8 directions, diagonals included */
+    if (STICK_H) { setK('L', dx < -9); setK('R', dx > 9); return; }
     setK('L', dx < -9); setK('R', dx > 9); setK('U', dy < -22 && Math.abs(dy) > Math.abs(dx) * 1.2); setK('D', dy > 22 && Math.abs(dy) > Math.abs(dx) * 1.2); };
   z.addEventListener('pointerdown', e => { e.preventDefault(); id = e.pointerId; const r = z.getBoundingClientRect(); ox = e.clientX; oy = e.clientY; base.style.left = (ox - r.left) + 'px'; base.style.top = (oy - r.top) + 'px'; base.style.display = 'block'; knob.style.transform = ''; try { z.setPointerCapture(id); } catch (_) {} move(e); });
   z.addEventListener('pointermove', move);
@@ -173,7 +174,7 @@ function showPad() {
   const G = cur != null ? GAMES[cur] : null;
   $('#pad').classList.toggle('on', padOn && (phase === 'play' || phase === 'ready') && !(G && G.pad === false));
   $('#pad').classList.toggle('lefty', ((DDT.get() || {}).hand) === 'L');
-  $('#pad').classList.toggle('nodp', !!(G && G.dpad === false)); $('#pad').classList.toggle('lr', !!(G && G.dpad === 'lr')); $('#pad').classList.toggle('ud', !!(G && G.dpad === 'ud')); $('#pad').classList.toggle('stick', !!(G && (G.dpad === 'stick' || G.dpad === 'omni'))); $('#pad').classList.toggle('b2', !!(G && G.act2)); $('#pad').classList.toggle('crawl', !!(G && G.id === 'crawl')); $('#pad').classList.toggle('runner', !!(G && G.id === 'sprinkler')); if (G && G.act2) $('#act2').textContent = G.act2; STICK_OMNI = !!(G && G.dpad === 'omni');
+  $('#pad').classList.toggle('nodp', !!(G && G.dpad === false)); $('#pad').classList.toggle('lr', !!(G && G.dpad === 'lr')); $('#pad').classList.toggle('ud', !!(G && G.dpad === 'ud')); $('#pad').classList.toggle('stick', !!(G && (G.dpad === 'stick' || G.dpad === 'omni'))); $('#pad').classList.toggle('b2', !!(G && G.act2)); $('#pad').classList.toggle('crawl', !!(G && G.id === 'crawl')); $('#pad').classList.toggle('runner', !!(G && G.id === 'sprinkler')); if (G && G.act2) $('#act2').textContent = G.act2; STICK_OMNI = !!(G && G.dpad === 'omni'); STICK_H = !!(G && G.stickH);
   $('#actbtn').textContent = (G && G.act) || 'GO'; $('#actbtn').style.display = G && G.act === null ? 'none' : '';
   $('#padbtn').textContent = padOn ? 'PAD ON' : 'PAD';
 }
@@ -302,7 +303,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && pha
 const load = (k, src) => new Promise(r => { const i = new Image(); i.onload = () => { IMG[k] = i; r(); }; i.onerror = r; i.src = src; });
 const loadMG = () => fetch('../assets/mg/sizes.json').then(r => r.json()).then(o => Promise.all(Object.keys(o).map(n => load('mg_' + n, '../assets/mg/' + n + '.png')))).catch(() => {});
 const capped = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);   // art helps, but never holds up the game
-Promise.all([capped(loadMG(), 2500), load('matt', '../assets/matt_dance.png'), load('matt_more', '../assets/matt_more.png'), load('ron_sheet', '../assets/ron_sheet.png'), load('rod_port', '../assets/rod_normal.png'), ...['stare', 'annoyed', 'confused', 'gross', 'smug', 'laugh', 'shocked', 'happy', 'tired', 'panic', 'normal'].map(f => load('rodf_' + f, '../assets/rod_' + f + '.png')), load('matt_walk', '../assets/matt_walk.png'), load('rod_walk', '../assets/rod_walk.png'), load('rod', '../assets/rod_dance.png'), load('rod_more', '../assets/rod_more.png'), load('van', '../assets/van_left.png'), load('van_back', '../assets/van_back.png'),
+Promise.all([capped(loadMG(), 2500), load('matt', '../assets/matt_dance.png'), load('matt_more', '../assets/matt_more.png'), load('ron_sheet', '../assets/ron_sheet.png'), load('rod_port', '../assets/rod_normal.png'), ...['stare', 'annoyed', 'confused', 'gross', 'smug', 'laugh', 'shocked', 'happy', 'tired', 'panic', 'normal'].map(f => load('rodf_' + f, '../assets/rod_' + f + '.png')), load('matt_walk', '../assets/matt_walk.png'), load('rod_walk', '../assets/rod_walk.png'), load('rod', '../assets/rod_dance.png'), load('rod_more', '../assets/rod_more.png'), load('van', '../assets/van_left.png'), load('van_back', '../assets/van_back.png'), load('bg_yard3', '../assets/bg_yard3.png'),
   document.fonts ? document.fonts.load('8px "Press Start 2P"').catch(() => {}) : 0]).then(() => {
     buildGrid(); requestAnimationFrame(frame);
     if (EMBED) { const i = GAMES.findIndex(x => x.id === EMBED); if (i >= 0) { openIntro(i); if (store.get('seen_' + EMBED)) start(); }   /* played it before: skip the how-to, straight to READY */
