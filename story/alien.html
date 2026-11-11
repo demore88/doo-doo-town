@@ -17,9 +17,9 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794380925"></script>
-<script src="../js/music.js?v=1794380925"></script>
-<script src="../js/sfx.js?v=1794380925"></script>
+<script src="../js/state.js?v=1794417732"></script>
+<script src="../js/music.js?v=1794417732"></script>
+<script src="../js/sfx.js?v=1794417732"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('spooky');
@@ -337,7 +337,7 @@ SCENES.window = async () => {
   };
   await fadeIn(900);
   window.RAIN = DDTSfx.loop('rain_loop', { vol: 0.6 });
-  await card(['MARCH · 2:13 AM', "ROD'S HOUSE"], 1600);
+  await card(['SEPTEMBER 10, 2022', '2:29 AM', "ROD'S HOUSE"], 2000);
   await wait(800);
   await tween(st, 'alienY', 70, 2600);
   await wait(400); SND.chirp(2);
@@ -375,7 +375,7 @@ SCENES.beam = async () => {
     rod(st.rodX, st.rodY, st.rodY < 230 ? 0 : 6, st.rodS, st.rodA);
   };
   await fadeIn(700);
-  await card(['2:14 AM'], 900);
+  await card(['2:31 AM'], 900);
   await tween(st, 'shipY', 70, 2000);
   await tween(st, 'rodA', 1, 300);
   await tween(st, 'rodX', 250, 2000, t => t);

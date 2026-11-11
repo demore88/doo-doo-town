@@ -283,6 +283,7 @@ const CALLS = [
     intro: [['ROD', 'Free second opinion. Always.'], ['MATT', "Let's see what thirty-five thousand looks like."]],
     tool: { q: 'Is the system really shot? How do we know?', opts: ['CAMERA THE WHOLE LINE', 'TRUST THE OTHER GUY', 'DIG IT ALL UP'], right: 0, good: 'Look before anyone spends a dime.', bad: "That's how people get taken." },
     game: 'camera', lead: 'rod', culprit: [['ROD', 'One blockage. Cleared. System is fine.'], ['CUST', 'So... not thirty-five thousand?'], ['MATT', 'About thirty-four thousand six hundred less.']], tip: 'Big quote? Get a second opinion. Ours is free.', pay: 400 },
+  { id: 'alien', title: 'OUT OF THIS WORLD', story: true, page: 'story/alien.html', town: 'BERLIN', addr: "Rod's house", window: 999, pay: 0, game: 'cable' },
 ],
 // ---------------- OCTOBER ----------------
 [
@@ -306,7 +307,6 @@ const CALLS = [
     intro: [['MATT', 'A fountain. In the basement.'], ['ROD', 'Shut-off first, questions later.']],
     tool: { q: 'Pipe spraying. First move?', opts: ['SHUT THE MAIN VALVE', 'DUCT TAPE', 'TAKE A PHOTO'], right: 0, good: 'Stop the water.', bad: "It's still spraying." },
     game: 'sprinkler', lead: 'matt', culprit: [['MATT', 'Cracked fitting. Fernco and done.'], ['CUST', 'I took a photo anyway.']], tip: 'Know where your main shut-off is.', pay: 300, needs: 'fernco125' },
-  { id: 'alien', title: 'OUT OF THIS WORLD', story: true, page: 'story/alien.html', town: 'BERLIN', addr: "Rod's house", window: 999, pay: 0, game: 'cable' },
 ],
 // ---------------- NOVEMBER ----------------
 [
