@@ -17,9 +17,9 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794417732"></script>
-<script src="../js/music.js?v=1794417732"></script>
-<script src="../js/sfx.js?v=1794417732"></script>
+<script src="../js/state.js?v=1794418588"></script>
+<script src="../js/music.js?v=1794418588"></script>
+<script src="../js/sfx.js?v=1794418588"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('spooky');
@@ -154,6 +154,14 @@ function rod(x, y, f = 0, s = 2, a = 1) {      // x,y = feet, center
 }
 // gray alien. o: {s, wave, point:[tx,ty], tilt, blink, sad}
 function alien(x, y, o = {}) {
+  if (ART.alien) {   /* poses: 0 idle 1 blink 2 point 3 tilt 4 impatient 5 angry 6 furious 7 satisfied */
+    const t = performance.now() / 1000; let f = 0, flip = false;
+    if (o.angry >= 3) f = 6; else if (o.angry === 2) f = 5; else if (o.angry === 1) f = 4;
+    else if (o.happy) f = 7; else if (o.point || o.wave) { f = 2; if (o.point && o.point[0] > x) flip = true; }
+    else if (o.tilt) f = 3; else if (o.blink || t % 4 < 0.14) f = 1;
+    const shake = f >= 5 ? Math.sin(t * 40) * 0.8 : 0, bob = o.wave ? Math.sin(t * 6) * 2 : 0;
+    spr('alien', f, x + shake, y + bob, 72 * (o.s || 1.4) / 1.4, { flip }); return;
+  }
   const s = o.s || 1, t = performance.now() / 1000;
   g.save(); g.translate(x, y); g.scale(s, s);
   // body
@@ -206,61 +214,58 @@ function bubble(x, y, ids, px = 3, label = null) {
   if (label) label.forEach((l, i) => T(l, x - w / 2 + px * 3 + i * (px * 8) + px * 2.5, y - 9, '#f7c418', 5, 'center', false));
 }
 
+// ---------- painted art (assets/alien) ----------
+const ART = {};
+['alien', 'port', 'ufo', 'sparks', 'toilet'].forEach(n => { const i = new Image(); i.onload = () => ART[n] = i; i.src = '../assets/alien/' + n + '.png'; });
+['bg_yard', 'bg_ship'].forEach(n => { const i = new Image(); i.onload = () => ART[n] = i; i.src = '../assets/alien/' + n + '.jpg'; });
+{ const i = new Image(); i.onload = () => ART.bg_bedroom = i; i.src = '../assets/alien/bg_bedroom.webp'; }
+const CELLS = { alien: 8, port: 3, ufo: 3, sparks: 6, toilet: 6 };
+// draw cell i of a strip, centered on x, bottom at y (or centered when mid), h tall
+function spr(n, i, x, y, h, o = {}) {
+  const im = ART[n]; if (!im) return false; const cw = im.width / CELLS[n], w = h * cw / im.height;
+  g.save(); g.imageSmoothingEnabled = true; if (o.a !== undefined) g.globalAlpha = o.a;
+  g.translate(x, o.mid ? y : y - h / 2); if (o.rot) g.rotate(o.rot); if (o.flip) g.scale(-1, 1);
+  g.drawImage(im, i * cw, 0, cw, im.height, -w / 2, -h / 2, w, h); g.restore(); return true;
+}
+function bg(n) { const im = ART[n]; if (!im) return false; g.save(); g.imageSmoothingEnabled = true; g.drawImage(im, 0, 0, W, H); g.restore(); return true; }
+
 // ---------- backdrops ----------
 const STARS = Array.from({ length: 70 }, () => [Math.random() * W, Math.random() * 170, Math.random()]);
 function stars(clip) { const t = performance.now() / 1000; STARS.forEach(([x, y, p]) => { if (!clip || clip(x, y)) R(x, y, 1, 1, (Math.sin(t * 2 + p * 9) > 0.6) ? '#fff' : '#8aa0d0'); }); }
 function bedroom(dawn = false) {
-  R(0, 0, W, H, dawn ? '#3a3046' : '#161c30');
-  for (let x = 0; x < W; x += 24) R(x, 0, 2, 200, dawn ? '#40354e' : '#1a2138');
-  R(0, 200, W, 70, '#2a2030'); for (let x = 0; x < W; x += 40) R(x, 200, 1, 70, '#33283b');
-  // window
-  const wx = 320, wy = 46, ww = 92, wh = 88;
-  if (dawn) { const gr = g.createLinearGradient(0, wy, 0, wy + wh); gr.addColorStop(0, '#f2a65a'); gr.addColorStop(1, '#ffd98a'); g.fillStyle = gr; g.fillRect(wx, wy, ww, wh); }
-  else { R(wx, wy, ww, wh, '#0a1030'); stars((x, y) => x > wx && x < wx + ww && y > wy && y < wy + wh); }
-  R(wx + 6, wy + wh - 22, 22, 22, '#0b1a10'); R(wx + 60, wy + wh - 30, 18, 30, '#0b1a10');
+  const wx = 330, wy = 82, ww = 70, wh = 70;   /* the window glass in bg_bedroom */
+  if (dawn) { const gr = g.createLinearGradient(0, wy, 0, wy + wh); gr.addColorStop(0, '#f2a65a'); gr.addColorStop(1, '#ffd98a'); g.fillStyle = gr; g.fillRect(wx - 4, wy - 4, ww + 8, wh + 8); }
+  else { R(wx - 4, wy - 4, ww + 8, wh + 8, '#0a1030'); stars((x, y) => x > wx && x < wx + ww && y > wy && y < wy + wh); E(wx + 54, wy + 14, 6, 6, '#e8e4c8'); R(wx - 4, wy + wh - 18, ww + 8, 22, '#0b1a10'); }
   st.windowDraw && st.windowDraw(wx, wy, ww, wh);
-  R(wx - 4, wy - 4, ww + 8, 4, '#6b5a40'); R(wx - 4, wy + wh, ww + 8, 6, '#6b5a40'); R(wx - 4, wy, 4, wh, '#6b5a40'); R(wx + ww, wy, 4, wh, '#6b5a40');
-  R(wx + ww / 2 - 1, wy, 3, wh, '#6b5a40'); R(wx, wy + wh / 2 - 1, ww, 3, '#6b5a40');
-  R(wx - 14, wy - 8, 12, wh + 20, '#5a2e3a'); R(wx + ww + 2, wy - 8, 12, wh + 20, '#5a2e3a');
-  // door
-  R(16, 92, 44, 108, '#4a3826'); R(20, 96, 36, 100, '#5a4430'); R(50, 146, 4, 4, '#d6b24a');
-  // TV
+  if (!bg('bg_bedroom')) { R(0, 0, W, H, '#161c30'); R(0, 236, W, 34, '#2a2030'); }
   const t = performance.now() / 1000, flick = dawn ? 0 : 0.5 + 0.5 * Math.sin(t * 13) * Math.sin(t * 7.3);
-  R(84, 168, 54, 32, '#2a2a2a'); R(86, 128, 50, 38, '#111'); R(90, 132, 42, 30, dawn ? '#222' : `rgb(${60 + flick * 50},${90 + flick * 60},${150 + flick * 80})`);
-  if (!dawn) { g.fillStyle = `rgba(120,160,255,${0.05 + flick * 0.05})`; g.beginPath(); g.moveTo(132, 132); g.lineTo(300, 110); g.lineTo(300, 230); g.lineTo(132, 162); g.fill(); }
+  if (dawn) { g.fillStyle = 'rgba(255,170,90,0.16)'; g.fillRect(0, 0, W, H); g.fillStyle = 'rgba(255,200,120,0.18)'; g.beginPath(); g.moveTo(wx, wy); g.lineTo(wx + ww, wy); g.lineTo(wx + ww - 30, 270); g.lineTo(wx - 120, 270); g.fill(); }
+  else { g.fillStyle = 'rgba(8,12,40,0.35)'; g.fillRect(0, 0, W, H); g.fillStyle = `rgba(120,170,255,${0.08 + flick * 0.08})`; g.beginPath(); g.moveTo(115, 156); g.lineTo(300, 120); g.lineTo(330, 260); g.lineTo(115, 186); g.fill(); R(83, 159, 32, 25, `rgba(150,200,255,${0.15 + flick * 0.25})`); }
 }
-function bed(front) {
-  if (!front) { R(150, 150, 8, 55, '#4a3018'); R(150, 176, 160, 24, '#5a3a1e'); R(162, 160, 40, 14, '#e8e4dc'); return; }
-  R(150, 170, 160, 24, '#2c4f8c'); R(150, 170, 160, 4, '#3d63a8'); for (let x = 160; x < 310; x += 22) R(x, 176, 10, 2, '#24427a');
-  R(302, 160, 8, 45, '#4a3018');
+function bed(front) {   /* the bed is in the painting: this is Rod's plaid comforter, drawn over him */
+  if (!front) return;
+  g.save(); g.beginPath(); g.moveTo(156, 206); g.lineTo(156, 190); g.quadraticCurveTo(190, 181, 232, 184); g.quadraticCurveTo(280, 187, 326, 186); g.lineTo(328, 208); g.lineTo(156, 208); g.closePath();
+  g.fillStyle = '#7a2c2c'; g.fill(); g.clip();
+  for (let x = 160; x < 330; x += 12) { R(x, 180, 4, 30, 'rgba(40,10,14,.45)'); R(x + 7, 180, 1, 30, 'rgba(240,200,170,.25)'); }
+  for (let y = 186; y < 210; y += 8) { R(156, y, 174, 3, 'rgba(40,10,14,.4)'); R(156, y + 5, 174, 1, 'rgba(240,200,170,.2)'); }
+  R(156, 204, 174, 4, 'rgba(0,0,0,.25)'); g.restore();
+  R(154, 187, 10, 19, '#e6dccb'); R(154, 187, 10, 2, '#fff8ea'); R(162, 187, 2, 19, '#c9bda8');   /* sheet folded over the top */
 }
 function shipRoom() {
-  R(0, 0, W, H, '#1e1638'); for (let x = 0; x < W; x += 40) { R(x, 0, 2, 200, '#2a1f4a'); R(x + 18, 20, 4, 4, '#4b3a80'); }
-  R(0, 200, W, 70, '#141026'); for (let x = 0; x < W; x += 30) R(x, 200, 28, 2, '#2b2350');
-  const t = performance.now() / 1000;
-  for (let x = 20; x < W; x += 60) R(x, 6, 30, 3, (Math.floor(t * 3 + x) % 3) ? '#5b49a6' : '#7dffb0');
-  // porthole with Earth
-  E(60, 72, 30, 30, '#4b3a80'); E(60, 72, 25, 25, '#05070c'); stars((x, y) => (x - 60) ** 2 + (y - 72) ** 2 < 600);
-  E(66, 78, 13, 13, '#2c6cd6'); E(62, 74, 5, 4, '#4caf50'); E(70, 82, 4, 3, '#4caf50');
+  if (bg('bg_ship')) return;
+  R(0, 0, W, H, '#1e1638'); R(0, 207, W, 63, '#141026');
 }
-function sparkPanel(x, y) {
-  R(x - 18, y - 14, 36, 28, '#2b2350'); R(x - 14, y - 10, 28, 20, '#0d0a1a');
-  g.strokeStyle = '#e9665a'; g.lineWidth = 1; g.beginPath(); g.moveTo(x - 10, y - 8); g.lineTo(x + 2, y + 2); g.lineTo(x - 4, y + 4); g.lineTo(x + 10, y + 9); g.stroke();
-  if (Math.random() < 0.25) for (let i = 0; i < 4; i++) R(x + rnd(-14, 14), y + rnd(-10, 12), 2, 2, '#f7c418');
+function sparkPanel(x, y) {   /* open wall panel: sparks pop every so often and fall to the floor */
+  const t = performance.now() / 1000, c = t % 1.7, on = c < 0.5;
+  spr('toilet', on ? 5 : 4, x, y, 44, { mid: true });
+  if (c < 0.5) spr('sparks', Math.min(5, Math.floor(c / 0.5 * 6)), x + 6, 226, 226 - y + 6);
 }
-function toiletDoor(x) { R(x - 22, 96, 44, 104, '#2b2350'); R(x - 18, 100, 36, 100, '#3a2d63'); R(x - 1, 100, 2, 100, '#1e1638'); R(x - 10, 82, 20, 12, '#0d0a1a'); R(x - 4, 85, 8, 4, '#7dffb0'); R(x - 2, 89, 4, 3, '#7dffb0'); }
+function toiletDoor(x) {}   /* the door is in bg_ship */
 function toolBag(x, y) { R(x - 14, y - 12, 28, 12, '#c0392b'); R(x - 10, y - 16, 20, 4, '#1a1a1a'); R(x - 12, y - 8, 24, 2, '#8b2a1f'); R(x + 4, y - 22, 3, 10, '#aaa'); }
-function spaceToilet(x, y, hoseT = 0) {
-  R(x - 10, y - 30, 20, 30, '#c9ced6'); R(x - 6, y - 30, 4, 30, '#e8ecf2');
-  E(x, y - 36, 22, 9, '#e8ecf2'); E(x, y - 37, 16, 5, '#5a6378'); R(x - 22, y - 37, 44, 2, '#c9ced6');
-  R(x - 2, y - 72, 26, 26, '#c9ced6'); R(x + 2, y - 68, 18, 6, '#7dffb0');
-  // ribbed hose coming out of the bowl and coiling up
-  const tw = Math.sin(hoseT * 18) * (hoseT > 0 ? 2 : 0);
-  g.strokeStyle = '#8a93a5'; g.lineWidth = 7; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(x - 14, y - 38); g.bezierCurveTo(x - 40, y - 38, x - 44, y - 80, x - 26 + tw, y - 92); g.stroke();
-  g.strokeStyle = '#a9b2c4'; g.lineWidth = 2; g.setLineDash([2, 3]);
-  g.beginPath(); g.moveTo(x - 14, y - 38); g.bezierCurveTo(x - 40, y - 38, x - 44, y - 80, x - 26 + tw, y - 92); g.stroke(); g.setLineDash([]);
-  R(x - 30 + tw, y - 100, 8, 10, '#5a6378'); R(x - 28 + tw, y - 104, 4, 5, '#7dffb0');
+function spaceToilet(x, y, hoseT = 0, clogged = false) {   /* 0 idle · 1/2 hose wiggling · 3 clogged */
+  const f = hoseT > 0 ? 1 + Math.floor(performance.now() / 140) % 2 : clogged ? 3 : 0;
+  if (spr('toilet', f, x, y, 54)) return;
+  R(x - 10, y - 30, 20, 30, '#c9ced6'); E(x, y - 36, 22, 9, '#e8ecf2');
 }
 
 // ---------- dialog box ----------
@@ -326,14 +331,14 @@ function drawButtons() {
 const SCENES = {};
 
 SCENES.window = async () => {
-  Object.assign(st, { rodX: 196, rodDY: 30, inBed: true, alienY: 170, wave: false, zz: true, rodF: 0, rodA: 1 });
-  st.windowDraw = (wx, wy, ww, wh) => { g.save(); g.beginPath(); g.rect(wx, wy, ww, wh); g.clip(); alien(wx + ww / 2 + 14, st.alienY + 44, { s: 1.4, wave: st.wave }); g.restore(); };
+  Object.assign(st, { rodX: 172, rodDY: 30, inBed: true, alienY: 170, wave: false, zz: true, rodF: 0, rodA: 1 });
+  st.windowDraw = (wx, wy, ww, wh) => { g.save(); g.beginPath(); g.rect(wx, wy, ww, wh); g.clip(); alien(wx + ww / 2, st.alienY + 94, { s: 1.4, wave: st.wave, tilt: !st.wave }); g.restore(); };
   view = () => {
     bedroom(); bed(false);
-    if (st.inBed) { g.save(); g.beginPath(); g.rect(0, 0, W, 172); g.clip(); rod(st.rodX, 200 + st.rodDY, st.rodF); g.restore(); }
+    if (st.inBed) { g.save(); g.beginPath(); g.rect(0, 0, W, 190); g.clip(); rod(st.rodX, 216 + st.rodDY, st.rodF); g.restore(); }
     bed(true);
-    if (!st.inBed) rod(st.rodX, 202, st.rodF, 2, st.rodA);
-    if (st.zz) { const t = performance.now() / 1000; for (let i = 0; i < 3; i++) { const p = (t * 0.5 + i / 3) % 1; T('z', 214 + p * 30, 150 - p * 40, `rgba(255,255,255,${1 - p})`, 6 + i * 2, 'left', false); } }
+    if (!st.inBed) rod(st.rodX, 252, st.rodF, 2, st.rodA);
+    if (st.zz) { const t = performance.now() / 1000; for (let i = 0; i < 3; i++) { const p = (t * 0.5 + i / 3) % 1; T('z', 190 + p * 30, 168 - p * 40, `rgba(255,255,255,${1 - p})`, 6 + i * 2, 'left', false); } }
   };
   await fadeIn(900);
   window.RAIN = DDTSfx.loop('rain_loop', { vol: 0.6 });
@@ -351,37 +356,30 @@ SCENES.window = async () => {
   await say('ROD', 'rod_normal', "Alright, alright. Let me get my boots on.");
   st.inBed = false; st.rodX = 230; st.rodF = 8;
   st.wave = false; await tween(st, 'alienY', 170, 900);
-  await tween(st, 'rodX', 60, 2200, t => t);
+  await tween(st, 'rodX', 36, 2200, t => t);
   await tween(st, 'rodA', 0, 400);
   await fadeOut(700);
 };
 
 SCENES.beam = async () => {
-  Object.assign(st, { shipY: -60, beam: 0, rodX: 134, rodY: 236, rodA: 0, rodS: 1 });
+  Object.assign(st, { shipY: -60, beam: 0, rodX: 124, rodY: 238, rodA: 0, rodS: 1 });
   view = () => {
-    const gr = g.createLinearGradient(0, 0, 0, 240); gr.addColorStop(0, '#05081a'); gr.addColorStop(1, '#1a2448'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
-    stars(); E(420, 40, 14, 14, '#e8e4c8'); E(425, 37, 12, 12, '#05081a');
-    for (let x = -10; x < W; x += 34) { g.fillStyle = '#0a1410'; g.beginPath(); g.moveTo(x, 236); g.lineTo(x + 17, 236 - 40 - (x * 7 % 23)); g.lineTo(x + 34, 236); g.fill(); }
-    R(0, 236, W, 34, '#14231a');
-    // Rod's house + porch light
-    R(60, 160, 120, 76, '#2a2a36'); g.fillStyle = '#1c1c26'; g.beginPath(); g.moveTo(52, 162); g.lineTo(120, 120); g.lineTo(188, 162); g.fill();
-    R(120, 196, 22, 40, '#4a3826'); R(146, 186, 4, 4, '#ffd98a'); R(78, 180, 22, 18, '#0a0f1e');
-    if (IMG.van) { const fw = (IMG.van.width / Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35)))), vh = 108 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.drawImage(IMG.van, 0, 0, fw, IMG.van.height, 320, 236 - vh, 108, vh); g.imageSmoothingEnabled = false; };
+    if (!bg('bg_yard')) { R(0, 0, W, H, '#05081a'); R(0, 236, W, 34, '#14231a'); }
+    if (IMG.van) { const fw = (IMG.van.width / Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35)))), vh = 112 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.drawImage(IMG.van, 0, 0, fw, IMG.van.height, 352, 258 - vh, 112, vh); g.imageSmoothingEnabled = false; }
     // ship
-    const sx = 250, sy = st.shipY, t = performance.now() / 1000;
-    if (st.beam > 0) { g.fillStyle = `rgba(125,255,176,${0.18 * st.beam + 0.05 * Math.sin(t * 20) * st.beam})`; g.beginPath(); g.moveTo(sx - 14, sy + 8); g.lineTo(sx + 14, sy + 8); g.lineTo(sx + 46, 238); g.lineTo(sx - 46, 238); g.fill(); }
-    E(sx, sy, 56, 13, '#7c8698'); E(sx, sy - 9, 24, 13, '#a6d8ff'); E(sx, sy + 3, 56, 6, '#5a6378');
-    for (let i = 0; i < 7; i++) R(sx - 44 + i * 14, sy + 1, 4, 3, (Math.floor(t * 6) + i) % 3 ? '#f7c418' : '#e9665a');
-    rod(st.rodX, st.rodY, st.rodY < 230 ? 0 : 6, st.rodS, st.rodA);
+    const sx = 290, sy = st.shipY, t = performance.now() / 1000;
+    if (st.beam > 0) { g.fillStyle = `rgba(125,255,176,${0.18 * st.beam + 0.05 * Math.sin(t * 20) * st.beam})`; g.beginPath(); g.moveTo(sx - 14, sy + 20); g.lineTo(sx + 14, sy + 20); g.lineTo(sx + 46, 244); g.lineTo(sx - 46, 244); g.fill(); }
+    if (!spr('ufo', Math.floor(t * 6) % 3, sx, sy, 58, { mid: true })) { E(sx, sy, 56, 13, '#7c8698'); E(sx, sy - 9, 24, 13, '#a6d8ff'); }
+    rod(st.rodX, st.rodY, st.rodY < 232 ? 0 : 6, st.rodS, st.rodA);
   };
   await fadeIn(700);
   await card(['2:31 AM'], 900);
   await tween(st, 'shipY', 70, 2000);
   await tween(st, 'rodA', 1, 300);
-  await tween(st, 'rodX', 250, 2000, t => t);
+  await tween(st, 'rodX', 290, 2200, t => t);
   SND.beam(); await tween(st, 'beam', 1, 500);
   await wait(400);
-  await Promise.all([tween(st, 'rodY', 92, 2200), tween(st, 'rodS', 1, 2200)]);
+  await Promise.all([tween(st, 'rodY', 108, 2200), tween(st, 'rodS', 1, 2200)]);
   await tween(st, 'rodA', 0, 300);
   await tween(st, 'beam', 0, 300);
   await tween(st, 'shipY', -80, 900);
@@ -390,27 +388,27 @@ SCENES.beam = async () => {
 
 // ---- LEARN THE LINGO (mini-game) ----
 const WORDS = [
-  { id: 'you', label: 'YOU', at: [150, 110] },
-  { id: 'me', label: 'ME', at: [330, 150] },
-  { id: 'toilet', label: 'TOILET', at: [420, 90] },
-  { id: 'broken', label: 'BROKEN', at: [236, 72] },
-  { id: 'fix', label: 'FIX', at: [100, 170] },
-  { id: 'home', label: 'HOME', at: [60, 72] },
+  { id: 'you', label: 'YOU', at: [150, 178] },
+  { id: 'me', label: 'ME', at: [300, 180] },
+  { id: 'toilet', label: 'TOILET', at: [366, 138] },
+  { id: 'broken', label: 'BROKEN', at: [222, 112] },
+  { id: 'fix', label: 'FIX', at: [100, 214] },
+  { id: 'home', label: 'HOME', at: [66, 136] },
 ];
 const LABEL = Object.fromEntries(WORDS.map(w => [w.id, w.label]));
 function picIcon(id, x, y) {   // 28x28 picture tiles
   const cx = x + 14, cy = y + 14;
   if (id === 'you') { if (IMG.rod) { const fw = IMG.rod.width / 9; g.imageSmoothingEnabled = fw > 24; g.drawImage(IMG.rod, 0, 0, fw, fw, x + 2, y + 2, 24, 24); g.imageSmoothingEnabled = false; } }
-  if (id === 'me') { g.save(); g.translate(cx, cy + 22); alien(0, 0, { s: 0.6, blink: false }); g.restore(); }
-  if (id === 'toilet') { E(cx, cy + 2, 9, 4, '#e8ecf2'); R(cx - 4, cy + 2, 8, 9, '#c9ced6'); R(cx + 2, cy - 10, 8, 10, '#c9ced6'); }
-  if (id === 'broken') { g.strokeStyle = '#e9665a'; g.lineWidth = 2; g.beginPath(); g.moveTo(x + 6, y + 4); g.lineTo(x + 16, y + 14); g.lineTo(x + 10, y + 16); g.lineTo(x + 22, y + 25); g.stroke(); R(x + 18, y + 6, 3, 3, '#f7c418'); }
+  if (id === 'me') { if (!spr('port', 0, cx, cy, 28, { mid: true })) { g.save(); g.translate(cx, cy + 22); alien(0, 0, { s: 0.6, blink: false }); g.restore(); } }
+  if (id === 'toilet') { if (!spr('toilet', 0, cx, cy + 13, 27)) { E(cx, cy + 2, 9, 4, '#e8ecf2'); R(cx - 4, cy + 2, 8, 9, '#c9ced6'); } }
+  if (id === 'broken' && spr('toilet', 5, cx, cy, 26, { mid: true })) {} else if (id === 'broken') { g.strokeStyle = '#e9665a'; g.lineWidth = 2; g.beginPath(); g.moveTo(x + 6, y + 4); g.lineTo(x + 16, y + 14); g.lineTo(x + 10, y + 16); g.lineTo(x + 22, y + 25); g.stroke(); R(x + 18, y + 6, 3, 3, '#f7c418'); }
   if (id === 'fix') { R(cx - 2, cy - 4, 4, 16, '#aaa'); R(cx - 6, cy - 10, 12, 6, '#aaa'); R(cx - 2, cy - 10, 4, 3, '#1d2638'); }
   if (id === 'home') { E(cx, cy, 11, 11, '#2c6cd6'); E(cx - 3, cy - 3, 5, 4, '#4caf50'); E(cx + 4, cy + 4, 4, 3, '#4caf50'); }
 }
 function shipLangRoom() {
-  shipRoom(); sparkPanel(236, 72); toiletDoor(420); toolBag(100, 200);
-  rod(150, 202, 0); alien(330, 202, { s: 1.4, point: st.point, tilt: st.tilt, sad: st.sad });
-  if (st.words) bubble(330, 112, st.words, 3, st.labels);
+  shipRoom(); sparkPanel(222, 112); toolBag(100, 226);
+  rod(150, 226, 0); alien(300, 226, { s: 1.4, point: st.point, tilt: st.tilt, angry: st.anger, happy: st.happy });
+  if (st.words) bubble(300, 142, st.words, 3, st.labels);
   if (st.mark) { const [mx, my] = st.mark, b = Math.floor(performance.now() / 200) % 2 ? 20 : 18; g.strokeStyle = '#f7c418'; g.lineWidth = 2; g.strokeRect(mx - b, my - b, b * 2, b * 2); }
 }
 async function demo(list) {
@@ -423,7 +421,7 @@ async function demo(list) {
 const MatchGame = {
   init() {
     this.gl = [...WORDS].sort(() => Math.random() - 0.5); this.pc = [...WORDS].sort(() => Math.random() - 0.5);
-    this.matched = new Set(); this.pick = null; this.pat = 3; this.cur = 0; this.flash = 0; this.again = false;
+    this.matched = new Set(); this.pick = null; this.pat = 3; st.anger = 0; this.cur = 0; this.flash = 0; this.again = false;
   },
   tile(i, row) { return [44 + i * 66, row ? 120 : 62, 40, 40]; },
   update(dt) {
@@ -438,7 +436,7 @@ const MatchGame = {
     if (choose < 6) { const w = this.gl[choose]; if (!this.matched.has(w.id)) { this.pick = w.id; SND.blip(); } return; }
     const p = this.pc[choose - 6]; if (this.matched.has(p.id) || !this.pick) return;
     if (p.id === this.pick) { this.matched.add(p.id); this.pick = null; SND.good(); SND.chirp(1); if (this.matched.size === 6) this.done('ok'); }
-    else { this.pat--; score.wrong++; this.flash = 1; this.pick = null; SND.bad(); if (this.pat <= 0) this.done('fail'); }
+    else { this.pat--; score.wrong++; this.flash = 1; this.pick = null; st.anger = 3 - this.pat; SND.bad(); SND.chirp(3); if (this.pat <= 0) this.done('fail'); }
   },
   draw() {
     R(24, 30, 432, 168, '#0b0e18ee'); g.strokeStyle = '#7dffb0'; g.lineWidth = 2; g.strokeRect(25, 31, 430, 166);
@@ -468,9 +466,9 @@ SCENES.lang = async () => {
     await demo(['you', 'me', 'toilet', 'broken', 'fix', 'home']);
     const r = await play(MatchGame);
     if (r === 'ok') break;
-    if (r === 'fail') { score.retries++; st.sad = true; SND.chirp(3); await say('ROD', 'rod_tired', 'Okay, okay. One more time. Slower.'); st.sad = false; }
+    if (r === 'fail') { score.retries++; st.anger = 3; SND.chirp(3); await say('ROD', 'rod_shocked', 'Whoa whoa whoa! Okay! One more time. Slower.'); st.anger = 0; }
   }
-  SND.ding();
+  SND.ding(); st.anger = 0;
   st.words = ['me', 'toilet', 'broken']; st.labels = ['ME', 'TOILET', 'BROKEN']; SND.chirp(3); await wait(2200);
   await say('ROD', 'rod_normal', "Your toilet's broken?");
   st.words = null; st.labels = null; st.tilt = 0.2; SND.chirp(6); await wait(500); st.tilt = -0.2; await wait(300); st.tilt = 0;
@@ -479,21 +477,22 @@ SCENES.lang = async () => {
     const c = await say('ROD', 'rod_normal', "So you're saying...", ['"YOU FIX TOILET. THEN YOU GO HOME."', '"YOU ARE MY TOILET NOW."', '"TAKE ME TO YOUR LEADER."']);
     if (c === 0) break;
     score.wrong++;
-    if (c === 1) { st.words = ['no', 'no', 'no']; st.labels = null; st.tilt = 0.4; SND.bad(); await wait(1200); await say('ROD', 'rod_normal', '...Okay. Good. Not that.'); }
-    if (c === 2) { st.words = ['me']; st.labels = ['ME']; SND.chirp(2); await wait(1200); await say('ROD', 'rod_normal', "You're the leader? Of a ship with a broken toilet?"); }
-    st.tilt = 0; st.words = ['you', 'fix', 'toilet', 'home']; st.labels = ['YOU', 'FIX', 'TOILET', 'HOME'];
+    if (c === 1) { st.words = ['no', 'no', 'no']; st.labels = null; st.anger = 3; SND.bad(); await wait(1400); await say('ROD', 'rod_shocked', '...Okay. Good. Not that. NOT that.'); }
+    if (c === 2) { st.words = ['me']; st.labels = ['ME']; st.anger = 1; SND.chirp(2); await wait(1200); await say('ROD', 'rod_normal', "You're the leader? Of a ship with a broken toilet?"); }
+    st.tilt = 0; st.anger = 0; st.words = ['you', 'fix', 'toilet', 'home']; st.labels = ['YOU', 'FIX', 'TOILET', 'HOME'];
   }
-  st.words = null; st.labels = null; SND.chirp(3);
+  st.words = null; st.labels = null; st.happy = true; SND.chirp(3);
   await say('ROD', 'rod_happy', "Deal. Show me the toilet.");
+  st.happy = false;
   await fadeOut(600);
 };
 
 SCENES.toilet = async () => {
   Object.assign(st, { rodX: 150, rodF: 6, hoseT: 0, alienTilt: 0 });
-  view = () => { shipRoom(); spaceToilet(300, 202, st.hoseT); rod(st.rodX, 202, st.rodF); alien(410, 202, { s: 1.4, point: st.point, tilt: st.alienTilt }); if (st.words) bubble(410, 112, st.words, 3); };
+  view = () => { shipRoom(); sparkPanel(222, 112); spaceToilet(300, 226, st.hoseT, true); rod(st.rodX, 226, st.rodF); alien(400, 226, { s: 1.4, point: st.point, tilt: st.alienTilt }); if (st.words) bubble(400, 142, st.words, 3); };
   await fadeIn(600);
-  st.point = [300, 160]; SND.chirp(2); await wait(1200); st.point = null;
-  await tween(st, 'rodX', 228, 1200, t => t); st.rodF = 0;
+  st.point = [300, 196]; SND.chirp(2); await wait(1200); st.point = null;
+  await tween(st, 'rodX', 196, 1100, t => t); st.rodF = 0;
   await say('ROD', 'rod_normal', '...Where does the hose go?');
   st.hoseT = 0.01; SND.chirp(1); tone(300, 0.15, 'square', 0.03, 0, 900); await wait(700); st.hoseT = 0;
   st.rodF = 6; await wait(500); st.rodF = 0; await wait(400); st.rodF = 6; await wait(400); st.rodF = 0;
@@ -501,7 +500,7 @@ SCENES.toilet = async () => {
   await say('ROD', 'rod_gross', "So THAT'S what the probe is.");
   st.alienTilt = 0.15; SND.chirp(2); await wait(900); st.alienTilt = 0;
   await say('ROD', 'rod_stare', "Every abduction story on Earth... and it's a toilet.");
-  st.point = [312, 128]; SND.chirp(1); await wait(500); SND.gurgle(); st.hoseT = 0.01; await wait(1100); st.hoseT = 0; st.point = null;
+  st.point = [300, 204]; SND.chirp(1); await wait(500); SND.gurgle(); st.hoseT = 0.01; await wait(1100); st.hoseT = 0; st.point = null;
   await say('ROD', 'rod_normal', "Yep. That's a clog. Where's your cleanout?");
   await fadeOut(600);
 };
@@ -578,14 +577,14 @@ SCENES.cable = async () => {
 SCENES.reveal = async () => {
   Object.assign(st, { cableUp: 0, holo: 0, rodF: 0, happy: false });
   view = () => {
-    shipRoom(); spaceToilet(300, 202, 0);
-    rod(228, 202, st.rodF);
+    shipRoom(); spaceToilet(300, 226, 0, !st.happy);
+    rod(196, 226, st.rodF);
     if (st.cableUp > 0) {
-      const tx = 244, ty = 120 - st.cableUp * 20;
-      g.strokeStyle = '#d0d0d0'; g.lineWidth = 2; g.beginPath(); g.moveTo(240, 160); g.lineTo(tx, ty + 10); g.stroke();
+      const tx = 288, ty = 150 - st.cableUp * 24;
+      g.strokeStyle = '#d0d0d0'; g.lineWidth = 2; g.beginPath(); g.moveTo(290, 200); g.lineTo(tx, ty + 10); g.stroke();
       R(tx - 3, ty, 7, 16, '#f2f0ea'); R(tx - 3, ty, 7, 2, '#d8d4c8'); g.strokeStyle = '#d8d4c8'; g.lineWidth = 1; g.beginPath(); g.moveTo(tx, ty + 16); g.quadraticCurveTo(tx + 6, ty + 26, tx + 2, ty + 34); g.stroke();
     }
-    alien(410, 202, { s: 1.4, sad: st.sad, tilt: st.tilt, wave: st.happy });
+    alien(400, 226, { s: 1.4, tilt: st.tilt, happy: st.happy, angry: st.sad ? 1 : 0 });
     if (st.holo > 0) {
       const t = performance.now() / 1000, a = st.holo * (0.55 + 0.15 * Math.sin(t * 30));
       g.globalAlpha = a; g.fillStyle = '#6fd3ff';
@@ -614,8 +613,8 @@ SCENES.dropoff = async () => {
   Object.assign(st, { rodDY: -140, beam: 0, inBed: true });
   view = () => {
     bedroom(true); bed(false);
-    if (st.beam > 0) { g.fillStyle = `rgba(125,255,176,${0.2 * st.beam})`; g.fillRect(170, 0, 56, 200); }
-    g.save(); g.beginPath(); g.rect(0, 0, W, 172); g.clip(); rod(196, 200 + st.rodDY, 0); g.restore();
+    if (st.beam > 0) { g.fillStyle = `rgba(125,255,176,${0.2 * st.beam})`; g.fillRect(146, 0, 52, 206); }
+    g.save(); g.beginPath(); g.rect(0, 0, W, 190); g.clip(); rod(172, 216 + st.rodDY, 0); g.restore();
     bed(true);
   };
   await fadeIn(700);
