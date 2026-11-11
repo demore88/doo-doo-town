@@ -1827,7 +1827,7 @@ GAMES.push({
           if (priced) T(o.price + ' CRK', x + w - 4, y + h / 2 + 1, s.crk >= o.price && !o.off ? '#7bd65b' : '#8a5a50', 5, 'right'); }); } }
     else {
       bevel(PX, 10, PW, 82);
-    { const z = this.zone(s); const zi = s.band ? s.band(s.pc) : 0; T(['THE ENTRANCE', 'POSSUM COUNTRY', 'THE DEEP MUCK', "THE KING'S HALL"][zi], PX + PW / 2, 18, '#e8c86a', 6, 'center'); if (!s.battle) T('TAP MAP', PX + PW - 6, 88, '#5a5048', 4, 'right'); T(`LV ${s.lvl}  ATK ${s.dmg[0] + s.atkB + s.lvl - 1}-${s.dmg[1] + s.atkB + s.lvl - 1}  DEF ${s.def}`, PX + PW / 2, 27, '#9fb3d9', 5, 'center'); }
+    { const z = this.zone(s); const zi = s.band ? s.band(s.pc) : 0; T(['THE ENTRANCE', 'POSSUM COUNTRY', 'THE DEEP MUCK', "THE KING'S HALL"][zi], PX + PW / 2, 18, '#e8c86a', 6, 'center'); if (!s.battle) T('TAP MAP', PX + PW - 6, 87, '#7a6a50', 5, 'right'); T(`LV ${s.lvl}  ATK ${s.dmg[0] + s.atkB + s.lvl - 1}-${s.dmg[1] + s.atkB + s.lvl - 1}  DEF ${s.def}`, PX + PW / 2, 27, '#9fb3d9', 5, 'center'); }
     { const Z = 4, VWc = 29, VHc = 13, oc = Math.max(0, Math.min(s.C - VWc, Math.round(s.vx - VWc / 2))), orr = Math.max(0, Math.min(s.R - VHc, Math.round(s.vy - VHc / 2))), mw = Math.min(s.C, VWc) * Z, mh = Math.min(s.R, VHc) * Z, mx0 = PX + (PW - mw) / 2 - oc * Z, my0 = 35 - orr * Z;   // automap: a window around you, only where you've been
       R(PX + (PW - mw) / 2 - 1, 34, mw + 2, mh + 2, '#16110b'); g.save(); g.beginPath(); g.rect(PX + (PW - mw) / 2, 35, mw, mh); g.clip();
       for (const k of s.seen) { const c = k % 100, r = Math.floor(k / 100); R(mx0 + c * Z, my0 + r * Z, Z, Z, '#7a6a50');
