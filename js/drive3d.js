@@ -654,7 +654,8 @@ function drive3d(choice, opts) {
         const sg = drawn[n], p = sg.s1; if (!p || p.sc <= 0) continue;
         for (const sp of sg.sprites) S(sp.img, sp.scale * 2.6, p.sx, p.sy, sp.off > 0 ? sp.off + (sg.rt || 1) - 1 : sp.off + (sg.lt || -1) + 1, p.sw, sg.clip, 0, 1);   /* unrounded, so trees and signs slide smoothly instead of twitching a pixel at a time */
         if (KITS.length && KIT_IMG.complete && KIT_IMG.naturalWidth) for (const k of KITS) if (!k.got && segAt(k.z) === sg) S(KIT_IMG, 0.09, p.sx, p.sy, k.off, p.sw, sg.clip, 0, 1);   /* a toolbox lying in the lane */
-        if (RIVAL && rz > pos && segAt(rz) === sg) { makeRival(); if (rivalImg) S(rivalImg, 0.62, p.sx, p.sy, roff, p.sw, sg.clip); }
+        if (RIVAL && rz > pos && segAt(rz) === sg) { makeRival(); const q = sg.s2, f = Math.max(0, Math.min(1, ((((rz % LEN) + LEN) % LEN) - sg.p1.z) / SEG));   /* glides like the other cars instead of hopping strip to strip */
+          if (rivalImg && q && q.sw > 0) S(rivalImg, 0.62, p.sx + (q.sx - p.sx) * f, p.sy + (q.sy - p.sy) * f, roff, p.sw + (q.sw - p.sw) * f, sg.clip, 0, 1); }
         for (const c of cars) if (!c.parked && segAt(c.z) === sg) { const q = sg.s2, f = Math.max(0, Math.min(1, ((((c.z % LEN) + LEN) % LEN) - sg.p1.z) / SEG));   /* glide between the segment's two edges instead of hopping strip to strip */
           const b = q && q.sw > 0 ? S(c.img, c.sc, p.sx + (q.sx - p.sx) * f, p.sy + (q.sy - p.sy) * f, c.off, p.sw + (q.sw - p.sw) * f, sg.clip, c.rot, 1) : null;
           if (b && c.blink > 0 && Math.floor(t * 4) % 2) { const bw = Math.max(2, b.w * 0.16), bh = Math.max(2, b.w * 0.1), bx = c.next < c.lane ? b.X - bw * 0.3 : b.X + b.w - bw * 0.7;
