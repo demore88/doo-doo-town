@@ -53,7 +53,7 @@ const VAN_TALK = [
   [['MATT', 'matt_suspicious', 'Rod. Do you hum when you snake a line?'], ['ROD', 'rod_normal', 'No.'], ['MATT', 'matt_happy', 'You hum Christmas music. In July.'], ['ROD', 'rod_stare', "That's focus."]],
   [['ROD', 'rod_normal', "Text the next one we're on the way."], ['MATT', 'matt_normal', 'Done. They sent back a thumbs up and a poop emoji.'], ['ROD', 'rod_tired', "That's a professional relationship."]],
   [['MATT', 'matt_happy', 'I want a tattoo of a plunger.'], ['ROD', 'rod_stare', 'Where?'], ['MATT', 'matt_normal', "Haven't decided."], ['ROD', 'rod_stare', 'Not on the face.']],
-  [['ROD', 'rod_sad', 'I miss the old van.'], ['MATT', 'matt_shocked', 'The old van caught fire.'], ['ROD', 'rod_sad', 'It had heart.']],
+  [['ROD', 'rod_sad', 'I miss the old van.'], ['MATT', 'matt_shocked', 'The old van caught fire.'], ['ROD', 'rod_sad', 'It had heart and comfy seats.']],
   [['MATT', 'matt_normal', "What's the best part of this job?"], ['ROD', 'rod_normal', 'The moment it drains.'], ['MATT', 'matt_happy', 'That gurgle.'], ['ROD', 'rod_happy', 'That gurgle.']],
   [['ROD', 'rod_suspicious', 'Did you leave the shop unlocked?'], ['MATT', 'matt_stare', '...'], ['ROD', 'rod_angry', 'MATT.'], ['MATT', 'matt_normal', "Who's gonna steal a used auger?"]],
   [['MATT', 'matt_happy', 'I think the Clog Kings are scared of us.'], ['ROD', 'rod_smug', 'They should be. They charge thirty-five grand for a toilet.']],
