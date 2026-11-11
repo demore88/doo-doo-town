@@ -1344,14 +1344,15 @@ GAMES.push({
     this.say(s, F.king ? 'THE RAT KING rises from the muck, cape and all!' : F.name === 'BIG BUFF RAT' ? 'A BIG BUFF RAT flexes at you. It has been working out.' : F.venom ? 'A BROWN RECLUSE drops down from a joist!' : F.thief ? 'A RACCOON was already down here. It is not happy.' : F.possum ? 'A POSSUM hisses at you from behind a pier!' : `A ${F.name} jumps out of the dark!`);
   },
   // CRAWLSPACE CARL: lives down here. Has for years. Sells what he's got.
-  HOBO_HI: ["Evenin'. Or mornin'. Hard to tell down here.", "Don't mind me. I'm just the guy who lives here.", "You're the plumber? About time. That drip keeps me up.", "Buy somethin' or keep crawlin'.", "Watch out for the raccoon. He's got a temper."],
-  HOBO_BUY: ["Pleasure doin' business.", "Don't spend it all in one crawlspace.", "No refunds.", "That one's fresh. Mostly."],
-  HOBO_BYE: ["Tell the landlord I said nothin'.", "Mind the spider.", "Come back anytime. I'll be here."],
+  HOBO_HI: ["Oh. Oh, hello. Nobody comes down here. Nobody EVER comes down here.", "Shhh. Don't move. Let me look at you. ...You're beautiful.", "You smell like outside. I love outside. I've never been.", "I've been waitin' for you. Not you specifically. But you'll do.", "Don't be scared. I'm Carl. I live in the dirt. It's nice in the dirt.", "Is that a pipe wrench? Can I touch it? I won't touch it. ...Can I?", "You crawled all this way. For me? Nobody's ever crawled for me."],
+  HOBO_BUY: ["Ooooh. You chose that. You CHOSE that.", "Take it. Take it and think of Carl.", "I'll treasure your coins. I'm gonna keep 'em in my mouth.", "That's my favorite one. I'll miss it. Goodbye, little friend.", "We're business partners now. That's practically married."],
+  HOBO_BYE: ["Don't go. ...Okay, go. But come back. Promise me.", "I'll be right here. I'm always right here.", "You'll dream about Carl tonight. Everybody does.", "Wave at me! ...You waved. I'll remember that forever.", "Mind the spider. Her name's Linda. She's spoken for."],
+  HOBO_BROKE: ["You don't have enough. That's okay. I'll love you anyway.", "Short? Stay a while. We could just... sit.", "I can't take IOUs. Not since the last one broke my heart."],
   wares(s) { return [
     { id: 'bat', label: 'BATTERIES', price: 2, go: () => s.lights++, line: 'Flashlight +1' },
     { id: 'pb', label: 'PEANUT BUTTER', price: 2, go: () => s.pb++, line: 'Peanut butter +1' },
     { id: 'aid', label: 'BAND-AIDS', price: 3, go: () => s.hp = Math.min(s.hpMax, s.hp + 8), line: '+8 HP' },
-    { id: 'beans', label: 'COLD BEANS', price: 5, go: () => s.hp = Math.min(s.hpMax, s.hp + 20), line: '+20 HP. Do not ask where he got them.' },
+    { id: 'beans', label: 'COLD BEANS', price: 5, go: () => s.hp = Math.min(s.hpMax, s.hp + 20), line: '+20 HP. He warmed them in his armpit.' },
     { id: 'map', label: 'HIS MAP', price: 4, go: () => { s.mapBought = true; }, line: 'An X on a napkin marks the drip.', off: s.mapBought },
     { id: 'bye', label: 'LEAVE', price: 0 } ]; },
   openShop(s) { s.shop = { sel: 0, say: this.HOBO_HI[Math.floor(s.rnd() * this.HOBO_HI.length)], t: 0 }; s.metHobo = true; },
@@ -1364,8 +1365,8 @@ GAMES.push({
     if (pick === null) return;
     const it = W2[pick];
     if (it.id === 'bye') { (s.log = s.log || []).push('CARL: ' + this.HOBO_BYE[Math.floor(s.rnd() * this.HOBO_BYE.length)]); s.shop = null; SFX('ui_select'); return; }
-    if (it.off) { S.say = "Already sold you that one."; SFX('click'); return; }
-    if (s.cash < it.price) { S.say = ["You're short, pal.", "Come back with more change.", "I don't take IOUs. Not anymore."][Math.floor(s.rnd() * 3)]; SFX('click'); return; }
+    if (it.off) { S.say = "You already have it. Do you not like it? ...You don't like it."; SFX('click'); return; }
+    if (s.cash < it.price) { S.say = this.HOBO_BROKE[Math.floor(s.rnd() * this.HOBO_BROKE.length)]; SFX('click'); return; }
     s.cash -= it.price; it.go(); S.say = this.HOBO_BUY[Math.floor(s.rnd() * this.HOBO_BUY.length)] + '  (' + it.line + ')'; SFX('ui_select');
   },
   endFight(s) { s.battle = null; TRL.bgm(false); },
