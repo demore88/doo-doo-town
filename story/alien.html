@@ -391,9 +391,9 @@ SCENES.beam = async () => {
   Object.assign(st, { shipY: -60, beam: 0, rodX: 124, rodY: 238, rodA: 0, rodS: 1 });
   view = () => {
     if (!bg('bg_yard')) { R(0, 0, W, H, '#05081a'); R(0, 236, W, 34, '#14231a'); }
-    if (IMG.van) { const fw = (IMG.van.width / Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35)))), vh = 112 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.drawImage(IMG.van, 0, 0, fw, IMG.van.height, 352, 258 - vh, 112, vh); g.imageSmoothingEnabled = false; }
+    if (IMG.van) { const fw = (IMG.van.width / Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35)))), vh = 224 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.drawImage(IMG.van, 0, 0, fw, IMG.van.height, 254, 268 - vh, 224, vh); g.imageSmoothingEnabled = false; }
     // ship
-    const sx = 290, sy = st.shipY, t = performance.now() / 1000;
+    const sx = 212, sy = st.shipY, t = performance.now() / 1000;
     if (st.beam > 0) { g.fillStyle = `rgba(125,255,176,${0.18 * st.beam + 0.05 * Math.sin(t * 20) * st.beam})`; g.beginPath(); g.moveTo(sx - 14, sy + 20); g.lineTo(sx + 14, sy + 20); g.lineTo(sx + 46, 244); g.lineTo(sx - 46, 244); g.fill(); }
     rod(st.rodX, st.rodY, st.rodY < 232 ? 0 : 6, st.rodS, st.rodA);   /* behind the ship, so he vanishes up into it */
     if (!spr('ufo', Math.floor(t * 6) % 3, sx, sy, 58, { mid: true })) { E(sx, sy, 56, 13, '#7c8698'); E(sx, sy - 9, 24, 13, '#a6d8ff'); }
@@ -403,7 +403,7 @@ SCENES.beam = async () => {
   await card(['2:31 AM'], 900);
   await tween(st, 'shipY', 70, 2000);
   await tween(st, 'rodA', 1, 300);
-  await tween(st, 'rodX', 290, 2200, t => t);
+  await tween(st, 'rodX', 212, 1700, t => t);
   SND.beam(); await tween(st, 'beam', 1, 500);
   await wait(400);
   await Promise.all([tween(st, 'rodY', 92, 2400), tween(st, 'rodS', 0.45, 2400)]);
@@ -634,10 +634,10 @@ SCENES.reveal = async () => {
 };
 
 SCENES.dropoff = async () => {   /* dropped back off in the front yard at sunrise, just before the alarm */
-  Object.assign(st, { shipY: -60, shipX: 290, beam: 0, rodX: 290, rodY: 92, rodS: 0.45, rodA: 0, rodF: 0 }); if (window.RAIN) RAIN.stop(); amb('alien_ship');
+  Object.assign(st, { shipY: -60, shipX: 212, beam: 0, rodX: 212, rodY: 92, rodS: 0.45, rodA: 0, rodF: 0 }); if (window.RAIN) RAIN.stop(); amb('alien_ship');
   view = () => {
     if (!bg('bg_yard_dawn')) { R(0, 0, W, H, '#f2a65a'); R(0, 236, W, 34, '#2f5a2a'); }
-    if (IMG.van) { const fw = (IMG.van.width / Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35)))), vh = 112 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.drawImage(IMG.van, 0, 0, fw, IMG.van.height, 352, 258 - vh, 112, vh); g.imageSmoothingEnabled = false; }
+    if (IMG.van) { const fw = (IMG.van.width / Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35)))), vh = 224 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.drawImage(IMG.van, 0, 0, fw, IMG.van.height, 254, 268 - vh, 224, vh); g.imageSmoothingEnabled = false; }
     const sx = st.shipX, sy = st.shipY, t = performance.now() / 1000;
     if (st.beam > 0) { g.fillStyle = `rgba(125,255,176,${0.2 * st.beam + 0.05 * Math.sin(t * 20) * st.beam})`; g.beginPath(); g.moveTo(sx - 14, sy + 20); g.lineTo(sx + 14, sy + 20); g.lineTo(sx + 46, 244); g.lineTo(sx - 46, 244); g.fill(); }
     rod(st.rodX, st.rodY, st.rodF, st.rodS, st.rodA);
@@ -658,7 +658,7 @@ SCENES.dropoff = async () => {   /* dropped back off in the front yard at sunris
   await wait(900);
   await say('ROD', 'rod_stare', '...');
   await say('ROD', 'rod_tired', "Alarm. Right on time. Didn't even get to sleep.");
-  st.rodF = 6; await tween(st, 'rodX', 352, 1400, t => t);   /* to the van */
+  st.rodF = 6; await tween(st, 'rodX', 268, 1000, t => t);   /* to the van */
   await fadeOut(500);
   view = () => { R(0, 0, W, H, '#0e1118'); };
   await fadeIn(300);
