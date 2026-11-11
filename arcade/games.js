@@ -1343,7 +1343,7 @@ setInterval(() => { const M = TRL.music, n = performance.now(); if (M.h && n - M
 
 GAMES.push({
   id: 'crawl', noReady: true, name: 'UNDER THE TRAILER', tag: 'A long crawl · rats, possums, a King · Crawlspace Carl',
-  how: ['Somewhere under this huge trailer the sewer pipe came apart. Crawl through the dark and find it. Follow the STINK. This is a LONG job.', 'Near the hatch it is just rats. Deeper in: possums, buff rats, raccoons, brown recluses... and THE RAT KING guards the drip.', 'Grab peanut butter crackers off the rat traps and from critters you beat. Crawlspace Carl LOVES them. He lives down here in three places: listen for him, then trade for gear, beans and his special tonic.', 'Win fights to level up. Hurt? Open the BAG (second button) to use items or REST: it heals you but adds 30 minutes to the job.'],
+  how: ['Somewhere under this huge trailer the sewer pipe came apart. Crawl through the dark and find it. Follow the STINK. This is a LONG job.', 'Near the hatch it is just rats. Deeper in: possums, buff rats, raccoons, brown recluses... and THE RAT KING guards the drip.', 'Grab peanut butter crackers off the rat traps and from critters you beat. Crawlspace Carl LOVES them. He lives down here in three places: listen for him, then trade for gear, beans and his special tonic.', 'In a fight: WHACK hits it. FLASHLIGHT blinds it so it loses its next 2 attacks (uses a battery). CRACKER: toss one and sneak away. RUN: might work. BAG: use an item.', 'Win fights to level up. Hurt? Open the BAG to use items or REST: it heals you but adds 30 minutes to the job. Want more fights? BANG ON PIPE in the bag.', 'Carl sells a napkin map to his next hiding spot. Tap your map to see it big and scribble notes on it.'],
   dpad: 'omni',
   ctl: '▲ ▼ CRAWL · ◀ ▶ TURN · SPACE = PICK · SHIFT = BAG',
   act: 'PICK', act2: 'BAG', phone: 'd-pad to crawl and turn (or tap the view), PICK in fights, BAG for items and resting.',
@@ -1452,6 +1452,7 @@ GAMES.push({
     const hp = Math.round((F.hp[0] + Math.floor(s.rnd() * (F.hp[1] - F.hp[0] + 1))) * (F.king ? [1.1, 1.3, 1.55][s.diff] : 1.5 + this.zone(s) * 0.6));   /* deeper ones are tougher */
     s.battle = { F, hp, max: hp, sel: 4, q: [], stun: 0, open: 0.6, blink: 0, dmgT: 0, pose: 2, poseT: 0.8, out: 0 }; s.since = 0; s.fights++; s.flash = 0.6; (s.met = s.met || []).push(F.name); TRL.bgm(true); TRL.cry(F, true);
     this.say(s, F.princess ? 'THE POSSUM PRINCESS blocks your way. She expects tribute.' : F.gary ? 'It is GARY. Gary is a raccoon in a tiny vest. Gary has done this before.' : F.king ? 'THE RAT KING rises from the muck, cape and all!' : F.name === 'BIG BUFF RAT' ? 'A BIG BUFF RAT flexes at you. It has been working out.' : F.venom ? 'A BROWN RECLUSE drops down from a joist!' : F.thief ? 'A RACCOON was already down here. It is not happy.' : F.possum ? 'A POSSUM hisses at you from behind a pier!' : `A ${F.name} jumps out of the dark!`);
+    if (!s.tipped && !F.princess) { s.tipped = true; this.say(s, 'TIP: WHACK hits it. FLASHLIGHT blinds it for 2 turns. CRACKER lets you sneak away.'); this.say(s, 'TIP: BAG has your band-aids. RUN might work... might not.'); }   /* explained once, in the first fight */
   },
   // CRAWLSPACE CARL: lives down here. Has for years. Sells what he's got.
   HOBO_HI: ["Do you have... the crackers? The little ones? With the peanut butter? The LITTLE ones?", "Shhh. Don't move. I can smell them on you. Peanut butter crackers.", "Oh. Oh, hello. Nobody comes down here. Did you bring the little crackers?", "The little orange ones. Six to a pack. Do you understand me? Do you UNDERSTAND me?", "I'll trade you anything. ANYTHING. For the little crackers.", "You crawled all this way. For me? With crackers? Nobody's ever crawled for me with crackers."],
@@ -1667,7 +1668,7 @@ GAMES.push({
     } else if (o.id === 'light') {
       s.lights--; this.say(s, 'You blast it with the flashlight!', () => { s.flash = 0.35; SFX('click'); });
       if (b.guards > 0) this.say(s, 'The guard rats scatter from the light!', () => { b.guards = 0; });
-      if (s.rnd() < (b.F.king ? 0.4 : 0.85)) { b.stun = b.F.king ? 1 : 2; this.say(s, `The ${b.F.name} is blinded!`); } else this.say(s, 'It just squints at you.');
+      if (s.rnd() < (b.F.king ? 0.4 : 0.85)) { b.stun = b.F.king ? 1 : 2; this.say(s, b.F.king ? 'THE RAT KING is blinded! He loses his next attack.' : `The ${b.F.name} is blinded! It loses its next 2 attacks.`); } else this.say(s, 'It just squints at you.');
       b.after = () => foeTurn();
     } else if (o.id === 'pb') {
       if (b.F.princess) { s.crk--; this.say(s, 'You offer the Princess a peanut butter cracker...'); this.say(s, 'She accepts. She knights you with a twig. DEF +1!', () => { SFX('ut_knight', { vol: 0.7 }); s.def++; b.pose = 4; b.poseT = 1; }); this.say(s, 'She takes your hand. She would like to go HOME now. (A crown on your map marks her kingdom.)', () => { this.gainXP(s, Math.round(b.F.pts * 1.35)); s.escort = true; b.out = 0.01; }); b.after = () => this.endFight(s); return; }
