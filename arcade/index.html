@@ -174,7 +174,7 @@ function showPad() {
   const G = cur != null ? GAMES[cur] : null;
   $('#pad').classList.toggle('on', padOn && (phase === 'play' || phase === 'ready') && !(G && G.pad === false));
   $('#pad').classList.toggle('lefty', ((DDT.get() || {}).hand) === 'L');
-  $('#pad').classList.toggle('nodp', !!(G && G.dpad === false)); $('#pad').classList.toggle('lr', !!(G && G.dpad === 'lr')); $('#pad').classList.toggle('ud', !!(G && G.dpad === 'ud')); $('#pad').classList.toggle('stick', !!(G && (G.dpad === 'stick' || G.dpad === 'omni'))); $('#pad').classList.toggle('b2', !!(G && G.act2)); $('#pad').classList.toggle('crawl', !!(G && G.id === 'crawl')); $('#pad').classList.toggle('runner', !!(G && G.id === 'sprinkler')); if (G && G.act2) $('#act2').textContent = G.act2; STICK_OMNI = !!(G && G.dpad === 'omni'); STICK_H = !!(G && G.stickH);
+  $('#pad').classList.toggle('nodp', !!(G && G.dpad === false)); $('#pad').classList.toggle('lr', !!(G && G.dpad === 'lr')); $('#pad').classList.toggle('ud', !!(G && G.dpad === 'ud')); $('#pad').classList.toggle('stick', !!(G && (G.dpad === 'stick' || G.dpad === 'omni'))); $('#pad').classList.toggle('b2', !!(G && G.act2)); $('#pad').classList.toggle('crawl', !!(G && G.id === 'crawl')); if (G && G.act2) $('#act2').textContent = G.act2; STICK_OMNI = !!(G && G.dpad === 'omni'); STICK_H = !!(G && G.stickH);
   $('#actbtn').textContent = (G && G.act) || 'GO'; $('#actbtn').style.display = G && G.act === null ? 'none' : '';
   $('#padbtn').textContent = padOn ? 'PAD ON' : 'PAD';
 }
