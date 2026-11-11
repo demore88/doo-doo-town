@@ -223,7 +223,7 @@ function bubble(x, y, ids, px = 3, label = null) {
 // ---------- painted art (assets/alien) ----------
 const ART = {};
 ['alien', 'port', 'ufo', 'sparks', 'toilet'].forEach(n => { const i = new Image(); i.onload = () => ART[n] = i; i.src = '../assets/alien/' + n + '.png'; });
-['bg_yard', 'bg_ship'].forEach(n => { const i = new Image(); i.onload = () => ART[n] = i; i.src = '../assets/alien/' + n + '.jpg'; });
+['bg_yard', 'bg_ship', 'bg_yard_dawn'].forEach(n => { const i = new Image(); i.onload = () => ART[n] = i; i.src = '../assets/alien/' + n + '.jpg'; });
 { const i = new Image(); i.onload = () => ART.bg_bedroom = i; i.src = '../assets/alien/bg_bedroom.webp'; }
 const CELLS = { alien: 8, port: 3, ufo: 3, sparks: 6, toilet: 6 };
 // draw cell i of a strip, centered on x, bottom at y (or centered when mid), h tall
@@ -615,23 +615,31 @@ SCENES.reveal = async () => {
   await fadeOut(700);
 };
 
-SCENES.dropoff = async () => {
-  Object.assign(st, { rodDY: -140, beam: 0, inBed: true, lie: 0 });
+SCENES.dropoff = async () => {   /* dropped back off in the front yard at sunrise, just before the alarm */
+  Object.assign(st, { shipY: -60, shipX: 290, beam: 0, rodX: 290, rodY: 108, rodA: 0, rodF: 0 });
   view = () => {
-    bedroom(true); bed(false);
-    if (st.beam > 0) { g.fillStyle = `rgba(125,255,176,${0.2 * st.beam})`; g.fillRect(180, 0, 52, 206); }
-    rodBed(st.lie, st.rodDY);
-    bed(true);
+    if (!bg('bg_yard_dawn')) { R(0, 0, W, H, '#f2a65a'); R(0, 236, W, 34, '#2f5a2a'); }
+    if (IMG.van) { const fw = (IMG.van.width / Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35)))), vh = 112 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.drawImage(IMG.van, 0, 0, fw, IMG.van.height, 352, 258 - vh, 112, vh); g.imageSmoothingEnabled = false; }
+    const sx = st.shipX, sy = st.shipY, t = performance.now() / 1000;
+    if (st.beam > 0) { g.fillStyle = `rgba(125,255,176,${0.2 * st.beam + 0.05 * Math.sin(t * 20) * st.beam})`; g.beginPath(); g.moveTo(sx - 14, sy + 20); g.lineTo(sx + 14, sy + 20); g.lineTo(sx + 46, 244); g.lineTo(sx - 46, 244); g.fill(); }
+    rod(st.rodX, st.rodY, st.rodF, 2, st.rodA);
+    spr('ufo', Math.floor(t * 6) % 3, sx, sy, 58, { mid: true });
   };
   await fadeIn(700);
   await card(['6:58 AM'], 900);
-  SND.beam(); await tween(st, 'beam', 1, 300);
-  await tween(st, 'rodDY', 0, 1600);
+  await tween(st, 'shipY', 70, 1600);
+  SND.beam(); await tween(st, 'beam', 1, 400);
+  await tween(st, 'rodA', 1, 300);
+  await tween(st, 'rodY', 240, 1800);   /* lowered down onto the lawn */
   await tween(st, 'beam', 0, 400);
-  await wait(500); await tween(st, 'lie', 1, 500);   /* flops back into bed */
-  await wait(500);
-  tone(880, 0.1, 'square', 0.04); tone(880, 0.1, 'square', 0.04, 0.25); tone(880, 0.1, 'square', 0.04, 0.5);
+  SND.chirp(3); await wait(300);
+  await Promise.all([tween(st, 'shipX', 560, 900, t => t * t), tween(st, 'shipY', -60, 900, t => t * t)]);   /* and gone */
   await wait(900);
+  tone(880, 0.1, 'square', 0.04); tone(880, 0.1, 'square', 0.04, 0.25); tone(880, 0.1, 'square', 0.04, 0.5); tone(880, 0.1, 'square', 0.04, 0.75);   /* his phone alarm */
+  await wait(900);
+  await say('ROD', 'rod_stare', '...');
+  await say('ROD', 'rod_tired', "Alarm. Right on time. Didn't even get to sleep.");
+  st.rodF = 6; await tween(st, 'rodX', 352, 1400, t => t);   /* to the van */
   await fadeOut(500);
   view = () => { R(0, 0, W, H, '#0e1118'); };
   await fadeIn(300);
