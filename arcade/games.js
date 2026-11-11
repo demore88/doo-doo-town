@@ -1490,7 +1490,7 @@ GAMES.push({
       if (z) { g.strokeStyle = 'rgba(200,60,40,.55)'; g.setLineDash([4, 3]); g.lineWidth = 1; g.beginPath(); g.moveTo(x0, oy); g.lineTo(x0, oy + s.R * Z); g.stroke(); g.setLineDash([]); }
       R((x0 + x1) / 2 - 20, oy + s.R * Z + 1, 40, 8, '#cdb88c'); T('ZONE ' + (z + 1), (x0 + x1) / 2, oy + s.R * Z + 5, '#6e5a3c', 5, 'center'); }
     s.carls.forEach((cl, i) => { if (cl.met || s.seen.has(cl.r * 100 + cl.c)) { R(ox + cl.c * Z, oy + cl.r * Z, Z, Z, '#4aa83a'); T('CARL', ox + cl.c * Z + Z / 2, oy + cl.r * Z - 4, '#2e6a24', 4, 'center'); } });
-    if (s.escort && s.kingdom) T('♛', ox + s.kingdom.c * Z + Z / 2, oy + s.kingdom.r * Z + Z / 2, '#c9a000', 7, 'center');
+    if (s.escort && s.kingdom) { const kx = ox + s.kingdom.c * Z + Z / 2, ky = oy + s.kingdom.r * Z + Z / 2; C(kx, ky, 9 + Math.sin(t * 5), 'rgba(247,212,74,.35)'); T('♛', kx, ky, '#a07800', 12, 'center'); T('HER KINGDOM', kx, ky - 12, '#8a6400', 5, 'center'); }
     this.xs(s).forEach(q => { const on = Math.floor(t * 3) % 2; T('X', ox + q.c * Z + Z / 2, oy + q.r * Z + Z / 2, on ? '#c0392b' : '#8a2a1e', 9, 'center'); });
     g.strokeStyle = '#6b3f1d'; g.lineWidth = 2; g.lineCap = g.lineJoin = 'round'; for (const st of s.scrib) { g.beginPath(); st.forEach(([x, y], i) => i ? g.lineTo(ox + x * Z, oy + y * Z) : g.moveTo(ox + x * Z, oy + y * Z)); if (st.length === 1) g.lineTo(ox + st[0][0] * Z + 0.5, oy + st[0][1] * Z); g.stroke(); }
     const cx = ox + s.vx * Z, cy = oy + s.vy * Z, a = s.va, k2 = Math.max(4, Z * 0.8); g.fillStyle = '#d4402a'; g.beginPath(); g.moveTo(cx + Math.cos(a) * k2, cy + Math.sin(a) * k2); g.lineTo(cx + Math.cos(a + 2.4) * k2 * 0.7, cy + Math.sin(a + 2.4) * k2 * 0.7); g.lineTo(cx + Math.cos(a - 2.4) * k2 * 0.7, cy + Math.sin(a - 2.4) * k2 * 0.7); g.fill();
@@ -1836,8 +1836,13 @@ GAMES.push({
       for (const k of s.seen) { const c = k % 100, r = Math.floor(k / 100); R(mx0 + c * Z, my0 + r * Z, Z, Z, '#7a6a50');
         for (const [ddx, ddy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (s.map[r + ddy][c + ddx] !== '.') R(mx0 + (c + ddx) * Z, my0 + (r + ddy) * Z, Z, Z, '#3e3a34'); }
       for (const cl of s.carls) if (cl.met || s.seen.has(cl.r * 100 + cl.c)) R(mx0 + cl.c * Z, my0 + cl.r * Z, Z, Z, '#4aa83a');   /* Carl */
-      if (s.escort && s.kingdom && Math.floor(t * 3) % 2) R(mx0 + s.kingdom.c * Z, my0 + s.kingdom.r * Z, Z, Z, '#f7d44a');   /* her kingdom */
-      if (Math.floor(t * 3) % 2) this.xs(s).forEach(q => T('X', mx0 + q.c * Z + Z / 2, my0 + q.r * Z + Z / 2, '#e9665a', 6, 'center'));   /* his napkin maps */
+      { const L0 = PX + (PW - mw) / 2, T0 = 35, pulse = 1 + 0.15 * Math.sin(t * 6);   /* goals: always shown; if it's off this little window, a pointer on the edge shows which way */
+        const mark = (c, r, glyph, col) => { let x = mx0 + c * Z + Z / 2, y = my0 + r * Z + Z / 2; const off = x < L0 + 4 || x > L0 + mw - 4 || y < T0 + 4 || y > T0 + mh - 4;
+          if (off) { const cx2 = L0 + mw / 2, cy2 = T0 + mh / 2, a2 = Math.atan2(y - cy2, x - cx2); x = Math.max(L0 + 6, Math.min(L0 + mw - 6, x)); y = Math.max(T0 + 6, Math.min(T0 + mh - 6, y));
+            g.fillStyle = col; g.beginPath(); g.moveTo(x + Math.cos(a2) * 5, y + Math.sin(a2) * 5); g.lineTo(x + Math.cos(a2 + 2.5) * 4, y + Math.sin(a2 + 2.5) * 4); g.lineTo(x + Math.cos(a2 - 2.5) * 4, y + Math.sin(a2 - 2.5) * 4); g.fill(); }
+          else T(glyph, x, y, col, Math.round(9 * pulse), 'center'); };
+        if (s.escort && s.kingdom) mark(s.kingdom.c, s.kingdom.r, '♛', '#f7d44a');   /* her kingdom */
+        this.xs(s).forEach(q => mark(q.c, q.r, 'X', '#e9665a')); }   /* his napkin maps */
       if (s.scrib) { g.strokeStyle = '#8a5a2a'; g.lineWidth = 1; for (const st of s.scrib) { g.beginPath(); st.forEach(([x, y], i) => i ? g.lineTo(mx0 + x * Z, my0 + y * Z) : g.moveTo(mx0 + x * Z, my0 + y * Z)); g.stroke(); } }
       const cx = mx0 + s.vx * Z, cy = my0 + s.vy * Z, a = s.va; g.fillStyle = '#f7c418'; g.beginPath(); g.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4); g.lineTo(cx + Math.cos(a + 2.4) * 3, cy + Math.sin(a + 2.4) * 3); g.lineTo(cx + Math.cos(a - 2.4) * 3, cy + Math.sin(a - 2.4) * 3); g.fill(); g.restore(); }
       bevel(PX, 100, PW, 88);
