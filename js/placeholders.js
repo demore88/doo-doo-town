@@ -29,7 +29,7 @@ function custBuild(seed) {
     shoe: ['#222', '#5a3a1c', '#e8e4d8', '#3a4a6a'][Math.floor(r() * 4)], accent: ['#c0392b', '#2c6cd6', '#2e8a3a', '#f2c94c', '#e8e4d8'][Math.floor(r() * 5)], cap: '#c0392b' };
 }
 // ---------- DRAWN CUSTOMERS: 15 pixel-art homeowners. Picked by seed, matched to the name (no "Gloria" in a beard), mirrored at random. ----------
-const CUST_SEX = 'mffmfmmfmmfmmfx';   // c0..c14 (x = either)
+const CUST_SEX = 'mffmfmmfmmfmmfx' + 'f'.repeat(30) + 'm'.repeat(30);   // c0..c74 (x = either)
 const CUST_F = /^(BEA|BEV|CAROL|DEB|DIANE|DOREEN|ELLEN|GAIL|GLORIA|HELEN|JESS|JUNE|KAYLA|LINDA|MAEVE|MARGE|NANCY|PRIYA|ROSE|SUE|TINA|ANN|MARY|KAREN|BETTY|JEAN|PAM|DOT|LISA|AMY)/;
 const CUST_M = /^(ART|BOB|BRENT|BUCK|BUD|DUANE|EARL|ED|FRANK|GRANT|GREG|HAL|JOE|JR|LOU|MIKE|NED|PHIL|RAY|RON|STAN|TODD|TYLER|VERN|WALT|CHEF)/;
 const _cimg = {}, CUST_NAME = {};
@@ -169,7 +169,7 @@ function artImg(name) {
   _art[name] = null; const i = new Image(); i.onload = () => (_art[name] = i); i.src = ART + name + '.png'; return null;
 }
 ['ron_smug', 'ron_happy', 'ron_cover'].forEach(artImg);
-for (let i = 0; i < CUST_SEX.length; i++) { custImg(i); custImg(i, true); }   // the drawn homeowners and their faces
+/* each homeowner's art loads the first time they're needed */
 
 // ---------- RON, GOD OF DRAINS: flowing hair, cape, holding a plunger crackling with lightning ----------
 function drawRon(x, y, s = 1) {           // x,y = feet
