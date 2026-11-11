@@ -28,8 +28,33 @@ function custBuild(seed) {
     hairStyle: ['bald', 'short', 'long', 'bun', 'cap'][L.style] || 'short', face: L.beard ? 'beard' : 'none',
     shoe: ['#222', '#5a3a1c', '#e8e4d8', '#3a4a6a'][Math.floor(r() * 4)], accent: ['#c0392b', '#2c6cd6', '#2e8a3a', '#f2c94c', '#e8e4d8'][Math.floor(r() * 5)], cap: '#c0392b' };
 }
+// ---------- DRAWN CUSTOMERS: 15 pixel-art homeowners. Picked by seed, matched to the name (no "Gloria" in a beard), mirrored at random. ----------
+const CUST_SEX = 'mffmfmmfmmfmmfx';   // c0..c14 (x = either)
+const CUST_F = /^(BEA|BEV|CAROL|DEB|DIANE|DOREEN|ELLEN|GAIL|GLORIA|HELEN|JESS|JUNE|KAYLA|LINDA|MAEVE|MARGE|NANCY|PRIYA|ROSE|SUE|TINA|ANN|MARY|KAREN|BETTY|JEAN|PAM|DOT|LISA|AMY)/;
+const CUST_M = /^(ART|BOB|BRENT|BUCK|BUD|DUANE|EARL|ED|FRANK|GRANT|GREG|HAL|JOE|JR|LOU|MIKE|NED|PHIL|RAY|RON|STAN|TODD|TYLER|VERN|WALT|CHEF)/;
+const _cimg = {}, CUST_NAME = {};
+function custImg(i, face) { const k = 'c' + i + (face ? '_face' : ''); if (k in _cimg) return _cimg[k]; _cimg[k] = null; const im = new Image(); im.onload = () => (_cimg[k] = im); im.src = ART + 'cust/' + k + '.png'; return null; }
+function custPick(seed) {
+  let nm = CUST_NAME[seed]; if (!nm && typeof JOB !== 'undefined' && JOB && JOB.cust && JOB.cust.seed === seed) nm = CUST_NAME[seed] = String(JOB.cust.name || '').toUpperCase();
+  const sex = nm && CUST_F.test(nm) ? 'f' : nm && CUST_M.test(nm) ? 'm' : '';
+  const pool = []; for (let i = 0; i < CUST_SEX.length; i++) if (!sex || CUST_SEX[i] === sex || CUST_SEX[i] === 'x') pool.push(i);
+  const h = Math.abs((seed * 2654435761) | 0); return { i: pool[h % pool.length], flip: (h >> 5) & 1 };
+}
 const _cbuild = {};
 function customer(x, y, seed, s = 2, mood = 'normal') {
+  { const P = custPick(seed), im = custImg(P.i);
+    if (im) {   // the drawn homeowner
+      const B = _cbuild[seed] || (_cbuild[seed] = custBuild(seed)), now = performance.now(), t = now / 1000, q = s / 2;
+      const mv = CUST_MV[seed] || (CUST_MV[seed] = { x, mv: 0, dir: 1 }); if (Math.abs(x - mv.x) > 0.05) { mv.mv = now; mv.dir = x > mv.x ? 1 : -1; } mv.x = x;
+      const walking = now - mv.mv < 150, talking = typeof dialog !== 'undefined' && dialog && dialog.shown < dialog.text.length && typeof JOB !== 'undefined' && JOB.cust && dialog.name === JOB.cust.name;
+      const shake = mood === 'upset' ? Math.round(Math.sin(t * 16)) : 0, hop = mood === 'happy' ? -Math.abs(Math.sin(t * 5)) * 3 * q : walking ? -Math.abs(Math.sin(t * 10)) * 2 * q : talking ? -Math.abs(Math.sin(t * 8)) * 1 * q : 0;
+      const hh = B.h * q * 0.95, ww = im.width * hh / im.height, breathe = 1 + Math.sin(t * 2.2) * 0.008;
+      const flip = walking ? mv.dir < 0 : !!P.flip, cx = Math.round(x + shake);
+      g.save(); g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(cx, Math.round(y) + 1, ww * 0.38, 3 * q, 0, 0, 7); g.fill();
+      g.translate(cx, Math.round(y + hop)); if (flip) g.scale(-1, 1); g.imageSmoothingEnabled = hh < im.height * 0.9; g.imageSmoothingQuality = 'high';
+      g.drawImage(im, -ww / 2, -hh * breathe, ww, hh * breathe); g.restore(); g.imageSmoothingEnabled = false;
+      return;
+    } }
   const B = _cbuild[seed] || (_cbuild[seed] = custBuild(seed)), now = performance.now(), t = now / 1000;
   const mv = CUST_MV[seed] || (CUST_MV[seed] = { x, mv: 0, dir: 1 }); if (Math.abs(x - mv.x) > 0.05) { mv.mv = now; mv.dir = x > mv.x ? 1 : -1; } mv.x = x;
   const walking = now - mv.mv < 150, talking = typeof dialog !== 'undefined' && dialog && dialog.shown < dialog.text.length && typeof JOB !== 'undefined' && JOB.cust && dialog.name === JOB.cust.name;
@@ -108,6 +133,12 @@ function customer(x, y, seed, s = 2, mood = 'normal') {
 const _ports = {};
 function custPortrait(seed, mood = 'normal') {
   const key = seed + mood; if (_ports[key]) return _ports[key];
+  const P = custPick(seed), paint = (c, f) => { const k = c.getContext('2d'); k.setTransform(1, 0, 0, 1, 0, 0); k.imageSmoothingEnabled = false;
+      const gr = k.createLinearGradient(0, 0, 0, 80); gr.addColorStop(0, '#34405a'); gr.addColorStop(1, '#1e2638'); k.fillStyle = gr; k.fillRect(0, 0, 80, 80);
+      if (P.flip) { k.translate(80, 0); k.scale(-1, 1); } k.drawImage(f, 0, 0, 80, 80); k.setTransform(1, 0, 0, 1, 0, 0);
+      if (mood === 'upset') { k.fillStyle = 'rgba(220,40,30,.16)'; k.fillRect(0, 0, 80, 80); k.fillStyle = '#e9665a'; k.fillRect(64, 6, 3, 9); k.fillRect(70, 8, 3, 7); k.fillRect(64, 18, 3, 3); k.fillRect(70, 18, 3, 3); }
+      if (mood === 'happy') { k.fillStyle = 'rgba(255,230,120,.12)'; k.fillRect(0, 0, 80, 80); } return c; };
+  { const f = custImg(P.i, true); if (f) { const c = document.createElement('canvas'); c.width = c.height = 80; return (_ports[key] = paint(c, f)); } }
   const L = custLook(seed), c = document.createElement('canvas'); c.width = c.height = 40; const k = c.getContext('2d');
   const r = (x, y, w, h, col) => { k.fillStyle = col; k.fillRect(x, y, w, h); };
   r(0, 0, 40, 40, '#2a3346');
@@ -126,7 +157,8 @@ function custPortrait(seed, mood = 'normal') {
   if (L.glasses) { k.strokeStyle = '#222'; k.lineWidth = 1; k.strokeRect(13.5, 16.5, 6, 5); k.strokeRect(20.5, 16.5, 6, 5); }
   r(19, 20, 2, 3, '#00000022');
   const big = document.createElement('canvas'); big.width = big.height = 80; const b = big.getContext('2d'); b.imageSmoothingEnabled = false; b.drawImage(c, 0, 0, 80, 80);
-  return (_ports[key] = big);
+  _ports[key] = big; let tries = 0; const poll = () => { const f = custImg(P.i, true); if (f) paint(big, f); else if (++tries < 40) setTimeout(poll, 150); }; poll();   /* the drawn face paints over this one as soon as it loads */
+  return big;
 }
 
 // ---------- art loaded on demand (portraits like ron_smug.png) ----------
@@ -137,6 +169,7 @@ function artImg(name) {
   _art[name] = null; const i = new Image(); i.onload = () => (_art[name] = i); i.src = ART + name + '.png'; return null;
 }
 ['ron_smug', 'ron_happy', 'ron_cover'].forEach(artImg);
+for (let i = 0; i < CUST_SEX.length; i++) { custImg(i); custImg(i, true); }   // the drawn homeowners and their faces
 
 // ---------- RON, GOD OF DRAINS: flowing hair, cape, holding a plunger crackling with lightning ----------
 function drawRon(x, y, s = 1) {           // x,y = feet
