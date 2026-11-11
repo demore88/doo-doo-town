@@ -547,16 +547,18 @@ function drive3d(choice, opts) {
       for (const L of LINES) { const { sg, p1, p2, rt } = L; if (sg.river || sg.lake) { const wc = SNOW ? '#7896af' : '#4574a6', o = (sg.lake ? 3.4 : 2.6) + rt - 1, hw = sg.lake ? 1.4 : 0.7; poly(p1.sx + p1.sw * o, p1.sy, p1.sw * hw, p2.sx + p2.sw * o, p2.sy, p2.sw * hw, wc, 0.8); } }   /* the river or lake */
       for (const L of LINES) { const { p1, p2, rt, lt } = L, cc = (rt + lt) / 2, hh = (rt - lt) / 2; poly(p1.sx + cc * p1.sw, p1.sy, p1.sw * (hh + 0.16), p2.sx + cc * p2.sw, p2.sy, p2.sw * (hh + 0.16), SNOW ? '#95908a' : '#7f674a', 0.8); }   /* the shoulder */
       for (const L of LINES) { const { p1, p2, rt, lt } = L, cc = (rt + lt) / 2, hh = (rt - lt) / 2; poly(p1.sx + cc * p1.sw, p1.sy, p1.sw * hh, p2.sx + cc * p2.sw, p2.sy, p2.sw * hh, '#4f5258', 0.8); }   /* the asphalt */
-      // the painted lines, in one pass on top of the finished pavement: continuous, never chopped into beads
-      for (const L of LINES) { const { sg, p1, p2, lt, rt } = L, lane = w => w * 0.022; if (p1.sw < 3) continue;   /* too far away to paint cleanly: leave it */
-        r.save(); r.beginPath(); r.rect(-10, -10, W + 20, L.clip + 2); r.clip();
-        for (const e of [lt + 0.05, rt - 0.05]) poly(p1.sx + e * p1.sw, p1.sy, Math.max(0.75, p1.sw * 0.012), p2.sx + e * p2.sw, p2.sy, Math.max(0.75, p2.sw * 0.012), '#dfe2e5', 0.6, true);   /* never thinner than a pixel, so it can't flicker into dashes */   // solid white edge lines
-        { const yx = w => -w / 3, yw = w => Math.max(0.6, lane(w) * 0.6);   // double yellow: oncoming lane on the left
-          if (lane(p1.sw) * 1.4 < 1.2) poly(p1.sx + yx(p1.sw), p1.sy, Math.max(0.75, lane(p1.sw) * 2), p2.sx + yx(p2.sw), p2.sy, Math.max(0.75, lane(p2.sw) * 2), '#e9bd34', 0.6, true);   /* far away the pair reads as one solid line */
-          else { poly(p1.sx + yx(p1.sw) - lane(p1.sw) * 1.4, p1.sy, yw(p1.sw), p2.sx + yx(p2.sw) - lane(p2.sw) * 1.4, p2.sy, yw(p2.sw), '#e9bd34', 0.6, true);
-          poly(p1.sx + yx(p1.sw) + lane(p1.sw) * 1.4, p1.sy, yw(p1.sw), p2.sx + yx(p2.sw) + lane(p2.sw) * 1.4, p2.sy, yw(p2.sw), '#e9bd34', 0.6, true); }
-          if (Math.floor(sg.i / 3) % 4 === 0) for (let lx = lt < -1.5 ? -1 : 1 / 3; lx < rt - 0.2; lx += lx < 0 ? 4 / 3 : 2 / 3) poly(p1.sx + p1.sw * lx, p1.sy, lane(p1.sw) * 0.8, p2.sx + p2.sw * lx, p2.sy, lane(p2.sw) * 0.8, '#e2e5e8', 0.6, true); }   /* dashed white between lanes going our way */
-        r.restore(); }
+      // the painted lines: each solid line is ONE shape from the van to the horizon (split only where a hill hides the road), so it can't break up
+      { const lane = w => w * 0.022, runs = []; let cur = null, prev = null;
+        for (const L of LINES) { if (!prev || L.sg.i !== (prev.sg.i + 1) % N) { cur = []; runs.push(cur); } cur.push(L); prev = L; }
+        const band = (run, off, half, col) => { if (run.length < 1) return; const left = [], right = [];
+          for (const L of run) for (const p of (L === run[run.length - 1] ? [L.p1, L.p2] : [L.p1])) { const o = off(L, p), h = Math.max(0.55, half(p.sw)); left.push([p.sx + o * p.sw - h, p.sy]); right.push([p.sx + o * p.sw + h, p.sy]); }
+          r.fillStyle = col; r.beginPath(); left.forEach((q, k) => k ? r.lineTo(q[0], q[1]) : r.moveTo(q[0], q[1])); for (let k = right.length - 1; k >= 0; k--) r.lineTo(right[k][0], right[k][1]); r.closePath(); r.fill(); };
+        for (const run of runs) {
+          band(run, L => L.lt + 0.05, w => w * 0.012, '#dfe2e5'); band(run, L => L.rt - 0.05, w => w * 0.012, '#dfe2e5');   /* white edge lines */
+          band(run, () => -1 / 3 - 0.022 * 1.4, w => lane(w) * 0.6, '#e9bd34'); band(run, () => -1 / 3 + 0.022 * 1.4, w => lane(w) * 0.6, '#e9bd34');   /* double yellow */
+        }
+        for (const L of LINES) { const { sg, p1, p2, lt, rt } = L; if (Math.floor(sg.i / 3) % 4 !== 0) continue;   /* dashed white between lanes going our way */
+          for (let lx = lt < -1.5 ? -1 : 1 / 3; lx < rt - 0.2; lx += lx < 0 ? 4 / 3 : 2 / 3) poly(p1.sx + p1.sw * lx, p1.sy, Math.max(0.55, lane(p1.sw) * 0.8), p2.sx + p2.sw * lx, p2.sy, Math.max(0.55, lane(p2.sw) * 0.8), '#e2e5e8', 0.6, true); } }
       // the plow berm: a continuous 3D snowbank along both shoulders, far to near, its height rolling with the road
       if (SNOW) {   /* the plow berm, one smooth shape per side: no pieces, so no seams or stripes */
         const bh = (i, side) => 0.11 + 0.05 * Math.sin(i * 0.031 + side) + 0.035 * Math.sin(i * 0.117 + side * 2);
