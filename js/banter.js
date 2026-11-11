@@ -58,7 +58,7 @@ const VAN_TALK = [
   [['ROD', 'rod_suspicious', 'Did you leave the shop unlocked?'], ['MATT', 'matt_stare', '...'], ['ROD', 'rod_angry', 'MATT.'], ['MATT', 'matt_normal', "Who's gonna steal a used auger covered in doo doo?"]],
   [['MATT', 'matt_happy', 'I think the Clog Kings are scared of us.'], ['ROD', 'rod_smug', 'They should be. They charge thirty-five grand for a toilet.']],
   [['ROD', 'rod_normal', 'Never put your face over a cleanout.'], ['MATT', 'matt_tired', "You've told me that eleven times."], ['ROD', 'rod_stare', 'And you have done it twelve.']],
-  [['MATT', 'matt_normal', 'Did you see that lady\'s cat?'], ['ROD', 'rod_normal', 'The one in the sink?'], ['MATT', 'matt_happy', "It was guarding the clog. Good cat."]],
+  [['MATT', 'matt_normal', 'Did you see that lady\'s cat?'], ['ROD', 'rod_normal', 'The one in the sink?'], ['MATT', 'matt_happy', "It knew where the clog was... good cat."]],
   [['ROD', 'rod_tired', "I'm buying an espresso machine."], ['MATT', 'matt_happy', 'You say that every week.'], ['ROD', 'rod_stare', 'And every week I mean it more.']],
   [['MATT', 'matt_suspicious', "Why do people always say 'it was fine yesterday'?"], ['ROD', 'rod_smug', "Because it's never fine yesterday. It's been dying for a year."]],
   [['ROD', 'rod_normal', 'How many pants you got in the van?'], ['MATT', 'matt_normal', 'Two.'], ['ROD', 'rod_stare', 'Get three.']],
