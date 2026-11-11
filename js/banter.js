@@ -55,7 +55,7 @@ const VAN_TALK = [
   [['MATT', 'matt_happy', 'I want a tattoo of a plunger.'], ['ROD', 'rod_stare', 'Where?'], ['MATT', 'matt_normal', "Haven't decided."], ['ROD', 'rod_stare', 'Not on the face.']],
   [['ROD', 'rod_sad', 'I miss the old van.'], ['MATT', 'matt_shocked', 'The old van caught fire.'], ['ROD', 'rod_sad', 'It had heart and comfy seats.']],
   [['MATT', 'matt_normal', "What's the best part of this job?"], ['ROD', 'rod_normal', 'The moment it drains.'], ['MATT', 'matt_happy', 'That gurgle.'], ['ROD', 'rod_happy', 'That gurgle.']],
-  [['ROD', 'rod_suspicious', 'Did you leave the shop unlocked?'], ['MATT', 'matt_stare', '...'], ['ROD', 'rod_angry', 'MATT.'], ['MATT', 'matt_normal', "Who's gonna steal a used auger?"]],
+  [['ROD', 'rod_suspicious', 'Did you leave the shop unlocked?'], ['MATT', 'matt_stare', '...'], ['ROD', 'rod_angry', 'MATT.'], ['MATT', 'matt_normal', "Who's gonna steal a used auger covered in doo doo?"]],
   [['MATT', 'matt_happy', 'I think the Clog Kings are scared of us.'], ['ROD', 'rod_smug', 'They should be. They charge thirty-five grand for a toilet.']],
   [['ROD', 'rod_normal', 'Never put your face over a cleanout.'], ['MATT', 'matt_tired', "You've told me that eleven times."], ['ROD', 'rod_stare', 'And you have done it twelve.']],
   [['MATT', 'matt_normal', 'Did you see that lady\'s cat?'], ['ROD', 'rod_normal', 'The one in the sink?'], ['MATT', 'matt_happy', "It was guarding the clog. Good cat."]],
