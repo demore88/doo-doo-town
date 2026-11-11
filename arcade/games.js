@@ -1324,7 +1324,7 @@ GAMES.push({
     s.seen = new Set([101]); s.steps = 0; s.since = 0;
     const H = HERO(s), rod = H.name === 'ROD';
     s.hpMax = s.hp = rod ? 36 : 28; s.dmg = rod ? [3, 6] : [4, 7]; s.runOdds = rod ? 0.5 : 0.7;
-    s.lvl = 1; s.xp = 0; s.atkB = -1; s.def = 0; s.swing = 0; s.gear = []; s.items = { aid: 1, beans: 0, tonic: 0, poison: 0 }; s.restMin = 0; s.bag = null; s.kingDone = false;
+    s.lives = 3; s.lvl = 1; s.xp = 0; s.atkB = -1; s.def = 0; s.swing = 0; s.gear = []; s.items = { aid: 1, beans: 0, tonic: 0, poison: 0 }; s.restMin = 0; s.bag = null; s.kingDone = false;
     s.lights = 3; s.crk = 2; s.score = 0; s.fights = 0; s.won = 0; s.hits = 0; s.battle = null; s.flash = 0; s.fixT = 0;
     s.cv = document.createElement('canvas'); s.cv.width = TRL.RW; s.cv.height = TRL.RH; s.cx = s.cv.getContext('2d'); s.img = s.cx.createImageData(TRL.RW, TRL.RH); s.buf = new Uint32Array(s.img.data.buffer); s.zb = new Float32Array(TRL.RW);
   },
@@ -1502,6 +1502,11 @@ GAMES.push({
     W2.i++; W2.t = 0; W2.sel = 0;
     if (W2.i >= W2.lines.length) { s.wed = null; s.escort = false; s.married = true; s.crk += 8; s.items.tonic += 2; s.gear.push('crown'); s.def += 2; this.gainXP(s, 150);
       (s.log = s.log || []).push('THE DOWRY: 8 crackers, 2 Carl\'s Tonics, and a tiny POSSUM CROWN (DEF +2).'); SFX('ui_select'); } },
+  respawn(s) {   // knocked out: you come to back at the last Carl you visited (or the hatch), patched up
+    s.lives--; const back = [...s.carls].reverse().find(c => c.met), spot = back ? [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [back.c + dx, back.r + dy]).find(([c, r]) => s.map[r][c] === '.') : [1, 1];
+    s.pc = spot[0]; s.pr = spot[1]; s.vx = s.pc + 0.5; s.vy = s.pr + 0.5; s.mv = 0; s.hp = s.hpMax; s.venom = 0; s.since = 0; s.flash = 1; s.restMin += 20;
+    if (back) { const d = [[1, 0], [0, 1], [-1, 0], [0, -1]].findIndex(([dx, dy]) => s.pc + dx === back.c && s.pr + dy === back.r); s.dir = d; s.va = s.ta = d * Math.PI / 2; }
+    (s.log = s.log || []).push(back ? `You wake up next to Carl. He's fanning you with a cracker sleeve. (${s.lives} ${s.lives === 1 ? 'life' : 'lives'} left)` : `You wake up by the hatch. Everything hurts. (${s.lives} ${s.lives === 1 ? 'life' : 'lives'} left)`); },
   endFight(s) { s.battle = null; TRL.bgm(false); },
   say(s, text, fx) { s.battle.q.push({ text, fx, t: 0 }); },
   // turn-based: messages play one at a time (tap / PICK to hurry them), then the menu comes back
@@ -1521,13 +1526,13 @@ GAMES.push({
       if (b.stun > 0) { b.stun--; this.say(s, `The ${b.F.name} is still seeing spots.`); return; }
       if (b.faking) { b.faking = false; this.say(s, `...The POSSUM gets right back up. It was faking!`, () => { b.pose = 4; b.poseT = 0.6; TRL.cry(b.F); }); return; }
       if (s.rnd() < 0.12) { this.say(s, `The ${b.F.name} lunges... and misses!`, () => { b.pose = 3; b.poseT = 0.5; }); return; }
-      if (b.F.thief && s.crk > 0 && s.rnd() < 0.35) { const n2 = b.F.gary ? Math.min(2, s.crk) : 1; this.say(s, b.F.gary ? `GARY pockets ${n2} of your crackers. In his VEST.` : 'The RACCOON snatches one of your crackers!', () => { s.crk -= n2; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); }); return; }
+      if (b.F.thief && s.crk > 0 && s.rnd() < 0.35) { const n2 = b.F.gary ? Math.min(2, s.crk) : 1; this.say(s, b.F.gary ? `GARY pockets ${n2} of your crackers. In his VEST.` : 'The RACCOON snatches one of your crackers!', () => { s.crk -= n2; b.stolen = (b.stolen || 0) + n2; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); }); return; }
       const d = Math.max(1, Math.round((b.F.atk[0] + s.rnd() * (b.F.atk[1] - b.F.atk[0])) * (s.k || 1) * (1 + (b.F.king ? 0 : this.zone(s) * 0.25))) - s.def);   /* your gear soaks some of it */
       this.say(s, b.F.king ? `THE RAT KING rakes you with royal claws! -${d} HP` : b.F.venom ? `The BROWN RECLUSE bites! -${d} HP. That's gonna itch.` : b.F.thief ? `The RACCOON claws you! -${d} HP` : `The ${b.F.name} bites! -${d} HP`,
         () => { s.hp -= d; s.hits++; s.shake = 0.35; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); if (b.F.venom) s.venom = 6; });
-      b.after = () => { if (s.hp <= 0) { s.hp = 0; TRL.bgm(false); s.battle = null; this.defeated(s); } };
+      b.after = () => { if (s.hp <= 0) { s.hp = 0; TRL.bgm(false); s.battle = null; if (s.lives > 0) this.respawn(s); else this.defeated(s); } };
     };
-    const won = () => { this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { const loot = b.F.king ? 4 : b.F.gary ? 5 : 1 + Math.floor(s.rnd() * 2); s.crk += loot; this.gainXP(s, b.F.pts); if (b.F.king) s.kingDone = true; (s.log = s.log || []).push(`It dropped ${loot} peanut butter cracker${loot > 1 ? 's' : ''}. Where was it keeping those.`); s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
+    const won = () => { this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { const loot = b.F.king ? 4 : b.F.gary ? 5 : 1 + Math.floor(s.rnd() * 2); s.crk += loot + (b.stolen || 0); if (b.stolen) (s.log = s.log || []).push(`You get your ${b.stolen} stolen cracker${b.stolen > 1 ? 's' : ''} back, too.`); this.gainXP(s, b.F.pts); if (b.F.king) s.kingDone = true; (s.log = s.log || []).push(`It dropped ${loot} peanut butter cracker${loot > 1 ? 's' : ''}. Where was it keeping those.`); s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
     b.wonFn = won; b.foeTurnFn = foeTurn;
     if (o.id === 'item') { s.bag = { sel: 0, battle: true }; return; }
     if (o.id === 'whack') {
@@ -1673,7 +1678,7 @@ GAMES.push({
     else { const stink = 1 - s.gd[s.pr][s.pc] / Math.max(1, s.gmax);
       T('STINK', PX + 8, 110, '#c9a46a', 6); BAR(PX + 8, 116, PW - 16, 6, stink, stink > 0.75 ? '#a0d040' : '#8a6a3a');
       if (stink > 0.75 && Math.floor(t * 3) % 2) T('SMELLS CLOSE', PX + PW / 2, 132, '#a0d040', 6, 'center');
-      T(s.escort ? 'ESCORTING THE PRINCESS' : s.married ? 'MARRIED (TO A POSSUM)' : 'B = BAG / REST', PX + 8, 138, s.escort || s.married ? '#ff8ad0' : '#9fd1ff', 5); T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PB CRACKERS x' + s.crk, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
+      T(s.escort ? 'ESCORTING THE PRINCESS' : s.married ? 'MARRIED (TO A POSSUM)' : 'B = BAG / REST', PX + 8, 138, s.escort || s.married ? '#ff8ad0' : '#9fd1ff', 5); T('LIVES ' + '♥'.repeat(s.lives) + '♡'.repeat(3 - s.lives), PX + PW - 8, 138, '#e9665a', 5, 'right'); T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PB CRACKERS x' + s.crk, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
     // bottom bar: the hero's portrait + health, and the message scroll
     bevel(10, 200, 56, 60);
     if (s.battle && s.battle.F.princess && s.battle.open <= 0 && MG('ut_princess_face')) { const b = s.battle, f = b.out ? 1 : b.pose === 7 ? 6 : b.pose === 6 ? 4 : b.pose === 4 ? 2 : b.hp < b.max / 2 ? 3 : 0;
