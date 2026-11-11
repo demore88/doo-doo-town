@@ -46,7 +46,7 @@ const VAN_TALK = [
   [['ROD', 'rod_suspicious', 'Why is there a hot dog in the glovebox?'], ['MATT', 'matt_normal', 'Emergency hot dog.'], ['ROD', 'rod_gross', 'From when?'], ['MATT', 'matt_stare', '...Define "when."']],
   [['MATT', 'matt_normal', 'We should get a van dog.'], ['ROD', 'rod_stare', 'Last dog that got in this van ate your lunch.'], ['MATT', 'matt_happy', 'Biscuit was a good boy.'], ['ROD', 'rod_annoyed', 'Biscuit was a damn thief.']],
   [['ROD', 'rod_normal', "Customer asked me if we're brothers."], ['MATT', 'matt_happy', 'What\'d you say?'], ['ROD', 'rod_tired', 'I said "no" and then I thought about it for a long time.']],
-  [['MATT', 'matt_happy', "If we ever get a second van, I'm naming it."], ['ROD', 'rod_suspicious', 'What.'], ['MATT', 'matt_happy', 'Van Halen.'], ['ROD', 'rod_stare', "We're never getting a second van."]],
+  [['MATT', 'matt_happy', "If I ever get my own van, I'm naming it."], ['ROD', 'rod_suspicious', 'What.'], ['MATT', 'matt_happy', 'Van Halen.'], ['ROD', 'rod_stare', "We're never getting you a van."]],
   [['ROD', 'rod_normal', 'Turn that down.'], ['MATT', 'matt_normal', "It's not on."], ['ROD', 'rod_suspicious', "Then what's making that noise?"], ['MATT', 'matt_shocked', "...Is that the transmission?"]],
   [['MATT', 'matt_normal', 'What do you think Fernko\'s guy does on weekends?'], ['ROD', 'rod_smug', 'Sits in the store. Waiting for me to buy copper cleanouts.'], ['MATT', 'matt_happy', 'You DO buy a lot of copper cleanouts.']],
   [['ROD', 'rod_stare', "You're gonna be a good plumber someday."], ['MATT', 'matt_happy', 'Really?'], ['ROD', 'rod_smug', 'Not soon. But someday.']],
