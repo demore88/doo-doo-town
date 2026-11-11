@@ -306,7 +306,7 @@ function drive3d(choice, opts) {
   const SQ = window.SQ_CALLERS || {}, SQ_SEEN = (() => { try { return JSON.parse(localStorage.getItem('ddt_sq_seen') || '{}'); } catch (e) { return {}; } })();
   const SQ_IMG = {}; const sqImg = (w, n) => { const k = w + '_' + (n || 0); return SQ_IMG[k] || (SQ_IMG[k] = DI('sq_' + k)); };
   const SQ_FACE = { baby: [1, 0] };
-  const SQ_SIBS = { baby: ['BABY ACORN', 'BABY BUNNY'], kid: ['CAP KID', 'LITTLE BROTHER'] };   /* two kids on one phone: they pass it back and forth every line */   /* which face first, which face later in the call (the baby starts hopeful, then sad) */
+  const SQ_SIBS = { kid: ['SQUIRREL KID', 'LITTLE BROTHER'] };   /* two kids on one phone: they pass it back and forth every line */   /* which face first, which face later in the call (the baby starts hopeful, then sad) */
   function startSqCall(force) {   /* pick a caller, then a call you haven't heard yet */
     const whos = Object.keys(SQ); if (!whos.length) return; const who = force && SQ[force] ? force : whos[Math.floor(Math.random() * whos.length)], C = SQ[who];
     const seen = SQ_SEEN[who] || []; let fresh = C.calls.map((_, i) => i).filter(i => !seen.includes(i)); if (!fresh.length) { fresh = C.calls.map((_, i) => i); SQ_SEEN[who] = []; }
