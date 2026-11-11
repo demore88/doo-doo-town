@@ -82,7 +82,7 @@ const VAN_MONTH = [
     [['ROD', 'rod_sad', 'New year. New me.'], ['MATT', 'matt_suspicious', "You said that last year."], ['ROD', 'rod_tired', 'Last year I was also wrong.']],
   ],
   [ // FEBRUARY
-    [['MATT', 'matt_happy', "Valentine's Day. Get your wife anything?"], ['ROD', 'rod_smug', 'A clear drain.'], ['MATT', 'matt_stare', 'Romantic.']],
+    [['MATT', 'matt_happy', "Valentine's Day. Got any plans?"], ['ROD', 'rod_smug', 'Yeah. Snake a line in Gorham.'], ['MATT', 'matt_stare', 'Romantic.']],
     [['ROD', 'rod_tired', 'Snowbanks are taller than the van now.'], ['MATT', 'matt_normal', 'Found a mailbox in one yesterday. Still had mail in it.']],
     [['MATT', 'matt_suspicious', "Groundhog saw his shadow."], ['ROD', 'rod_normal', 'Up here it\'s six more weeks either way.'], ['MATT', 'matt_tired', 'Six more MONTHS.']],
     [['ROD', 'rod_normal', "Ice dams on every roof in Berlin."], ['MATT', 'matt_happy', "Not our department!"], ['ROD', 'rod_smug', 'Not yet.']],
@@ -138,7 +138,7 @@ const VAN_MONTH = [
   [ // NOVEMBER
     [['MATT', 'matt_normal', 'Hunting season. Orange hats everywhere.'], ['ROD', 'rod_normal', 'Wear yours when you go in the woods to find a septic.'], ['MATT', 'matt_shocked', 'Wait, really?']],
     [['ROD', 'rod_tired', 'Thanksgiving is coming.'], ['MATT', 'matt_happy', 'Turkey! Stuffing!'], ['ROD', 'rod_stare', 'Grease. Potato peels. Busiest plumbing day of the year.']],
-    [['MATT', 'matt_normal', "What are you thankful for?"], ['ROD', 'rod_smug', 'Waders.'], ['MATT', 'matt_stare', 'Not your family?'], ['ROD', 'rod_normal', 'Waders and my family.']],
+    [['MATT', 'matt_normal', "What are you thankful for?"], ['ROD', 'rod_smug', 'Waders.'], ['MATT', 'matt_stare', 'Not your kids?'], ['ROD', 'rod_normal', 'Waders and my kids.']],
     [['ROD', 'rod_normal', 'Clocks went back. Dark at four.'], ['MATT', 'matt_tired', "We'll be working by headlamp again."]],
   ],
   [ // DECEMBER
