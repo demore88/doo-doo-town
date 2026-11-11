@@ -551,7 +551,7 @@ function drive3d(choice, opts) {
       { const lane = w => w * 0.022, runs = []; let cur = null, prev = null;
         for (const L of LINES) { if (!prev || L.sg.i !== (prev.sg.i + 1) % N) { cur = []; runs.push(cur); } cur.push(L); prev = L; }
         const band = (run, off, half, col) => { if (run.length < 1) return; const left = [], right = [];
-          for (const L of run) for (const p of (L === run[run.length - 1] ? [L.p1, L.p2] : [L.p1])) { const o = off(L, p), h = Math.max(0.55, half(p.sw)); left.push([p.sx + o * p.sw - h, p.sy]); right.push([p.sx + o * p.sw + h, p.sy]); }
+          for (const L of run) for (const p of (L === run[run.length - 1] ? [L.p1, L.p2] : [L.p1])) { const o = off(L, p), h = Math.max(0.22, half(p.sw));   /* keeps shrinking with distance; the thinnest bits just get fainter */ left.push([p.sx + o * p.sw - h, p.sy]); right.push([p.sx + o * p.sw + h, p.sy]); }
           r.fillStyle = col; r.beginPath(); left.forEach((q, k) => k ? r.lineTo(q[0], q[1]) : r.moveTo(q[0], q[1])); for (let k = right.length - 1; k >= 0; k--) r.lineTo(right[k][0], right[k][1]); r.closePath(); r.fill(); };
         for (const run of runs) {
           band(run, L => L.lt + 0.05, w => w * 0.012, '#dfe2e5'); band(run, L => L.rt - 0.05, w => w * 0.012, '#dfe2e5');   /* white edge lines */
