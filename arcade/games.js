@@ -1297,11 +1297,12 @@ GAMES.push({
         for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) { if (m[r][c] !== '.' || (c === best[0] && r === best[1]) || (c === 1 && r === 1) || taken.some(q => q.c === c && q.r === r)) continue;
           if ([[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b2]) => m[r + b2][c + a] === '.').length !== 1) continue;
           const dd = Math.abs(D0[r][c] / s.dmax - zt); if (dd < bd) { bd = dd; pickC = { c, r }; } } return pickC; };
-      s.carls = []; [[0.08, 1], [0.5, 2], [0.88, 3]].forEach(([zt, tier]) => { const q = deadAt(zt, s.carls); if (q) s.carls.push({ ...q, tier, met: false }); }); }
-    if (s.carls.length < 3 && (s.regen = (s.regen || 0) + 1) < 12) return this.init(s);   /* not enough nooks for Carl: roll a new crawlspace */
+      s.carls = []; [[0.08, 1], [0.5, 2], [0.88, 3]].forEach(([zt, tier]) => { const q = deadAt(zt, s.carls); if (q) s.carls.push({ ...q, tier, met: false }); });
+      s.kingdom = deadAt(0.42, s.carls); }
+    if ((s.carls.length < 3 || !s.kingdom) && (s.regen = (s.regen || 0) + 1) < 12) return this.init(s);   /* not enough nooks for Carl: roll a new crawlspace */
     s.hobo = s.carls[0];
     s.shop = null; s.mapBought = false;
-    { const free = []; for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) if (m[r][c] === '.' && !(c === 1 && r === 1) && !(c === best[0] && r === best[1]) && !s.carls.some(q => q.c === c && q.r === r)) free.push([c, r]);
+    { const free = []; for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) if (m[r][c] === '.' && !(c === 1 && r === 1) && !(c === best[0] && r === best[1]) && !s.carls.some(q => q.c === c && q.r === r) && !(s.kingdom && s.kingdom.c === c && s.kingdom.r === r)) free.push([c, r]);
       s.traps = []; for (let i = 0; i < [22, 26, 30][s.diff] && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.traps.push({ c, r }); } }   /* rat traps, baited with the good crackers */
     s.pc = 1; s.pr = 1; s.dir = m[1][2] === '.' ? 0 : 1; s.vx = 1.5; s.vy = 1.5; s.va = s.dir * Math.PI / 2; s.mv = 0;
     s.seen = new Set([101]); s.steps = 0; s.since = 0;
@@ -1317,6 +1318,7 @@ GAMES.push({
     if (s.fixT) { s.fixT += dt * (s.fixT > 3.4 && (I.Ap || I.ptr.clicked) ? 6 : 1); if (s.fixT > 9.4) { const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.t < 50 + s.gmax * 2, f >= 0.3), line: s.epi[1] + (s.restMin ? ` (Rested ${s.restMin} min.)` : ''), extraTime: s.restMin }); } return; }
     if (!s.battle) { TRL.music.atick = performance.now(); TRL.amb(true); } else TRL.amb(false);
     if (s.talk) { const K = s.talk; K.t += dt; if ((K.t > 0.4 && (I.Ap || I.ptr.clicked)) || K.t > 4.5) { K.i++; K.t = 0; if (K.i >= K.lines.length) { const me = HERO(s).name, them = me === 'ROD' ? 'Matt' : 'Rod'; s.talk.i = K.lines.length - 1; s.end = { win: true, stars: 1, carl: true, extraTime: s.restMin, line: `${them} fixed it. ${me === 'ROD' ? 'Rod' : 'Matt'} is still talking about Carl.` }; } } return; }
+    if (s.wed) return this.wedStep(s, dt, I);
     if (s.bag) return this.bagging(s, dt, I);
     if (s.shop) return this.shopping(s, dt, I);
     if (s.battle) return this.fight(s, dt, I);
@@ -1335,9 +1337,10 @@ GAMES.push({
     s.fx0 = s.vx; s.fy0 = s.vy; s.fa0 = s.va; s.ta = s.va; s.mvD = dur;
     if (cmd === 'L' || cmd === 'R') { s.ta = s.va + (cmd === 'L' ? -1 : 1) * Math.PI / 2; s.dir = (s.dir + (cmd === 'L' ? 3 : 1)) % 4; s.mv = s.mvD = dur * 0.8; return; }
     const v = [[1, 0], [0, 1], [-1, 0], [0, -1]][s.dir], sg = cmd === 'F' ? 1 : -1, nc = s.pc + v[0] * sg, nr = s.pr + v[1] * sg;
+    if (s.escort && !s.married && s.kingdom && nc === s.kingdom.c && nr === s.kingdom.r && cmd === 'F') { this.wedding(s); return; }   /* you brought her home */
     const carlHere = s.carls.find(q => q.c === nc && q.r === nr);
     if (carlHere && cmd === 'F') { this.openShop(s, carlHere); return; }   /* crawl up to Carl: he's sitting right there */
-    if (!this.open(s, nc, nr) || carlHere) { s.shake = 0.15; if (!s.bonk || s.t - s.bonk > 0.6) { s.bonk = s.t; SFX('click', { vol: 0.4 }); } return; }
+    if (!this.open(s, nc, nr) || carlHere || (s.kingdom && nc === s.kingdom.c && nr === s.kingdom.r)) { s.shake = 0.15; if (!s.bonk || s.t - s.bonk > 0.6) { s.bonk = s.t; SFX('click', { vol: 0.4 }); } return; }
     s.pc = nc; s.pr = nr; s.mv = s.mvD = cmd === 'B' ? dur * 1.3 : dur; s.arrived = true; SFX('ui_tap', { vol: 0.12 });
   },
   arrive(s) {
@@ -1346,8 +1349,8 @@ GAMES.push({
     if (s.venom > 0) { s.venom--; if (s.hp > 1) { s.hp--; (s.log = s.log || []).push('The spider bite itches. -1 HP'); } }
     if (s.pc === s.goal.c && s.pr === s.goal.r) { s.fixT = 0.01; s.score += 500; TRL.amb(false);
       const met = s.met || [], big = ['THE RAT KING', 'BROWN RECLUSE', 'RACCOON', 'BIG BUFF RAT', 'POSSUM', 'SEWER RAT'].find(n => met.includes(n));   /* ...and then nobody believes you */
-      const brag = !met.length ? 'Just a drip. Easy one.' : big === 'THE RAT KING' ? 'There was a RAT KING down there. With a CROWN.' : big === 'BROWN RECLUSE' ? 'I fought a brown recluse. Hand to hand.' : big === 'RACCOON' ? 'A raccoon jumped me. We went three rounds.' : met.length > 2 ? `I fought ${met.length} things down there.` : `I had to fight a ${big.toLowerCase()} down there.`;
-      const nope = !met.length ? ["That's what I like to hear.", 'Good. Now get in the van.'] : ['Sure you did, bud.', 'Uh huh. Get in the van.', "You were under there twenty minutes. Fixing a Fernco.", 'Was it the same raccoon as last time?', "Sure. And I'm the Rat King.", "You smell like you did, I'll give you that.", "Nobody's gonna believe that.", "Don't tell the customer that."];
+      const brag = s.married ? 'I got married down there. To a possum. Then I left on a quest.' : !met.length ? 'Just a drip. Easy one.' : big === 'THE RAT KING' ? 'There was a RAT KING down there. With a CROWN.' : big === 'BROWN RECLUSE' ? 'I fought a brown recluse. Hand to hand.' : big === 'RACCOON' ? 'A raccoon jumped me. We went three rounds.' : met.length > 2 ? `I fought ${met.length} things down there.` : `I had to fight a ${big.toLowerCase()} down there.`;
+      const nope = s.married ? ['...Congratulations?', 'Does she know where you live?', 'Are you paying child support to a possum?', 'You were under there for an hour.'] : !met.length ? ["That's what I like to hear.", 'Good. Now get in the van.'] : ['Sure you did, bud.', 'Uh huh. Get in the van.', "You were under there twenty minutes. Fixing a Fernco.", 'Was it the same raccoon as last time?', "Sure. And I'm the Rat King.", "You smell like you did, I'll give you that.", "Nobody's gonna believe that.", "Don't tell the customer that."];
       s.epi = [brag, nope[Math.floor(s.rnd() * nope.length)]]; return; }
     if (s.gd[s.pr][s.pc] === 1 && !s.kingDone) { this.ambush(s, TRL.FOES.find(f => f.king)); return; }   /* he guards the drip */
     this.carlHint(s);
@@ -1408,6 +1411,7 @@ GAMES.push({
     const SEEN = { 'SEWER RAT': 'Rats. A LOT of rats.', 'BIG BUFF RAT': "One of the rats was JACKED. Like it LIFTS.", 'POSSUM': 'A possum faked its own death at me. Then it got back UP.', 'RACCOON': 'A raccoon took my peanut butter. Right out of my hand.', 'BROWN RECLUSE': 'A brown recluse came down on a string. I can still feel it.', 'THE POSSUM PRINCESS': 'A possum PRINCESS knighted me. With a twig. I am a knight now.', 'GARY': 'A raccoon named Gary robbed me. He had a VEST.', 'THE RAT KING': 'There is a KING down there. A RAT king. He had a CAPE.' };
     L.push([me, pick(["I'm out. I'm not going back down there.", "Don't. Don't go under there.", "I need a minute. Maybe a week."])]);
     [...new Set(met)].slice(-3).forEach(n => L.push([me, SEEN[n]]));
+    if (s.married) L.push([me, "Also I'm married now. To a possum princess. I said I was going on a quest."]);
     if (s.metHobo) L.push([me, pick(["And a guy named Carl lives down there! He sold me beans!", "There's a man down there. Carl. He wears a hard hat. He LOVES me.", "Carl. His name is Carl. He warmed beans in his armpit."])]);
     L.push([them, pick(['Uh huh.', 'Sure, bud.', 'Right.', "You've been under a trailer for twenty minutes."])]);
     L.push([them, pick(["I'll just go do it then, scaredy cat.", "Gimme the Fernco. I'll do it, scaredy cat.", "Move. I'll go do it, scaredy cat."])]);
@@ -1446,6 +1450,36 @@ GAMES.push({
     s.bag = null; (s.log = s.log || []).push(msg);
     if (B.battle) { const b = s.battle; this.say(s, msg); b.after = () => { if (b.hp <= 0) b.wonFn(); else b.foeTurnFn(); }; } },
   bagBox(i) { return [178, 30 + i * 22, 140, 18]; },
+  // THE POSSUM KINGDOM: you brought the Princess home. Her family has expectations.
+  wedding(s) { const me = HERO(s).name;
+    s.wed = { i: 0, t: 0, sel: 0, lines: [
+      ['', 'THE POSSUM KINGDOM'],
+      ['POSSUM KING', 'You. Human. You have returned our daughter.'],
+      ['POSSUM QUEEN', 'And she says you gave her a CRACKER.'],
+      ['POSSUM KING', 'In the Possum Kingdom, a cracker is a proposal.'],
+      [me, '...It is NOT a proposal.', ['NO. ABSOLUTELY NOT.', 'I GAVE HER A CRACKER.', 'I AM HERE TO FIX A PIPE.']],
+      ['POSSUM QUEEN', 'He said yes.'],
+      ['POSSUM KING', 'He said yes!'],
+      [me, 'I did NOT say yes.', ['NO.', 'NO!', 'I SAID NO.']],
+      ['', 'The possums do not accept "no." Several of them are already crying.'],
+      ['POSSUM KING', 'Dearly beloved. We are gathered here in the dirt...'],
+      ['THE PRINCESS', '*hisses lovingly*'],
+      ['POSSUM KING', 'You may now kiss the possum.'],
+      [me, '...', ['*kiss the possum*', '*kiss the possum, crying*', '*shake her paw firmly*']],
+      ['', 'You are married. The possums play dead in celebration.'],
+      ['POSSUM QUEEN', 'Will you stay, son? Forever? In the dirt?'],
+      [me, 'Honey... I have to go on a quest. A very long quest.', ['I WILL RETURN.', 'I WILL... RETURN.', 'DO NOT WAIT UP.']],
+      ['THE PRINCESS', '*plays dead out of sadness*'],
+      ['', 'You crawl away. You will never return. You keep the dowry.'],
+    ] }; SFX('ui_select'); },
+  wedStep(s, dt, I) { const W2 = s.wed, L = W2.lines[W2.i], ch = L[2]; W2.t += dt;
+    if (ch) { if (I.Up || I.Lp) W2.sel = (W2.sel + ch.length - 1) % ch.length; if (I.Dp || I.Rp) W2.sel = (W2.sel + 1) % ch.length;
+      let pick = I.Ap ? W2.sel : null; if (I.ptr.clicked) ch.forEach((_, i) => { const [x, y, w, h] = this.optBox(i, ch.length); if (I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h) pick = i; });
+      if (pick === null || W2.t < 0.4) return; SFX('ui_select'); }
+    else if (!((W2.t > 0.4 && (I.Ap || I.ptr.clicked)) || W2.t > 4.2)) return;
+    W2.i++; W2.t = 0; W2.sel = 0;
+    if (W2.i >= W2.lines.length) { s.wed = null; s.escort = false; s.married = true; s.crk += 8; s.items.tonic += 2; s.gear.push('crown'); s.def += 2; this.gainXP(s, 150);
+      (s.log = s.log || []).push('THE DOWRY: 8 crackers, 2 Carl\'s Tonics, and a tiny POSSUM CROWN (DEF +2).'); SFX('ui_select'); } },
   endFight(s) { s.battle = null; TRL.bgm(false); },
   say(s, text, fx) { s.battle.q.push({ text, fx, t: 0 }); },
   // turn-based: messages play one at a time (tap / PICK to hurry them), then the menu comes back
@@ -1484,7 +1518,7 @@ GAMES.push({
       if (s.rnd() < (b.F.king ? 0.4 : 0.85)) { b.stun = b.F.king ? 1 : 2; this.say(s, `The ${b.F.name} is blinded!`); } else this.say(s, 'It just squints at you.');
       b.after = () => foeTurn();
     } else if (o.id === 'pb') {
-      if (b.F.princess) { s.crk--; this.say(s, 'You offer the Princess a peanut butter cracker...'); this.say(s, 'She accepts. She knights you with a twig. DEF +1!', () => { s.def++; b.pose = 4; b.poseT = 1; }); this.say(s, 'She drops something shiny as she leaves: CARL\'S TONIC.', () => { s.items.tonic++; this.gainXP(s, b.F.pts); b.out = 0.01; }); b.after = () => this.endFight(s); return; }
+      if (b.F.princess) { s.crk--; this.say(s, 'You offer the Princess a peanut butter cracker...'); this.say(s, 'She accepts. She knights you with a twig. DEF +1!', () => { s.def++; b.pose = 4; b.poseT = 1; }); this.say(s, 'She takes your hand. She would like to go HOME now. (A crown on your map marks her kingdom.)', () => { this.gainXP(s, b.F.pts); s.escort = true; b.out = 0.01; }); b.after = () => this.endFight(s); return; }
       s.crk--; this.say(s, 'You flick a peanut butter cracker down the row...'); this.say(s, `The ${b.F.name} goes for it. You crawl away.`, () => { b.pose = 3; b.poseT = 9; b.out = 0.01; }); b.after = () => this.endFight(s);
     } else if (o.id === 'run') {
       if (s.rnd() < s.runOdds * (b.F.king ? 0.5 : 1)) { this.say(s, 'You scramble away through the muck!'); b.after = () => this.endFight(s); }
@@ -1562,10 +1596,23 @@ GAMES.push({
     }
     if (b && b.open > 0) { const k = b.open / 0.6; for (let i = 0; i < 9; i++) R(VX, VY + i * 20, VW * (1 - k), 20, '#000'); }   // the screen wipe into the fight
     if (s.flash > 0) { g.fillStyle = `rgba(255,250,220,${s.flash})`; g.fillRect(VX, VY, VW, VH); }
+    if (s.wed) { const W2 = s.wed, [who, line] = W2.lines[W2.i], k = W2.i;
+      const grd = g.createLinearGradient(0, VY, 0, VY + VH); grd.addColorStop(0, '#2a1a12'); grd.addColorStop(1, '#5a3a22'); g.fillStyle = grd; g.fillRect(VX, VY, VW, VH);
+      for (let i = 0; i < 6; i++) { const fx = VX + 20 + i * 56; R(fx, VY + 52, 3, 12, '#e8dcc0'); C(fx + 1.5, VY + 49 + Math.sin(t * 9 + i) * 1, 2.5, '#ffd27a'); }   /* candles on the dirt wall */
+      const crown = (x, y, sz) => { g.fillStyle = '#f7d44a'; g.beginPath(); g.moveTo(x - sz, y + sz * 0.6); g.lineTo(x - sz, y - sz * 0.2); g.lineTo(x - sz * 0.45, y + sz * 0.25); g.lineTo(x, y - sz * 0.7); g.lineTo(x + sz * 0.45, y + sz * 0.25); g.lineTo(x + sz, y - sz * 0.2); g.lineTo(x + sz, y + sz * 0.6); g.fill(); C(x, y - sz * 0.7, sz * 0.18, '#ff8ad0'); };
+      const dead = k >= 13 && k <= 13, sad = k >= 16, base = VY + VH - 18;
+      TRL.UTS('ut_possum', dead ? 7 : (Math.floor(t * 1.5) % 3 === 0 ? 1 : 0), VX + 60, base, 70, false); crown(VX + 78, base - 50, 9);   /* the King */
+      TRL.UTS('ut_possum', dead ? 7 : (Math.floor(t * 1.5 + 1) % 3 === 0 ? 1 : 0), VX + VW - 60, base, 66, true); crown(VX + VW - 78, base - 47, 6);   /* the Queen */
+      TRL.UTS('ut_possum', sad ? 7 : k >= 9 && k <= 12 ? 4 : 0, VX + VW / 2, base + 4, 82, false); crown(VX + VW / 2 + 26, base - (k >= 9 && k <= 12 ? 78 : 55), 7);   /* the Princess */
+      if (k >= 9 && k <= 15) { g.globalAlpha = 0.55; g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(VX + VW / 2 + 18, base - (k <= 12 ? 74 : 52)); g.lineTo(VX + VW / 2 - 30, base - 10); g.lineTo(VX + VW / 2 + 40, base - 6); g.fill(); g.globalAlpha = 1; }   /* her veil */
+      if (k >= 13 && k <= 14) for (let i = 0; i < 8; i++) T('♥', VX + 30 + (i * 41 + t * 30) % (VW - 40), VY + 60 + Math.sin(t * 2 + i) * 20, '#ff8ad0', 8, 'center');
+      R(VX + 8, VY + 6, VW - 16, 28, 'rgba(10,8,6,.85)');
+      if (!who) T(line, VX + VW / 2, VY + 20, '#e8c86a', 6, 'center'); else { T(who + ':', VX + 14, VY + 14, '#e8c86a', 6); T(line, VX + 14, VY + 26, '#fff', 6); }
+    }
     if (s.bag) { R(VX, VY, VW, VH, 'rgba(10,8,6,.93)'); T('THE BAG', VX + 10, VY + 10, '#e8c86a', 8);
       const st = [['LEVEL', s.lvl], ['XP', `${s.xp} / ${s.lvl * 60}`], ['HP', `${Math.max(0, s.hp)} / ${s.hpMax}`], ['ATTACK', `${s.dmg[0] + s.atkB + s.lvl - 1}-${s.dmg[1] + s.atkB + s.lvl - 1}`], ['DEFENSE', s.def], ['CRACKERS', s.crk], ['FLASHLIGHTS', s.lights], ['TIME RESTED', `${s.restMin} MIN`]];
       st.forEach(([k, v], i) => { T(k, VX + 12, VY + 30 + i * 14, '#9fb3d9', 6); T(String(v), VX + 150, VY + 30 + i * 14, '#fff', 6, 'right'); });
-      const GN = { pads: 'KNEE PADS', hat: 'HARD HAT', waders: 'CHEST WADERS', wrench: 'BIGGER WRENCH', cutter: 'PIPE CUTTER' }; T('WEARING: ' + (s.gear.length ? s.gear.map(q => GN[q]).join(', ') : 'NOTHING SPECIAL'), VX + 12, VY + VH - 12, '#c9a46a', 5);
+      const GN = { crown: 'POSSUM CROWN', pads: 'KNEE PADS', hat: 'HARD HAT', waders: 'CHEST WADERS', wrench: 'BIGGER WRENCH', cutter: 'PIPE CUTTER' }; T('WEARING: ' + (s.gear.length ? s.gear.map(q => GN[q]).join(', ') : 'NOTHING SPECIAL'), VX + 12, VY + VH - 12, '#c9a46a', 5);
       this.bagList(s).forEach((o, i) => { const [x, y, w, h] = this.bagBox(i), on = i === s.bag.sel; R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); T(o.label, x + 6, y + h / 2 + 1, o.off ? '#5a5048' : on ? '#f7c418' : '#e8dcc0', 6); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); }); }
     if (s.fixT && s.fixT < 3.4) { R(VX + 20, VY + 70, VW - 40, 40, 'rgba(10,8,6,.85)'); T(s.fixT < 1.2 ? 'THERE IT IS. THE DRIP.' : s.fixT < 2.2 ? 'FERNCO ON...' : 'CLAMPS TIGHT. DONE!', VX + VW / 2, VY + 90, '#7bd65b', 9, 'center'); }
     if (s.talk) { const K = s.talk, [who, line] = K.lines[Math.min(K.i, K.lines.length - 1)];
@@ -1588,10 +1635,12 @@ GAMES.push({
       for (const k of s.seen) { const c = k % 100, r = Math.floor(k / 100); R(mx0 + c * Z, my0 + r * Z, Z, Z, '#7a6a50');
         for (const [ddx, ddy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (s.map[r + ddy][c + ddx] !== '.') R(mx0 + (c + ddx) * Z, my0 + (r + ddy) * Z, Z, Z, '#3e3a34'); }
       for (const cl of s.carls) if (cl.met || s.seen.has(cl.r * 100 + cl.c)) R(mx0 + cl.c * Z, my0 + cl.r * Z, Z, Z, '#4aa83a');   /* Carl */
+      if (s.escort && s.kingdom && Math.floor(t * 3) % 2) R(mx0 + s.kingdom.c * Z, my0 + s.kingdom.r * Z, Z, Z, '#f7d44a');   /* her kingdom */
       if (s.mapBought && Math.floor(t * 3) % 2) { T('X', mx0 + s.goal.c * Z + Z / 2, my0 + s.goal.r * Z + Z / 2, '#e9665a', 6, 'center'); }   /* his napkin map */
       const cx = mx0 + s.vx * Z, cy = my0 + s.vy * Z, a = s.va; g.fillStyle = '#f7c418'; g.beginPath(); g.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4); g.lineTo(cx + Math.cos(a + 2.4) * 3, cy + Math.sin(a + 2.4) * 3); g.lineTo(cx + Math.cos(a - 2.4) * 3, cy + Math.sin(a - 2.4) * 3); g.fill(); g.restore(); }
     bevel(PX, 100, PW, 88);
-    if (s.shop) { const W2 = this.wares(s); W2.forEach((o, i) => { const [x, y, w, h] = this.optBox(i, W2.length), on = i === s.shop.sel;
+    if (s.wed && s.wed.lines[s.wed.i][2]) { const ch = s.wed.lines[s.wed.i][2]; ch.forEach((o, i) => { const [x, y, w, h] = this.optBox(i, ch.length), on = i === s.wed.sel; R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); T(o, x + 5, y + h / 2 + 1, on ? '#f7c418' : '#e8dcc0', 5); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); }); }
+    else if (s.shop) { const W2 = this.wares(s); W2.forEach((o, i) => { const [x, y, w, h] = this.optBox(i, W2.length), on = i === s.shop.sel;
       R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); T(o.label, x + 5, y + h / 2 + 1, o.off ? '#5a5048' : on ? '#f7c418' : '#e8dcc0', 5); if (o.price) T(o.price + ' CRK', x + w - 4, y + h / 2 + 1, s.crk >= o.price && !o.off ? '#7bd65b' : '#8a5a50', 5, 'right'); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); }); }
     else if (b && b.open <= 0 && !b.q.length && !s.bag) this.opts(s).forEach((o, i, A) => { const [x, y, w, h] = this.optBox(i, A.length), on = i === b.sel;
       R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); R(x, y + h - 1, w, 1, '#120e09'); T(o.label, x + 6, y + h / 2 + 1, o.off ? '#5a5048' : on ? '#f7c418' : '#e8dcc0', 6); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); });
@@ -1599,7 +1648,7 @@ GAMES.push({
     else { const stink = 1 - s.gd[s.pr][s.pc] / Math.max(1, s.gmax);
       T('STINK', PX + 8, 110, '#c9a46a', 6); BAR(PX + 8, 116, PW - 16, 6, stink, stink > 0.75 ? '#a0d040' : '#8a6a3a');
       if (stink > 0.75 && Math.floor(t * 3) % 2) T('SMELLS CLOSE', PX + PW / 2, 132, '#a0d040', 6, 'center');
-      T('B = BAG / REST', PX + 8, 138, '#9fd1ff', 5); T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PB CRACKERS x' + s.crk, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
+      T(s.escort ? 'ESCORTING THE PRINCESS' : s.married ? 'MARRIED (TO A POSSUM)' : 'B = BAG / REST', PX + 8, 138, s.escort || s.married ? '#ff8ad0' : '#9fd1ff', 5); T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PB CRACKERS x' + s.crk, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
     // bottom bar: the hero's portrait + health, and the message scroll
     bevel(10, 200, 56, 60);
     if (s.shop && MG('ut_carl_face')) { const S = s.shop, tw = Math.floor(t / 3.1) % 3 === 2 && (t % 3.1) < 0.18, f = tw ? 7 : S.flip != null && S.t > 1.1 ? S.flip : S.face;
