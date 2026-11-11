@@ -1290,6 +1290,7 @@ GAMES.push({
         for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) if (m[r][c] === '#' && !(c === best[0] && r === best[1])) { const ws = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b2]) => m[r + b2][c + a] === '.'); if (ws.length === 1) { m[r][c] = '.'; return [c, r]; } }
         return [-9, -9]; })();   /* only in a dead end, so he never blocks the way */
       s.hobo = { c: pick[0], r: pick[1] }; }
+    if (s.hobo.c < 0 && (s.regen = (s.regen || 0) + 1) < 12) return this.init(s);   /* no spot for Carl: roll a new crawlspace */
     s.cash = 3; s.shop = null; s.mapBought = false;
     s.pc = 1; s.pr = 1; s.dir = m[1][2] === '.' ? 0 : 1; s.vx = 1.5; s.vy = 1.5; s.va = s.dir * Math.PI / 2; s.mv = 0;
     s.seen = new Set([101]); s.steps = 0; s.since = 0;
