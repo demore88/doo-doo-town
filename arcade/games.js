@@ -1465,7 +1465,7 @@ GAMES.push({
     if (t === 1) L.push(gear('pipewrench', 'PIPE WRENCH', 3, 'atk', 3, 'ATK +3. Finally, a weapon.'), gear('lid', 'TRASH CAN LID', 3, 'def', 2, 'DEF +2. Strapped to your arm. Smells.'), gear('pads', 'KNEE PADS', 2, 'def', 1, 'DEF +1. Still warm.'));
     if (t >= 2) L.push({ id: 'beans', label: 'COLD BEANS', price: 2, go: () => I2.beans++, line: '+25 HP. He warmed them in his armpit.' }, gear(t === 2 ? 'hat' : 'waders', t === 2 ? 'HARD HAT' : 'CHEST WADERS', t === 2 ? 5 : 7, 'def', t === 2 ? 2 : 3, t === 2 ? "DEF +2. It's his old one." : 'DEF +3. Mostly waterproof.'), gear(t === 2 ? 'wrench' : 'cutter', t === 2 ? 'MONKEY WRENCH' : 'PIPE CUTTER', t === 2 ? 6 : 8, 'atk', t === 2 ? 2 : 3, t === 2 ? 'ATK +2. 24 inches of truth.' : 'ATK +3. Do not ask what else he cut with it.'));
     L.push({ id: 'map', label: t < 3 ? 'NAPKIN MAP' : 'MAP TO THE DRIP', price: t < 3 ? 2 : 3, go: () => { s.maps[t - 1] = true; }, line: t < 3 ? "An X on a napkin: Carl's next hidey-hole. Tap your map to look." : 'An X on a napkin marks the DRIP. Tap your map to look.', off: s.maps[t - 1] });   /* each Carl sells the way to the next one; the last one sells the way to the drip */
-    if (t === 3) L.push({ id: 'tonic', label: "CARL'S TONIC", price: 3, go: () => I2.tonic++, line: 'Full health. Smells like gasoline and love.' }, { id: 'poison', label: 'RAT POISON', price: 4, go: () => I2.poison++, line: '25 damage to anything with a tail. Including Kings.' });
+    if (t === 3) L.push({ id: 'tonic', label: "CARL'S TONIC", price: 3, go: () => I2.tonic++, line: 'Full health. Smells like gasoline and Carl.' }, { id: 'life', label: 'EXTRA LIFE', price: 20, go: () => { s.lives++; }, line: 'One more life. If you go down, Carl will find you. Carl ALWAYS finds you.' }, { id: 'poison', label: 'RAT POISON', price: 4, go: () => I2.poison++, line: '25 damage to anything with a tail. Including Kings.' });
     return [...L, { id: 'bye', label: 'LEAVE', price: 0 } ]; },
   xs(s) { const M = s.maps || []; return [M[0] && s.carls[1], M[1] && s.carls[2], M[2] && s.goal].filter(Boolean); },   /* where Carl's napkin maps point */
   bigBox() { return { x: 14, y: 26, w: 384, h: 236 }; },
@@ -1517,7 +1517,7 @@ GAMES.push({
     if (it.id === 'bye') { (s.log = s.log || []).push('CARL: ' + this.HOBO_BYE[Math.floor(s.rnd() * this.HOBO_BYE.length)]); if (!s.iga) { s.iga = true; s.log.push('(Could have bought out his whole store with three bucks of crackers from IGA.)'); } s.shop = null; SFX('ui_select'); return; }
     if (it.off) { S.say = "You already have it. Do you not like it? ...You don't like it."; this.mood(s, [3]); S.flip = 5; SFX('click'); return; }
     if (s.crk < it.price) { S.say = this.HOBO_BROKE[Math.floor(s.rnd() * this.HOBO_BROKE.length)]; this.mood(s, [2, 5]); SFX('click'); return; }
-    s.crk -= it.price; it.go(); S.say = it.id === 'tonic' ? "Oh yes. You'll like this. It's full of gasoline and my LOVE, baby. And remember... Carl's hands are always warm.  (" + it.line + ')' : this.HOBO_BUY[Math.floor(s.rnd() * this.HOBO_BUY.length)] + '  (' + it.line + ')'; this.mood(s, [1, 6]); S.buyT = 1.2; SFX('ut_buy', { vol: 0.7 });
+    s.crk -= it.price; it.go(); S.say = it.id === 'tonic' ? "Oh yes. You'll like this. It's full of gasoline and my LOVE. And remember... Carl's hands are always warm.  (" + it.line + ')' : this.HOBO_BUY[Math.floor(s.rnd() * this.HOBO_BUY.length)] + '  (' + it.line + ')'; this.mood(s, [1, 6]); S.buyT = 1.2; SFX('ut_buy', { vol: 0.7 });
   },
   // knocked out of the crawlspace: he tells the other guy everything. The other guy doesn't buy a word of it, goes down, and fixes it.
   defeated(s) {
@@ -1841,7 +1841,7 @@ GAMES.push({
       const cx = mx0 + s.vx * Z, cy = my0 + s.vy * Z, a = s.va; g.fillStyle = '#f7c418'; g.beginPath(); g.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4); g.lineTo(cx + Math.cos(a + 2.4) * 3, cy + Math.sin(a + 2.4) * 3); g.lineTo(cx + Math.cos(a - 2.4) * 3, cy + Math.sin(a - 2.4) * 3); g.fill(); g.restore(); }
       bevel(PX, 100, PW, 88);
       const stink = 1 - s.gd[s.pr][s.pc] / Math.max(1, s.gmax);
-      T('STINK', PX + 8, 110, '#c9a46a', 6); T('♥'.repeat(s.lives) + '♡'.repeat(3 - s.lives), PX + PW - 8, 110, '#e9665a', 6, 'right'); BAR(PX + 8, 117, PW - 16, 6, stink, stink > 0.75 ? '#a0d040' : '#8a6a3a');
+      T('STINK', PX + 8, 110, '#c9a46a', 6); T('♥'.repeat(s.lives) + '♡'.repeat(Math.max(0, 3 - s.lives)), PX + PW - 8, 110, '#e9665a', 6, 'right'); BAR(PX + 8, 117, PW - 16, 6, stink, stink > 0.75 ? '#a0d040' : '#8a6a3a');
       const st = s.escort ? ['ESCORTING THE PRINCESS', '#ff8ad0'] : stink > 0.75 ? ['SMELLS CLOSE!', Math.floor(t * 3) % 2 ? '#a0d040' : '#6a8a30'] : s.married ? ['MARRIED (TO A POSSUM)', '#ff8ad0'] : null;
       if (st) T(st[0], PX + 8, 131, st[1], 5);
       T('LIGHT x' + s.lights, PX + 8, 146, '#e8dcc0', 5); T('CRACKERS x' + s.crk, PX + 8, 160, '#e8dcc0', 5); T('BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 5);
