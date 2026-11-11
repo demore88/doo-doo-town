@@ -303,17 +303,13 @@ function drive3d(choice, opts) {
   // ---------- the windshield: cracks that stick around (and grow with every hit), bugs, mud, and now and then some weather ----------
   let grip = 0, gripSide = 1, sqCall = null;
   // the squirrel's family calls the van. Each caller has an avatar (assets/drive/sq_<who>.png; a squirrel stand-in until the art exists).
-  const SQ_CALLS = [
-    { who: 'baby', name: 'BABY SQUIRREL', lines: ['Hello? Is this the blue van?', 'Have you seen my mommy?', 'Someone said they saw your van go by...', 'She was getting us acorns.'] },
-    { who: 'wife', name: 'MRS. SQUIRREL', lines: ['Is this Mt. Washington Sewer and Drain?', 'My husband went out for nuts an hour ago.', 'Gary from the oak tree says he saw a van.', 'He said it was YELLOW AND BLUE.'] },
-    { who: 'grandma', name: 'GRANDMA SQUIRREL', lines: ["Speak up, dear, I'm old.", 'Did my grandson come by your truck?', 'He never calls.', 'Well. He never will now, will he.'] },
-    { who: 'lawyer', name: 'SQUIRREL ATTORNEY', lines: ['Good afternoon. Chester P. Nutworth, Esquire.', 'I represent the family of the deceased.', 'We have dashcam footage from a crow.', 'Expect to hear from us.'] },
-    { who: 'brother', name: 'BIG BROTHER SQUIRREL', lines: ['Yeah. You. In the van.', 'That was my little brother, man.', 'I know where you park.', "Check your engine bay tonight. I'm serious."] },
-    { who: 'kid', name: 'SQUIRREL KID', lines: ['Is my dad okay?', 'He was gonna take me to the bird feeder.', 'Mom is crying...', 'Can YOU take me to the bird feeder?'] },
-    { who: 'pastor', name: 'REVEREND SQUIRREL', lines: ['Bless you, my child.', 'Our brother crossed over today. On Route 16.', 'Services are Sunday under the big maple.', 'Please. Bring nuts.'] },
-  ];
+  const SQ = window.SQ_CALLERS || {}, SQ_SEEN = (() => { try { return JSON.parse(localStorage.getItem('ddt_sq_seen') || '{}'); } catch (e) { return {}; } })();
   const SQ_IMG = {}; const sqImg = w => SQ_IMG[w] || (SQ_IMG[w] = DI('sq_' + w));
-  function startSqCall(force) { const c = force ? SQ_CALLS.find(q => q.who === force) || SQ_CALLS[0] : SQ_CALLS[Math.floor(Math.random() * SQ_CALLS.length)]; sqImg(c.who); sqCall = { c, t: 0, ring: 1.2 }; sfx('phone_ring'); }   /* a raccoon on the glass */
+  function startSqCall(force) {   /* pick a caller, then a call you haven't heard yet */
+    const whos = Object.keys(SQ); if (!whos.length) return; const who = force && SQ[force] ? force : whos[Math.floor(Math.random() * whos.length)], C = SQ[who];
+    const seen = SQ_SEEN[who] || []; let fresh = C.calls.map((_, i) => i).filter(i => !seen.includes(i)); if (!fresh.length) { fresh = C.calls.map((_, i) => i); SQ_SEEN[who] = []; }
+    const k = fresh[Math.floor(Math.random() * fresh.length)]; (SQ_SEEN[who] = SQ_SEEN[who] || []).push(k); try { localStorage.setItem('ddt_sq_seen', JSON.stringify(SQ_SEEN)); } catch (e) {}
+    sqImg(who); sqCall = { c: { who, name: C.name, lines: C.calls[k] }, t: 0, ring: 1.6 }; sfx('phone_ring'); }   /* a raccoon on the glass */
   let glass = 0; if (!opts.arcade) try { glass = (DDT.get() || {}).glass || 0; } catch (e) {}   /* menu drives start with clean glass */
   // the Driving Game: score, near misses, and toolboxes on the road that patch the van back up
   let score = 0, combo = 0, comboT = 0, distPts = 0, slowT = 0; const DS = { kits: 0, kitsUsed: 0, near: 0, bestCombo: 0, rear: 0 };   /* the Driving Game record */ const KITS = [], KIT_IMG = new Image(); KIT_IMG.src = (typeof ART !== 'undefined' ? ART : 'assets/') + 'mg/sr2_toolbox.png';
@@ -521,7 +517,7 @@ function drive3d(choice, opts) {
           say({ moose: 'HIT THE MOOSE! +20 MIN', deer: covered ? 'OH DEER. INSURANCE HAS IT!' : 'OH DEER. +12 MIN', turkeys: 'FEATHERS! +5 MIN', peeper: 'SLAMMED THE BRAKES! +8 MIN' }[cr.kind]);
         }
       }
-      inv = Math.max(0, inv - dt); msgT = Math.max(0, msgT - dt); shake = Math.max(0, shake - dt); grip = Math.max(0, grip - dt); if (sqCall) { if (sqCall.ring > 0) sqCall.ring -= dt; else { sqCall.t += dt; if (sqCall.t > sqCall.c.lines.length * 2.6 + 0.6) sqCall = null; } }
+      inv = Math.max(0, inv - dt); msgT = Math.max(0, msgT - dt); shake = Math.max(0, shake - dt); grip = Math.max(0, grip - dt); if (sqCall) { if (sqCall.ring > 0) sqCall.ring -= dt; else { sqCall.t += dt; if (sqCall.t > sqCall.c.lines.length * 2.8 + 0.6) sqCall = null; } }
       if (window.DRV && DRV.src) DRV.src.playbackRate.value = 0.7 + 0.6 * ratio;
       draw(gas, brake, steer);
       if (opts.endless) { const mi = pos / SEG / SEG_PER_MI; if (crashes >= 20 || pos >= (N - 40) * SEG) { done = true; removeEventListener('keydown', kd); removeEventListener('keyup', ku); rc.onpointerdown = rc.onpointerup = rc.onpointermove = rc.onpointercancel = null;
@@ -723,15 +719,23 @@ function drive3d(choice, opts) {
         { const x = 6, w = 132; r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(x, 26, w, 18); const f = 1 - crashes / 20; r.fillStyle = '#2c3326'; r.fillRect(x + 6, 31, w - 52, 8); r.fillStyle = crashes > 14 ? '#e9665a' : crashes > 8 ? '#f7c418' : '#7bd65b'; r.fillRect(x + 6, 31, (w - 52) * f, 8); r.fillStyle = '#fff'; r.textAlign = 'right'; r.fillText(`${20 - crashes}`, x + w - 6, 35); r.textAlign = 'left'; }   /* van health, top left */
         box(150, 84, `${mi.toFixed(1)} MI`, '#7bd65b'); box(242, 150, `${(score + Math.floor(distPts)).toLocaleString()} PTS`, '#f7c418'); }
 
-      if (sqCall) { const c = sqCall.c, bx = 96, by = 50, bw = W - 192, bh = 56;   /* incoming call from the squirrel's family */
-        r.fillStyle = 'rgba(16,21,31,.94)'; r.fillRect(bx, by, bw, bh); r.fillStyle = '#f7c418'; r.fillRect(bx, by, bw, 2);
-        const im = sqImg(c.who), fb = ANIM.squirrel[0]; r.fillStyle = '#2a3346'; r.fillRect(bx + 5, by + 5, 46, 46);
-        if (im.complete && im.naturalWidth) r.drawImage(im, bx + 5, by + 5, 46, 46); else if (fb.complete && fb.naturalWidth) r.drawImage(fb, bx + 8, by + 14, 40, 40 * fb.height / fb.width);
-        r.font = '6px "Press Start 2P", monospace'; r.textAlign = 'left'; r.fillStyle = '#f7c418';
-        if (sqCall.ring > 0) { r.fillText((Math.floor(t * 4) % 2 ? '📞 ' : '') + 'INCOMING CALL...', bx + 58, by + 16); r.fillStyle = '#fff'; r.fillText(c.name, bx + 58, by + 30); }
-        else { r.fillText(c.name, bx + 58, by + 14); const li = Math.min(c.lines.length - 1, Math.floor(sqCall.t / 2.6)), shown = Math.floor((sqCall.t - li * 2.6) * 30);
-          r.fillStyle = '#fff'; const txt = c.lines[li].slice(0, shown), words = txt.split(' '); let line = '', y = by + 28;
-          for (const w of words) { if ((line + w).length > 30) { r.fillText(line, bx + 58, y); y += 10; line = ''; } line += w + ' '; } r.fillText(line, bx + 58, y); } }
+      if (sqCall) {   /* a cell phone slides in on the right: rings, shows who it is, then plays the call by itself */
+        const c = sqCall.c, slide = Math.min(1, (1.6 - Math.max(0, sqCall.ring)) * 4 + (sqCall.ring <= 0 ? 1 : 0)), end = sqCall.t > c.lines.length * 2.8 ? Math.min(1, (sqCall.t - c.lines.length * 2.8) * 3) : 0;
+        const pw = 84, ph = 150, px0 = W - 6 - pw + (1 - slide + end) * (pw + 12), py0 = 64, shake = sqCall.ring > 0 ? Math.sin(t * 60) * 1.5 : 0, X = px0 + shake;
+        r.fillStyle = '#16181c'; r.fillRect(X, py0, pw, ph); r.fillStyle = '#2a2d33'; r.fillRect(X + 2, py0 + 2, pw - 4, ph - 4); r.fillStyle = '#0e1116'; r.fillRect(X + 5, py0 + 12, pw - 10, ph - 26);   /* the phone and its screen */
+        r.fillStyle = '#3a3e46'; r.fillRect(X + pw / 2 - 8, py0 + 6, 16, 2); r.fillRect(X + pw / 2 - 6, py0 + ph - 10, 12, 4);
+        const im = sqImg(c.who), fb = ANIM.squirrel[0], ax = X + pw / 2 - 22, ay = py0 + 18;
+        r.fillStyle = '#2a3346'; r.fillRect(ax, ay, 44, 44);
+        if (im.complete && im.naturalWidth) r.drawImage(im, ax, ay, 44, 44); else if (fb.complete && fb.naturalWidth) r.drawImage(fb, ax + 3, ay + 8, 38, 38 * fb.height / fb.width);
+        r.font = '5px "Press Start 2P", monospace'; r.textAlign = 'center'; r.fillStyle = '#f7c418';
+        const nm = c.name.split(' '), nl = c.name.length > 12 && nm.length > 1 ? [nm.slice(0, -1).join(' '), nm[nm.length - 1]] : [c.name]; nl.forEach((l, k) => r.fillText(l, X + pw / 2, ay + 52 + k * 7));
+        const ty = ay + 54 + nl.length * 7;
+        if (sqCall.ring > 0) { r.fillStyle = Math.floor(t * 4) % 2 ? '#7bd65b' : '#3a8a3a'; r.fillRect(X + 10, ty + 4, pw - 20, 12); r.fillStyle = '#fff'; r.fillText('INCOMING CALL', X + pw / 2, ty + 11); }
+        else { const li = Math.min(c.lines.length - 1, Math.floor(sqCall.t / 2.8)), shown = Math.floor((sqCall.t - li * 2.8) * 28), txt = c.lines[li].slice(0, shown);
+          r.fillStyle = '#e8ecf2'; r.fillRect(X + 7, ty, pw - 14, 46); r.fillStyle = '#16181c'; r.textAlign = 'left';
+          let line = '', yy = ty + 8; for (const w of txt.split(' ')) { if ((line + w).length > 12) { r.fillText(line, X + 10, yy); yy += 7; line = ''; } line += w + ' '; } r.fillText(line, X + 10, yy);
+          r.fillStyle = '#e9665a'; r.textAlign = 'center'; r.fillText(`${Math.floor(sqCall.t / 60)}:${String(Math.floor(sqCall.t) % 60).padStart(2, '0')}`, X + pw / 2, py0 + ph - 18); }
+        r.textAlign = 'left'; }
       // phone buttons (also show what the keys do)
       if (true) {   // brake in both corners, gas = both thumbs (keyboard: ▲)
         r.fillStyle = brake ? 'rgba(233,102,90,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40); r.fillRect(W - 96, H - 46, 92, 40);
@@ -755,7 +759,7 @@ function drive3d(choice, opts) {
         r.fillStyle = '#9fb3d9'; r.fillText(`${DRIVER === 'matt' ? 'MATT' : 'ROD'} DRIVES · TOP ${DRIVER === 'matt' ? 60 : 40} MPH`, 240, 124); r.fillText('WATCH FOR BLINKERS + MOOSE', 240, 138);
         r.fillStyle = '#f7c418'; r.font = '12px "Press Start 2P", monospace'; r.fillText(t < 1.2 ? 'READY' : 'GO!', 240, 154); r.textAlign = 'left';
       }
-      if (msgT > 0) { const my = sqCall ? 124 : 68; r.font = '10px "Press Start 2P", monospace'; r.textAlign = 'center'; r.fillStyle = '#000'; r.fillText(msg, 241, my + 1); r.fillStyle = '#f7c418'; r.fillText(msg, 240, my); r.textAlign = 'left'; }   /* drop below the phone call while one is on */
+      if (msgT > 0) { const my = 68; r.font = '10px "Press Start 2P", monospace'; r.textAlign = 'center'; r.fillStyle = '#000'; r.fillText(msg, 241, my + 1); r.fillStyle = '#f7c418'; r.fillText(msg, 240, my); r.textAlign = 'left'; }   /* drop below the phone call while one is on */
     }
     requestAnimationFrame(frame);
   });
