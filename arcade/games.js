@@ -268,17 +268,17 @@ GAMES.push({
     s.LEN = [1700, 2100, 2500][s.diff]; s.d = 0; s.x = 240; s.kink = 0; s.KMAX = [4, 3, 3][s.diff]; s.snag = 0; s.wall = 0; s.chew = 0; s.CHEW = 100; s.spinT = 0;
     s.ph = [s.rnd() * 6, s.rnd() * 6, s.rnd() * 6];
     s.junk = []; for (let d = 260; d < s.LEN - 150; d += 110 + s.rnd() * 120) s.junk.push({ d, off: (s.rnd() - .5) * 30, kind: ['wipe', 'root', 'toy', 'wipe'][Math.floor(s.rnd() * 4)], gone: false });
-    s.TIME = 40; s.x = this.cx(s, 0);   // start in the middle of the pipe
+    s.TIME = 40; s.x = this.cx(s, 0); s.PVC = s.rnd() < 0.5;   /* start in the middle of the pipe */
   },
   cx(s, d) { return 240 + 70 * Math.sin(d / 260 + s.ph[0]) + 24 * Math.sin(d / 140 + s.ph[1]) * Math.min(1, d / 400); },
   wid(s, d) { return 38 - 6 * s.diff + 8 * Math.sin(d / 180 + s.ph[2]); },
   update(s, dt, I) {
     s.t += dt; FX(s, dt);
-    const H = HERO(s), spin = I.A || (I.ptr.down && Math.abs(I.ptr.x - s.x) < 40), atClog = s.d >= s.LEN;
+    const H = HERO(s), spin = I.A || (I.ptr.down && Math.abs(I.ptr.x - 240) < 60), atClog = s.d >= s.LEN;   /* touch: hold the middle to spin, either side to steer */
     s.spinT += spin ? dt * 18 : dt * 3;
     if (!atClog) {
       // steering: keys or drag toward your finger
-      let st = (I.R ? 1 : 0) - (I.L ? 1 : 0); if (I.ptr.down && Math.abs(I.ptr.x - s.x) >= 40) st = Math.sign(I.ptr.x - s.x);
+      let st = (I.R ? 1 : 0) - (I.L ? 1 : 0); if (I.ptr.down && Math.abs(I.ptr.x - 240) >= 60) st = Math.sign(I.ptr.x - 240);
       s.x += st * 150 * H.spd * dt;
       const feed = s.snag > 0 ? 0 : (spin ? 70 : 110) * (0.9 + 0.1 * s.k);
       s.snag = Math.max(0, s.snag - dt); s.d = Math.min(s.LEN, s.d + feed * dt);
@@ -286,12 +286,12 @@ GAMES.push({
       // the walls: scraping builds up a kink, and a kink bounces you back toward the middle (one kink per hit, never a chain)
       s.wallCool = Math.max(0, (s.wallCool || 0) - dt);
       if (Math.abs(s.x - c) > w) { const side = Math.sign(s.x - c); s.x = c + side * w;
-        if (s.wallCool <= 0) { s.wall += dt * 1.6 / H.steady; if (s.wall >= 1) { s.wall = 0; s.kink++; s.wallCool = 1.2; s.x = c + side * w * 0.4; s.shake = 0.35; PUFF(s, s.x, 190, '#bbb', 10); POP(s, s.x, 170, 'KINK!', '#e9665a'); SFX('drill_stop'); } } }
+        if (s.wallCool <= 0) { s.wall += dt * 1.6 / H.steady; if (s.wall >= 1) { s.wall = 0; s.kink++; s.wallCool = 1.2; s.x = c + side * w * 0.4; s.shake = 0.35; PUFF(s, 240 + side * 120, 190, '#bbb', 10); POP(s, 240, 170, 'KINK!', '#e9665a'); SFX('drill_stop'); } } }
       else s.wall = Math.max(0, s.wall - dt * 1.2);
       for (const j of s.junk) if (!j.gone && Math.abs(j.d - s.d) < 10 && Math.abs(s.x - (this.cx(s, j.d) + j.off)) < 16) {
         j.gone = true;
-        if (spin) { PUFF(s, s.x, 170, j.kind === 'root' ? '#8a6a3e' : j.kind === 'toy' ? '#e9665a' : '#f4f4f2', 14, 90); POP(s, s.x, 150, 'SHREDDED!', '#7bd65b'); SFX('drill_burst', { vol: 0.5 }); }
-        else { s.snag = 0.9; s.shake = 0.25; POP(s, s.x, 150, 'SNAGGED! SPIN!', '#e9665a'); SFX('drill_stop'); }
+        if (spin) { PUFF(s, 240, 180, j.kind === 'root' ? '#8a6a3e' : j.kind === 'toy' ? '#e9665a' : '#f4f4f2', 18, 140); POP(s, 240, 150, 'SHREDDED!', '#7bd65b'); SFX('drill_burst', { vol: 0.5 }); }
+        else { s.snag = 0.9; s.shake = 0.25; POP(s, 240, 150, 'SNAGGED! SPIN!', '#e9665a'); SFX('drill_stop'); }
       }
     } else {
       if (spin) { s.chew += dt * 22 * H.grip; if (s.rnd() < 0.5) PUFF(s, 240 + (s.rnd() - .5) * 40, 110, s.room === 'kitchen' ? '#1c1a17' : '#7a4a1e', 2, 80); }
@@ -300,37 +300,32 @@ GAMES.push({
     if (s.kink >= s.KMAX) s.end = { win: false, stars: 0, line: 'Kinked the cable three times. Pull it and start over.' };
     else if (s.t >= s.TIME && !s.end) s.end = { win: false, stars: 0, line: 'Ran out of time. The clog won this round.' };
   },
-  draw(s) {
-    const greasy = s.room === 'kitchen';
-    R(0, 0, W, H, '#1a1612');
-    // screen y=190 is the cable head; rows above it are further up the pipe (this has to match the wall check exactly)
-    for (let y = 16; y < H; y += 3) {
-      const d = s.d + (190 - y), c = this.cx(s, d), w = this.wid(s, d);
-      if (d > s.LEN + 30) { R(0, y, W, 3, '#14110c'); continue; }
-      R(c - w - 10, y, 10, 3, '#6e7177'); R(c + w, y, 10, 3, '#5d6168'); R(c - w, y, w * 2, 3, greasy ? '#26231f' : '#3a332a');
-      if (Math.floor(d / 60) % 2 === 0) R(c - w - 10, y, 3, 3, '#888');   // pipe joints
-    }
-    for (let k = 1; k <= 5; k++) { const d = s.d + k * 26, y = 190 - k * 26; if (d > s.LEN) break; const c = this.cx(s, d), nx = this.cx(s, d + 13) - c;
-      g.globalAlpha = 0.5 - k * 0.07; R(c - 4 + nx * 0.5, y - 2, 3, 3, '#f7c418'); R(c + 1 + nx * 0.5, y - 2, 3, 3, '#f7c418'); R(c - 1 + nx, y - 5, 3, 3, '#f7c418'); g.globalAlpha = 1; }   // ^ arrows show where the pipe goes
-    // the clog waiting at the end
-    const cy = 190 - (s.LEN - s.d) - 10;
-    if (cy > -40) { const left = 1 - s.chew / s.CHEW, c = this.cx(s, s.LEN);
-      for (let i = 0; i < 18 * left + 2; i++) C(c - 24 + (i * 37) % 48, cy - 10 + (i * 13) % 26, 7, greasy ? (i % 2 ? '#1c1a17' : '#2e2a24') : (i % 2 ? '#7a4a1e' : '#5a3a1c')); }
-    for (const j of s.junk) if (!j.gone) { const y = 190 - (j.d - s.d), x = this.cx(s, j.d) + j.off; if (y < 10 || y > H) continue;
-      if (SPC(j.kind === 'wipe' ? 'wipes' : j.kind === 'root' ? 'roots' : 'toycar', x, y, 0.6)) continue;
-      if (j.kind === 'wipe') { R(x - 8, y - 6, 16, 12, '#f4f4f2'); R(x - 6, y - 4, 12, 2, '#d9d4c8'); }
-      else if (j.kind === 'root') { for (let i = 0; i < 5; i++) R(x - 10 + i * 4, y - 6 + (i % 2) * 4, 2, 10, '#8a6a3e'); }
-      else { R(x - 7, y - 4, 14, 8, '#c0392b'); C(x - 4, y + 5, 2.5, '#222'); C(x + 4, y + 5, 2.5, '#222'); } }
-    // the cable behind the head, and the spinning cutter
-    g.strokeStyle = '#9a9a9a'; g.lineWidth = 3; g.beginPath(); g.moveTo(s.x, 190);
-    for (let y = 196; y < H + 4; y += 6) g.lineTo(this.cx(s, s.d - (y - 190)) + (s.x - this.cx(s, s.d)) * Math.max(0, 1 - (y - 190) / 60), y); g.stroke();
-    const sp = s.spinT; for (let i = 0; i < 4; i++) { const a = sp + i * 1.57; R(s.x + Math.cos(a) * 7 - 2, 186 + Math.sin(a) * 4 - 2, 4, 4, '#ddd'); }
-    C(s.x, 190, 4, s.snag > 0 ? '#e9665a' : '#bbb');
+  draw(s) {   /* riding behind the cutter head, looking up the pipe */
+    const SC = 1 / 30, c = this.cx(s, s.d), w = this.wid(s, s.d), off = clamp((s.x - c) / w, -1.15, 1.15), ox = off * 0.6, oy = 0.28, greasy = s.room === 'kitchen';
+    const sway = clamp((this.cx(s, s.d + 420) - c) * 0.7, -55, 55), toClog = (s.LEN - s.d) * SC, hole = Math.min(0.95, s.chew / s.CHEW);
+    R(0, 0, W, H, '#050605');
+    TUNNEL.draw({ D: s.d * SC, t: s.t, pvc: s.PVC, ox, oy, plugs: [{ f: Math.max(1.4, toClog), hole, kind: greasy ? 'grease' : 'debris', seed: 5 }], water: 0.28 }, 0, sway);
+    // junk coming at you, far to near
+    const vis = s.junk.filter(q => !q.gone && q.d > s.d && (q.d - s.d) * SC < 26).sort((a, b) => b.d - a.d);
+    for (const q of vis) { const f = (q.d - s.d) * SC, X = q.off / w * 0.6, Y = q.kind === 'root' ? -0.55 : q.kind === 'toy' ? 0.62 : 0.15;
+      let [x, y, r] = TUNNEL.proj(f, X, Y, ox, oy); x += sway * Math.min(1, f / 8); const lit = Math.max(0.3, 1 / (1 + (f / 13) ** 2)), sc = r * 0.38 / 30;
+      g.globalAlpha = 1; g.filter = `brightness(${Math.round(lit * 110)}%)`;
+      if (!SPC(q.kind === 'wipe' ? 'wipes' : q.kind === 'root' ? 'roots' : 'toycar', x, y, sc)) { if (q.kind === 'wipe') R(x - r * 0.3, y - r * 0.2, r * 0.6, r * 0.4, '#f4f4f2'); else if (q.kind === 'root') for (let i2 = 0; i2 < 5; i2++) R(x - r * 0.3 + i2 * r * 0.15, y - r * 0.3, r * 0.05, r * 0.5, '#8a6a3e'); else R(x - r * 0.25, y - r * 0.15, r * 0.5, r * 0.3, '#c0392b'); }
+      g.filter = 'none'; }
+    TUNNEL.vignette(0.55);
+    // the cable coming up from behind, and the cutter head spinning in front of you
+    const hx = 240 - off * 30, hy = 214, sp = s.spinT;
+    g.strokeStyle = '#3a3a3e'; g.lineWidth = 12; g.beginPath(); g.moveTo(240, H + 10); g.quadraticCurveTo(240 - off * 10, 250, hx, hy + 8); g.stroke();
+    g.strokeStyle = '#8a8a90'; g.lineWidth = 2; for (let i2 = 0; i2 < 10; i2++) { const yy = hy + 10 + i2 * 6; g.beginPath(); g.moveTo(hx - 6 + (yy - hy) * off * -0.1, yy); g.lineTo(hx + 6 + (yy - hy) * off * -0.1, yy + 3); g.stroke(); }   /* the cable's coil */
+    for (let i2 = 0; i2 < 4; i2++) { const a = sp + i2 * Math.PI / 2, bx = hx + Math.cos(a) * 26, by = hy + Math.sin(a) * 12;
+      g.strokeStyle = s.snag > 0 ? '#e9665a' : '#d8dade'; g.lineWidth = 5; g.beginPath(); g.moveTo(hx, hy); g.lineTo(bx, by); g.stroke(); R(bx - 3, by - 3, 6, 6, '#f4f6f8'); }   /* the cutter blades */
+    C(hx, hy, 7, s.snag > 0 ? '#e9665a' : '#b8bcc2'); C(hx - 2, hy - 2, 2.5, '#fff');
+    if (s.wall > 0.2) for (let i2 = 0; i2 < 6; i2++) R(hx + Math.sign(off) * (30 + Math.random() * 30), hy - 10 + Math.random() * 20, 3, 2, i2 % 2 ? '#f7c418' : '#e9665a');   /* sparks off the wall */
     DRAWFX(s);
     HUD(s, 'SNAKE THE LINE', s.TIME - s.t);
     BAR(6, 30, 110, 7, s.d / s.LEN, '#7bd65b', 'TO THE CLOG');
     for (let i = 0; i < s.KMAX; i++) R(130 + i * 12, 26, 9, 9, i < s.kink ? '#e9665a' : '#3a3f4a'); T('KINKS', 130, 20, '#fff', 5);
-    if (s.wall > 0.2) T('SCRAPING!', s.x, 205, '#f7c418', 6, 'center');
+    if (Math.abs(off) > 0.75) T(off > 0 ? '◀ WALL! STEER LEFT' : 'WALL! STEER RIGHT ▶', 240, 64, '#f7c418', 7, 'center');
     if (s.d >= s.LEN) { BAR(140, 240, 200, 10, s.chew / s.CHEW, '#f7c418', 'BREAK UP THE CLOG: HOLD SPACE'); }
   },
 });
@@ -469,6 +464,75 @@ GAMES.push({
 });
 
 // =====================================================================
+// TUNNEL — the shared 3D pipe view (Sewer Camera, Snake the Line, Jetter Pulse, Thaw It Out).
+// One ray per pixel into a round pipe of radius 1; the camera sits at (ox, oy) inside it looking down the pipe.
+// Distances are in feet ahead; a thing f ft ahead is at ray depth f + 2.6. Things that fill the pipe (ice, a clog face)
+// are "plugs" with a hole that opens as you clear them. Dithered and posterized to read as pixel art.
+const TUNNEL = {
+  BW: 300, BH: 180, BF: 450, F: 900, NEAR: 2.6,
+  init() {
+    if (this.DX) return; const { BW, BH, BF } = this, n = BW * BH; this.DX = new Float32Array(n); this.DY = new Float32Array(n); this.A = new Float32Array(n);
+    for (let py = 0; py < BH; py++) for (let px = 0; px < BW; px++) { const k = py * BW + px, dx = (px + 0.5 - BW / 2) / BF, dy = (py + 0.5 - BH / 2) / BF; this.DX[k] = dx; this.DY[k] = dy; this.A[k] = dx * dx + dy * dy; }
+    this.buf = document.createElement('canvas'); this.buf.width = BW; this.buf.height = BH; this.bx = this.buf.getContext('2d'); this.img = this.bx.createImageData(BW, BH);
+  },
+  proj(f, X, Y, ox, oy) {   /* a point in the pipe (X, Y in radii) f ft ahead -> screen (game px, before roll/sway), and the pipe's radius there */
+    const zz = f + this.NEAR; return [240 + ((X || 0) - ox) * this.F / zz, 132 + ((Y || 0) - oy) * this.F / zz, this.F / zz];
+  },
+  hash(a, b) { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; },
+  // o: { D, t, pvc, ox, oy, defs (camera-style list with d in ft), frost 0..1, plugs [{ f, hole, kind: 'ice'|'litter'|'beads'|'debris'|'grease', seed }], flow: +1 away / -1 toward you, water: base half-width (radians), light }
+  paint(o) {
+    this.init(); const { DX, DY, A, img, BW, BH } = this, d = img.data, hash = this.hash, HALF = Math.PI / 2;
+    const D = o.D, t = o.t, PVC = o.pvc, ox = o.ox || 0, oy = o.oy == null ? 0.38 : o.oy, frost = o.frost || 0, flow = o.flow || 1, LT = o.light || 1;
+    const defs = (o.defs || []).filter(q => q.d - D > -2 && q.d - D < 34);
+    const cracks = defs.filter(q => q.kind === 'crack'), bellies = defs.filter(q => q.kind === 'belly'), greases = defs.filter(q => q.kind === 'grease' && q.ang <= 3), offs = defs.filter(q => q.kind === 'offset');
+    const plugs = (o.plugs || []).filter(q => q.hole < 0.995).map(q => ({ ...q, z: q.f + this.NEAR })).sort((a, b) => a.z - b.z);
+    const BAY = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5], c0 = ox * ox + oy * oy - 1, wbase = o.water == null ? 0.32 : o.water;
+    for (let k = 0, n = BW * BH; k < n; k++) {
+      const dx = DX[k], dy = DY[k], a = A[k], b = 2 * (ox * dx + oy * dy), z = (-b + Math.sqrt(b * b - 4 * a * c0)) / (2 * a), hx = ox + z * dx, hy = oy + z * dy;
+      let r, g_, bl, shine = 0, L, faced = false;
+      // a plug in the way? (the first one whose face is nearer than the wall, unless the ray goes through its hole)
+      for (const q of plugs) { if (q.z >= z) break; const px_ = ox + dx * q.z, py_ = oy + dy * q.z, rr = Math.sqrt(px_ * px_ + py_ * py_); if (rr < q.hole * 0.92) continue;
+        const u = Math.floor((px_ + 1) * 14), v = Math.floor((py_ + 1) * 14), h1 = hash(u + q.seed * 31, v), h2 = hash(Math.floor((px_ + 1) * 40) + q.seed, Math.floor((py_ + 1) * 40)), rim = rr < q.hole * 0.92 + 0.08;
+        if (q.kind === 'ice') { r = 118 + h1 * 30; g_ = 168 + h1 * 26; bl = 206 + h1 * 20; if (h2 > 0.95) { r = 230; g_ = 244; bl = 255; }   /* clear ice with trapped bubbles */
+          const cr1 = Math.sin(px_ * 4.3 + py_ * 1.7 + q.seed) + 0.35 * Math.sin(py_ * 11 + q.seed), cr2 = Math.sin(py_ * 3.7 - px_ * 2.9 + q.seed * 2) + 0.35 * Math.sin(px_ * 13); if (Math.abs(cr1) < 0.05 || Math.abs(cr2) < 0.04) { r += 60; g_ += 50; bl += 40; } }   /* white fracture lines */
+        else if (q.kind === 'litter') { r = 150 + h2 * 50; g_ = 140 + h2 * 44; bl = 118 + h2 * 34; if (h1 > 0.8) { r -= 40; g_ -= 40; bl -= 34; } }   /* packed clumping litter */
+        else if (q.kind === 'beads') { const hb = hash(Math.floor((px_ + 1) * 9) + q.seed, Math.floor((py_ + 1) * 9)), cx = ((px_ + 1) * 9) % 1 - 0.5, cy = ((py_ + 1) * 9) % 1 - 0.5, inb = cx * cx + cy * cy < 0.2;
+          const pal = [[120, 200, 255], [255, 140, 190], [150, 240, 160], [255, 220, 120], [200, 160, 255]][Math.floor(hb * 5)]; if (inb) { r = pal[0]; g_ = pal[1]; bl = pal[2]; if (cx < -0.1 && cy < -0.1) shine = 1; } else { r = pal[0] * 0.45; g_ = pal[1] * 0.45; bl = pal[2] * 0.45; } }   /* swollen water beads */
+        else if (q.kind === 'grease') { r = 200 + h1 * 30; g_ = 180 + h1 * 26; bl = 110 + h1 * 20; if (h2 > 0.88) shine = 1; }
+        else { r = 96 + h1 * 60; g_ = 60 + h1 * 40; bl = 28 + h1 * 22; if (h2 > 0.9) { r = 232; g_ = 230; bl = 222; } }   /* debris, a wipe here and there */
+        if (rim && q.hole > 0.02) { r *= 0.55; g_ *= 0.55; bl *= 0.55; }   /* the edge of the hole you've cut */
+        L = Math.min(q.kind === 'ice' ? 0.95 : 1.15, 1.25 / (1 + (q.z / 13) * (q.z / 13))) * (1 - 0.25 * rr) * LT; faced = true; break; }
+      if (!faced) {
+        const th = Math.atan2(hy, hx), w = D + z - this.NEAR;
+        if (PVC) { r = 226; g_ = 223; bl = 212; const mt = hash(Math.floor(th * 9), Math.floor(w * 3)); r -= mt * 8; g_ -= mt * 8; bl -= mt * 8; if (Math.abs(th + HALF) < 0.05 && (Math.floor(w * 1.5) % 3)) { r -= 60; g_ -= 66; bl -= 40; } }
+        else { const m = hash(Math.floor(th * 7), Math.floor(w * 2.2)), m2 = hash(Math.floor(th * 15) + 7, Math.floor(w * 5)); r = 104 + m * 26; g_ = 86 + m * 18; bl = 70 + m * 10; if (m2 > 0.86) { r += 46; g_ += 18; bl -= 10; } if (m2 < 0.08) { r -= 30; g_ -= 26; bl -= 22; } }
+        const jf = w / 4 - Math.floor(w / 4), jw = 0.012 + 0.04 / z;
+        if (jf < jw) { if (PVC) { r *= 0.72; g_ *= 0.72; bl *= 0.70; } else { r *= 0.45; g_ *= 0.42; bl *= 0.40; } } else if (jf < jw * 2.4 && !PVC) { r *= 1.15; g_ *= 1.1; bl *= 1.05; }
+        for (const q of offs) { const dw = w - q.d; if (dw > -0.25 && dw < 0.5) { let da = th - q.ang; da = Math.atan2(Math.sin(da), Math.cos(da)); if (Math.abs(da) < 1.7) { if (dw < 0.05) { r = 18; g_ = 15; bl = 12; } else { r = 236; g_ = 150; bl = 64; shine = 1; } } } }
+        for (const q of cracks) { const dw = w - q.d; if (Math.abs(dw) < 1.3) { let da = th - q.ang; da = Math.atan2(Math.sin(da), Math.cos(da));
+          if (q.ang > 4.5) { if (Math.abs(dw) < 0.55 && Math.abs(da) < 0.5 - 0.25 * hash(Math.floor(dw * 9), Math.floor(da * 9))) { r = 8; g_ = 6; bl = 5; } }
+          else { const jag = Math.sin(dw * 11 + q.ang * 3) * 0.07 + Math.sin(dw * 29) * 0.03; if (Math.abs(da - jag) < 0.038 + 0.02 / z) { r *= 0.15; g_ *= 0.13; bl *= 0.12; } } } }
+        for (const q of greases) { const dw = w - q.d; if (Math.abs(dw) < 2.2 && th < 0.3) { const blob = hash(Math.floor(th * 5 + 40), Math.floor(w * 1.6)) + hash(Math.floor(th * 2.5 + 9), Math.floor(w * 0.8)) * 0.7; if (blob > 1.0 + Math.abs(dw) * 0.15) { r = 214; g_ = 190; bl = 112; if (hash(Math.floor(th * 30), Math.floor(w * 12)) > 0.8) shine = 1; } } }
+        if (frost > 0) { const fr = hash(Math.floor(th * 40), Math.floor(w * 14)), fz = frost * (0.45 + 0.55 * hash(Math.floor(th * 6) + 3, Math.floor(w * 2)));   /* frost feathering the walls */
+          if (fr < fz) { r = r * 0.35 + 210; g_ = g_ * 0.3 + 226; bl = bl * 0.2 + 240; if (fr < fz * 0.15) shine = 1; } }
+        let wh = wbase; for (const q of bellies) { const dw = Math.abs(w - q.d); if (dw < 3.2) wh = Math.max(wh, 1.15 * (1 - dw / 3.2) + wbase); }
+        const fb = Math.abs(th - HALF);
+        if (fb < wh) { const deep = 1 - fb / wh; r = r * 0.25 + 52 * (1 - deep * 0.4); g_ = g_ * 0.25 + 74 * (1 - deep * 0.3); bl = bl * 0.25 + 70; if (Math.sin(w * 4 - flow * t * 5) * Math.sin(th * 16 + w * 2.5) > 0.72) shine = 1; }
+        const ix = hx * dx + hy * dy, inc = Math.max(0.15, ix / Math.sqrt(a + 1));
+        L = (0.3 + 0.7 * Math.sqrt(inc)) / (1 + (z / 13) * (z / 13)) * 1.3 * LT;
+      }
+      if (shine) L = Math.max(L, 0.9 / (1 + (faced ? 0 : z * z / 220)));
+      const px = k % BW, py = (k / BW) | 0; L = Math.max(0, Math.min(1.25, Math.round((L + (BAY[(py & 3) * 4 + (px & 3)] / 16 - 0.5) / 9) * 6) / 6));
+      const o4 = k * 4, sh = shine ? 40 * L : 0; d[o4] = Math.min(255, r * L + sh); d[o4 + 1] = Math.min(255, g_ * L + sh); d[o4 + 2] = Math.min(255, bl * L + sh * 0.75); d[o4 + 3] = 255;
+    }
+    this.bx.putImageData(img, 0, 0); return this.buf;
+  },
+  // draw the view: rolled by `roll` radians about the centre, shifted sideways by `sway` px (the pipe bending away)
+  draw(o, roll, sway) { const buf = this.paint(o); g.save(); g.translate(240, 132); g.rotate(roll || 0); g.translate(-240, -132); g.imageSmoothingEnabled = false; g.drawImage(buf, 240 - this.BW + (sway || 0), 132 - this.BH, this.BW * 2, this.BH * 2); g.restore(); },
+  vignette(a) { const vg = g.createRadialGradient(240, 132, 140, 240, 132, 300); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, `rgba(0,0,0,${a == null ? 0.6 : a})`); g.fillStyle = vg; g.fillRect(0, 0, W, H); },
+};
+
+// =====================================================================
 // 6. SEWER CAMERA — you're looking at the camera monitor, straight down the pipe. Push it, tag what's wrong, pick the right branch, find the clog.
 GAMES.push({
   id: 'camera', name: 'SEWER CAMERA', tag: 'Scope the line · tag the problems · find the clog',
@@ -520,70 +584,15 @@ GAMES.push({
     if (s.t >= s.TIME) s.end = { win: false, stars: 0, line: "Ran out of time. Customer's watching the clock. No report." };
   },
   label(k) { return { roots: 'ROOTS', crack: 'CRACK', offset: 'OFFSET JOINT', belly: 'BELLY (STANDING WATER)', grease: 'GREASE', clog: 'THE CLOG' }[k]; },
-  // ---------- the 3D pipe: one ray per pixel into a cylinder, camera riding low like a real push camera ----------
-  BW: 300, BH: 180, BF: 450, OY: 0.38,
-  tables() {
-    if (this._tab) return this._tab;
-    const { BW, BH, BF, OY } = this, n = BW * BH, Z = new Float32Array(n), TH = new Float32Array(n), INC = new Float32Array(n);
-    for (let py = 0; py < BH; py++) for (let px = 0; px < BW; px++) {
-      const dx = (px + 0.5 - BW / 2) / BF, dy = (py + 0.5 - BH / 2) / BF;   /* ray (dx, dy, 1) from a camera OY below the pipe's axis */
-      const a = dx * dx + dy * dy, b = 2 * OY * dy, c = OY * OY - 1, t = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a), hx = t * dx, hy = OY + t * dy, k = py * BW + px;
-      Z[k] = t; TH[k] = Math.atan2(hy, hx);
-      INC[k] = Math.max(0.15, (hx * dx + hy * dy) / Math.sqrt(a + 1));   /* how square the wall faces the light on the camera head */
-    }
-    const buf = document.createElement('canvas'); buf.width = BW; buf.height = BH; const bx = buf.getContext('2d'), img = bx.createImageData(BW, BH);
-    return (this._tab = { Z, TH, INC, buf, bx, img });
-  },
-  proj(z) {   /* the pipe's cross-section z ft ahead -> centre and radius on screen (game px) */
-    const zz = z + 2.6; return [240, 132 - this.OY * 900 / zz, 900 / zz];
-  },
-  paint(s) {
-    const T_ = this.tables(), { Z, TH, INC, img } = T_, d = img.data, { BW, BH } = this, D = s.d, t = s.t, PVC = s.PVC;
-    const BAY = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-    const hash = (a, b) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
-    const near = s.def.filter(o => o.d - D > -2 && o.d - D < 30);
-    const cracks = near.filter(o => o.kind === 'crack'), bellies = near.filter(o => o.kind === 'belly'), greases = near.filter(o => o.kind === 'grease'), offs = near.filter(o => o.kind === 'offset');
-    const HALF = Math.PI / 2;
-    for (let k = 0, n = BW * BH; k < n; k++) {
-      const z = Z[k], th = TH[k], w = D + z - 2.6;   /* w = footage of this bit of wall */
-      let r, g_, b, shine = 0;
-      if (PVC) { r = 226; g_ = 223; b = 212; const mt = hash(Math.floor(th * 9), Math.floor(w * 3)); r -= mt * 8; g_ -= mt * 8; b -= mt * 8;
-        if (Math.abs(th + HALF) < 0.05 && (Math.floor(w * 1.5) % 3)) { r -= 60; g_ -= 66; b -= 40; } }   /* the print line along the crown */
-      else { const m = hash(Math.floor(th * 7), Math.floor(w * 2.2)), m2 = hash(Math.floor(th * 15) + 7, Math.floor(w * 5));
-        r = 104 + m * 26; g_ = 86 + m * 18; b = 70 + m * 10; if (m2 > 0.86) { r += 46; g_ += 18; b -= 10; } if (m2 < 0.08) { r -= 30; g_ -= 26; b -= 22; } }   /* rust, scale and pitting */
-      // joints every 4 ft
-      const jf = w / 4 - Math.floor(w / 4), jw = 0.012 + 0.04 / z;
-      if (jf < jw) { if (PVC) { r *= 0.72; g_ *= 0.72; b *= 0.70; } else { r *= 0.45; g_ *= 0.42; b *= 0.40; } }
-      else if (jf < jw * 2.4 && !PVC) { r *= 1.15; g_ *= 1.1; b *= 1.05; }   /* the hub's raised lip catches the light */
-      // offset joints: the next pipe sits low and to one side, a dark gap and a bright lip
-      for (const o of offs) { const dw = w - o.d; if (dw > -0.25 && dw < 0.5) { let da = th - o.ang; da = Math.atan2(Math.sin(da), Math.cos(da));
-        if (Math.abs(da) < 1.7) { if (dw < 0.05) { r = 18; g_ = 15; b = 12; } else { r = 236; g_ = 150; b = 64; shine = 1; } } } }
-      // cracks: a jagged dark line running with the pipe; a broken one is a black hole in the wall
-      for (const o of cracks) { const dw = w - o.d; if (Math.abs(dw) < 1.3) { let da = th - o.ang; da = Math.atan2(Math.sin(da), Math.cos(da));
-        if (o.ang > 4.5) { if (Math.abs(dw) < 0.55 && Math.abs(da) < 0.5 - 0.25 * hash(Math.floor(dw * 9), Math.floor(da * 9))) { r = 8; g_ = 6; b = 5; } }
-        else { const jag = Math.sin(dw * 11 + o.ang * 3) * 0.07 + Math.sin(dw * 29) * 0.03; if (Math.abs(da - jag) < 0.038 + 0.02 / z) { r *= 0.15; g_ *= 0.13; b *= 0.12; } } } }
-      // grease: lumpy yellow-white coating on the upper walls
-      for (const o of greases) { const dw = w - o.d; if (Math.abs(dw) < 2.2 && th < 0.3) { const blob = hash(Math.floor(th * 5 + 40), Math.floor(w * 1.6)) + hash(Math.floor(th * 2.5 + 9), Math.floor(w * 0.8)) * 0.7;
-        if (blob > 1.0 + Math.abs(dw) * 0.15) { r = 214; g_ = 190; b = 112; if (hash(Math.floor(th * 30), Math.floor(w * 12)) > 0.8) shine = 1; } } }
-      // water along the invert: a trickle, wider and deeper in a belly
-      let wh = 0.32; for (const o of bellies) { const dw = Math.abs(w - o.d); if (dw < 3.2) wh = Math.max(wh, 1.15 * (1 - dw / 3.2) + 0.32); }
-      const fromBottom = Math.abs(th - HALF);
-      if (fromBottom < wh) { const deep = 1 - fromBottom / wh; r = r * 0.25 + 52 * (1 - deep * 0.4); g_ = g_ * 0.25 + 74 * (1 - deep * 0.3); b = b * 0.25 + 70; 
-        if (Math.sin(w * 4 - t * 5) * Math.sin(th * 16 + w * 2.5) > 0.72) shine = 1; }   /* ripples flowing past */
-      // the head's light: strong up close, gone by 25 ft; then posterize with an ordered dither so it reads as pixel art
-      let L = (0.3 + 0.7 * Math.sqrt(INC[k])) / (1 + (z / 13) * (z / 13)) * 1.3; if (shine) L = Math.max(L, 0.9 / (1 + z * z / 220));
-      const px = k % BW, py = (k / BW) | 0, dith = (BAY[(py & 3) * 4 + (px & 3)] / 16 - 0.5) / 9;
-      L = Math.max(0, Math.min(1.25, Math.round((L + dith) * 6) / 6));
-      const o4 = k * 4; d[o4] = Math.min(255, r * L + (shine ? 40 : 0) * L); d[o4 + 1] = Math.min(255, g_ * L + (shine ? 40 : 0) * L); d[o4 + 2] = Math.min(255, b * L + (shine ? 30 : 0) * L); d[o4 + 3] = 255;
-    }
-    T_.bx.putImageData(img, 0, 0); return T_.buf;
-  },
+  OY: 0.38,
+  proj(z) { const [x, y, r] = TUNNEL.proj(z, 0, 0, 0, this.OY); return [x, y, r]; },
+  paint(s) { return TUNNEL.paint({ D: s.d, t: s.t, pvc: s.PVC, ox: 0, oy: this.OY, defs: s.def }); },
   draw(s) {
     const t = s.t, D = s.d, CX = 240, CY = 132;
     R(0, 0, W, H, '#050605');
     g.save(); g.translate(CX, CY); g.rotate(s.lvl * 0.75 + (s.tumble > 0 ? s.t * 9 : 0)); g.translate(-CX, -CY);   // the picture rolls when the head rolls
     const sway = (this.bend(s, D + 3) - this.bend(s, D)) * 0.35;   /* the view drifts as the pipe wanders */
-    { const buf = this.paint(s); g.imageSmoothingEnabled = false; g.drawImage(buf, CX - this.BW + sway, CY - this.BH, this.BW * 2, this.BH * 2); }
+    { const buf = this.paint(s); g.imageSmoothingEnabled = false; g.drawImage(buf, CX - TUNNEL.BW + sway, CY - TUNNEL.BH, TUNNEL.BW * 2, TUNNEL.BH * 2); }
     const path = z => { const [x, y] = this.proj(z); return [x + sway, y]; }, rad = z => this.proj(z)[2];
     const zEnd = 30;
     // the problems, far to near
@@ -914,7 +923,7 @@ GAMES.push({
   how: ['Hold SPACE to build jetter pressure; let go to drop it.', 'Pressure in the GREEN band cuts the clog. Stay in the RED and it PACKS tighter.', 'Aim the nozzle with ▲ ▼ at the soft spot (it moves). Dead-on cuts 3x faster.', 'The clog keeps swelling, so keep pulsing. Clear it in time.'],
   ctl: 'HOLD SPACE = PRESSURE  ·  ▲ ▼ = AIM',
   act: 'JET', dpad: 'ud',
-  init(s) { s.TIME = 30; s.p = 0; s.prog = 0; s.red = 0; s.packs = 0; s.LO = 30; s.HI = 75 + 8 * (HERO(s).grip - 1) * 4; s.aim = 0.5; s.spot = 0.5; s.sv = 0.25; },
+  init(s) { s.TIME = 30; s.p = 0; s.prog = 0; s.red = 0; s.packs = 0; s.beads = s.rnd() < 0.5; s.LO = 30; s.HI = 75 + 8 * (HERO(s).grip - 1) * 4; s.aim = 0.5; s.spot = 0.5; s.sv = 0.25; },
   update(s, dt, I) {
     s.t += dt;
     s.p = clamp(s.p + ((I.A || I.ptr.down) ? 55 : -60) * dt, 0, 100);
@@ -929,20 +938,29 @@ GAMES.push({
     if (s.prog >= 100) s.end = { win: true, stars: stars3(s.packs === 0, s.packs <= 2), line: `Line is open. ${s.packs} pack-up${s.packs === 1 ? '' : 's'}.` };
     else if (s.t >= s.TIME) s.end = { win: false, stars: 0, line: 'Still packed solid.' };
   },
-  draw(s) {
-    if (!BGI('bg_utility')) R(0, 0, W, H, '#2b2a26'); R(0, 90, W, 70, '#5d6168'); R(0, 100, W, 50, '#1e1d1a');
-    const rem = 1 - s.prog / 100;
-    R(260, 98, 140 * rem + 6, 54, '#cfc3a6'); for (let i = 0; i < 30 * rem; i++) R(262 + (i * 37) % (140 * rem + 1), 100 + (i * 17) % 50, 3, 3, '#a89c80');
-    for (let i = 0; i < 6 * rem; i++) SPC('beads', 272 + (i * 53) % (130 * rem + 1), 110 + (i * 23) % 36, 0.5);
-    const ny = 104 + s.aim * 42, sy = 104 + s.spot * 42;
-    R(256, sy - 5, 10, 10, '#f7c418'); R(258, sy - 3, 6, 6, '#fff3b0');                       // the soft spot
-    R(0, ny - 3, 120, 6, '#222'); R(116, ny - 7, 12, 14, '#999');
-    if (s.p > 5) for (let i = 0; i < 10; i++) R(128 + i * 12 + (s.t * 300 % 12), ny - 1 + Math.sin(i + s.t * 30) * 3, 8, 2, s.p > s.HI ? '#e9665a' : '#9fd1ff');
+  draw(s) {   /* behind the jetter nozzle, looking at the clog face */
+    const oy = 0.22, f = 4.2 + s.prog / 100 * 1.6, hole = Math.min(0.92, s.prog / 100 * 0.95), kind = s.beads ? 'beads' : 'litter';
+    R(0, 0, W, H, '#050605');
+    TUNNEL.draw({ D: 0, t: s.t, pvc: false, ox: 0, oy, plugs: [{ f, hole, kind, seed: 9 }], water: 0.26, flow: -1, light: s.flash > 0 ? 0.8 : 1 }, 0, 0);
+    const Y = v => -0.62 + v * 1.24, [sx, sy, sr] = TUNNEL.proj(f, 0, Y(s.spot), 0, oy), [ax, ay] = TUNNEL.proj(f, 0, Y(s.aim), 0, oy);
+    // the soft spot: a wet, darker patch that glistens
+    const pul = 0.7 + 0.3 * Math.sin(s.t * 6); g.fillStyle = `rgba(247,196,24,${0.35 * pul})`; g.beginPath(); g.ellipse(sx, sy, sr * 0.28, sr * 0.16, 0, 0, 7); g.fill();
+    g.strokeStyle = `rgba(255,236,150,${0.8 * pul})`; g.lineWidth = 2; g.beginPath(); g.ellipse(sx, sy, sr * 0.28, sr * 0.16, 0, 0, 7); g.stroke();
+    TUNNEL.vignette(0.5);
+    // the nozzle and its jets
+    const nx = 240, ny = 226, red = s.p > s.HI, on = s.p > 5;
+    g.strokeStyle = '#1e1e22'; g.lineWidth = 14; g.beginPath(); g.moveTo(240, H + 10); g.lineTo(nx, ny + 8); g.stroke();
+    R(nx - 9, ny - 6, 18, 14, '#b8862e'); R(nx - 9, ny - 6, 18, 3, '#e0b45a'); R(nx - 5, ny - 11, 10, 6, '#9a6e22');   /* brass nozzle */
+    if (on) { const n = 3 + Math.floor(s.p / 20), col = red ? '232,110,96' : '170,215,255';
+      for (let i2 = 0; i2 < n; i2++) { const jx = ax + (Math.random() - 0.5) * sr * 0.25, jy = ay + (Math.random() - 0.5) * sr * 0.15;
+        g.strokeStyle = `rgba(${col},${0.35 + Math.random() * 0.4})`; g.lineWidth = 1 + Math.random() * 2.5; g.beginPath(); g.moveTo(nx + (Math.random() - 0.5) * 6, ny - 10); g.lineTo(jx, jy); g.stroke(); }
+      for (let i2 = 0; i2 < 10; i2++) { const a = Math.random() * 6.28, rr = Math.random() * sr * 0.3 * (s.p / 100); R(ax + Math.cos(a) * rr, ay + Math.sin(a) * rr * 0.6, 2, 2, red ? '#ffb0a0' : '#e8f6ff'); } }   /* spray off the face */
+    g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 1; g.beginPath(); g.moveTo(ax - 8, ay); g.lineTo(ax + 8, ay); g.moveTo(ax, ay - 6); g.lineTo(ax, ay + 6); g.stroke();   /* where you're aiming */
     if (s.flash > 0) T('PACKED!', 240, 70, '#e9665a', 12, 'center');
     HUD(s, 'JETTER PULSE', s.TIME - s.t);
-    const gx = 40, gw = 400; R(gx, 200, gw, 16, '#2c3326'); R(gx + s.LO / 100 * gw, 200, (s.HI - s.LO) / 100 * gw, 16, '#3f8f2e'); R(gx + s.HI / 100 * gw, 200, (100 - s.HI) / 100 * gw, 16, '#7a2a24');
-    R(gx + s.p / 100 * gw - 3, 194, 6, 28, '#fff'); T('PRESSURE', gx, 188, '#fff', 6);
-    BAR(gx, 240, gw, 8, s.prog / 100, '#f7c418', 'CLOG CLEARED');
+    const gx = 40, gw = 400; R(gx, 200 + 30, gw, 10, '#2c3326'); R(gx + s.LO / 100 * gw, 230, (s.HI - s.LO) / 100 * gw, 10, '#3f8f2e'); R(gx + s.HI / 100 * gw, 230, (100 - s.HI) / 100 * gw, 10, '#7a2a24');
+    R(gx + s.p / 100 * gw - 3, 226, 6, 18, '#fff'); T('PRESSURE', gx, 222, '#fff', 6);
+    BAR(gx, 252, gw, 6, s.prog / 100, '#f7c418', 'CLOG CLEARED');
   },
 });
 
@@ -2042,7 +2060,7 @@ GAMES.push({
 // don't cook the pipe, and swap the bucket before the meltwater runs over.
 GAMES.push({
   id: 'steamer', name: 'THAW IT OUT', tag: 'The frozen line · steamer up through the cleanout',
-  how: ['The line froze solid along the outside wall. You are at the cleanout with the steamer.', '◀ ▶ feeds the steam hose up the pipe (or pulls it back).', 'Hold SPACE to steam the ice in front of the nozzle.', 'Steam too long in one spot and the pipe gets soft. Watch the HEAT bar.', 'The melt runs back down into your bucket. ▼ swaps the bucket before it spills.', 'Melt every chunk of ice to open the line.'],
+  how: ['The line froze solid along the outside wall. You are at the cleanout with the steamer, looking up the pipe.', '▶ (or ▲) feeds the steam hose up the pipe, ◀ pulls it back.', 'Hold SPACE to steam the ice in front of the nozzle.', 'Steam too long in one spot and the pipe gets soft. Watch the HEAT bar.', 'The melt runs back down into your bucket. ▼ swaps the bucket before it spills.', 'Melt every chunk of ice to open the line.'],
   ctl: '◀ ▶ HOSE · SPACE STEAM · ▼ SWAP BUCKET',
   phone: 'the pad moves the hose (▼ swaps the bucket), the big button steams.',
   act: 'STEAM',
@@ -2059,10 +2077,10 @@ GAMES.push({
     const front = s.ice.find(c => c.hp > 0);
     const maxX = front ? front.x - 6 : 440;
     if (s.swap > 0) { s.swap -= dt; if (s.swap <= 0) { s.bucket = 0; POP(s, 60, 196, 'FRESH BUCKET', '#7dffb0'); } }
-    else if (I.Dp || (I.D && s.bucket > 0.15)) { s.swap = 1.1 / Math.sqrt(H0.spd); SFX('splash'); }
-    const dir = (I.R ? 1 : 0) - (I.L ? 1 : 0) + (I.ptr.down && !I.A ? Math.sign(I.ptr.x - s.hx) * (Math.abs(I.ptr.x - s.hx) > 4 ? 1 : 0) : 0);
+    else if (I.Dp || (I.D && s.bucket > 0.15) || (I.ptr.clicked && I.ptr.x < 110 && I.ptr.y > 190)) { s.swap = 1.1 / Math.sqrt(H0.spd); SFX('splash'); }   /* or tap the bucket */
+    const dir = (I.R || I.U ? 1 : 0) - (I.L ? 1 : 0) + (I.ptr.down && !I.A ? (I.ptr.x > 330 ? 1 : I.ptr.x < 150 ? -1 : 0) : 0);   /* touch: right side feeds the hose in, left pulls it back, middle steams */
     s.hx = clamp(s.hx + dir * 70 * H0.spd * dt, 92, maxX);
-    const steaming = (I.A || (I.ptr.down && Math.abs(I.ptr.x - s.hx) <= 4)) && s.swap <= 0;
+    const steaming = (I.A || (I.ptr.down && I.ptr.x >= 150 && I.ptr.x <= 330 && I.ptr.y < 200)) && s.swap <= 0; s.steaming = steaming; s.near = front && front.x - s.hx < 16;
     // heat builds where you steam and bleeds off when you stop. Rod's steadier hands spread it out.
     if (steaming) {
       s.heat += dt * (0.42 + s.diff * 0.06) / H0.grip;
@@ -2078,28 +2096,27 @@ GAMES.push({
     else if (!front) s.end = { win: true, stars: stars3(s.soft + s.spill === 0 && s.t < s.DUR * 0.7, s.soft + s.spill <= 1), line: s.soft + s.spill ? 'Line is open. A little messy.' : 'Line is open. Not a drop on the floor.' };
     else if (s.t >= s.DUR) s.end = { win: false, stars: 0, line: 'Still frozen. Doreen is pouring hot water down it again.' };
   },
-  draw(s) {
-    if (BGI('bg_basement')) R(0, 0, W, H, 'rgba(10,12,16,.25)'); else { R(0, 0, W, H, '#3b4048');
-    R(0, 0, 470, 240, '#5d5650'); for (let y = 10; y < 240; y += 14) for (let x = (y / 14 % 2) * 14; x < 470; x += 28) R(x, y, 26, 12, '#6a625b'); }   // basement block wall
-    R(470, 0, 10, 240, '#e8eef4'); R(400, 0, 70, 240, 'rgba(180,210,235,.18)');   // the cold outside wall
-    for (let i = 0; i < 12; i++) R(404 + (i * 37) % 60, (i * 53) % 230, 2, 2, '#e8f4ff');
-    if (!MG('bg_basement')) R(0, 240, W, 30, '#4a4038');
-    // the kitchen sink upstairs and the drain running down to the cleanout
-    R(410, 18, 60, 10, '#c9ccd1'); R(426, 28, 28, 14, '#9aa0a6'); R(436, 42, 8, 108, '#e8e4d8'); R(436, 42, 3, 108, '#fff');
-    R(70, 144, 374, 16, '#e8e4d8'); R(70, 144, 374, 4, '#fff'); R(70, 157, 374, 3, '#b9b4a8');   // the line
-    R(60, 140, 14, 24, '#ddd'); R(62, 160, 10, 4, '#2c8a4a');   // cleanout
-    // ice inside the pipe
-    for (const c of s.ice) if (c.hp > 0) { const a = 0.35 + 0.65 * c.hp; g.globalAlpha = a; R(c.x, 147, c.w * (0.4 + 0.6 * c.hp), 10, '#bfe6ff'); R(c.x + 2, 148, 4, 8, '#ffffff'); g.globalAlpha = 1; }
-    // the hose and nozzle
-    R(74, 151, s.hx - 74, 3, '#2a2a2e'); R(s.hx - 2, 149, 8, 7, '#d0a03a');
-    for (const p of s.puffs) { if (SPC('steam_' + Math.min(3, Math.floor((0.6 - p.l) / 0.15)), p.x, p.y, 0.45, false, Math.max(0, p.l / 0.6) * 0.9)) continue; g.globalAlpha = Math.max(0, p.l / 0.6) * 0.8; C(p.x, p.y, 4 + (0.6 - p.l) * 10, '#f4f6f8'); g.globalAlpha = 1; }
-    for (const d of s.drips) R(d.x, 155, 3, 2, '#7fc4ff');
-    // the bucket under the cleanout
-    const bx = 44, by = 196;
-    if (s.swap > 0) { T('SWAP!', bx + 16, by - 8, '#f7c418', 6, 'center'); g.globalAlpha = 0.4; }
-    if (MG('bucket')) { SPI('bucket', bx + 16, by + 28, 1.15); g.fillStyle = 'rgba(127,196,255,.95)'; g.beginPath(); g.ellipse(bx + 16, by - 4 + (1 - Math.min(1, s.bucket)) * 6, 11, 2 + Math.min(1, s.bucket) * 2, 0, 0, 7); g.fill(); } else { R(bx, by, 32, 28, '#e8762b'); R(bx + 2, by + 28 - 26 * Math.min(1, s.bucket), 28, 26 * Math.min(1, s.bucket), '#7fc4ff'); R(bx - 2, by - 2, 36, 3, '#c45f1e'); } g.globalAlpha = 1;
-    if (s.bucket > 0.8 && Math.floor(s.t * 6) % 2) T('!', bx + 16, by - 18, '#e9665a', 10, 'center');
-    if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) SPR(s.hero || 'rod', 6, 104, 240);
+  draw(s) {   /* the steam nozzle's view up the frozen line */
+    const PX = 10, oy = 0.3, hot = Math.max(0, s.heat - 0.5) * 2;
+    const plugs = s.ice.map((c, i2) => c.hp > 0 ? { f: Math.max(0.12, (c.x - s.hx) / PX), hole: Math.min(0.9, (1 - c.hp) * 1.05), kind: 'ice', seed: i2 + 2 } : null).filter(Boolean);
+    R(0, 0, W, H, '#050605');
+    TUNNEL.draw({ D: s.hx / PX, t: s.t, pvc: true, ox: 0, oy, plugs, frost: 0.55, water: 0.2 + Math.min(0.25, s.bucket * 0.2), flow: -1 }, 0, 0);
+    if (hot > 0) { const gr = g.createRadialGradient(240, 220, 20, 240, 200, 260); gr.addColorStop(0, `rgba(255,120,40,${0.35 * hot})`); gr.addColorStop(1, 'rgba(255,60,20,0)'); g.fillStyle = gr; g.fillRect(0, 16, W, H); }   /* the pipe going soft */
+    TUNNEL.vignette(0.5);
+    // steam rolling off the nozzle
+    for (const p of s.puffs) { const age = 0.6 - p.l, a = Math.max(0, p.l / 0.6) * 0.2, rr = 12 + age * 90, px = 240 + Math.sin(p.x * 7.1) * 40 * age * 2, py = 210 - age * 150;
+      g.fillStyle = `rgba(240,244,248,${a})`; g.beginPath(); g.arc(px, py, rr, 0, 7); g.fill(); }
+    // the steam hose and brass nozzle
+    g.strokeStyle = '#1e1e22'; g.lineWidth = 14; g.beginPath(); g.moveTo(240, H + 10); g.lineTo(240, 232); g.stroke();
+    R(231, 218, 18, 16, '#b8862e'); R(231, 218, 18, 3, '#e0b45a'); R(236, 212, 8, 7, '#9a6e22');
+    if (s.steaming && !s.near && Math.floor(s.t * 3) % 2) T('GET CLOSER TO THE ICE ▶', 240, 64, '#f7c418', 7, 'center');
+    // the bucket under the cleanout, down in the corner (tap it or ▼ to swap)
+    const bx = 14, by = 204; R(bx - 4, by - 8, 92, 60, 'rgba(0,0,0,.55)');
+    if (s.swap > 0) { T('SWAP!', bx + 44, by - 2, '#f7c418', 6, 'center'); g.globalAlpha = 0.4; }
+    if (MG('bucket')) { SPI('bucket', bx + 20, by + 46, 1.0); g.fillStyle = 'rgba(127,196,255,.95)'; g.beginPath(); g.ellipse(bx + 20, by + 12 + (1 - Math.min(1, s.bucket)) * 6, 10, 2 + Math.min(1, s.bucket) * 2, 0, 0, 7); g.fill(); }
+    else { R(bx + 4, by + 10, 30, 32, '#e8762b'); R(bx + 6, by + 42 - 30 * Math.min(1, s.bucket), 26, 30 * Math.min(1, s.bucket), '#7fc4ff'); }
+    g.globalAlpha = 1; T('▼ SWAP', bx + 62, by + 30, '#cfd8e0', 5, 'center');
+    if (s.bucket > 0.8 && Math.floor(s.t * 6) % 2) T('!', bx + 20, by - 2, '#e9665a', 10, 'center');
     DRAWFX(s);
     HUD(s, `THAW IT OUT  ${s.melted}/${s.ice.length}`, s.DUR - s.t); PANTS(s, 6, 22);
     BAR(330, 26, 140, 6, s.heat, s.heat > 0.8 ? '#e9665a' : '#f39c12', 'PIPE HEAT');
