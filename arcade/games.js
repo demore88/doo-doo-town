@@ -1251,6 +1251,7 @@ TRL.tex = (() => {   // little 32x32 textures, painted once
   return { block, skirt, dirt, ceil, pipe: [pipe(0), pipe(1)], hobo: [hobo(0), hobo(1)], trap };
 })();
 TRL.faces = {};
+TRL.faceN = n => { const F = TRL.faces; if (F[n] === undefined) { F[n] = null; const im = new Image(); im.onload = () => F[n] = im; im.onerror = () => { F[n] = false; }; im.src = '../assets/' + n + '.png'; } return F[n] || null; };
 TRL.face = (who, hp) => { const F = TRL.faces, ld = n => { if (F[n] === undefined) { F[n] = null; const im = new Image(); im.onload = () => F[n] = im; im.onerror = () => { F[n] = false; }; im.src = '../assets/' + n + '.png'; } };
   const n = who + (hp > 0.5 ? '_normal' : hp > 0.25 ? '_tired' : '_panic'); ld(who + '_normal');   /* the hero's real face, looking worse as he gets bitten */
   if (F[n] === undefined) { F[n] = null; const im = new Image(); im.onload = () => F[n] = im; im.onerror = () => { F[n] = false; }; im.src = '../assets/' + n + '.png'; }
@@ -1334,6 +1335,7 @@ GAMES.push({
     if (s.fixT) { s.fixT += dt * (s.fixT > 3.4 && (I.Ap || I.ptr.clicked) ? 6 : 1); if (s.fixT > 9.4) { const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.t < 50 + s.gmax * 2, f >= 0.3), line: s.epi[1] + (s.restMin ? ` (Rested ${s.restMin} min.)` : ''), extraTime: s.restMin }); } return; }
     if (!s.battle) { TRL.music.atick = performance.now(); TRL.amb(true); } else TRL.amb(false);
     if (s.talk) { const K = s.talk; K.t += dt; if ((K.t > 0.4 && (I.Ap || I.ptr.clicked)) || K.t > 4.5) { K.i++; K.t = 0; if (K.i >= K.lines.length) { const me = HERO(s).name, them = me === 'ROD' ? 'Matt' : 'Rod'; s.talk.i = K.lines.length - 1; s.end = { win: true, stars: 1, carl: true, extraTime: s.restMin, line: `${them} fixed it. ${me === 'ROD' ? 'Rod' : 'Matt'} is still talking about Carl.` }; } } return; }
+    if (s.wake) return this.wakeStep(s, dt, I);
     if (s.wed) return this.wedStep(s, dt, I);
     if (s.bag) return this.bagging(s, dt, I);
     if (s.shop) return this.shopping(s, dt, I);
@@ -1506,7 +1508,25 @@ GAMES.push({
     s.lives--; const back = [...s.carls].reverse().find(c => c.met), spot = back ? [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [back.c + dx, back.r + dy]).find(([c, r]) => s.map[r][c] === '.') : [1, 1];
     s.pc = spot[0]; s.pr = spot[1]; s.vx = s.pc + 0.5; s.vy = s.pr + 0.5; s.mv = 0; s.hp = s.hpMax; s.venom = 0; s.since = 0; s.flash = 1; s.restMin += 20;
     if (back) { const d = [[1, 0], [0, 1], [-1, 0], [0, -1]].findIndex(([dx, dy]) => s.pc + dx === back.c && s.pr + dy === back.r); s.dir = d; s.va = s.ta = d * Math.PI / 2; }
-    (s.log = s.log || []).push(back ? `You wake up next to Carl. He's fanning you with a cracker sleeve. (${s.lives} ${s.lives === 1 ? 'life' : 'lives'} left)` : `You wake up by the hatch. Everything hurts. (${s.lives} ${s.lives === 1 ? 'life' : 'lives'} left)`); },
+    const left = `(${s.lives} ${s.lives === 1 ? 'life' : 'lives'} left)`;
+    if (!back) { (s.log = s.log || []).push(`You wake up by the hatch. Everything hurts. ${left}`); return; }
+    const me = HERO(s).name, pick = a => a[Math.floor(s.rnd() * a.length)], first = !s.rubbed; s.rubbed = (s.rubbed || 0) + 1;
+    s.wake = { i: 0, t: 0, lines: first ? [
+      ['CARL', 6, "Shhh. Shhhh. You're awake. Carl found you."],
+      ['CARL', 0, "You were face down in the muck. So Carl dragged you back to Carl's special place."],
+      ['CARL', 4, "By the ankles. Took a while. You're heavier than you look."],
+      ['CARL', 6, "Then Carl rubbed you. And rubbed you. Until you were all better."],
+      ['CARL', 1, "Magic hands. Carl's got MAGIC hands. Thirty-one years of handyman hands."],
+      [me, 'gross', '...Where. Where did you rub.'],
+      ['CARL', 0, 'Everywhere that hurt.'],
+      [me, 'gross', pick(["Nothing hurt THAT much.", "I'm going to need a minute.", "I'm gonna go stand in the rain for a while."])],
+      ['CARL', 6, "Come back anytime. Carl's hands are always warm."],
+      ['', 0, `Full health. Lingering discomfort. ${left}`] ] : [
+      ['CARL', 6, pick(["You came back to Carl. You WANTED the hands.", "Back so soon? Carl warmed his hands up just in case.", "Again? Carl's starting to think you're doing it on purpose."])],
+      ['CARL', 4, pick(["Same as last time. Ankles, then the rubbing.", "Carl did the special technique this time. You'll know it when you feel it.", "Don't look at your back. Just trust Carl."])],
+      [me, 'gross', pick(["I want to go home.", "Please stop saying 'the rubbing.'", "Why is my shirt on backwards.", me === 'ROD' ? "I'm never telling Matt about this." : "I'm never telling Rod about this."])],
+      ['', 0, `Full health. Your soul, less so. ${left}`] ] }; },
+  wakeStep(s, dt, I) { const W2 = s.wake; W2.t += dt; if (!((W2.t > 0.4 && (I.Ap || I.ptr.clicked)) || W2.t > 4.5)) return; W2.i++; W2.t = 0; if (W2.i >= W2.lines.length) { (s.log = s.log || []).push(W2.lines[W2.lines.length - 1][2]); s.wake = null; } },
   endFight(s) { s.battle = null; TRL.bgm(false); },
   say(s, text, fx) { s.battle.q.push({ text, fx, t: 0 }); },
   // turn-based: messages play one at a time (tap / PICK to hurry them), then the menu comes back
@@ -1621,9 +1641,13 @@ GAMES.push({
       // the monster's name plate along the top of the view
       R(cx - 70, VY + 4, 140, 22, 'rgba(10,8,6,.8)'); T(b.F.name, cx, VY + 12, b.F.king ? '#f7c418' : '#fff', 7, 'center'); BAR(cx - 50, VY + 19, 100, 4, b.hp / b.max, '#e9665a');
     }
-    if (!s.wed && !s.bag && !s.talk && !(s.fixT >= 3.4)) TRL.hands(s, VX, VY, VW, VH, t);
+    if (!s.wed && !s.wake && !s.bag && !s.talk && !(s.fixT >= 3.4)) TRL.hands(s, VX, VY, VW, VH, t);
     if (b && b.open > 0) { const k = b.open / 0.6; for (let i = 0; i < 9; i++) R(VX, VY + i * 20, VW * (1 - k), 20, '#000'); }   // the screen wipe into the fight
     if (s.flash > 0) { g.fillStyle = `rgba(255,250,220,${s.flash})`; g.fillRect(VX, VY, VW, VH); }
+    if (s.wake) { const [who, , line] = s.wake.lines[s.wake.i]; R(VX, VY, VW, VH, 'rgba(20,12,6,.55)');
+      if (MG('ut_carl')) { const im = MG('ut_carl'), cw = im.width / 4, h = VH * 1.25, w = h * cw / im.height; g.save(); g.imageSmoothingEnabled = false; g.drawImage(im, (who === 'CARL' ? 2 : 0) * cw, 0, cw, im.height, VX + VW / 2 - w / 2 + Math.sin(t * 1.5) * 3, VY + VH * 0.15, w, h); g.restore(); }   /* right up in your face */
+      g.fillStyle = `rgba(255,190,120,${0.12 + 0.05 * Math.sin(t * 7)})`; g.fillRect(VX, VY, VW, VH);
+      R(VX + 8, VY + 6, VW - 16, 36, 'rgba(10,8,6,.88)'); if (!who) T(line, VX + VW / 2, VY + 22, '#e8c86a', 6, 'center'); else { T(who + ':', VX + 14, VY + 14, '#e8c86a', 6); const wr = []; let ln = ''; for (const w2 of line.split(' ')) { if ((ln + w2).length > 50) { wr.push(ln.trim()); ln = ''; } ln += w2 + ' '; } wr.push(ln.trim()); wr.slice(0, 2).forEach((l2, i) => T(l2, VX + 14, VY + 24 + i * 8, '#fff', 5)); } }
     if (s.wed) { const W2 = s.wed, [who, line] = W2.lines[W2.i], k = W2.i;
       const grd = g.createLinearGradient(0, VY, 0, VY + VH); grd.addColorStop(0, '#2a1a12'); grd.addColorStop(1, '#5a3a22'); g.fillStyle = grd; g.fillRect(VX, VY, VW, VH);
       for (let i = 0; i < 6; i++) { const fx = VX + 20 + i * 56; R(fx, VY + 52, 3, 12, '#e8dcc0'); C(fx + 1.5, VY + 49 + Math.sin(t * 9 + i) * 1, 2.5, '#ffd27a'); }   /* candles on the dirt wall */
@@ -1678,10 +1702,15 @@ GAMES.push({
     else { const stink = 1 - s.gd[s.pr][s.pc] / Math.max(1, s.gmax);
       T('STINK', PX + 8, 110, '#c9a46a', 6); BAR(PX + 8, 116, PW - 16, 6, stink, stink > 0.75 ? '#a0d040' : '#8a6a3a');
       if (stink > 0.75 && Math.floor(t * 3) % 2) T('SMELLS CLOSE', PX + PW / 2, 132, '#a0d040', 6, 'center');
-      T(s.escort ? 'ESCORTING THE PRINCESS' : s.married ? 'MARRIED (TO A POSSUM)' : 'B = BAG / REST', PX + 8, 138, s.escort || s.married ? '#ff8ad0' : '#9fd1ff', 5); T('LIVES ' + '♥'.repeat(s.lives) + '♡'.repeat(3 - s.lives), PX + PW - 8, 138, '#e9665a', 5, 'right'); T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PB CRACKERS x' + s.crk, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
+      T(s.escort ? 'ESCORTING THE PRINCESS' : s.married ? 'MARRIED (TO A POSSUM)' : 'B = BAG / REST', PX + 8, 138, s.escort || s.married ? '#ff8ad0' : '#9fd1ff', 5); T('LIVES ' + '♥'.repeat(s.lives) + '♡'.repeat(3 - s.lives), PX + PW - 8, 126, '#e9665a', 5, 'right'); T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PB CRACKERS x' + s.crk, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
     // bottom bar: the hero's portrait + health, and the message scroll
     bevel(10, 200, 56, 60);
-    if (s.battle && s.battle.F.princess && s.battle.open <= 0 && MG('ut_princess_face')) { const b = s.battle, f = b.out ? 1 : b.pose === 7 ? 6 : b.pose === 6 ? 4 : b.pose === 4 ? 2 : b.hp < b.max / 2 ? 3 : 0;
+    if (s.wake) { const [who, f] = s.wake.lines[s.wake.i], me = HERO(s).name.toLowerCase();
+      R(10, 200, 56, 60, '#0a0806'); g.imageSmoothingEnabled = true;
+      if (who === 'CARL' && MG('ut_carl_face')) g.drawImage(MG('ut_carl_face'), f * 96, 0, 96, 96, 10, 202, 56, 56);
+      else { const im = TRL.faceN(me === 'rod' ? 'rod_gross' : 'matt_shocked') || TRL.face(me, 1); if (im) g.drawImage(im, 10, 200, 56, 60); }
+      g.imageSmoothingEnabled = false; }
+    else if (s.battle && s.battle.F.princess && s.battle.open <= 0 && MG('ut_princess_face')) { const b = s.battle, f = b.out ? 1 : b.pose === 7 ? 6 : b.pose === 6 ? 4 : b.pose === 4 ? 2 : b.hp < b.max / 2 ? 3 : 0;
       R(10, 200, 56, 60, '#0a0806'); g.imageSmoothingEnabled = true; g.drawImage(MG('ut_princess_face'), f * 96, 0, 96, 96, 10, 202, 56, 56); g.imageSmoothingEnabled = false; }
     else if (s.wed && s.wed.lines[s.wed.i][0] === 'THE PRINCESS' && MG('ut_princess_face')) { const f = s.wed.i >= 16 ? 6 : 7;   /* the bride */
       R(10, 200, 56, 60, '#0a0806'); g.imageSmoothingEnabled = true; g.drawImage(MG('ut_princess_face'), f * 96, 0, 96, 96, 10, 202, 56, 56); g.imageSmoothingEnabled = false; }
@@ -1692,7 +1721,7 @@ GAMES.push({
     else { const H = HERO(s), sp = s.talk ? s.talk.lines[s.talk.i][0] : null, other = s.fixT > 6.2, im = TRL.face(sp ? sp.toLowerCase() : (H.name === 'ROD') !== other ? 'rod' : 'matt', sp || other ? 1 : s.hp / s.hpMax); if (im) { g.imageSmoothingEnabled = true; g.drawImage(im, 10, 200, 56, 60); g.imageSmoothingEnabled = false; } else R(10, 200, 56, 60, '#2a2a36');
       if (s.shake > 0.2) { g.fillStyle = 'rgba(233,102,90,.45)'; g.fillRect(10, 200, 56, 60); } }
     bevel(74, 200, 92, 60);
-    T(s.wed && /POSSUM (KING|QUEEN)|THE PRINCESS/.test(s.wed.lines[s.wed.i][0]) ? s.wed.lines[s.wed.i][0].replace('POSSUM ', '').replace('THE ', '') : s.battle && s.battle.F.princess && MG('ut_princess_face') ? 'PRINCESS' : HERO(s).name, 80, 210, '#e8c86a', 7); T('HP', 80, 226, '#fff', 6); BAR(96, 222, 64, 7, s.hp / s.hpMax, s.hp / s.hpMax > 0.5 ? '#7bd65b' : s.hp / s.hpMax > 0.25 ? '#f7c418' : '#e9665a');
+    T(s.wake && s.wake.lines[s.wake.i][0] === 'CARL' ? 'CARL' : s.wed && /POSSUM (KING|QUEEN)|THE PRINCESS/.test(s.wed.lines[s.wed.i][0]) ? s.wed.lines[s.wed.i][0].replace('POSSUM ', '').replace('THE ', '') : s.battle && s.battle.F.princess && MG('ut_princess_face') ? 'PRINCESS' : HERO(s).name, 80, 210, '#e8c86a', 7); T('HP', 80, 226, '#fff', 6); BAR(96, 222, 64, 7, s.hp / s.hpMax, s.hp / s.hpMax > 0.5 ? '#7bd65b' : s.hp / s.hpMax > 0.25 ? '#f7c418' : '#e9665a');
     T(`${Math.max(0, s.hp)} / ${s.hpMax}`, 160, 240, '#e8dcc0', 6, 'right'); T(s.venom > 0 ? 'ITCHY' : s.hp / s.hpMax > 0.5 ? 'GOOD' : s.hp / s.hpMax > 0.25 ? 'BITTEN' : 'BAD SHAPE', 80, 252, s.venom > 0 ? '#c080e0' : s.hp / s.hpMax > 0.5 ? '#7bd65b' : '#e9665a', 6);
     bevel(174, 200, 298, 60);
     { const log = s.log || (s.log = []);
