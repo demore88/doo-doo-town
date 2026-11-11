@@ -78,7 +78,8 @@
   #pad.lr .A{right:15%;left:auto;bottom:28%;width:13%}
   /* left-handed: everything mirrors */
   #pad .B{display:none;left:4%;bottom:52%;width:13%;border-radius:50%;border-color:#9fd1ff;font-size:clamp(8px,1.5cqw,15px)}
-  #pad.crawl .A,#pad.crawl.b2 .B{display:none}   /* Under the Trailer: everything is tapped right on the screen (BAG and the fight buttons live in the right panel) */
+  #pad.crawl .A,#pad.crawl.b2 .B{display:none}
+  #pad.runner .A{right:3%;bottom:30%;width:14%} #pad.runner.b2 .B{left:auto;right:5%;bottom:5%;width:12%}   /* Cleanout Blowout: JUMP over SLIDE on the right thumb */   /* Under the Trailer: everything is tapped right on the screen (BAG and the fight buttons live in the right panel) */
   #pad.b2 .B{display:block} #pad.lr .B{left:15%;bottom:28%}   /* the second button: the same action on the left (SPIN), or a left-thumb action (HOLD BREATH) */
   #pad.lefty .A{right:auto;left:4%}
   #pad.lefty.lr .A{left:15%;right:auto}
@@ -172,7 +173,7 @@ function showPad() {
   const G = cur != null ? GAMES[cur] : null;
   $('#pad').classList.toggle('on', padOn && (phase === 'play' || phase === 'ready') && !(G && G.pad === false));
   $('#pad').classList.toggle('lefty', ((DDT.get() || {}).hand) === 'L');
-  $('#pad').classList.toggle('nodp', !!(G && G.dpad === false)); $('#pad').classList.toggle('lr', !!(G && G.dpad === 'lr')); $('#pad').classList.toggle('ud', !!(G && G.dpad === 'ud')); $('#pad').classList.toggle('stick', !!(G && (G.dpad === 'stick' || G.dpad === 'omni'))); $('#pad').classList.toggle('b2', !!(G && G.act2)); $('#pad').classList.toggle('crawl', !!(G && G.id === 'crawl')); if (G && G.act2) $('#act2').textContent = G.act2; STICK_OMNI = !!(G && G.dpad === 'omni');
+  $('#pad').classList.toggle('nodp', !!(G && G.dpad === false)); $('#pad').classList.toggle('lr', !!(G && G.dpad === 'lr')); $('#pad').classList.toggle('ud', !!(G && G.dpad === 'ud')); $('#pad').classList.toggle('stick', !!(G && (G.dpad === 'stick' || G.dpad === 'omni'))); $('#pad').classList.toggle('b2', !!(G && G.act2)); $('#pad').classList.toggle('crawl', !!(G && G.id === 'crawl')); $('#pad').classList.toggle('runner', !!(G && G.id === 'sprinkler')); if (G && G.act2) $('#act2').textContent = G.act2; STICK_OMNI = !!(G && G.dpad === 'omni');
   $('#actbtn').textContent = (G && G.act) || 'GO'; $('#actbtn').style.display = G && G.act === null ? 'none' : '';
   $('#padbtn').textContent = padOn ? 'PAD ON' : 'PAD';
 }
