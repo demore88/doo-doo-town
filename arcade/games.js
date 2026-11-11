@@ -1268,6 +1268,22 @@ TRL.FOES = [   /* spr: 8-frame strip (0 idle 1 sniff 2 stalk 3 run 4 rear up 5 a
 TRL.cry = (F, long) => SFX(F.snd, { offset: F.off || 0, dur: long ? 1.6 : 1.0 });   /* each critter's own noise */
 TRL.UTS = (n, f, cx, by, h, flip, a) => { const im = MG(n); if (!im) return false; const cw = im.width / 8, w = h * cw / im.height;   /* one frame of a creature strip */
   g.save(); if (a != null) g.globalAlpha = a; g.imageSmoothingEnabled = false; g.translate(cx, by); if (flip) g.scale(-1, 1); g.drawImage(im, f * cw, 0, cw, im.height, -w / 2, -h, w, h); g.restore(); return true; };
+TRL.hands = (s, VX, VY, VW, VH, t) => {
+  const G2 = s.gear, wpn = G2.includes('cutter') ? 'cutter' : G2.includes('wrench') ? 'monkey' : G2.includes('pipewrench') ? 'pipe' : 'fist', lid = G2.includes('lid');
+  const bob = s.mv > 0 ? Math.sin(t * 16) * 3 : Math.sin(t * 2) * 1, sw = s.swing > 0 ? Math.sin((1 - s.swing / 0.35) * Math.PI) : 0, by = VY + VH;
+  const glove = (x, y, w, h) => { R(x, y, w, h, '#8a5a2e'); R(x, y, w, 2, '#b07a44'); R(x + 2, y + 3, w - 4, 1, '#6a4422'); for (let i = 1; i < 4; i++) R(x + (w / 4) * i, y, 1, 4, '#5a3a1c'); };   /* leather work gloves */
+  // left: the flashlight, or the trash can lid strapped on
+  { const x = VX + 40, y = by - 46 + bob;
+    if (lid) { C(x + 14, y + 8, 34, '#7c8288'); C(x + 14, y + 8, 30, '#9aa1a8'); for (let i = 0; i < 4; i++) { g.strokeStyle = '#7c8288'; g.lineWidth = 1; g.beginPath(); g.arc(x + 14, y + 8, 8 + i * 6, 0, 7); g.stroke(); } R(x + 6, y + 4, 16, 6, '#5a5f66'); C(x + 2, y - 6, 6, 'rgba(255,255,255,.35)'); }
+    else { R(x + 10, y - 2, 14, 30, '#2a2a2a'); R(x + 8, y - 8, 18, 8, '#3a3a3a'); R(x + 10, y - 7, 14, 4, '#fff6c0'); glove(x + 4, y + 8, 26, 16); } }
+  // right: fists, pipe wrench, monkey wrench, or pipe cutter, swinging up when you hit
+  { const x = VX + VW - 90, y = by - 40 + bob - sw * 40; g.save(); g.translate(x + 30, y + 30); g.rotate(-0.5 * sw - 0.15); g.translate(-30, -30);
+    if (wpn === 'fist') { glove(14, 10, 34, 26); R(14, 6, 34, 6, '#8a5a2e'); for (let i = 0; i < 4; i++) R(16 + i * 8, 6, 6, 4, '#a06a38'); }
+    else if (wpn === 'pipe') { R(24, -36, 9, 56, '#c0392b'); R(24, -36, 2, 56, '#e05a4a'); R(16, -50, 24, 10, '#9aa1a8'); R(16, -42, 8, 10, '#9aa1a8'); R(22, -48, 2, 6, '#5a5f66'); glove(12, 14, 34, 22); }
+    else if (wpn === 'monkey') { R(24, -42, 10, 62, '#9aa1a8'); R(24, -42, 3, 62, '#d0d6dc'); R(14, -58, 30, 12, '#b8bec4'); R(14, -48, 10, 12, '#b8bec4'); R(26, -36, 6, 4, '#5a5f66'); glove(12, 14, 36, 22); }
+    else { R(22, -30, 12, 50, '#e07a1c'); R(22, -30, 3, 50, '#f2a04a'); C(28, -38, 11, '#c9ced6'); C(28, -38, 5, '#5a5f66'); R(16, -50, 24, 6, '#e07a1c'); glove(12, 14, 34, 22); }
+    g.restore(); }
+};
 TRL.music = { h: null, tick: 0, amb: null, atick: 0 };
 TRL.bgm = on => { const M = TRL.music; if (on && !M.h && typeof DDTSfx !== 'undefined') M.h = DDTSfx.loop('ut_battle'); if (!on && M.h) { M.h.stop(); M.h = null; } };
 TRL.amb = on => { const M = TRL.music; if (on && !M.amb && typeof DDTSfx !== 'undefined') M.amb = [DDTSfx.loop('ut_amb_a'), DDTSfx.loop('ut_amb_b')]; if (!on && M.amb) { M.amb.forEach(h => h.stop()); M.amb = null; } };   /* the two crawlspace tracks, layered */
@@ -1308,13 +1324,13 @@ GAMES.push({
     s.seen = new Set([101]); s.steps = 0; s.since = 0;
     const H = HERO(s), rod = H.name === 'ROD';
     s.hpMax = s.hp = rod ? 36 : 28; s.dmg = rod ? [3, 6] : [4, 7]; s.runOdds = rod ? 0.5 : 0.7;
-    s.lvl = 1; s.xp = 0; s.atkB = 0; s.def = 0; s.gear = []; s.items = { aid: 1, beans: 0, tonic: 0, poison: 0 }; s.restMin = 0; s.bag = null; s.kingDone = false;
+    s.lvl = 1; s.xp = 0; s.atkB = -1; s.def = 0; s.swing = 0; s.gear = []; s.items = { aid: 1, beans: 0, tonic: 0, poison: 0 }; s.restMin = 0; s.bag = null; s.kingDone = false;
     s.lights = 3; s.crk = 2; s.score = 0; s.fights = 0; s.won = 0; s.hits = 0; s.battle = null; s.flash = 0; s.fixT = 0;
     s.cv = document.createElement('canvas'); s.cv.width = TRL.RW; s.cv.height = TRL.RH; s.cx = s.cv.getContext('2d'); s.img = s.cx.createImageData(TRL.RW, TRL.RH); s.buf = new Uint32Array(s.img.data.buffer); s.zb = new Float32Array(TRL.RW);
   },
   open(s, c, r) { return s.map[r] && s.map[r][c] === '.'; },
   update(s, dt, I) {
-    s.t += dt; FX(s, dt); s.flash = Math.max(0, s.flash - dt); s.shake = Math.max(0, (s.shake || 0) - dt);
+    s.t += dt; FX(s, dt); s.flash = Math.max(0, s.flash - dt); s.shake = Math.max(0, (s.shake || 0) - dt); s.swing = Math.max(0, (s.swing || 0) - dt);
     if (s.fixT) { s.fixT += dt * (s.fixT > 3.4 && (I.Ap || I.ptr.clicked) ? 6 : 1); if (s.fixT > 9.4) { const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.t < 50 + s.gmax * 2, f >= 0.3), line: s.epi[1] + (s.restMin ? ` (Rested ${s.restMin} min.)` : ''), extraTime: s.restMin }); } return; }
     if (!s.battle) { TRL.music.atick = performance.now(); TRL.amb(true); } else TRL.amb(false);
     if (s.talk) { const K = s.talk; K.t += dt; if ((K.t > 0.4 && (I.Ap || I.ptr.clicked)) || K.t > 4.5) { K.i++; K.t = 0; if (K.i >= K.lines.length) { const me = HERO(s).name, them = me === 'ROD' ? 'Matt' : 'Rod'; s.talk.i = K.lines.length - 1; s.end = { win: true, stars: 1, carl: true, extraTime: s.restMin, line: `${them} fixed it. ${me === 'ROD' ? 'Rod' : 'Matt'} is still talking about Carl.` }; } } return; }
@@ -1351,7 +1367,7 @@ GAMES.push({
       const met = s.met || [], big = ['THE RAT KING', 'BROWN RECLUSE', 'RACCOON', 'BIG BUFF RAT', 'POSSUM', 'SEWER RAT'].find(n => met.includes(n));   /* ...and then nobody believes you */
       const brag = s.married ? 'I got married down there. To a possum. Then I left on a quest.' : !met.length ? 'Just a drip. Easy one.' : big === 'THE RAT KING' ? 'There was a RAT KING down there. With a CROWN.' : big === 'BROWN RECLUSE' ? 'I fought a brown recluse. Hand to hand.' : big === 'RACCOON' ? 'A raccoon jumped me. We went three rounds.' : met.length > 2 ? `I fought ${met.length} things down there.` : `I had to fight a ${big.toLowerCase()} down there.`;
       const nope = s.married ? ['...Congratulations?', 'Does she know where you live?', 'Are you paying child support to a possum?', 'You were under there for an hour.'] : !met.length ? ["That's what I like to hear.", 'Good. Now get in the van.'] : ['Sure you did, bud.', 'Uh huh. Get in the van.', "You were under there twenty minutes. Fixing a Fernco.", 'Was it the same raccoon as last time?', "Sure. And I'm the Rat King.", "You smell like you did, I'll give you that.", "Nobody's gonna believe that.", "Don't tell the customer that."];
-      s.epi = [brag, nope[Math.floor(s.rnd() * nope.length)]]; return; }
+      s.epi = [brag, nope[Math.floor(s.rnd() * nope.length)]]; if (s.carls.every(c => c.met)) s.epi[1] = "...Hey. Whose blue Econoline is that? It's been out front for fifteen years."; return; }
     if (s.gd[s.pr][s.pc] === 1 && !s.kingDone) { this.ambush(s, TRL.FOES.find(f => f.king)); return; }   /* he guards the drip */
     this.carlHint(s);
     const chance = [0.11, 0.13, 0.15][s.diff];
@@ -1382,18 +1398,23 @@ GAMES.push({
   HOBO_BROKE: ["No crackers? ...No crackers. That's okay. I'll love you anyway.", "Come back when you have the little ones.", "You don't have enough. That's okay. I'll love you anyway.", "Short? Stay a while. We could just... sit.", "I can't take IOUs. Not since the last one broke my heart."],
   wares(s) { const t = (s.shop && s.shop.tier) || 1, I2 = s.items, gear = (id, label, price, k, v, line) => ({ id, label, price, go: () => { s.gear.push(id); if (k === 'def') s.def += v; else if (k === 'atk') s.atkB += v; else { s.hpMax += v; s.hp += v; } }, line, off: s.gear.includes(id) });
     const L = [{ id: 'bat', label: 'BATTERIES', price: 1, go: () => s.lights++, line: 'Flashlight +1' }, { id: 'aid', label: 'BAND-AIDS', price: 1, go: () => I2.aid++, line: 'Into the bag. +12 HP when you use them.' }];
-    if (t === 1) L.push(gear('pads', 'KNEE PADS', 3, 'def', 1, 'DEF +1. Still warm.'), { id: 'map', label: 'HIS MAP', price: 3, go: () => { s.mapBought = true; }, line: 'An X on a napkin marks the drip.', off: s.mapBought });
-    if (t >= 2) L.push({ id: 'beans', label: 'COLD BEANS', price: 2, go: () => I2.beans++, line: '+25 HP. He warmed them in his armpit.' }, gear(t === 2 ? 'hat' : 'waders', t === 2 ? 'HARD HAT' : 'CHEST WADERS', t === 2 ? 5 : 7, 'def', t === 2 ? 2 : 3, t === 2 ? "DEF +2. It's his old one." : 'DEF +3. Mostly waterproof.'), gear(t === 2 ? 'wrench' : 'cutter', t === 2 ? 'BIGGER WRENCH' : 'PIPE CUTTER', t === 2 ? 6 : 8, 'atk', t === 2 ? 2 : 3, t === 2 ? 'ATK +2. 24 inches of truth.' : 'ATK +3. Do not ask what else he cut with it.'));
+    if (t === 1) L.push(gear('pipewrench', 'PIPE WRENCH', 3, 'atk', 3, 'ATK +3. Finally, a weapon.'), gear('lid', 'TRASH CAN LID', 3, 'def', 2, 'DEF +2. Strapped to your arm. Smells.'), gear('pads', 'KNEE PADS', 2, 'def', 1, 'DEF +1. Still warm.'), { id: 'map', label: 'HIS MAP', price: 3, go: () => { s.mapBought = true; }, line: 'An X on a napkin marks the drip.', off: s.mapBought });
+    if (t >= 2) L.push({ id: 'beans', label: 'COLD BEANS', price: 2, go: () => I2.beans++, line: '+25 HP. He warmed them in his armpit.' }, gear(t === 2 ? 'hat' : 'waders', t === 2 ? 'HARD HAT' : 'CHEST WADERS', t === 2 ? 5 : 7, 'def', t === 2 ? 2 : 3, t === 2 ? "DEF +2. It's his old one." : 'DEF +3. Mostly waterproof.'), gear(t === 2 ? 'wrench' : 'cutter', t === 2 ? 'MONKEY WRENCH' : 'PIPE CUTTER', t === 2 ? 6 : 8, 'atk', t === 2 ? 2 : 3, t === 2 ? 'ATK +2. 24 inches of truth.' : 'ATK +3. Do not ask what else he cut with it.'));
     if (t === 2) L.push({ id: 'map', label: 'HIS MAP', price: 2, go: () => { s.mapBought = true; }, line: 'An X on a napkin marks the drip.', off: s.mapBought });
     if (t === 3) L.push({ id: 'tonic', label: "CARL'S TONIC", price: 3, go: () => I2.tonic++, line: 'Full health. Smells like gasoline and love.' }, { id: 'poison', label: 'RAT POISON', price: 4, go: () => I2.poison++, line: '25 damage to anything with a tail. Including Kings.' });
     return [...L, { id: 'bye', label: 'LEAVE', price: 0 } ]; },
   mood(s, list) { const S = s.shop; if (!S) return; S.face = list[Math.floor(s.rnd() * list.length)]; S.flip = s.rnd() < 0.35 ? [5, 1, 7, 3][Math.floor(s.rnd() * 4)] : null; S.t = 0; },   /* ...and sometimes he flips mid-sentence */
   HOBO_T2: "YOU! You came back! ...Different Carl? There's only one Carl. I get around. Crackers?",
   HOBO_T3: "Shhh. He's right through there. The KING. You're gonna want everything Carl's got. Everything. For the little crackers.",
-  openShop(s, cl) { cl = cl || s.carls[0]; s.hobo = cl; s.shop = { sel: 0, tier: cl.tier, say: this.HOBO_HI[Math.floor(s.rnd() * this.HOBO_HI.length)], t: 0, buyT: 0 }; s.metHobo = true; this.mood(s, [0, 6, 4]);
-    if (!cl.met) { cl.met = true; s.shop.say = cl.tier === 1 ? this.HOBO_FIRST : cl.tier === 2 ? this.HOBO_T2 : this.HOBO_T3; } },
+  openShop(s, cl) { cl = cl || s.carls[0]; s.hobo = cl; s.shop = { q: [], sel: 0, tier: cl.tier, say: this.HOBO_HI[Math.floor(s.rnd() * this.HOBO_HI.length)], t: 0, buyT: 0 }; s.metHobo = true; this.mood(s, [0, 6, 4]);
+    if (!cl.met) { cl.met = true; s.shop.say = cl.tier === 1 ? this.HOBO_FIRST : cl.tier === 2 ? this.HOBO_T2 : this.HOBO_T3; s.shop.q = this.CARL_STORY[cl.tier].slice(); } },
+  CARL_STORY: {
+    1: ["I came down here to fix a P-trap. 2009. Nice lady. Doris. ...Or Dot.", "Somebody put the skirting back on while I was under here. With SCREWS. Four of 'em.", "Been living off the little crackers ever since. Somebody keeps baiting the rat traps with 'em. Bless 'em."],
+    2: ["I was a handyman. Thirty-one years. Faucets. Furnaces. The occasional possum.", "I could fix that drip, you know. I've been MEANING to. Fifteen years.", "Is there a blue Econoline parked out front? ...No. Don't tell me. I don't want to know."],
+    3: ["The King took my good wrench. And my tool belt. And my dignity.", "When you fix that drip... tell 'em upstairs Carl says hi. Tell 'em I'm fine.", "Don't feel bad for me. I got crackers. I got candles. I got a skull. What more does a man need?"] },
   shopping(s, dt, I) {
     const S = s.shop, W2 = this.wares(s); S.t += dt; S.buyT = Math.max(0, S.buyT - dt);
+    if (S.q && S.q.length && S.t > 4.5) { S.say = S.q.shift(); S.t = 0; this.mood(s, [0, 4, 7, 6]); S.t = 0; }   /* he keeps talking while you shop */
     if (I.Up || I.Lp) S.sel = (S.sel + W2.length - 1) % W2.length; if (I.Dp || I.Rp) S.sel = (S.sel + 1) % W2.length;
     let pick = I.Ap ? S.sel : null;
     if (I.ptr.clicked) for (let i = 0; i < W2.length; i++) { const [x, y, w, h] = this.optBox(i, W2.length); if (I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h) { S.sel = i; pick = i; } }
@@ -1423,6 +1444,7 @@ GAMES.push({
     L.push([them, pick(['Get in the van.', "Don't tell the customer.", 'I am never letting you live this down.'])]);
     s.talk = { lines: L, i: 0, t: 0 };
   },
+  weapon(s) { const G2 = s.gear; return G2.includes('cutter') ? 'pipe cutter' : G2.includes('wrench') ? 'monkey wrench' : G2.includes('pipewrench') ? 'pipe wrench' : 'fists'; },
   gainXP(s, n) { s.xp += n; while (s.xp >= s.lvl * 60) { s.xp -= s.lvl * 60; s.lvl++; s.hpMax += 5; s.hp = Math.min(s.hpMax, s.hp + Math.round(s.hpMax * 0.4)); (s.log = s.log || []).push(`LEVEL ${s.lvl}! Max HP +5, hits harder. You feel more... crawly.`); SFX('ui_select'); } },
   // the bag: stats, items, and resting. B opens it. In a fight, using something takes your turn.
   bagList(s) { const I2 = s.items, inB = s.bag && s.bag.battle; const L = [
@@ -1509,9 +1531,9 @@ GAMES.push({
     b.wonFn = won; b.foeTurnFn = foeTurn;
     if (o.id === 'item') { s.bag = { sel: 0, battle: true }; return; }
     if (o.id === 'whack') {
-      if (s.rnd() < 0.1) this.say(s, 'You swing the pipe wrench... and hit a pier. CLANG.', () => SFX('click'));
+      if (s.rnd() < 0.1) this.say(s, this.weapon(s) === 'fists' ? 'You swing... and punch a pier. OW.' : `You swing the ${this.weapon(s)}... and hit a pier. CLANG.`, () => { s.swing = 0.35; SFX('click'); });
       else { const crit = s.rnd() < 0.12, d = Math.round((s.dmg[0] + s.rnd() * (s.dmg[1] - s.dmg[0]) + s.atkB + (s.lvl - 1)) * (crit ? 2 : 1));
-        this.say(s, crit ? `CRITICAL WHACK! ${d} damage!` : `You whack it with the pipe wrench! ${d} damage.`, () => { b.hp -= d; b.blink = 0.4; b.dmgT = 0.7; b.dmg = d; s.shake = 0.12; b.pose = 6; b.poseT = 0.6; b.faking = false; SFX('wrench_hit'); }); }
+        this.say(s, crit ? `CRITICAL ${this.weapon(s) === 'fists' ? 'PUNCH' : 'WHACK'}! ${d} damage!` : this.weapon(s) === 'fists' ? `You punch it! ${d} damage.` : `You whack it with the ${this.weapon(s)}! ${d} damage.`, () => { s.swing = 0.35; b.hp -= d; b.blink = 0.4; b.dmgT = 0.7; b.dmg = d; s.shake = 0.12; b.pose = 6; b.poseT = 0.6; b.faking = false; SFX('wrench_hit'); }); }
       b.after = () => { if (b.hp <= 0) won(); else if (b.F.possum && !b.played && b.hp < b.max / 2) { b.played = b.faking = true; this.say(s, 'The POSSUM keels over. ...Is it dead?', () => { b.pose = 7; b.poseT = 99; }); } else foeTurn(); };
     } else if (o.id === 'light') {
       s.lights--; this.say(s, 'You blast it with the flashlight!', () => { s.flash = 0.35; SFX('click'); });
@@ -1525,7 +1547,7 @@ GAMES.push({
       else { this.say(s, "You're stuck in the muck!"); b.after = () => foeTurn(); }
     }
   },
-  opts(s) { const K = s.battle && s.battle.F.king; return [{ id: 'whack', label: 'WHACK' }, { id: 'light', label: `FLASHLIGHT x${s.lights}`, off: s.lights <= 0 }, { id: 'item', label: 'BAG' }, { id: 'pb', label: `TOSS A CRACKER x${s.crk}`, off: s.crk <= 0 || K }, { id: 'run', label: 'RUN', off: K }]; },
+  opts(s) { const K = s.battle && s.battle.F.king; return [{ id: 'whack', label: this.weapon(s) === 'fists' ? 'PUNCH' : 'WHACK' }, { id: 'light', label: `FLASHLIGHT x${s.lights}`, off: s.lights <= 0 }, { id: 'item', label: 'BAG' }, { id: 'pb', label: `TOSS A CRACKER x${s.crk}`, off: s.crk <= 0 || K }, { id: 'run', label: 'RUN', off: K }]; },
   optBox(i, n = 4) { const gap = Math.min(22, Math.floor(86 / n)), h = gap - 2; return [340, 103 + i * gap, 130, h]; },   /* the command buttons, down the right-hand panel */
   render(s) {   // the 3D view: raycast walls, cast floor + ceiling, then the broken joint as a sprite
     const { RW, RH, T: N } = TRL, buf = s.buf, zb = s.zb, tx = TRL.tex;
@@ -1594,6 +1616,7 @@ GAMES.push({
       // the monster's name plate along the top of the view
       R(cx - 70, VY + 4, 140, 22, 'rgba(10,8,6,.8)'); T(b.F.name, cx, VY + 12, b.F.king ? '#f7c418' : '#fff', 7, 'center'); BAR(cx - 50, VY + 19, 100, 4, b.hp / b.max, '#e9665a');
     }
+    if (!s.wed && !s.bag && !s.talk && !(s.fixT >= 3.4)) TRL.hands(s, VX, VY, VW, VH, t);
     if (b && b.open > 0) { const k = b.open / 0.6; for (let i = 0; i < 9; i++) R(VX, VY + i * 20, VW * (1 - k), 20, '#000'); }   // the screen wipe into the fight
     if (s.flash > 0) { g.fillStyle = `rgba(255,250,220,${s.flash})`; g.fillRect(VX, VY, VW, VH); }
     if (s.wed) { const W2 = s.wed, [who, line] = W2.lines[W2.i], k = W2.i;
@@ -1614,7 +1637,7 @@ GAMES.push({
     if (s.bag) { R(VX, VY, VW, VH, 'rgba(10,8,6,.93)'); T('THE BAG', VX + 10, VY + 10, '#e8c86a', 8);
       const st = [['LEVEL', s.lvl], ['XP', `${s.xp} / ${s.lvl * 60}`], ['HP', `${Math.max(0, s.hp)} / ${s.hpMax}`], ['ATTACK', `${s.dmg[0] + s.atkB + s.lvl - 1}-${s.dmg[1] + s.atkB + s.lvl - 1}`], ['DEFENSE', s.def], ['CRACKERS', s.crk], ['FLASHLIGHTS', s.lights], ['TIME RESTED', `${s.restMin} MIN`]];
       st.forEach(([k, v], i) => { T(k, VX + 12, VY + 30 + i * 14, '#9fb3d9', 6); T(String(v), VX + 150, VY + 30 + i * 14, '#fff', 6, 'right'); });
-      const GN = { crown: 'POSSUM CROWN', pads: 'KNEE PADS', hat: 'HARD HAT', waders: 'CHEST WADERS', wrench: 'BIGGER WRENCH', cutter: 'PIPE CUTTER' }; T('WEARING: ' + (s.gear.length ? s.gear.map(q => GN[q]).join(', ') : 'NOTHING SPECIAL'), VX + 12, VY + VH - 12, '#c9a46a', 5);
+      const GN = { pipewrench: 'PIPE WRENCH', lid: 'TRASH CAN LID', crown: 'POSSUM CROWN', pads: 'KNEE PADS', hat: 'HARD HAT', waders: 'CHEST WADERS', wrench: 'BIGGER WRENCH', cutter: 'PIPE CUTTER' }; T('WEARING: ' + (s.gear.length ? s.gear.map(q => GN[q]).join(', ') : 'NOTHING SPECIAL'), VX + 12, VY + VH - 12, '#c9a46a', 5);
       this.bagList(s).forEach((o, i) => { const [x, y, w, h] = this.bagBox(i), on = i === s.bag.sel; R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); T(o.label, x + 6, y + h / 2 + 1, o.off ? '#5a5048' : on ? '#f7c418' : '#e8dcc0', 6); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); }); }
     if (s.fixT && s.fixT < 3.4) { R(VX + 20, VY + 70, VW - 40, 40, 'rgba(10,8,6,.85)'); T(s.fixT < 1.2 ? 'THERE IT IS. THE DRIP.' : s.fixT < 2.2 ? 'FERNCO ON...' : 'CLAMPS TIGHT. DONE!', VX + VW / 2, VY + 90, '#7bd65b', 9, 'center'); }
     if (s.talk) { const K = s.talk, [who, line] = K.lines[Math.min(K.i, K.lines.length - 1)];
@@ -1653,14 +1676,18 @@ GAMES.push({
       T(s.escort ? 'ESCORTING THE PRINCESS' : s.married ? 'MARRIED (TO A POSSUM)' : 'B = BAG / REST', PX + 8, 138, s.escort || s.married ? '#ff8ad0' : '#9fd1ff', 5); T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PB CRACKERS x' + s.crk, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
     // bottom bar: the hero's portrait + health, and the message scroll
     bevel(10, 200, 56, 60);
-    if (s.wed && /POSSUM (KING|QUEEN)/.test(s.wed.lines[s.wed.i][0]) && MG('ut_royal_face')) { const k = s.wed.i, king = s.wed.lines[k][0] === 'POSSUM KING', f = king ? ({ 1: 0, 3: 1, 6: 1, 9: 1, 11: 1 }[k] ?? 3) : ({ 2: 4, 5: 4, 14: 7 }[k] ?? 6);   /* the in-laws */
+    if (s.battle && s.battle.F.princess && s.battle.open <= 0 && MG('ut_princess_face')) { const b = s.battle, f = b.out ? 1 : b.pose === 7 ? 6 : b.pose === 6 ? 4 : b.pose === 4 ? 2 : b.hp < b.max / 2 ? 3 : 0;
+      R(10, 200, 56, 60, '#0a0806'); g.imageSmoothingEnabled = true; g.drawImage(MG('ut_princess_face'), f * 96, 0, 96, 96, 10, 202, 56, 56); g.imageSmoothingEnabled = false; }
+    else if (s.wed && s.wed.lines[s.wed.i][0] === 'THE PRINCESS' && MG('ut_princess_face')) { const f = s.wed.i >= 16 ? 6 : 7;   /* the bride */
+      R(10, 200, 56, 60, '#0a0806'); g.imageSmoothingEnabled = true; g.drawImage(MG('ut_princess_face'), f * 96, 0, 96, 96, 10, 202, 56, 56); g.imageSmoothingEnabled = false; }
+    else if (s.wed && /POSSUM (KING|QUEEN)/.test(s.wed.lines[s.wed.i][0]) && MG('ut_royal_face')) { const k = s.wed.i, king = s.wed.lines[k][0] === 'POSSUM KING', f = king ? ({ 1: 0, 3: 1, 6: 1, 9: 1, 11: 1 }[k] ?? 3) : ({ 2: 4, 5: 4, 14: 7 }[k] ?? 6);   /* the in-laws */
       R(10, 200, 56, 60, '#0a0806'); g.imageSmoothingEnabled = true; g.drawImage(MG('ut_royal_face'), f * 96, 0, 96, 96, 10, 202, 56, 56); g.imageSmoothingEnabled = false; }
     else if (s.shop && MG('ut_carl_face')) { const S = s.shop, tw = Math.floor(t / 3.1) % 3 === 2 && (t % 3.1) < 0.18, f = tw ? 7 : S.flip != null && S.t > 1.1 ? S.flip : S.face;
       R(10, 200, 56, 60, '#0a0806'); g.imageSmoothingEnabled = true; g.drawImage(MG('ut_carl_face'), f * 96, 0, 96, 96, 10, 202, 56, 56); g.imageSmoothingEnabled = false; }
     else { const H = HERO(s), sp = s.talk ? s.talk.lines[s.talk.i][0] : null, other = s.fixT > 6.2, im = TRL.face(sp ? sp.toLowerCase() : (H.name === 'ROD') !== other ? 'rod' : 'matt', sp || other ? 1 : s.hp / s.hpMax); if (im) { g.imageSmoothingEnabled = true; g.drawImage(im, 10, 200, 56, 60); g.imageSmoothingEnabled = false; } else R(10, 200, 56, 60, '#2a2a36');
       if (s.shake > 0.2) { g.fillStyle = 'rgba(233,102,90,.45)'; g.fillRect(10, 200, 56, 60); } }
     bevel(74, 200, 92, 60);
-    T(s.wed && /POSSUM (KING|QUEEN)/.test(s.wed.lines[s.wed.i][0]) ? s.wed.lines[s.wed.i][0].replace('POSSUM ', '') : HERO(s).name, 80, 210, '#e8c86a', 7); T('HP', 80, 226, '#fff', 6); BAR(96, 222, 64, 7, s.hp / s.hpMax, s.hp / s.hpMax > 0.5 ? '#7bd65b' : s.hp / s.hpMax > 0.25 ? '#f7c418' : '#e9665a');
+    T(s.wed && /POSSUM (KING|QUEEN)|THE PRINCESS/.test(s.wed.lines[s.wed.i][0]) ? s.wed.lines[s.wed.i][0].replace('POSSUM ', '').replace('THE ', '') : s.battle && s.battle.F.princess && MG('ut_princess_face') ? 'PRINCESS' : HERO(s).name, 80, 210, '#e8c86a', 7); T('HP', 80, 226, '#fff', 6); BAR(96, 222, 64, 7, s.hp / s.hpMax, s.hp / s.hpMax > 0.5 ? '#7bd65b' : s.hp / s.hpMax > 0.25 ? '#f7c418' : '#e9665a');
     T(`${Math.max(0, s.hp)} / ${s.hpMax}`, 160, 240, '#e8dcc0', 6, 'right'); T(s.venom > 0 ? 'ITCHY' : s.hp / s.hpMax > 0.5 ? 'GOOD' : s.hp / s.hpMax > 0.25 ? 'BITTEN' : 'BAD SHAPE', 80, 252, s.venom > 0 ? '#c080e0' : s.hp / s.hpMax > 0.5 ? '#7bd65b' : '#e9665a', 6);
     bevel(174, 200, 298, 60);
     { const log = s.log || (s.log = []);
