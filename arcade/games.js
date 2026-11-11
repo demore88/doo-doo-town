@@ -1273,11 +1273,13 @@ TRL.hands = (s, VX, VY, VW, VH, t) => {
   const G2 = s.gear, wpn = G2.includes('cutter') ? 'cutter' : G2.includes('wrench') ? 'monkey' : G2.includes('pipewrench') ? 'pipe' : 'fist', lid = G2.includes('lid');
   const bob = s.mv > 0 ? Math.sin(t * 16) * 3 : Math.sin(t * 2) * 1, sw = s.swing > 0 ? Math.sin((1 - s.swing / 0.35) * Math.PI) : 0, by = VY + VH, D = 3.6;
   const L = MG(lid ? (s.guard > 0 ? 'ut_h_lidup' : 'ut_h_lid') : s.lights > 0 ? 'ut_h_lighton' : 'ut_h_lightoff'), Rt = MG('ut_h_' + wpn);
-  if (L && Rt) {   /* the painted hands: drawn smooth (not chunky) so you can tell what you're holding */
+  if (L && Rt) {   /* the painted hands: big, drawn smooth (not chunky) so you can tell what you're holding */
+    const D2 = 3, arm = (im, x, y, w, h) => {   /* the arm keeps going down past the bottom of the picture, so it never looks cut off */
+      const sy = im.height - 3; g.drawImage(im, 0, sy, im.width, 3, x, y + h - 2, w, 400); g.drawImage(im, x, y, w, h); };
     g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-    { const w = L.width / D, h = L.height / D, gu = s.guard > 0 ? Math.sin(Math.min(1, (0.6 - s.guard) / 0.12) * Math.PI / 2) * 5 : 0; g.drawImage(L, VX + 18, by - h + 8 + bob * 0.8 - gu, w, h); }
-    { const w = Rt.width / D, h = Rt.height / D, x = VX + VW - w - 24, y = by - h + 10 + bob - sw * 8;
-      g.translate(x + w * 0.55, y + h * 0.75); g.rotate(-0.6 * sw); g.drawImage(Rt, -w * 0.55, -h * 0.75, w, h); }
+    { const w = L.width / D2, h = L.height / D2, gu = s.guard > 0 ? Math.sin(Math.min(1, (0.6 - s.guard) / 0.12) * Math.PI / 2) * 16 : 0; arm(L, VX - w * 0.22, by - h * (L === MG('ut_h_lidup') ? 0.66 : 0.6) + bob * 1.5 - gu, w, h); }
+    { const w = Rt.width / D2, h = Rt.height / D2, x = VX + VW - w * 0.8, y = by - h * (wpn === 'fist' ? 0.6 : 0.7) + bob * 1.5 - sw * 14;
+      g.translate(x + w * 0.55, y + h * 0.9); g.rotate(-0.5 * sw); arm(Rt, -w * 0.55, -h * 0.9, w, h); }
     g.restore(); return; }
   const glove = (x, y, w, h) => { R(x, y, w, h, '#8a5a2e'); R(x, y, w, 2, '#b07a44'); R(x + 2, y + 3, w - 4, 1, '#6a4422'); for (let i = 1; i < 4; i++) R(x + (w / 4) * i, y, 1, 4, '#5a3a1c'); };   /* leather work gloves */
   // left: the flashlight, or the trash can lid strapped on
