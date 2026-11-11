@@ -229,7 +229,7 @@ GAMES.push({
     const ramp = Math.min(1, s.z / s.DIST); s.v = (11 + 6 * ramp) * s.k; s.z += s.v * dt;
     if (I.Lp || (I.ptr.clicked && I.ptr.x / W < 0.5)) s.lane = Math.max(-1, s.lane - 1);   /* three lanes, one hop at a time: no standing in between */
     if (I.Rp || (I.ptr.clicked && I.ptr.x / W >= 0.5)) s.lane = Math.min(1, s.lane + 1);
-    s.x += (s.lane - s.x) * Math.min(1, dt * 14);
+    s.x += Math.sign(s.lane - s.x) * Math.min(Math.abs(s.lane - s.x), 4.2 * dt);   /* a steady side-step you can see */
     while (s.z + 70 > s.next && s.next < s.DIST - 14) { this.row(s, s.next, ramp); s.next += (6.6 - 1.4 * ramp) * (0.9 + s.rnd() * 0.25); }
     for (const o of s.objs) {
       const rel = o.wz - s.z, prev = o.rel == null ? rel : o.rel; o.rel = rel;
@@ -249,8 +249,17 @@ GAMES.push({
     if (IMG.bg_yard3) { g.imageSmoothingEnabled = true; g.drawImage(IMG.bg_yard3, 0, 165 - HY - 4, 480, HY + 4, -6, 0, W + 12, HY + 4); g.imageSmoothingEnabled = false; }
     else { R(-6, 0, W + 12, HY, '#9fc4e0'); }
     g.fillStyle = `rgba(80,55,25,${0.18 + 0.25 * ramp})`; g.fillRect(-6, 0, W + 12, HY);   /* the sky is going brown */
-    for (let y = HY; y < H; y += 2) { const rel = D * (FY - HY) / Math.max(0.5, y - HY) - D, k = Math.floor((s.z + rel) / 3) % 2, f = Math.min(1, (y - HY) / (H - HY)), c0 = [158, 150, 64], c1 = [104, 116, 42], m = (a, b2) => Math.round(a + (b2 - a) * f) - (k ? 10 : 0);
-      R(-6, y, W + 12, 2, `rgb(${m(c0[0], c1[0])},${m(c0[1], c1[1])},${m(c0[2], c1[2])})`); }
+    for (let y = HY; y < H; y += 2) { const rel = D * (FY - HY) / Math.max(0.5, y - HY) - D, wz = s.z + rel, f = Math.min(1, (y - HY) / (H - HY)), c0 = [150, 146, 66], c1 = [98, 114, 44], v = Math.sin(wz * 0.31) * 4 + Math.sin(wz * 0.117 + 1.3) * 5, m = (a, b2) => Math.round(a + (b2 - a) * f + v);
+      R(-6, y, W + 12, 2, `rgb(${m(c0[0], c1[0])},${m(c0[1], c1[1])},${m(c0[2], c1[2])})`); }   /* an ordinary back lawn: no mowing stripes */
+    { const hsh = n => { const x = Math.sin(n * 127.1) * 43758.5453; return x - Math.floor(x); }, z0 = Math.floor(s.z / 1.1) * 1.1;   /* worn patches, clover, tufts and dandelions, fixed to the ground so they rush past */
+      for (let zz = z0 + 34; zz >= z0; zz -= 1.1) { const rel = zz - s.z; if (rel < -1) continue;   /* only the near lawn: far away it's just grass */ const k = Math.round(zz / 1.1);
+        for (let i = 0; i < 7; i++) { const r1 = hsh(k * 13 + i), x = (r1 - 0.5) * 9, p = this.P(s, rel + hsh(k * 7 + i) * 1.1, x), sc2 = p.sc, kind = hsh(k * 31 + i);
+          if (p.y < HY + 1) continue;
+          if (kind < 0.04) { g.fillStyle = 'rgba(110,92,48,.3)'; g.beginPath(); g.ellipse(p.x, p.y, 70 * sc2, 12 * sc2, 0, 0, 7); g.fill(); }   /* bare dirt */
+          else if (kind < 0.16) { g.fillStyle = 'rgba(70,96,34,.28)'; g.beginPath(); g.ellipse(p.x, p.y, 34 * sc2, 7 * sc2, 0, 0, 7); g.fill(); }   /* darker clump */
+          else if (kind < 0.75) { g.strokeStyle = kind < 0.5 ? '#5f7c2c' : '#8fa848'; g.lineWidth = Math.max(1, 1.6 * sc2); g.beginPath(); for (let j = -2; j <= 2; j++) { g.moveTo(p.x + j * 3 * sc2, p.y); g.lineTo(p.x + j * 4.5 * sc2, p.y - (7 + (j & 1) * 3) * sc2); } g.stroke(); }   /* grass tuft */
+          else if (kind < 0.8) { C(p.x, p.y - 3 * sc2, Math.max(1, 2.6 * sc2), '#f2d23c'); }   /* dandelion */
+          else if (kind < 0.84) { C(p.x, p.y - 2 * sc2, Math.max(1, 2 * sc2), '#e8e4d8'); } } } }   /* clover flower */
     { const rel = s.DIST - s.z + 4; if (rel < 75 && IMG.van_back) { const p = this.P(s, rel, 0), im = IMG.van_back, fw = im.width / 6, h = 2.6 * this.U * p.sc, w = h * fw / im.height; g.imageSmoothingEnabled = true; g.drawImage(im, 0, 0, fw, im.height, p.x - w / 2, p.y - h, w, h); g.imageSmoothingEnabled = false; } }
     const L = s.objs.filter(o => o.wz - s.z > -1).sort((a, b) => (b.wz - s.z) - (a.wz - s.z));
     for (const o of L) { const rel = o.wz - s.z;
@@ -277,7 +286,9 @@ GAMES.push({
           SPC('poop', p.x + 2, top + 2, 0.55);   /* and one right on top of his head */
           for (let i = 0; i < 4; i++) { const an = t * (4 + i) + i * 1.6; R(p.x + Math.cos(an) * 24, top + 8 + Math.sin(an * 1.3) * 10, 2, 2, '#111'); }   /* flies */
           R(0, H - 46, W, 30, 'rgba(16,21,31,.85)'); T(s.hits ? 'Made it. ...Mostly.' : 'Made it! ...Wait. The RAIN.', 240, H - 37, '#f7c418', 8, 'center'); T(`${HERO(s).name === 'ROD' ? 'MATT' : 'ROD'}: "You're riding in the back."`, 240, H - 24, '#e8dcc0', 6, 'center'); } }
-      else if (!(s.inv > 0 && Math.floor(t * 12) % 2)) SPR(who, IMG[who + '_walk'] ? 22 + Math.floor(t * 10) % 4 : 7, p.x, p.y - Math.abs(Math.sin(t * 20)) * 2, false, 2.4); }
+      else if (!(s.inv > 0 && Math.floor(t * 12) % 2)) { const dx = s.lane - s.x, side = Math.abs(dx) > 0.12;   /* hopping lanes: you actually run that way */
+        if (side) { g.save(); g.translate(p.x, p.y); g.rotate(dx * 0.12); SPR(who, WALK(who, t * 1.6, dx > 0 ? 6 : 8), 0, -Math.abs(Math.sin(t * 20)) * 2, dx < 0 && !!IMG[who + '_more'], 2.4); g.restore(); }
+        else SPR(who, IMG[who + '_walk'] ? 22 + Math.floor(t * 10) % 4 : 7, p.x, p.y - Math.abs(Math.sin(t * 20)) * 2, false, 2.4); } }
     g.restore();
     // the brown rain
     g.strokeStyle = `rgba(95,62,26,${0.35 + 0.35 * ramp})`; g.lineWidth = 1; g.beginPath(); for (const d of s.drops) { g.moveTo(d.x, d.y); g.lineTo(d.x + 3, d.y - 9); } g.stroke();
