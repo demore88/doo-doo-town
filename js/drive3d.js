@@ -299,7 +299,7 @@ function drive3d(choice, opts) {
   addEventListener('pointerup', e => { if (pts.delete(e.pointerId)) retouch(); }); addEventListener('blur', () => { pts.clear(); retouch(); });
   const say = (m, s = 1.4) => { msg = opts.endless && m ? m.replace(/ ?\+\d+ MIN/, '') : m; msgT = s; };   /* no clock in the Driving Game, so no lost-minutes */
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__moose = () => { const c = { kind: 'moose', seg: Math.floor((pos + PZ) / SEG), off: px, dir: -1, hit: true, react: 0.001 }; critters.push(c); }; window.__crash = () => bursts.push({ t: 0, side: 0.3, big: false }); window.__turk = () => critters.push({ kind: 'turkeys', seg: 0, off: 0, dir: 1, hit: true, fly: 0.001, flyDir: 1 }); window.__deer = (d = 1) => critters.push({ kind: 'deer', seg: 0, off: 0, dir: d, hit: true, fly: 0.001, flyDir: d });   // dev: test the windshield deer
-  const sfx = (n, o) => { if (window.DDTSfx) DDTSfx.play(n, o); };
+  const sfx = (n, o) => { if (typeof DDTSfx !== 'undefined') DDTSfx.play(n, o); };   /* DDTSfx is a top-level const: it's never on window */
   // ---------- the windshield: cracks that stick around (and grow with every hit), bugs, mud, and now and then some weather ----------
   let grip = 0, gripSide = 1, sqCall = null;
   // the squirrel's family calls the van. Each caller has an avatar (assets/drive/sq_<who>.png; a squirrel stand-in until the art exists).
@@ -678,7 +678,7 @@ function drive3d(choice, opts) {
       { const pr = pos / ((N - 40) * SEG), dt = Math.min(0.05, Math.max(0, t - glassT)); glassT = t;
         for (const e of events) if (!e.done && pr >= e.at) { e.done = true; e.kind === 'bug' ? splatBug() : splatMud(); }
         const wxK = WX ? Math.max(0, Math.min(1, (pr - wxFrom) / 0.05, (wxTo - pr) / 0.05)) : 0;
-        if (WX === 'rain') { if (wxK > 0 && !rainSnd && window.DDTSfx) rainSnd = DDTSfx.loop ? DDTSfx.loop('rain_loop') : null; if (wxK <= 0 && rainSnd) { rainSnd.stop(); rainSnd = null; } }
+        if (WX === 'rain') { if (wxK > 0 && !rainSnd && typeof DDTSfx !== 'undefined') rainSnd = DDTSfx.loop ? DDTSfx.loop('rain_loop') : null; if (wxK <= 0 && rainSnd) { rainSnd.stop(); rainSnd = null; } }
         if (wxK > 0) {
           if (WX === 'fog') { const gr = r.createLinearGradient(0, HORIZON - 30, 0, H); gr.addColorStop(0, `rgba(214,220,224,${0.92 * wxK})`); gr.addColorStop(0.45, `rgba(214,220,224,${0.7 * wxK})`); gr.addColorStop(1, `rgba(214,220,224,${0.15 * wxK})`); r.fillStyle = gr; r.fillRect(0, 0, W, H); }
           if (WX === 'rain') { r.fillStyle = `rgba(60,70,85,${0.25 * wxK})`; r.fillRect(0, 0, W, H); r.strokeStyle = `rgba(200,215,230,${0.55 * wxK})`; r.lineWidth = 1; r.beginPath();
