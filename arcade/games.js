@@ -1337,6 +1337,7 @@ TRL.imgTex = (n, w) => {   /* turn a sprite into a 32x32 billboard texture, sitt
 TRL.music = { h: null, tick: 0, amb: null, atick: 0 };
 TRL.bgm = on => { const M = TRL.music; if (on && !M.h && typeof DDTSfx !== 'undefined') M.h = DDTSfx.loop('ut_battle'); if (!on && M.h) { M.h.stop(); M.h = null; } };
 TRL.amb = on => { const M = TRL.music; if (on && !M.amb && typeof DDTSfx !== 'undefined') M.amb = [DDTSfx.loop('ut_amb_a'), DDTSfx.loop('ut_amb_b')]; if (!on && M.amb) { M.amb.forEach(h => h.stop()); M.amb = null; } };   /* the two crawlspace tracks, layered */
+TRL.hold = txt => 3.5 + String(txt || '').length * 0.07;   /* how long a line stays up before it moves on by itself: long lines get time to be read (tap skips) */
 TRL.wedM = on => { const M = TRL.music; if (on && !M.wed && typeof DDTSfx !== 'undefined') M.wed = DDTSfx.loop('ut_wedding'); if (!on && M.wed) { M.wed.stop(); M.wed = null; } };
 setInterval(() => { const M = TRL.music, n = performance.now(); if (M.h && n - M.tick > 400) TRL.bgm(false); if (M.amb && n - M.atick > 400) TRL.amb(false); if (M.wed && n - (M.wtick || 0) > 400) TRL.wedM(false); }, 300);   /* game paused, quit or over: the battle music stops */
 
@@ -1384,7 +1385,7 @@ GAMES.push({
     s.t += dt; FX(s, dt); s.flash = Math.max(0, s.flash - dt); s.shake = Math.max(0, (s.shake || 0) - dt); s.swing = Math.max(0, (s.swing || 0) - dt); s.guard = Math.max(0, (s.guard || 0) - dt);
     if (s.fixT) { s.fixT += dt * (s.fixT > 3.4 && (I.Ap || I.ptr.clicked) ? 6 : 1); if (s.fixT > 9.4) { const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.t < 50 + s.gmax * 2, f >= 0.3), line: s.epi[1] + (s.restMin ? ` (Rested ${s.restMin} min.)` : ''), extraTime: s.restMin }); } return; }
     if (s.wed) { TRL.music.wtick = performance.now(); TRL.wedM(true); TRL.amb(false); } else { TRL.wedM(false); if (!s.battle) { TRL.music.atick = performance.now(); TRL.amb(true); } else TRL.amb(false); }   /* the wedding gets its own music */
-    if (s.talk) { const K = s.talk; K.t += dt; if ((K.t > 0.4 && (I.Ap || I.ptr.clicked)) || K.t > 4.5) { K.i++; K.t = 0; if (K.i >= K.lines.length) { const me = HERO(s).name, them = me === 'ROD' ? 'Matt' : 'Rod'; s.talk.i = K.lines.length - 1; s.end = { win: true, stars: 1, carl: true, extraTime: s.restMin, line: `${them} fixed it. ${me === 'ROD' ? 'Rod' : 'Matt'} is still talking about Carl.` }; } } return; }
+    if (s.talk) { const K = s.talk; K.t += dt; if ((K.t > 0.4 && (I.Ap || I.ptr.clicked)) || K.t > TRL.hold(K.lines[Math.min(K.i, K.lines.length - 1)][1])) { K.i++; K.t = 0; if (K.i >= K.lines.length) { const me = HERO(s).name, them = me === 'ROD' ? 'Matt' : 'Rod'; s.talk.i = K.lines.length - 1; s.end = { win: true, stars: 1, carl: true, extraTime: s.restMin, line: `${them} fixed it. ${me === 'ROD' ? 'Rod' : 'Matt'} is still talking about Carl.` }; } } return; }
     if (s.wake) return this.wakeStep(s, dt, I);
     if (s.wed) return this.wedStep(s, dt, I);
     if (s.bag) return this.bagging(s, dt, I);
@@ -1467,7 +1468,7 @@ GAMES.push({
     3: ["The King took my good wrench. And my tool belt. And my dignity.", "When you fix that drip... tell 'em upstairs Carl says hi. Tell 'em I'm fine.", "Don't feel bad for me. I got crackers. I got candles. I got a skull. What more does a man need?"] },
   shopping(s, dt, I) {
     const S = s.shop, W2 = this.wares(s); S.t += dt; S.buyT = Math.max(0, S.buyT - dt);
-    if (S.q && S.q.length && S.t > 4.5) { S.say = S.q.shift(); S.t = 0; this.mood(s, [0, 4, 7, 6]); S.t = 0; }   /* he keeps talking while you shop */
+    if (S.q && S.q.length && S.t > TRL.hold(S.say)) { S.say = S.q.shift(); S.t = 0; this.mood(s, [0, 4, 7, 6]); S.t = 0; }   /* he keeps talking while you shop */
     if (I.Up || I.Lp) S.sel = (S.sel + W2.length - 1) % W2.length; if (I.Dp || I.Rp) S.sel = (S.sel + 1) % W2.length;
     let pick = I.Ap ? S.sel : null;
     if (I.ptr.clicked) for (let i = 0; i < W2.length; i++) { const [x, y, w, h] = this.optBox(i, W2.length); if (I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h) { S.sel = i; pick = i; } }
@@ -1551,7 +1552,7 @@ GAMES.push({
     if (ch) { if (I.Up || I.Lp) W2.sel = (W2.sel + ch.length - 1) % ch.length; if (I.Dp || I.Rp) W2.sel = (W2.sel + 1) % ch.length;
       let pick = I.Ap ? W2.sel : null; if (I.ptr.clicked) ch.forEach((_, i) => { const [x, y, w, h] = this.optBox(i, ch.length); if (I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h) pick = i; });
       if (pick === null || W2.t < 0.4) return; SFX('ui_select'); }
-    else if (!((W2.t > 0.4 && (I.Ap || I.ptr.clicked)) || W2.t > 4.2)) return;
+    else if (!((W2.t > 0.4 && (I.Ap || I.ptr.clicked)) || W2.t > TRL.hold(L[1]))) return;
     W2.i++; W2.t = 0; W2.sel = 0;
     if (W2.i >= W2.lines.length) { s.wed = null; s.escort = false; s.married = true; s.crk += 8; s.items.tonic += 2; s.gear.push('crown'); s.def += 2; this.gainXP(s, 150);
       (s.log = s.log || []).push('THE DOWRY: 8 crackers, 2 Carl\'s Tonics, and a tiny POSSUM CROWN (DEF +2).'); SFX('ui_select'); } },
@@ -1577,7 +1578,7 @@ GAMES.push({
       ['CARL', 4, pick(["Same as last time. Ankles, then the rubbing.", "Carl did the special technique this time. You'll know it when you feel it.", "Don't look at your back. Just trust Carl."])],
       [me, 'gross', pick(["I want to go home.", "Please stop saying 'the rubbing.'", "Why is my shirt on backwards.", me === 'ROD' ? "I'm never telling Matt about this." : "I'm never telling Rod about this."])],
       ['', 0, `Full health. Your soul, less so. ${left}`] ] }; },
-  wakeStep(s, dt, I) { const W2 = s.wake; W2.t += dt; if (!((W2.t > 0.4 && (I.Ap || I.ptr.clicked)) || W2.t > 4.5)) return; W2.i++; W2.t = 0; if (W2.i >= W2.lines.length) { (s.log = s.log || []).push(W2.lines[W2.lines.length - 1][2]); s.wake = null; } },
+  wakeStep(s, dt, I) { const W2 = s.wake; W2.t += dt; if (!((W2.t > 0.4 && (I.Ap || I.ptr.clicked)) || W2.t > TRL.hold(W2.lines[W2.i][2]))) return; W2.i++; W2.t = 0; if (W2.i >= W2.lines.length) { (s.log = s.log || []).push(W2.lines[W2.lines.length - 1][2]); s.wake = null; } },
   endFight(s) { s.battle = null; TRL.bgm(false); },
   say(s, text, fx) { s.battle.q.push({ text, fx, t: 0 }); },
   // turn-based: messages play one at a time (tap / PICK to hurry them), then the menu comes back
