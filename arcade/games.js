@@ -1564,6 +1564,97 @@ GAMES.push({
 });
 
 // =====================================================================
+// PISS KITTY — something in this house pisses on everything and the old lady swears she has no cat.
+// Sniff your way room to room. He moves. He leaves fresh puddles. When you find him... he stands up.
+const PK = {
+  ROOMS: [
+    { name: 'KITCHEN', bg: 'bg_kitchen', spots: [['UNDER THE SINK', 118, 196], ['THE PANTRY', 250, 118], ['BEHIND THE FRIDGE', 404, 140], ['THE TRASH CAN', 330, 214]] },
+    { name: 'BATHROOM', bg: 'bg_bath', spots: [['THE HAMPER', 62, 214], ['THE TUB', 132, 186], ['BEHIND THE TOILET', 252, 196], ['THE VANITY', 372, 188]] },
+    { name: 'LAUNDRY', bg: 'bg_laundry', spots: [['THE SHELF', 214, 92], ['THE LAUNDRY PILE', 128, 214], ['BEHIND THE DRYER', 300, 168], ['THE UTILITY SINK', 404, 180]] },
+    { name: 'BASEMENT', bg: 'bg_basement', spots: [['THE CRAWL HOLE', 62, 118], ['THE OLD COUCH', 116, 200], ['THE FLOOR DRAIN', 244, 228], ['THE FURNACE', 384, 160]] },
+  ],
+  NOPE: ['A puddle. On a slipper. Why a slipper.', 'Wet. Not water.', 'An old tuna can. Licked clean.', 'Nothing. Smells like... old lady perfume.', 'Somebody peed on the cereal box.', 'A tiny wet footprint. ...Just the back feet?', 'A dry trap. That is not it.', 'Rubber ducky. Damp. Do not ask.', 'A sock. Crunchy.', 'Forty years of potpourri.', 'A hairless... no. That is a chicken cutlet.', 'Cobwebs. And a faint yellow stain.'],
+  FRESH: ['FRESH. Still warm. He was HERE.', 'Steaming. He JUST left.', 'Wet, warm, and somehow smug.'],
+};
+GAMES.push({
+  id: 'kitty', name: 'PISS KITTY', tag: 'Track the smell · room by room · he moves',
+  how: ["The old lady says it smells like piss. She does NOT have a cat. Find what's doing it.", 'Pick a room (◀ ▶), then SNIFF a spot (▲ ▼ to choose, or tap it). The STINK bar shows how strong it is in this room.', 'Every wrong sniff makes you gag. Gag out and you have to step outside.', 'Fresh, warm puddles mean he was JUST there. He moves when you get close. Corner him.'],
+  dpad: true, ctl: '◀ ▶ ROOM · ▲ ▼ SPOT · SPACE = SNIFF', act: 'SNIFF', phone: 'tap a room tab, then tap a spot to sniff it.',
+  init(s) {
+    s.room = 0; s.sel = 0; s.gag = 0; s.GAG = [12, 10, 9][s.diff] * HERO(s).grip; s.sniffs = 0; s.moves = 0;
+    s.cat = { r: 1 + Math.floor(s.rnd() * 3), p: Math.floor(s.rnd() * 4) }; s.fresh = null; s.sniffed = {}; s.msg = 'It smells like piss in here. Faint. Start sniffing.'; s.msgT = 99; s.found = 0; s.recog = false;
+  },
+  stink(s, r) { const d = Math.min(Math.abs(r - s.cat.r), 4 - Math.abs(r - s.cat.r)); return d === 0 ? 0.92 : d === 1 ? 0.5 : 0.18; },
+  update(s, dt, I) {
+    s.t += dt; FX(s, dt);
+    if (s.found) { s.found += dt; if (s.found > 5.2) s.end = { win: true, stars: stars3(s.sniffs <= 6, s.sniffs <= 10), line: `Found PISS KITTY in ${s.sniffs} sniffs. He went out the dog door. Next house.` }; return; }
+    const R0 = PK.ROOMS[s.room];
+    if (I.Lp) { s.room = (s.room + 3) % 4; s.sel = 0; SFX('ui_tap'); } if (I.Rp) { s.room = (s.room + 1) % 4; s.sel = 0; SFX('ui_tap'); }
+    if (I.Up) s.sel = (s.sel + 3) % 4; if (I.Dp) s.sel = (s.sel + 1) % 4;
+    let pick = I.Ap ? s.sel : null;
+    if (I.ptr.clicked) {
+      for (let i = 0; i < 4; i++) { const x = 8 + i * 118; if (I.ptr.x > x && I.ptr.x < x + 112 && I.ptr.y > 18 && I.ptr.y < 34) { s.room = i; s.sel = 0; SFX('ui_tap'); return; } }
+      R0.spots.forEach(([, x, y], i) => { if (Math.hypot(I.ptr.x - x, I.ptr.y - y) < 22) { s.sel = i; pick = i; } });
+    }
+    if (pick === null) return;
+    const key = s.room * 10 + pick; s.sniffs++; s.msgT = 3;
+    if (s.cat.r === s.room && s.cat.p === pick) { s.found = 0.01; SFX('ui_select'); return; }
+    const fresh = s.fresh && s.fresh.r === s.room && s.fresh.p === pick;
+    s.gag += fresh ? 0.5 : 1; s.shake = 0.15; SFX('click');
+    s.msg = fresh ? PK.FRESH[Math.floor(s.rnd() * PK.FRESH.length)] : PK.NOPE[Math.floor(s.rnd() * PK.NOPE.length)];
+    if (fresh && !s.recog) { s.recog = true; s.msg += "   ...Wait. I KNOW this smell."; }
+    s.sniffed[key] = fresh ? 'fresh' : 'nope';
+    // close in his room, or every few sniffs: he slips off to a spot next door, leaving a warm puddle where he was
+    if ((s.room === s.cat.r && s.rnd() < 0.55) || (s.sniffs % 4 === 0 && s.rnd() < 0.5)) {
+      s.fresh = { r: s.cat.r, p: s.cat.p }; delete s.sniffed[s.cat.r * 10 + s.cat.p]; s.moves++;
+      const nr = s.rnd() < 0.5 ? s.cat.r : (s.cat.r + (s.rnd() < 0.5 ? 1 : 3)) % 4; let np; do np = Math.floor(s.rnd() * 4); while (nr === s.cat.r && np === s.cat.p);
+      s.cat = { r: nr, p: np }; delete s.sniffed[nr * 10 + np]; POP(s, 240, 60, '*pitter patter*', '#c9a46a');
+    }
+    if (s.gag >= s.GAG) s.end = { win: false, stars: 0, line: "Gagged out. Had to step outside. Something in there is STILL peeing." };
+  },
+  drawCat(s, x, y, k) {   /* a hairless cat, standing up like a little man */
+    const up = Math.min(1, k * 2), skin = '#e6b7a6', dk = '#c48f80';
+    g.save(); g.translate(x, y);
+    g.fillStyle = skin; g.beginPath(); g.ellipse(0, -18 - up * 10, 11, 16 + up * 6, 0, 0, 7); g.fill();   // body
+    R(-8, -6, 5, 8, skin); R(3, -6, 5, 8, skin); R(-10, 0, 8, 3, dk); R(2, 0, 8, 3, dk);   // hind legs, feet
+    g.strokeStyle = dk; g.lineWidth = 3; g.beginPath(); g.moveTo(-10, -26 - up * 8); g.lineTo(-16, -14 - up * 10 + Math.sin(s.t * 6) * 3); g.moveTo(10, -26 - up * 8); g.lineTo(17, -34 - up * 6); g.stroke();   // arms: one on the hip, one waving
+    const hy = -42 - up * 18; g.fillStyle = skin; g.beginPath(); g.ellipse(0, hy, 12, 10, 0, 0, 7); g.fill();   // head
+    g.beginPath(); g.moveTo(-11, hy - 4); g.lineTo(-15, hy - 20); g.lineTo(-4, hy - 9); g.fill(); g.beginPath(); g.moveTo(11, hy - 4); g.lineTo(15, hy - 20); g.lineTo(4, hy - 9); g.fill();   // huge ears
+    for (let i = 0; i < 3; i++) R(-6 + i * 4, hy - 7 + (i % 2), 3, 1, dk);   // forehead wrinkles
+    C(-5, hy, 3.4, '#c8e05a'); C(5, hy, 3.4, '#c8e05a'); R(-5.5, hy - 2, 1, 4, '#111'); R(4.5, hy - 2, 1, 4, '#111');   // eyes
+    R(-1, hy + 3, 2, 1, '#a0605a'); R(-3, hy + 5, 6, 1, dk);
+    g.strokeStyle = skin; g.lineWidth = 3; g.beginPath(); g.moveTo(0, -4); g.quadraticCurveTo(-18, 6, -22, -10 + Math.sin(s.t * 4) * 4); g.stroke();   // tail
+    g.restore();
+  },
+  draw(s) {
+    const R0 = PK.ROOMS[s.room];
+    if (!BGI(R0.bg)) R(0, 0, W, H, '#3a3028');
+    g.fillStyle = `rgba(200,190,60,${0.05 + this.stink(s, s.room) * 0.14})`; g.fillRect(0, 0, W, H);   // the air is visibly yellow
+    HUD(s, 'PISS KITTY', null);
+    PK.ROOMS.forEach((r, i) => { const x = 8 + i * 118; R(x, 18, 112, 16, i === s.room ? '#2c6cd6' : 'rgba(16,21,31,.85)'); T(r.name, x + 56, 26, '#fff', 6, 'center'); });
+    // stink + gag
+    const st = this.stink(s, s.room); R(W - 128, 40, 122, 30, 'rgba(16,21,31,.85)');
+    T('STINK', W - 122, 48, '#c9b84a', 6); BAR(W - 84, 45, 72, 6, st, st > 0.8 ? '#d0d040' : '#a08a40');
+    T('GAG', W - 122, 62, '#e9665a', 6); BAR(W - 84, 59, 72, 6, s.gag / s.GAG, '#e9665a');
+    T(st > 0.8 ? 'EYES WATERING' : st > 0.4 ? 'STRONG' : 'FAINT', W - 10, 77, st > 0.8 ? '#d0d040' : '#9fb3d9', 5, 'right');
+    // the spots
+    R0.spots.forEach(([nm, x, y], i) => { const k = s.room * 10 + i, st2 = s.sniffed[k], on = i === s.sel, hot = s.fresh && s.fresh.r === s.room && s.fresh.p === i;
+      if (hot) { g.fillStyle = 'rgba(230,210,60,.55)'; g.beginPath(); g.ellipse(x, y + 10, 16, 5, 0, 0, 7); g.fill(); for (let j = 0; j < 3; j++) R(x - 8 + j * 8, y + 2 - ((s.t * 20 + j * 7) % 14), 1, 4, 'rgba(255,255,255,.5)'); }   // steam off a fresh one
+      C(x, y, on ? 15 : 12, st2 === 'nope' ? 'rgba(60,60,60,.7)' : on ? 'rgba(247,196,24,.85)' : 'rgba(16,21,31,.75)');
+      T(st2 === 'nope' ? 'x' : '?', x, y + 1, st2 === 'nope' ? '#888' : on ? '#10151f' : '#f7c418', 9, 'center');
+      if (on) { R(x - nm.length * 3 - 4, y - 28, nm.length * 6 + 8, 12, 'rgba(16,21,31,.9)'); T(nm, x, y - 22, '#fff', 6, 'center'); } });
+    if (s.found) { const sp = R0.spots[s.cat.p], k = s.found;
+      R(0, 0, W, H, `rgba(0,0,0,${Math.min(0.55, k * 0.4)})`);
+      const run = Math.max(0, k - 3.6), cx = sp[1] + run * 260, cy = sp[2] + 20;
+      this.drawCat(s, cx, cy, k);
+      if (k > 1.8 && k < 3.6) { g.strokeStyle = '#e6d040'; g.lineWidth = 2; g.beginPath(); g.moveTo(cx + 2, cy - 14); g.quadraticCurveTo(cx - 30, cy - 40, cx - 60, cy + 10); g.stroke(); T('PSSSSSHHHH', cx - 50, cy - 46, '#e6d040', 7, 'center'); }   // right on your boot
+      T(k < 1.2 ? '...' : k < 1.8 ? 'PISS KITTY.' : k < 3.6 ? '' : 'AND HE IS GONE.', W / 2, 70, '#f7c418', 12, 'center'); }
+    if (s.msg && s.msgT > 0) { R(10, H - 34, W - 20, 26, 'rgba(16,21,31,.9)'); T(s.msg, W / 2, H - 21, '#fff', 6, 'center'); }
+    DRAWFX(s);
+  },
+});
+
+// =====================================================================
 // 16. LINE DETECTIVE — a whole house of plumbing. Run water at the fixtures, read what backs up and what's just slow, and name the pipe.
 GAMES.push({
   id: 'detective', name: 'LINE DETECTIVE', tag: 'The hidden cesspool · the second inlet',

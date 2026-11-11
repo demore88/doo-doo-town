@@ -287,6 +287,12 @@ const CALLS = [
 ],
 // ---------------- OCTOBER ----------------
 [
+  { id: 'piss-kitty', title: 'PISS KITTY', story: true, town: 'GORHAM', addr: 'Lancaster Rd', cust: { name: 'DORIS', seed: 311 }, ext: 'house', room: 'bathroom', window: 120,
+    ring: "It smells like piss in my house. All the time. EVERYWHERE. And before you ask, I do NOT have a cat. I have never had a cat.",
+    intro: [['CUST', "Every room. Every morning. Something new is wet."], ['ROD', "Could be a dry trap. Could be a cracked vent."], ['MATT', "...Could be."], ['CUST', "And I do NOT have a cat."], ['MATT', "...Right."]],
+    tool: { q: 'Mystery piss smell, every room. First move?', opts: ['SNIFF IT OUT, ROOM BY ROOM', 'SNAKE THE MAIN LINE', 'AIR FRESHENER'], right: 0, good: 'Follow your nose.', bad: "That smell is not coming from the main." },
+    game: 'kitty', lead: 'matt', culprit: [['MATT', "...PISS KITTY."], ['ROD', "You KNOW that cat?"], ['MATT', "He lived in my house for three months. Stood up in the hallway like a little man. I thought it was the dog."], ['CUST', "Where did it GO?"], ['MATT', "Next house. He always goes to the next house."], ['ROD', "...Is he paying rent anywhere?"], ['MATT', "Doris, check your boots before you put them on. For a while."]],
+    tip: "Mystery smell? Check your floor drain traps... and check for a cat you didn't know you had.", pay: 450 },
   { id: 'leaf-drain', title: 'LEAF SEASON', town: 'JACKSON', addr: 'Black Mountain Rd', cust: { name: 'GREG', seed: 293 }, ext: 'house', room: 'yard', window: 120,
     ring: "The outside drain is overflowing. It's raining. And leaves. So many leaves.",
     intro: [['MATT', 'Peak foliage. Peak clog.'], ['ROD', 'Clear the grate first.']],
