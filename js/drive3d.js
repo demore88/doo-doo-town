@@ -528,7 +528,7 @@ function drive3d(choice, opts) {
       const base = segAt(pos), pct = (pos % SEG) / SEG, playerY = (base.p1.y + (base.p2.y - base.p1.y) * pct);
       const camY = playerY + CAMH, camZ = pos - (pos >= LEN ? LEN : 0);
       let x = 0, dx = -(base.curve * pct), maxy = H;
-      const drawn = [];
+      const drawn = [], LINES = [];
       for (let n = 0; n < DRAW; n++) {
         const sg = segs[(base.i + n) % N], loop = sg.i < base.i ? LEN : 0;
         const p1 = { z: sg.p1.z + loop, y: sg.p1.y, wx: x }, p2 = { z: sg.p2.z + loop, y: sg.p2.y, wx: x + dx };
@@ -536,34 +536,36 @@ function drive3d(choice, opts) {
         x += dx; dx += sg.curve;
         sg.clip = maxy; sg.s1 = p1; sg.s2 = p2; drawn.push(sg);
         if (p1.z - camZ <= DEPTH || p2.sy >= maxy || p2.sy >= p1.sy) continue;
-        r.fillStyle = sg.dark ? G2 : G1; { const ya = Math.round(p2.sy), yb = Math.round(p1.sy); if (yb > ya) r.fillRect(-10, ya, W + 20, yb - ya); }   /* whole pixels, no overlap: the road strip drawn next covers its edge cleanly */
-        const rum = w => w * 0.08, lane = w => w * 0.022;
-        const rt = sg.rt || 1, lt = sg.lt || -1, cc = (rt + lt) / 2, hh = (rt - lt) / 2;   /* the road's centre and half-width: wider where it opens up */
-        if (sg.river || sg.lake) { const wc = SNOW ? '#7896af' : '#4574a6';   // the river (or lake) off to the right
-          poly(p1.sx + p1.sw * ((sg.lake ? 3.4 : 2.6) + rt - 1), p1.sy, p1.sw * (sg.lake ? 1.4 : 0.7), p2.sx + p2.sw * ((sg.lake ? 3.4 : 2.6) + rt - 1), p2.sy, p2.sw * (sg.lake ? 1.4 : 0.7), wc); }
-        poly(p1.sx + cc * p1.sw, p1.sy, p1.sw * (hh + 0.16), p2.sx + cc * p2.sw, p2.sy, p2.sw * (hh + 0.16), SNOW ? '#95908a' : '#7f674a', 0.5);   // dirt (or slushy sand) shoulder: stops at its own strip so it never peeks under the road below
-        poly(p1.sx + cc * p1.sw, p1.sy, p1.sw * hh, p2.sx + cc * p2.sw, p2.sy, p2.sw * hh, '#4f5258', 0.7);   /* asphalt */
-        for (const e of [lt + 0.05, rt - 0.05]) poly(p1.sx + e * p1.sw, p1.sy, Math.max(0.5, p1.sw * 0.012), p2.sx + e * p2.sw, p2.sy, Math.max(0.5, p2.sw * 0.012), '#e8eaec');   // solid white edge lines
-        // (snow lives on the shoulder now, so the white edge line stays readable)
-        { const yx = w => -w / 3;   // double yellow: oncoming lane on the left
-          poly(p1.sx + yx(p1.sw) - lane(p1.sw) * 1.4, p1.sy, lane(p1.sw) * 0.6, p2.sx + yx(p2.sw) - lane(p2.sw) * 1.4, p2.sy, lane(p2.sw) * 0.6, '#f2c12e');
-          poly(p1.sx + yx(p1.sw) + lane(p1.sw) * 1.4, p1.sy, lane(p1.sw) * 0.6, p2.sx + yx(p2.sw) + lane(p2.sw) * 1.4, p2.sy, lane(p2.sw) * 0.6, '#f2c12e');
-          if (Math.floor(sg.i / 3) % 4 === 0) for (let lx = lt < -1.5 ? -1 : 1 / 3; lx < rt - 0.2; lx += lx < 0 ? 4 / 3 : 2 / 3) poly(p1.sx + p1.sw * lx, p1.sy, lane(p1.sw) * 0.8, p2.sx + p2.sw * lx, p2.sy, lane(p2.sw) * 0.8, '#eef0f2'); }   /* dashed white between every lane going our way */   // dashed white between our two lanes: short dash, long gap
+        const rt = sg.rt || 1, lt = sg.lt || -1;
+        LINES.push({ sg, p1, p2, lt, rt, clip: sg.clip });   /* drawn in layers below: ground, then water, then shoulder, then asphalt, then paint */
         maxy = p1.sy;
       }
+      // layer by layer, so no layer's edge ever shows through the one on top of it
+      r.fillStyle = G1; for (const L of LINES) { const ya = Math.round(L.p2.sy), yb = Math.round(L.p1.sy); if (yb > ya) r.fillRect(-10, ya, W + 20, yb - ya); }   /* the ground */
+      for (const L of LINES) { const { sg, p1, p2, rt } = L; if (sg.river || sg.lake) { const wc = SNOW ? '#7896af' : '#4574a6', o = (sg.lake ? 3.4 : 2.6) + rt - 1, hw = sg.lake ? 1.4 : 0.7; poly(p1.sx + p1.sw * o, p1.sy, p1.sw * hw, p2.sx + p2.sw * o, p2.sy, p2.sw * hw, wc, 0.8); } }   /* the river or lake */
+      for (const L of LINES) { const { p1, p2, rt, lt } = L, cc = (rt + lt) / 2, hh = (rt - lt) / 2; poly(p1.sx + cc * p1.sw, p1.sy, p1.sw * (hh + 0.16), p2.sx + cc * p2.sw, p2.sy, p2.sw * (hh + 0.16), SNOW ? '#95908a' : '#7f674a', 0.8); }   /* the shoulder */
+      for (const L of LINES) { const { p1, p2, rt, lt } = L, cc = (rt + lt) / 2, hh = (rt - lt) / 2; poly(p1.sx + cc * p1.sw, p1.sy, p1.sw * hh, p2.sx + cc * p2.sw, p2.sy, p2.sw * hh, '#4f5258', 0.8); }   /* the asphalt */
+      // the painted lines, in one pass on top of the finished pavement: continuous, never chopped into beads
+      for (const L of LINES) { const { sg, p1, p2, lt, rt } = L, lane = w => w * 0.022; if (p1.sw < 3) continue;   /* too far away to paint cleanly: leave it */
+        r.save(); r.beginPath(); r.rect(-10, -10, W + 20, L.clip + 1); r.clip();
+        for (const e of [lt + 0.05, rt - 0.05]) poly(p1.sx + e * p1.sw, p1.sy, Math.max(0.5, p1.sw * 0.012), p2.sx + e * p2.sw, p2.sy, Math.max(0.5, p2.sw * 0.012), '#dfe2e5', 0.6);   // solid white edge lines
+        { const yx = w => -w / 3;   // double yellow: oncoming lane on the left
+          poly(p1.sx + yx(p1.sw) - lane(p1.sw) * 1.4, p1.sy, lane(p1.sw) * 0.6, p2.sx + yx(p2.sw) - lane(p2.sw) * 1.4, p2.sy, lane(p2.sw) * 0.6, '#e9bd34', 0.6);
+          poly(p1.sx + yx(p1.sw) + lane(p1.sw) * 1.4, p1.sy, lane(p1.sw) * 0.6, p2.sx + yx(p2.sw) + lane(p2.sw) * 1.4, p2.sy, lane(p2.sw) * 0.6, '#e9bd34', 0.6);
+          if (Math.floor(sg.i / 3) % 4 === 0) for (let lx = lt < -1.5 ? -1 : 1 / 3; lx < rt - 0.2; lx += lx < 0 ? 4 / 3 : 2 / 3) poly(p1.sx + p1.sw * lx, p1.sy, lane(p1.sw) * 0.8, p2.sx + p2.sw * lx, p2.sy, lane(p2.sw) * 0.8, '#e2e5e8', 0.6); }   /* dashed white between lanes going our way */
+        r.restore(); }
       // the plow berm: a continuous 3D snowbank along both shoulders, far to near, its height rolling with the road
-      if (SNOW) { const q4 = (ax, ay, bx, by, cx, cy, dx, dy, col) => { r.fillStyle = col; r.strokeStyle = col; r.lineWidth = 1.2; r.beginPath(); r.moveTo(ax, ay); r.lineTo(bx, by); r.lineTo(cx, cy); r.lineTo(dx, dy); r.closePath(); r.fill(); r.stroke(); };   /* stroked in its own colour so the pieces meet with no seams */
-        const bh = (i, side) => 0.11 + 0.05 * Math.sin(i * 0.031 + side) + 0.035 * Math.sin(i * 0.117 + side * 2) + 0.015 * Math.sin(i * 0.43 + side);
-        for (let n = drawn.length - 1; n >= 0; n--) { const sg = drawn[n], a = sg.s1, b = sg.s2; if (!a || !b || a.sc <= 0 || b.sc <= 0 || b.sy >= a.sy || a.z - camZ <= DEPTH || a.sy > H + 40) continue;
-          r.save(); r.beginPath(); r.rect(-10, -10, W + 20, sg.clip + 10); r.clip();   /* only where the nearer road isn't in front of it */
-          const rt = sg.rt || 1, lt = sg.lt || -1, i = sg.i;
-          for (const side of [-1, 1]) { const base = side < 0 ? lt - 0.16 : rt + 0.16, crest = base + side * 0.34, outer = base + side * 1.05, h1 = bh(i, side), h2 = bh(i + 1, side);
-            const X = (p, o) => p.sx + o * p.sw, Yc = (p, h) => p.sy - h * p.sw;
-            q4(X(a, crest), Yc(a, h1), X(a, outer), a.sy, X(b, outer), b.sy, X(b, crest), Yc(b, h2), side < 0 ? '#e9eff5' : '#c3cfdb');   /* back slope */
-            q4(X(a, base), a.sy, X(a, crest), Yc(a, h1), X(b, crest), Yc(b, h2), X(b, base), b.sy, side < 0 ? '#c9d5e0' : '#edf2f7');   /* the face toward the road */
-            q4(X(a, base), a.sy, X(a, base + side * 0.05), a.sy - h1 * a.sw * 0.18, X(b, base + side * 0.05), b.sy - h2 * b.sw * 0.18, X(b, base), b.sy, '#9c958c');   /* road grit thrown up along the bottom */
-          }
-          r.restore(); } }
+      if (SNOW) {   /* the plow berm, one smooth shape per side: no pieces, so no seams or stripes */
+        const bh = (i, side) => 0.11 + 0.05 * Math.sin(i * 0.031 + side) + 0.035 * Math.sin(i * 0.117 + side * 2);
+        const ok = drawn.filter(sg => sg.s1 && sg.s1.sc > 0 && sg.s1.z - camZ > DEPTH && sg.s1.sy < H + 60);
+        for (const side of [-1, 1]) {
+          const base = [], crest = [], outer = [];
+          for (const sg of ok) { const a = sg.s1, b0 = side < 0 ? (sg.lt || -1) - 0.16 : (sg.rt || 1) + 0.16, h = bh(sg.i, side);
+            base.push([a.sx + b0 * a.sw, a.sy]); crest.push([a.sx + (b0 + side * 0.34) * a.sw, a.sy - h * a.sw]); outer.push([a.sx + (b0 + side * 1.05) * a.sw, a.sy]); }
+          if (crest.length < 2) continue;
+          const fill = (A, B, col) => { r.fillStyle = col; r.beginPath(); A.forEach((p, k) => k ? r.lineTo(p[0], p[1]) : r.moveTo(p[0], p[1])); for (let k = B.length - 1; k >= 0; k--) r.lineTo(B[k][0], B[k][1]); r.closePath(); r.fill(); };
+          fill(crest, outer, side < 0 ? '#e6edf3' : '#d2dce6');   /* back slope */
+          fill(base, crest, side < 0 ? '#d3dde7' : '#eaf0f5'); } }   /* the face toward the road */
       // sprites, cars, critters back to front
       const S = (img, sc, sx, sy, off, sw, clip, rot) => {
         const wpx = img.width * sc * sw / 160, hpx = img.height * sc * sw / 160, X = sx + sw * off - wpx / 2, Y = sy - hpx;
