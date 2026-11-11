@@ -1517,7 +1517,7 @@ GAMES.push({
     if (it.id === 'bye') { (s.log = s.log || []).push('CARL: ' + this.HOBO_BYE[Math.floor(s.rnd() * this.HOBO_BYE.length)]); if (!s.iga) { s.iga = true; s.log.push('(Could have bought out his whole store with three bucks of crackers from IGA.)'); } s.shop = null; SFX('ui_select'); return; }
     if (it.off) { S.say = "You already have it. Do you not like it? ...You don't like it."; this.mood(s, [3]); S.flip = 5; SFX('click'); return; }
     if (s.crk < it.price) { S.say = this.HOBO_BROKE[Math.floor(s.rnd() * this.HOBO_BROKE.length)]; this.mood(s, [2, 5]); SFX('click'); return; }
-    s.crk -= it.price; it.go(); S.say = this.HOBO_BUY[Math.floor(s.rnd() * this.HOBO_BUY.length)] + '  (' + it.line + ')'; this.mood(s, [1, 6]); S.buyT = 1.2; SFX('ut_buy', { vol: 0.7 });
+    s.crk -= it.price; it.go(); S.say = it.id === 'tonic' ? "Oh yes. You'll like this. It's full of gasoline and my LOVE, baby. And remember... Carl's hands are always warm.  (" + it.line + ')' : this.HOBO_BUY[Math.floor(s.rnd() * this.HOBO_BUY.length)] + '  (' + it.line + ')'; this.mood(s, [1, 6]); S.buyT = 1.2; SFX('ut_buy', { vol: 0.7 });
   },
   // knocked out of the crawlspace: he tells the other guy everything. The other guy doesn't buy a word of it, goes down, and fixes it.
   defeated(s) {
