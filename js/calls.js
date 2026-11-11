@@ -80,7 +80,7 @@ const CALLS = [
   { id: 'stairs-of-death', title: 'STAIRS OF DEATH', story: true, town: 'BARTLETT', addr: 'Cobb Farm Rd', cust: { name: 'GLORIA', seed: 77 }, ext: 'camp', room: 'basement', window: 110,
     ring: "The cleanout is in the basement. The stairs are... steep. Do you have insurance?",
     intro: [['MATT', "Those aren't stairs. That's a ladder with ambition."], ['ROD', "And the jetter weighs two hundred pounds."]],
-    tool: { q: 'Get the jetter down the stairs of death. Plan?', opts: ['ROPE IT DOWN TOGETHER', 'ROD CARRIES IT ALONE', 'THROW IT'], right: 0, good: 'Slow. Together.', bad: 'Rod\'s knees just filed a complaint.' },
+    tool: { q: 'Get the jetter down the stairs of death. Plan?', opts: ['CARRY IT DOWN TOGETHER', 'ROD CARRIES IT ALONE', 'THROW IT'], right: 0, good: 'Slow. Together.', bad: 'Rod\'s knees just filed a complaint.' },
     game: 'stairs', lead: 'matt', culprit: [['ROD', 'We made it. Nobody died.'], ['CUST', "Now you have to bring it back up."], ['MATT', '...']], tip: "Easy access to your cleanout saves time (and plumbers' lives).", pay: 600 },
 ],
 // ---------------- MARCH ----------------

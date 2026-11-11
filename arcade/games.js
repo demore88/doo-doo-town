@@ -1104,7 +1104,7 @@ GAMES.push({
     let mv = (I.R ? 1 : 0) - (I.L ? 1 : 0);
     if (I.ptr.down && !I.ptr.clicked) { const v = I.ptr.x - s.x; mv = Math.abs(v) < 6 ? 0 : Math.sign(v); }
     if (mv) s.facing = mv;
-    s.x = clamp(s.x + mv * 78 * HERO(s).spd * dt, Math.min(F.a, F.b), Math.max(F.a, F.b));
+    s.x = clamp(s.x + mv * 55 * HERO(s).spd * dt, Math.min(F.a, F.b), Math.max(F.a, F.b));
     if ((I.Ap) && s.jump <= 0) { s.jump = s.JUMP; SFX('click', { vol: 0.3 }); }
     if (s.jump > 0) { s.jump -= dt; const p = 1 - Math.max(0, s.jump) / s.JUMP; s.jy = Math.sin(p * Math.PI) * 20; } else s.jy = 0;
     // end of the flight: step down to the next one
