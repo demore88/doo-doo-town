@@ -1238,14 +1238,24 @@ TRL.face = (who, hp) => { const F = TRL.faces, ld = n => { if (F[n] === undefine
   const n = who + (hp > 0.5 ? '_normal' : hp > 0.25 ? '_tired' : '_panic'); ld(who + '_normal');   /* the hero's real face, looking worse as he gets bitten */
   if (F[n] === undefined) { F[n] = null; const im = new Image(); im.onload = () => F[n] = im; im.onerror = () => { F[n] = false; }; im.src = '../assets/' + n + '.png'; }
   return F[n] || F[who + '_normal'] || null; };
-TRL.FOES = [
-  { name: 'SEWER RAT', hp: [7, 10], atk: [2, 4], w: 6, sc: 1, pts: 50 },
-  { name: "BIG OL' RAT", hp: [13, 17], atk: [3, 6], w: 3, sc: 1.5, pts: 120 },
-  { name: 'THE RAT KING', hp: [22, 26], atk: [4, 7], w: 1, sc: 1.2, king: true, pts: 300 },
+TRL.FOES = [   /* spr: 8-frame strip (0 idle 1 sniff 2 stalk 3 run 4 rear up 5 attack 6 hurt 7 down) */
+  { name: 'SEWER RAT', spr: 'ut_rat', snd: 'rat_screech', hp: [7, 10], atk: [2, 4], w: 5, sc: 1, pts: 50 },
+  { name: "BIG OL' RAT", spr: 'ut_rat', snd: 'rat_screech', hp: [13, 17], atk: [3, 6], w: 3, sc: 1.35, pts: 120 },
+  { name: 'POSSUM', spr: 'ut_possum', snd: 'possum_hiss', hp: [10, 13], atk: [2, 5], w: 2, sc: 1.05, pts: 90, possum: true },
+  { name: 'RACCOON', spr: 'ut_raccoon', snd: 'raccoon', off: 2.5, hp: [12, 15], atk: [3, 5], w: 2, sc: 1.1, pts: 110, thief: true },
+  { name: 'BROWN RECLUSE', spr: 'ut_spider', snd: 'spider', hp: [5, 8], atk: [2, 3], w: 2, sc: 0.8, pts: 80, venom: true },
+  { name: 'THE RAT KING', spr: 'ut_rat', snd: 'rat_screech', hp: [22, 26], atk: [4, 7], w: 1, sc: 0.95, king: true, pts: 300 },
 ];
+TRL.cry = (F, long) => SFX(F.snd, { offset: F.off || 0, dur: long ? 1.6 : 1.0 });   /* each critter's own noise */
+TRL.UTS = (n, f, cx, by, h, flip, a) => { const im = MG(n); if (!im) return false; const cw = im.width / 8, w = h * cw / im.height;   /* one frame of a creature strip */
+  g.save(); if (a != null) g.globalAlpha = a; g.imageSmoothingEnabled = false; g.translate(cx, by); if (flip) g.scale(-1, 1); g.drawImage(im, f * cw, 0, cw, im.height, -w / 2, -h, w, h); g.restore(); return true; };
+TRL.music = { h: null, tick: 0 };
+TRL.bgm = on => { const M = TRL.music; if (on && !M.h && typeof DDTSfx !== 'undefined') M.h = DDTSfx.loop('ut_battle'); if (!on && M.h) { M.h.stop(); M.h = null; } };
+setInterval(() => { if (TRL.music.h && performance.now() - TRL.music.tick > 400) TRL.bgm(false); }, 300);   /* game paused, quit or over: the battle music stops */
+
 GAMES.push({
   id: 'crawl', name: 'UNDER THE TRAILER', tag: 'Dark crawlspace · detached pipe · rats',
-  how: ['Somewhere under this trailer the sewer pipe came apart. Crawl through the dark and find it.', '▲ crawl forward, ▼ back up, ◀ ▶ turn. On the phone you can also tap the left / middle / right of the view.', 'Follow the STINK meter: the stronger it gets, the closer you are. The map in the corner fills in as you go.', 'Rats jump you in the dark. Pick WHACK, FLASHLIGHT, PEANUT BUTTER or RUN, then press the action button. Out of health and you crawl out.'],
+  how: ['Somewhere under this trailer the sewer pipe came apart. Crawl through the dark and find it. Rats, possums, raccoons and brown recluses live down there.', '▲ crawl forward, ▼ back up, ◀ ▶ turn. On the phone you can also tap the left / middle / right of the view.', 'Follow the STINK meter: the stronger it gets, the closer you are. The map in the corner fills in as you go.', 'Rats jump you in the dark. Pick WHACK, FLASHLIGHT, PEANUT BUTTER or RUN, then press the action button. Out of health and you crawl out.'],
   dpad: true,
   ctl: '▲ ▼ CRAWL · ◀ ▶ TURN · SPACE = PICK',
   act: 'PICK', phone: 'd-pad to crawl and turn (or tap the view), PICK in fights.',
@@ -1272,7 +1282,7 @@ GAMES.push({
   open(s, c, r) { return s.map[r] && s.map[r][c] === '.'; },
   update(s, dt, I) {
     s.t += dt; FX(s, dt); s.flash = Math.max(0, s.flash - dt); s.shake = Math.max(0, (s.shake || 0) - dt);
-    if (s.fixT) { s.fixT += dt; if (s.fixT > 3.2) { const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.t < 50 + s.gmax * 2, f >= 0.3), line: s.won ? `Fernco on, clamps tight. ${s.won} rat${s.won > 1 ? 's' : ''} sent packing.` : 'Fernco on, clamps tight. No more drip.' }); } return; }
+    if (s.fixT) { s.fixT += dt * (s.fixT > 3.4 && (I.Ap || I.ptr.clicked) ? 6 : 1); if (s.fixT > 9.4) { const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.t < 50 + s.gmax * 2, f >= 0.3), line: s.epi[1] }); } return; }
     if (s.battle) return this.fight(s, dt, I);
     const H = HERO(s), dur = 0.26 / H.spd;
     if (s.mv > 0) {   // gliding to the next square / turning
@@ -1293,7 +1303,12 @@ GAMES.push({
   },
   arrive(s) {
     s.seen.add(s.pr * 100 + s.pc); s.steps++; s.since++;
-    if (s.pc === s.goal.c && s.pr === s.goal.r) { s.fixT = 0.01; s.score += 500; return; }
+    if (s.venom > 0) { s.venom--; if (s.hp > 1) { s.hp--; (s.log = s.log || []).push('The spider bite itches. -1 HP'); } }
+    if (s.pc === s.goal.c && s.pr === s.goal.r) { s.fixT = 0.01; s.score += 500;
+      const met = s.met || [], big = ['THE RAT KING', 'BROWN RECLUSE', 'RACCOON', "BIG OL' RAT", 'POSSUM', 'SEWER RAT'].find(n => met.includes(n));   /* ...and then nobody believes you */
+      const brag = !met.length ? 'Just a drip. Easy one.' : big === 'THE RAT KING' ? 'There was a RAT KING down there. With a CROWN.' : big === 'BROWN RECLUSE' ? 'I fought a brown recluse. Hand to hand.' : big === 'RACCOON' ? 'A raccoon jumped me. We went three rounds.' : met.length > 2 ? `I fought ${met.length} things down there.` : `I had to fight a ${big.toLowerCase()} down there.`;
+      const nope = !met.length ? ["That's what I like to hear.", 'Good. Now get in the van.'] : ['Sure you did, bud.', 'Uh huh. Get in the van.', "You were under there twenty minutes. Fixing a Fernco.", 'Was it the same raccoon as last time?', "Sure. And I'm the Rat King.", "You smell like you did, I'll give you that.", "Nobody's gonna believe that.", "Don't tell the customer that."];
+      s.epi = [brag, nope[Math.floor(s.rnd() * nope.length)]]; return; }
     const chance = [0.09, 0.12, 0.15][s.diff];
     if (s.since > 3 && s.gd[s.pr][s.pc] > 1 && s.rnd() < chance) this.ambush(s);
   },
@@ -1302,13 +1317,15 @@ GAMES.push({
     let r = s.rnd() * pool.reduce((a, f) => a + f.w, 0), F = pool[0]; for (const f of pool) { if ((r -= f.w) <= 0) { F = f; break; } }
     if (F.king) s.kingSeen = true;
     const hp = F.hp[0] + Math.floor(s.rnd() * (F.hp[1] - F.hp[0] + 1));
-    s.battle = { F, hp, max: hp, sel: 0, q: [], stun: 0, open: 0.6, blink: 0, dmgT: 0 }; s.since = 0; s.fights++; s.flash = 0.6;
-    this.say(s, F.king ? 'THE RAT KING rises from the muck!' : `A ${F.name} jumps out of the dark!`);
+    s.battle = { F, hp, max: hp, sel: 0, q: [], stun: 0, open: 0.6, blink: 0, dmgT: 0, pose: 2, poseT: 0.8, out: 0 }; s.since = 0; s.fights++; s.flash = 0.6; (s.met = s.met || []).push(F.name); TRL.bgm(true); TRL.cry(F, true);
+    this.say(s, F.king ? 'THE RAT KING rises from the muck!' : F.venom ? 'A BROWN RECLUSE drops down from a joist!' : F.thief ? 'A RACCOON was already down here. It is not happy.' : F.possum ? 'A POSSUM hisses at you from behind a pier!' : `A ${F.name} jumps out of the dark!`);
   },
+  endFight(s) { s.battle = null; TRL.bgm(false); },
   say(s, text, fx) { s.battle.q.push({ text, fx, t: 0 }); },
   // turn-based: messages play one at a time (tap / PICK to hurry them), then the menu comes back
   fight(s, dt, I) {
-    const b = s.battle, tap = I.Ap || I.ptr.clicked;
+    const b = s.battle, tap = I.Ap || I.ptr.clicked; TRL.music.tick = performance.now();
+    b.poseT = Math.max(0, b.poseT - dt); if (b.poseT <= 0 && b.pose !== 7) b.pose = null; if (b.out) b.out += dt;
     if (b.open > 0) { b.open -= dt; return; }
     b.blink = Math.max(0, b.blink - dt); b.dmgT = Math.max(0, b.dmgT - dt);
     if (b.q.length) { const m = b.q[0]; if (!m.t && m.fx) m.fx(); m.t += dt; if ((m.t > 0.25 && tap) || m.t > 1.6) { (s.log = s.log || []).push(m.text.length > 44 ? m.text.slice(0, 43) + '…' : m.text); b.q.shift(); if (!b.q.length && b.after) { const a = b.after; b.after = null; a(); } } return; }
@@ -1320,25 +1337,28 @@ GAMES.push({
     const o = OPTS[pick]; if (o.off) { SFX('click'); return; } SFX('ui_select');
     const foeTurn = () => {
       if (b.stun > 0) { b.stun--; this.say(s, `The ${b.F.name} is still seeing spots.`); return; }
-      if (s.rnd() < 0.12) { this.say(s, `The ${b.F.name} lunges... and misses!`); return; }
+      if (b.faking) { b.faking = false; this.say(s, `...The POSSUM gets right back up. It was faking!`, () => { b.pose = 4; b.poseT = 0.6; TRL.cry(b.F); }); return; }
+      if (s.rnd() < 0.12) { this.say(s, `The ${b.F.name} lunges... and misses!`, () => { b.pose = 3; b.poseT = 0.5; }); return; }
+      if (b.F.thief && s.pb > 0 && s.rnd() < 0.35) { this.say(s, 'The RACCOON swipes a jar of peanut butter!', () => { s.pb--; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); }); return; }
       const d = Math.max(1, Math.round((b.F.atk[0] + s.rnd() * (b.F.atk[1] - b.F.atk[0])) * (s.k || 1)));
-      this.say(s, b.F.king ? `THE RAT KING bites all at once! -${d} HP` : `The ${b.F.name} bites! -${d} HP`, () => { s.hp -= d; s.hits++; s.shake = 0.35; });
-      b.after = () => { if (s.hp <= 0) { s.hp = 0; s.end = { win: false, stars: 0, line: 'The rats own this crawlspace. We are coming back with traps.' }; } };
+      this.say(s, b.F.king ? `THE RAT KING bites all at once! -${d} HP` : b.F.venom ? `The BROWN RECLUSE bites! -${d} HP. That's gonna itch.` : b.F.thief ? `The RACCOON claws you! -${d} HP` : `The ${b.F.name} bites! -${d} HP`,
+        () => { s.hp -= d; s.hits++; s.shake = 0.35; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); if (b.F.venom) s.venom = 6; });
+      b.after = () => { if (s.hp <= 0) { s.hp = 0; TRL.bgm(false); s.end = { win: false, stars: 0, line: 'The rats own this crawlspace. We are coming back with traps.' }; } };
     };
-    const won = () => { this.say(s, `The ${b.F.name} runs off squeaking! +${b.F.pts} PTS`, () => { s.score += b.F.pts; s.won++; SFX('ui_select'); }); b.after = () => { s.battle = null; }; };
+    const won = () => { this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
     if (o.id === 'whack') {
       if (s.rnd() < 0.1) this.say(s, 'You swing the pipe wrench... and hit a pier. CLANG.', () => SFX('click'));
       else { const crit = s.rnd() < 0.12, d = Math.round((s.dmg[0] + s.rnd() * (s.dmg[1] - s.dmg[0])) * (crit ? 2 : 1));
-        this.say(s, crit ? `CRITICAL WHACK! ${d} damage!` : `You whack it with the pipe wrench! ${d} damage.`, () => { b.hp -= d; b.blink = 0.4; b.dmgT = 0.7; b.dmg = d; s.shake = 0.12; }); }
-      b.after = () => { if (b.hp <= 0) won(); else { foeTurn(); } };
+        this.say(s, crit ? `CRITICAL WHACK! ${d} damage!` : `You whack it with the pipe wrench! ${d} damage.`, () => { b.hp -= d; b.blink = 0.4; b.dmgT = 0.7; b.dmg = d; s.shake = 0.12; b.pose = 6; b.poseT = 0.6; b.faking = false; SFX('wrench_hit'); }); }
+      b.after = () => { if (b.hp <= 0) won(); else if (b.F.possum && !b.played && b.hp < b.max / 2) { b.played = b.faking = true; this.say(s, 'The POSSUM keels over. ...Is it dead?', () => { b.pose = 7; b.poseT = 99; }); } else foeTurn(); };
     } else if (o.id === 'light') {
       s.lights--; this.say(s, 'You blast it with the flashlight!', () => { s.flash = 0.35; SFX('click'); });
       if (s.rnd() < (b.F.king ? 0.4 : 0.85)) { b.stun = b.F.king ? 1 : 2; this.say(s, `The ${b.F.name} is blinded!`); } else this.say(s, 'It just squints at you.');
       b.after = () => foeTurn();
     } else if (o.id === 'pb') {
-      s.pb--; this.say(s, 'You toss a spoonful of peanut butter down the row...'); this.say(s, `The ${b.F.name} goes for it. You crawl away.`); b.after = () => { s.battle = null; };
+      s.pb--; this.say(s, 'You toss a spoonful of peanut butter down the row...'); this.say(s, `The ${b.F.name} goes for it. You crawl away.`, () => { b.pose = 3; b.poseT = 9; b.out = 0.01; }); b.after = () => this.endFight(s);
     } else if (o.id === 'run') {
-      if (s.rnd() < s.runOdds * (b.F.king ? 0.5 : 1)) { this.say(s, 'You scramble away through the muck!'); b.after = () => { s.battle = null; }; }
+      if (s.rnd() < s.runOdds * (b.F.king ? 0.5 : 1)) { this.say(s, 'You scramble away through the muck!'); b.after = () => this.endFight(s); }
       else { this.say(s, "You're stuck in the muck!"); b.after = () => foeTurn(); }
     }
   },
@@ -1393,10 +1413,11 @@ GAMES.push({
     if (b && b.open <= 0) {   // the rats stand right there in the corridor, like the old games
       const cx = VX + VW / 2, by = VY + VH - 14 + Math.sin(t * 3) * 1.5, blinkOff = b.blink > 0 && Math.floor(t * 20) % 2;
       g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(cx, by + 2, 70 * b.F.sc, 9, 0, 0, 7); g.fill();
-      if (!blinkOff && (b.hp > 0 || b.q.length)) {
-        if (b.F.king) { for (const [ox, oy] of [[-44, -6], [44, -6], [0, 4]]) if (!SPI('rat_' + ((Math.floor(t * 4) + (ox > 0 ? 1 : 0)) % 2), cx + ox, by + oy, 2.3, ox > 0)) R(cx + ox - 20, by + oy - 20, 40, 20, '#6a5a4c');
-          g.fillStyle = '#f7c418'; const kx = cx - 2, ky = by - 84; g.beginPath(); g.moveTo(kx - 20, ky + 16); g.lineTo(kx - 20, ky); g.lineTo(kx - 10, ky + 9); g.lineTo(kx, ky - 5); g.lineTo(kx + 10, ky + 9); g.lineTo(kx + 20, ky); g.lineTo(kx + 20, ky + 16); g.fill(); C(kx, ky - 5, 2.5, '#e9665a'); C(kx - 10, ky + 11, 1.5, '#2c6cd6'); C(kx + 10, ky + 11, 1.5, '#2c6cd6'); }
-        else if (!SPI('rat_' + (Math.floor(t * 4) % 2), cx, by, 2.8 * b.F.sc, false)) R(cx - 30, by - 30, 60, 30, '#6a5a4c');
+      if (!blinkOff && (b.hp > 0 || b.q.length || b.pose === 7)) {
+        const idle = [0, 0, 1, 0, 2][Math.floor(t / 0.6) % 5], f = b.pose != null ? b.pose : idle, ox = b.out ? b.out * 420 : 0, a = b.out ? Math.max(0, 1 - b.out * 1.5) : 1, h = 120 * b.F.sc;
+        if (b.F.king) { for (const [kx, ky, k] of [[-62, -4, 1], [62, -4, 2], [0, 6, 0]]) TRL.UTS(b.F.spr, b.pose != null ? f : [0, 1, 2][(Math.floor(t / 0.5) + k) % 3], cx + kx + ox, by + ky, h, kx < 0, a);
+          if (!b.out) { g.fillStyle = '#f7c418'; const kx = cx + 22, ky = by - h * 0.62; g.beginPath(); g.moveTo(kx - 16, ky + 13); g.lineTo(kx - 16, ky); g.lineTo(kx - 8, ky + 7); g.lineTo(kx, ky - 5); g.lineTo(kx + 8, ky + 7); g.lineTo(kx + 16, ky); g.lineTo(kx + 16, ky + 13); g.fill(); C(kx, ky - 5, 2.5, '#e9665a'); C(kx - 8, ky + 9, 1.5, '#2c6cd6'); C(kx + 8, ky + 9, 1.5, '#2c6cd6'); } }
+        else if (!TRL.UTS(b.F.spr, f, cx + ox, by, h, false, a)) R(cx - 30, by - 30, 60, 30, '#6a5a4c');
         if (b.stun > 0) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; T('*', cx + Math.cos(a) * 30, by - 70 + Math.sin(a) * 6, '#f7c418', 8, 'center'); }
       }
       if (b.dmgT > 0) T('-' + b.dmg, cx + 50, VY + 60 - (0.7 - b.dmgT) * 30, '#fff', 14, 'center');
@@ -1405,7 +1426,14 @@ GAMES.push({
     }
     if (b && b.open > 0) { const k = b.open / 0.6; for (let i = 0; i < 9; i++) R(VX, VY + i * 20, VW * (1 - k), 20, '#000'); }   // the screen wipe into the fight
     if (s.flash > 0) { g.fillStyle = `rgba(255,250,220,${s.flash})`; g.fillRect(VX, VY, VW, VH); }
-    if (s.fixT) { R(VX + 20, VY + 70, VW - 40, 40, 'rgba(10,8,6,.85)'); T(s.fixT < 1.2 ? 'THERE IT IS. THE DRIP.' : s.fixT < 2.2 ? 'FERNCO ON...' : 'CLAMPS TIGHT. DONE!', VX + VW / 2, VY + 90, '#7bd65b', 9, 'center'); }
+    if (s.fixT && s.fixT < 3.4) { R(VX + 20, VY + 70, VW - 40, 40, 'rgba(10,8,6,.85)'); T(s.fixT < 1.2 ? 'THERE IT IS. THE DRIP.' : s.fixT < 2.2 ? 'FERNCO ON...' : 'CLAMPS TIGHT. DONE!', VX + VW / 2, VY + 90, '#7bd65b', 9, 'center'); }
+    if (s.fixT >= 3.4) {   // crawled back out into daylight
+      const k = Math.min(1, (s.fixT - 3.4) / 0.6), sky = g.createLinearGradient(0, VY, 0, VY + VH); sky.addColorStop(0, '#8fc4ef'); sky.addColorStop(1, '#d8ecf8'); g.globalAlpha = k; g.fillStyle = sky; g.fillRect(VX, VY, VW, VH);
+      if (!BGI('bg_lawn')) { R(VX, VY + VH * 0.62, VW, VH * 0.38, '#5f9a3e'); } g.globalAlpha = 1;
+      if (k >= 1) { R(VX + 12, VY + VH - 62, VW - 24, 52, 'rgba(10,8,6,.88)');
+        const me = HERO(s).name, them = me === 'ROD' ? 'MATT' : 'ROD', two = s.fixT > 6.2;
+        T(me + ':', VX + 22, VY + VH - 50, '#e8c86a', 7); T(s.epi[0], VX + 22, VY + VH - 38, '#fff', 6);
+        if (two) { T(them + ':', VX + 22, VY + VH - 24, '#e8c86a', 7); T(s.epi[1], VX + 70, VY + VH - 24, '#fff', 6); } } }
     g.restore();
     // side panel: title, map + compass up top; commands in a fight, stink otherwise
     const PX = 338, PW = 134; bevel(PX, 10, PW, 82);
@@ -1422,14 +1450,14 @@ GAMES.push({
     else { const stink = 1 - s.gd[s.pr][s.pc] / Math.max(1, s.gmax);
       T('STINK', PX + 8, 110, '#c9a46a', 6); BAR(PX + 8, 116, PW - 16, 6, stink, stink > 0.75 ? '#a0d040' : '#8a6a3a');
       if (stink > 0.75 && Math.floor(t * 3) % 2) T('SMELLS CLOSE', PX + PW / 2, 132, '#a0d040', 6, 'center');
-      T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PEANUT BUTTER x' + s.pb, PX + 8, 162, '#e8dcc0', 6); T('RATS RUN OFF: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
+      T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PEANUT BUTTER x' + s.pb, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
     // bottom bar: the hero's portrait + health, and the message scroll
     bevel(10, 200, 56, 60);
-    { const H = HERO(s), im = TRL.face(H.name === 'ROD' ? 'rod' : 'matt', s.hp / s.hpMax); if (im) { g.imageSmoothingEnabled = true; g.drawImage(im, 10, 200, 56, 60); g.imageSmoothingEnabled = false; } else R(10, 200, 56, 60, '#2a2a36');
+    { const H = HERO(s), other = s.fixT > 6.2, im = TRL.face((H.name === 'ROD') !== other ? 'rod' : 'matt', other ? 1 : s.hp / s.hpMax); if (im) { g.imageSmoothingEnabled = true; g.drawImage(im, 10, 200, 56, 60); g.imageSmoothingEnabled = false; } else R(10, 200, 56, 60, '#2a2a36');
       if (s.shake > 0.2) { g.fillStyle = 'rgba(233,102,90,.45)'; g.fillRect(10, 200, 56, 60); } }
     bevel(74, 200, 92, 60);
     T(HERO(s).name, 80, 210, '#e8c86a', 7); T('HP', 80, 226, '#fff', 6); BAR(96, 222, 64, 7, s.hp / s.hpMax, s.hp / s.hpMax > 0.5 ? '#7bd65b' : s.hp / s.hpMax > 0.25 ? '#f7c418' : '#e9665a');
-    T(`${Math.max(0, s.hp)} / ${s.hpMax}`, 160, 240, '#e8dcc0', 6, 'right'); T(s.hp / s.hpMax > 0.5 ? 'GOOD' : s.hp / s.hpMax > 0.25 ? 'BITTEN' : 'BAD SHAPE', 80, 252, s.hp / s.hpMax > 0.5 ? '#7bd65b' : '#e9665a', 6);
+    T(`${Math.max(0, s.hp)} / ${s.hpMax}`, 160, 240, '#e8dcc0', 6, 'right'); T(s.venom > 0 ? 'ITCHY' : s.hp / s.hpMax > 0.5 ? 'GOOD' : s.hp / s.hpMax > 0.25 ? 'BITTEN' : 'BAD SHAPE', 80, 252, s.venom > 0 ? '#c080e0' : s.hp / s.hpMax > 0.5 ? '#7bd65b' : '#e9665a', 6);
     bevel(174, 200, 298, 60);
     { const log = s.log || (s.log = []);
       if (b && b.q.length) { const m = b.q[0], txt = m.text.slice(0, Math.floor(m.t * 60)); log.slice(-1).forEach(l => T(l, 180, 214, '#7a6a50', 6)); { const wr = []; let ln = ''; for (const w of txt.split(' ')) { if ((ln + w).length > 44) { wr.push(ln.trim()); ln = ''; } ln += w + ' '; } wr.push(ln.trim()); wr.slice(0, 2).forEach((l, i) => T(l, 180, 236 + i * 12, '#fff', 6)); }   /* wrapped to fit the scroll */ if (m.t > 0.4 && Math.floor(t * 3) % 2) T('▼', 464, 252, '#e8c86a', 6, 'right'); }
