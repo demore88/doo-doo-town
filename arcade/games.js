@@ -1870,7 +1870,7 @@ GAMES.push({
     { const log = s.log || (s.log = []);
       const MW = 280, scroll = (entries) => {   /* the newest messages, wrapped to the scroll, as many lines as fit */
         const lines = []; entries.forEach((e, k) => WRAP(e, 0, null, MW, '#fff', 6, 11).forEach(l => lines.push([l, k === entries.length - 1]))); lines.slice(-4).forEach(([l, last], i, A) => T(l, 180, 212 + (4 - A.length) * 11 + i * 11, last ? '#e8dcc0' : '#7a6a50', 6)); };
-      if (s.shop) { T('CRAWLSPACE CARL:', 180, 210, '#e8c86a', 6); T('PB CRACKERS: ' + s.crk, 464, 210, '#7bd65b', 6, 'right'); WRAP(s.shop.say, 180, 223, MW, '#fff', 6, 11, 3); }
+      if (s.shop) { T('CRAWLSPACE CARL:', 180, 210, '#e8c86a', 6); T('PB CRACKERS: ' + s.crk, 464, 210, '#7bd65b', 6, 'right'); WRAP(s.shop.say, 180, 222, MW, '#fff', 6, 10, 4); }
       else if (b && b.q.length) { const m = b.q[0], full = WRAP(m.text, 0, null, MW, '#fff', 6, 11), shown = m.text.slice(0, Math.floor(m.t * 60));   /* typed out, wrapped where the full line will wrap */
         let left = shown.length; full.slice(-4).forEach((l, i, A) => { const cut = l.slice(0, Math.max(0, left)); left -= l.length + 1; T(cut, 180, 214 + i * 11, '#fff', 6); });
         if (m.t > 0.4 && Math.floor(t * 3) % 2) T('▼', 464, 252, '#e8c86a', 6, 'right'); }
