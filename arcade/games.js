@@ -1377,7 +1377,7 @@ GAMES.push({
     s.hobo = s.carls[0];
     s.shop = null; s.maps = [false, false, false]; s.scrib = []; s.big = null;
     { const free = []; for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) if (m[r][c] === '.' && !(c === 1 && r === 1) && !(c === best[0] && r === best[1]) && !s.carls.some(q => q.c === c && q.r === r) && !(s.kingdom && s.kingdom.c === c && s.kingdom.r === r)) free.push([c, r]);
-      s.traps = []; for (let i = 0; i < [22, 26, 30][s.diff] && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.traps.push({ c, r }); } s.gloves = []; for (let i = 0; i < 3 && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.gloves.push({ c, r }); } }   /* rat traps, baited with the good crackers */
+      s.traps = []; for (let i = 0; i < [12, 11, 10][s.diff] && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.traps.push({ c, r }); } s.gloves = []; for (let i = 0; i < 3 && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.gloves.push({ c, r }); } }   /* rat traps, baited with the good crackers */
     s.pc = 1; s.pr = 1; s.dir = m[1][2] === '.' ? 0 : 1; s.vx = 1.5; s.vy = 1.5; s.va = s.dir * Math.PI / 2; s.mv = 0;
     s.seen = new Set([101]); s.steps = 0; s.since = 0;
     const H = HERO(s), rod = H.name === 'ROD';
@@ -1591,7 +1591,7 @@ GAMES.push({
       if (pick === null || W2.t < 0.4) return; SFX('ui_select'); }
     else if (!((W2.t > 0.4 && (I.Ap || I.ptr.clicked)) || W2.t > TRL.hold(L[1]))) return;
     W2.i++; W2.t = 0; W2.sel = 0;
-    if (W2.i >= W2.lines.length) { s.wed = null; s.escort = false; s.married = true; s.crk += 8; s.items.tonic += 2; s.gear.push('crown'); s.def += 2; this.gainXP(s, 150);
+    if (W2.i >= W2.lines.length) { s.wed = null; s.escort = false; s.married = true; s.crk += 5; s.items.tonic += 2; s.gear.push('crown'); s.def += 2; this.gainXP(s, 150);
       (s.log = s.log || []).push('THE DOWRY: 8 crackers, 2 Carl\'s Tonics, and a tiny POSSUM CROWN (DEF +2).'); SFX('ui_select'); } },
   respawn(s) {   // knocked out: you come to back at the last Carl you visited (or the hatch), patched up
     s.lives--; const back = [...s.carls].reverse().find(c => c.met), spot = back ? [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [back.c + dx, back.r + dy]).find(([c, r]) => s.map[r][c] === '.') : [1, 1];
@@ -1646,7 +1646,7 @@ GAMES.push({
         () => { s.hp -= d; s.hits++; s.shake = 0.35; s.guard = 0.6; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); if (b.F.venom) s.venom = 6; });
       b.after = () => { if (s.hp <= 0) { s.hp = 0; TRL.bgm(false); s.battle = null; if (s.lives > 0) this.respawn(s); else this.defeated(s); } };
     };
-    const won = () => { this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { const loot = b.F.king ? 4 : b.F.gary ? 5 : 1 + Math.floor(s.rnd() * 2); s.crk += loot + (b.stolen || 0); if (b.stolen) (s.log = s.log || []).push(`You get your ${b.stolen} stolen cracker${b.stolen > 1 ? 's' : ''} back, too.`); this.gainXP(s, b.F.pts); if (b.F.king) s.kingDone = true; (s.log = s.log || []).push(`It dropped ${loot} peanut butter cracker${loot > 1 ? 's' : ''}. Where was it keeping those.`); s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
+    const won = () => { this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { const loot = b.F.king ? 4 : b.F.gary ? 3 : s.rnd() < [0.55, 0.48, 0.42][s.diff] ? 1 : 0;   /* most critters aren't carrying crackers */ s.crk += loot + (b.stolen || 0); if (b.stolen) (s.log = s.log || []).push(`You get your ${b.stolen} stolen cracker${b.stolen > 1 ? 's' : ''} back, too.`); this.gainXP(s, b.F.pts); if (b.F.king) s.kingDone = true; if (loot) (s.log = s.log || []).push(`It dropped ${loot} peanut butter cracker${loot > 1 ? 's' : ''}. Where was it keeping those.`); s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
     b.wonFn = won; b.foeTurnFn = foeTurn;
     if (o.id === 'item') { s.bag = { sel: 0, battle: true }; return; }
     if (o.id === 'whack' && b.guards > 0) {   /* the guards are in the way: you have to get through them first */
