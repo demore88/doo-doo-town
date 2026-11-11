@@ -1208,7 +1208,7 @@ GAMES.push({
 // =====================================================================
 // 15. UNDER THE TRAILER — an old-school first-person crawl. Feel your way through the piers and the muck,
 // follow your nose to the broken joint, and fight off the rats the old-fashioned way: turn-based.
-const TRL = { RW: 240, RH: 135, T: 32 };
+const TRL = { RW: 480, RH: 270, T: 32, T2: 128 };   /* the view is drawn at 480x270, the walls/floor/ceiling with 128px textures so they stay sharp */
 TRL.rgb = (r, gg, b) => (255 << 24) | (Math.max(0, Math.min(255, b)) << 16) | (Math.max(0, Math.min(255, gg)) << 8) | Math.max(0, Math.min(255, r));
 TRL.tex = (() => {   // little 32x32 textures, painted once
   const N = TRL.T, mk = f => { const a = new Uint32Array(N * N); for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) a[y * N + x] = f(x, y); return a; };
@@ -1248,7 +1248,17 @@ TRL.tex = (() => {   // little 32x32 textures, painted once
     if (y >= 22 && y <= 25 && x >= 13 && x <= 18) { if ((x + y) % 3 === 0) return TRL.rgb(120, 70, 30); return y === 22 ? TRL.rgb(236, 170, 80) : TRL.rgb(214, 140, 60); }   /* cracker */
     if (y >= 24 && y <= 26 && x >= 16 && x <= 20 && y === 26) return TRL.rgb(150, 150, 156);
     return 0; });
-  return { block, skirt, dirt, ceil, pipe: [pipe(0), pipe(1)], hobo: [hobo(0), hobo(1)], trap };
+  const M = TRL.T2, up = (src, smooth, grain) => { const o = new Uint32Array(M * M), f = N / M; let sd = 99;
+    const rnd2 = () => ((sd = (sd * 16807) % 2147483647) / 2147483647), ch = (c, k) => (c >> (k * 8)) & 255;
+    for (let y = 0; y < M; y++) for (let x = 0; x < M; x++) { const u = (x + 0.5) * f - 0.5, v = (y + 0.5) * f - 0.5;
+      let c; const n0 = src[(((y * f) | 0) % N) * N + (((x * f) | 0) % N)];
+      if (!smooth || (n0 & 0xffffff) === 0xc8f0fa) c = n0;   /* the daylight crack stays exact */
+      else { const x0 = Math.floor(u), y0 = Math.floor(v), ax = u - x0, ay = v - y0, P = (xx, yy) => src[((yy + N) % N) * N + ((xx + N) % N)];
+        const a = P(x0, y0), b = P(x0 + 1, y0), cc = P(x0, y0 + 1), d = P(x0 + 1, y0 + 1), mix = k => Math.round((ch(a, k) * (1 - ax) + ch(b, k) * ax) * (1 - ay) + (ch(cc, k) * (1 - ax) + ch(d, k) * ax) * ay);
+        c = (255 << 24) | (mix(2) << 16) | (mix(1) << 8) | mix(0); }
+      const gr = (rnd2() - 0.5) * grain; o[y * M + x] = (c & 0xffffff) === 0xc8f0fa ? c : TRL.rgb(ch(c, 0) + gr, ch(c, 1) + gr, ch(c, 2) + gr); }
+    return o; };
+  return { block, skirt, dirt, ceil, pipe: [pipe(0), pipe(1)], hobo: [hobo(0), hobo(1)], trap, hi: { block: up(block, false, 14), skirt: up(skirt, false, 10), dirt: up(dirt, true, 18), ceil: up(ceil, true, 12) } };
 })();
 TRL.faces = {};
 TRL.faceN = n => { const F = TRL.faces; if (F[n] === undefined) { F[n] = null; const im = new Image(); im.onload = () => F[n] = im; im.onerror = () => { F[n] = false; }; im.src = '../assets/' + n + '.png'; } return F[n] || null; };
@@ -1379,9 +1389,9 @@ GAMES.push({
   arrive(s) {
     s.seen.add(s.pr * 100 + s.pc); s.steps++; s.since++;
     { const gl = (s.gloves || []).find(q => !q.got && q.c === s.pc && q.r === s.pr); if (gl) { gl.got = true; (s.log = s.log || []).push(['A muddy work glove. ...Carl\'s? It\'s warm.', 'Somebody\'s glove. Blue. Crunchy.', 'A glove. You do not put it on.'][Math.floor(s.rnd() * 3)]); } }
-    { const k = (s.traps || []).findIndex(q => !q.got && q.c === s.pc && q.r === s.pr); if (k >= 0) { s.traps[k].got = true; s.crk++; s.shake = 0.15; SFX('click'); (s.log = s.log || []).push(['You slide a peanut butter cracker off a rat trap... SNAP! Missed your fingers.', 'A rat trap with a little cracker on it. Mine now.', 'Peanut butter cracker off a trap. Slightly chewed.'][Math.floor(s.rnd() * 3)]); } }
+    { const k = (s.traps || []).findIndex(q => !q.got && q.c === s.pc && q.r === s.pr); if (k >= 0) { s.traps[k].got = true; s.crk++; s.shake = 0.15; SFX('click'); SFX('ut_get', { vol: 0.6 }); (s.log = s.log || []).push(['You slide a peanut butter cracker off a rat trap... SNAP! Missed your fingers.', 'A rat trap with a little cracker on it. Mine now.', 'Peanut butter cracker off a trap. Slightly chewed.'][Math.floor(s.rnd() * 3)]); } }
     if (s.venom > 0) { s.venom--; if (s.hp > 1) { s.hp--; (s.log = s.log || []).push('The spider bite itches. -1 HP'); } }
-    if (s.pc === s.goal.c && s.pr === s.goal.r) { s.fixT = 0.01; s.score += 500; TRL.amb(false);
+    if (s.pc === s.goal.c && s.pr === s.goal.r) { s.fixT = 0.01; s.score += 500; TRL.amb(false); SFX('ut_win', { vol: 0.6 });
       const met = s.met || [], big = ['THE RAT KING', 'BROWN RECLUSE', 'RACCOON', 'BIG BUFF RAT', 'POSSUM', 'SEWER RAT'].find(n => met.includes(n));   /* ...and then nobody believes you */
       const brag = s.married ? 'I got married down there. To a possum. Then I left on a quest.' : !met.length ? 'Just a drip. Easy one.' : big === 'THE RAT KING' ? 'There was a RAT KING down there. With a CROWN.' : big === 'BROWN RECLUSE' ? 'I fought a brown recluse. Hand to hand.' : big === 'RACCOON' ? 'A raccoon jumped me. We went three rounds.' : met.length > 2 ? `I fought ${met.length} things down there.` : `I had to fight a ${big.toLowerCase()} down there.`;
       const nope = s.married ? ['...Congratulations?', 'Does she know where you live?', 'Are you paying child support to a possum?', 'You were under there for an hour.'] : !met.length ? ["That's what I like to hear.", 'Good. Now get in the van.'] : ['Sure you did, bud.', 'Uh huh. Get in the van.', "You were under there twenty minutes. Fixing a Fernco.", 'Was it the same raccoon as last time?', "Sure. And I'm the Rat King.", "You smell like you did, I'll give you that.", "Nobody's gonna believe that.", "Don't tell the customer that."];
@@ -1442,7 +1452,7 @@ GAMES.push({
     if (it.id === 'bye') { (s.log = s.log || []).push('CARL: ' + this.HOBO_BYE[Math.floor(s.rnd() * this.HOBO_BYE.length)]); if (!s.iga) { s.iga = true; s.log.push('(Could have bought out his whole store with three bucks of crackers from IGA.)'); } s.shop = null; SFX('ui_select'); return; }
     if (it.off) { S.say = "You already have it. Do you not like it? ...You don't like it."; this.mood(s, [3]); S.flip = 5; SFX('click'); return; }
     if (s.crk < it.price) { S.say = this.HOBO_BROKE[Math.floor(s.rnd() * this.HOBO_BROKE.length)]; this.mood(s, [2, 5]); SFX('click'); return; }
-    s.crk -= it.price; it.go(); S.say = this.HOBO_BUY[Math.floor(s.rnd() * this.HOBO_BUY.length)] + '  (' + it.line + ')'; this.mood(s, [1, 6]); S.buyT = 1.2; SFX('ui_select');
+    s.crk -= it.price; it.go(); S.say = this.HOBO_BUY[Math.floor(s.rnd() * this.HOBO_BUY.length)] + '  (' + it.line + ')'; this.mood(s, [1, 6]); S.buyT = 1.2; SFX('ut_buy', { vol: 0.7 });
   },
   // knocked out of the crawlspace: he tells the other guy everything. The other guy doesn't buy a word of it, goes down, and fixes it.
   defeated(s) {
@@ -1463,7 +1473,7 @@ GAMES.push({
     s.talk = { lines: L, i: 0, t: 0 };
   },
   weapon(s) { const G2 = s.gear; return G2.includes('cutter') ? 'pipe cutter' : G2.includes('wrench') ? 'monkey wrench' : G2.includes('pipewrench') ? 'pipe wrench' : 'fists'; },
-  gainXP(s, n) { s.xp += n; while (s.xp >= s.lvl * 60) { s.xp -= s.lvl * 60; s.lvl++; s.hpMax += 5; s.hp = Math.min(s.hpMax, s.hp + Math.round(s.hpMax * 0.4)); (s.log = s.log || []).push(`LEVEL ${s.lvl}! Max HP +5, hits harder. You feel more... crawly.`); SFX('ui_select'); } },
+  gainXP(s, n) { s.xp += n; while (s.xp >= s.lvl * 60) { s.xp -= s.lvl * 60; s.lvl++; SFX('ut_levelup'); s.hpMax += 5; s.hp = Math.min(s.hpMax, s.hp + Math.round(s.hpMax * 0.4)); (s.log = s.log || []).push(`LEVEL ${s.lvl}! Max HP +5, hits harder. You feel more... crawly.`); SFX('ui_select'); } },
   // the bag: stats, items, and resting. B opens it. In a fight, using something takes your turn.
   bagList(s) { const I2 = s.items, inB = s.bag && s.bag.battle; const L = [
       { id: 'aid', label: `BAND-AIDS x${I2.aid}`, off: !I2.aid }, { id: 'beans', label: `COLD BEANS x${I2.beans}`, off: !I2.beans }, { id: 'tonic', label: `CARL'S TONIC x${I2.tonic}`, off: !I2.tonic } ];
@@ -1522,7 +1532,7 @@ GAMES.push({
       (s.log = s.log || []).push('THE DOWRY: 8 crackers, 2 Carl\'s Tonics, and a tiny POSSUM CROWN (DEF +2).'); SFX('ui_select'); } },
   respawn(s) {   // knocked out: you come to back at the last Carl you visited (or the hatch), patched up
     s.lives--; const back = [...s.carls].reverse().find(c => c.met), spot = back ? [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [back.c + dx, back.r + dy]).find(([c, r]) => s.map[r][c] === '.') : [1, 1];
-    s.pc = spot[0]; s.pr = spot[1]; s.vx = s.pc + 0.5; s.vy = s.pr + 0.5; s.mv = 0; s.hp = s.hpMax; s.venom = 0; s.since = 0; s.flash = 1; s.restMin += 20;
+    s.pc = spot[0]; s.pr = spot[1]; s.vx = s.pc + 0.5; s.vy = s.pr + 0.5; s.mv = 0; s.hp = s.hpMax; s.venom = 0; s.since = 0; s.flash = 1; s.restMin += 20; SFX('ut_wake', { vol: 0.5 });
     if (back) { const d = [[1, 0], [0, 1], [-1, 0], [0, -1]].findIndex(([dx, dy]) => s.pc + dx === back.c && s.pr + dy === back.r); s.dir = d; s.va = s.ta = d * Math.PI / 2; }
     const left = `(${s.lives} ${s.lives === 1 ? 'life' : 'lives'} left)`;
     if (!back) { (s.log = s.log || []).push(`You wake up by the hatch. Everything hurts. ${left}`); return; }
@@ -1559,39 +1569,48 @@ GAMES.push({
     if (pick === null) return;
     const o = OPTS[pick]; if (o.off) { SFX('click'); return; } SFX('ui_select');
     const foeTurn = () => {
+      if (b.F.king && !b.ph2 && b.hp < b.max / 2) { b.ph2 = true; b.guards = 2;   /* PHASE 2: he calls his royal guard and gets mad */
+        this.say(s, 'THE RAT KING lets out a royal SCREECH!', () => { b.pose = 4; b.poseT = 1.2; s.shake = 0.5; TRL.cry(b.F, true); });
+        this.say(s, 'Two ROYAL GUARD RATS jump in!', () => { b.gIn = 0.01; SFX('rat_screech', { vol: 0.6, dur: 0.8 }); });
+        this.say(s, "He's FURIOUS. His claws hit harder now."); return; }
       if (b.stun > 0) { b.stun--; this.say(s, `The ${b.F.name} is still seeing spots.`); return; }
       if (b.faking) { b.faking = false; this.say(s, `...The POSSUM gets right back up. It was faking!`, () => { b.pose = 4; b.poseT = 0.6; TRL.cry(b.F); }); return; }
       if (s.rnd() < 0.12) { this.say(s, `The ${b.F.name} lunges... and misses!`, () => { b.pose = 3; b.poseT = 0.5; }); return; }
       if (b.F.thief && s.crk > 0 && s.rnd() < 0.35) { const n2 = b.F.gary ? Math.min(2, s.crk) : 1; this.say(s, b.F.gary ? `GARY pockets ${n2} of your crackers. In his VEST.` : 'The RACCOON snatches one of your crackers!', () => { s.crk -= n2; b.stolen = (b.stolen || 0) + n2; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); }); return; }
-      const d = Math.max(1, Math.round((b.F.atk[0] + s.rnd() * (b.F.atk[1] - b.F.atk[0])) * (s.k || 1) * (1 + (b.F.king ? 0 : this.zone(s) * 0.25))) - s.def);   /* your gear soaks some of it */
-      this.say(s, b.F.king ? `THE RAT KING rakes you with royal claws! -${d} HP` : b.F.venom ? `The BROWN RECLUSE bites! -${d} HP. That's gonna itch.` : b.F.thief ? `The RACCOON claws you! -${d} HP` : `The ${b.F.name} bites! -${d} HP`,
+      const gn = b.guards > 0 ? b.guards * (1 + Math.floor(s.rnd() * 2)) : 0;   /* each guard gets a nip in */
+      const d = Math.max(1, Math.round((b.F.atk[0] + s.rnd() * (b.F.atk[1] - b.F.atk[0])) * (s.k || 1) * (b.ph2 ? 1.3 : 1) * (1 + (b.F.king ? 0 : this.zone(s) * 0.25))) - s.def) + gn;   /* your gear soaks some of it */
+      this.say(s, b.F.king ? (gn ? `The King AND his guards get you! -${d} HP` : b.ph2 ? `THE FURIOUS RAT KING mauls you! -${d} HP` : `THE RAT KING rakes you with royal claws! -${d} HP`) : b.F.venom ? `The BROWN RECLUSE bites! -${d} HP. That's gonna itch.` : b.F.thief ? `The RACCOON claws you! -${d} HP` : `The ${b.F.name} bites! -${d} HP`,
         () => { s.hp -= d; s.hits++; s.shake = 0.35; s.guard = 0.6; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); if (b.F.venom) s.venom = 6; });
       b.after = () => { if (s.hp <= 0) { s.hp = 0; TRL.bgm(false); s.battle = null; if (s.lives > 0) this.respawn(s); else this.defeated(s); } };
     };
     const won = () => { this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { const loot = b.F.king ? 4 : b.F.gary ? 5 : 1 + Math.floor(s.rnd() * 2); s.crk += loot + (b.stolen || 0); if (b.stolen) (s.log = s.log || []).push(`You get your ${b.stolen} stolen cracker${b.stolen > 1 ? 's' : ''} back, too.`); this.gainXP(s, b.F.pts); if (b.F.king) s.kingDone = true; (s.log = s.log || []).push(`It dropped ${loot} peanut butter cracker${loot > 1 ? 's' : ''}. Where was it keeping those.`); s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
     b.wonFn = won; b.foeTurnFn = foeTurn;
     if (o.id === 'item') { s.bag = { sel: 0, battle: true }; return; }
-    if (o.id === 'whack') {
+    if (o.id === 'whack' && b.guards > 0) {   /* the guards are in the way: you have to get through them first */
+      this.say(s, b.guards === 2 ? 'You knock a guard rat flying!' : 'The last guard flees. Get the King!', () => { s.swing = 0.35; b.guards--; s.shake = 0.12; SFX('wrench_hit'); });
+      b.after = () => foeTurn();
+    } else if (o.id === 'whack') {
       if (s.rnd() < 0.1) this.say(s, this.weapon(s) === 'fists' ? 'You swing... and punch a pier. OW.' : `You swing the ${this.weapon(s)}... and hit a pier. CLANG.`, () => { s.swing = 0.35; SFX('click'); });
       else { const crit = s.rnd() < 0.12, d = Math.round((s.dmg[0] + s.rnd() * (s.dmg[1] - s.dmg[0]) + s.atkB + (s.lvl - 1)) * (crit ? 2 : 1));
         this.say(s, crit ? `CRITICAL ${this.weapon(s) === 'fists' ? 'PUNCH' : 'WHACK'}! ${d} damage!` : this.weapon(s) === 'fists' ? `You punch it! ${d} damage.` : `You whack it with the ${this.weapon(s)}! ${d} damage.`, () => { s.swing = 0.35; b.hp -= d; b.blink = 0.4; b.dmgT = 0.7; b.dmg = d; s.shake = 0.12; b.pose = 6; b.poseT = 0.6; b.faking = false; SFX('wrench_hit'); }); }
       b.after = () => { if (b.hp <= 0) won(); else if (b.F.possum && !b.played && b.hp < b.max / 2) { b.played = b.faking = true; this.say(s, 'The POSSUM keels over. ...Is it dead?', () => { b.pose = 7; b.poseT = 99; }); } else foeTurn(); };
     } else if (o.id === 'light') {
       s.lights--; this.say(s, 'You blast it with the flashlight!', () => { s.flash = 0.35; SFX('click'); });
+      if (b.guards > 0) this.say(s, 'The guard rats scatter from the light!', () => { b.guards = 0; });
       if (s.rnd() < (b.F.king ? 0.4 : 0.85)) { b.stun = b.F.king ? 1 : 2; this.say(s, `The ${b.F.name} is blinded!`); } else this.say(s, 'It just squints at you.');
       b.after = () => foeTurn();
     } else if (o.id === 'pb') {
-      if (b.F.princess) { s.crk--; this.say(s, 'You offer the Princess a peanut butter cracker...'); this.say(s, 'She accepts. She knights you with a twig. DEF +1!', () => { s.def++; b.pose = 4; b.poseT = 1; }); this.say(s, 'She takes your hand. She would like to go HOME now. (A crown on your map marks her kingdom.)', () => { this.gainXP(s, b.F.pts); s.escort = true; b.out = 0.01; }); b.after = () => this.endFight(s); return; }
+      if (b.F.princess) { s.crk--; this.say(s, 'You offer the Princess a peanut butter cracker...'); this.say(s, 'She accepts. She knights you with a twig. DEF +1!', () => { SFX('ut_knight', { vol: 0.7 }); s.def++; b.pose = 4; b.poseT = 1; }); this.say(s, 'She takes your hand. She would like to go HOME now. (A crown on your map marks her kingdom.)', () => { this.gainXP(s, b.F.pts); s.escort = true; b.out = 0.01; }); b.after = () => this.endFight(s); return; }
       s.crk--; this.say(s, 'You flick a peanut butter cracker down the row...'); this.say(s, `The ${b.F.name} goes for it. You crawl away.`, () => { b.pose = 3; b.poseT = 9; b.out = 0.01; }); b.after = () => this.endFight(s);
     } else if (o.id === 'run') {
-      if (s.rnd() < s.runOdds * (b.F.king ? 0.5 : 1)) { this.say(s, 'You scramble away through the muck!'); b.after = () => this.endFight(s); }
+      if (s.rnd() < s.runOdds * (b.F.king ? 0.5 : 1)) { this.say(s, 'You scramble away through the muck!', () => SFX('ut_flee', { vol: 0.6 })); b.after = () => this.endFight(s); }
       else { this.say(s, "You're stuck in the muck!"); b.after = () => foeTurn(); }
     }
   },
   opts(s) { const K = s.battle && s.battle.F.king; return [{ id: 'whack', label: this.weapon(s) === 'fists' ? 'PUNCH' : 'WHACK' }, { id: 'light', label: `FLASHLIGHT x${s.lights}`, off: s.lights <= 0 }, { id: 'item', label: 'BAG' }, { id: 'pb', label: `TOSS A CRACKER x${s.crk}`, off: s.crk <= 0 || K }, { id: 'run', label: 'RUN', off: K }]; },
   optBox(i, n = 4) { const gap = Math.min(22, Math.floor(86 / n)), h = gap - 2; return [340, 103 + i * gap, 130, h]; },   /* the command buttons, down the right-hand panel */
   render(s) {   // the 3D view: raycast walls, cast floor + ceiling, then the broken joint as a sprite
-    const { RW, RH, T: N } = TRL, buf = s.buf, zb = s.zb, tx = TRL.tex;
+    const { RW, RH, T: N, T2: M } = TRL, buf = s.buf, zb = s.zb, tx = TRL.tex, HI = tx.hi;
     const dx = Math.cos(s.va), dy = Math.sin(s.va), pl = 0.66, plx = -dy * pl, ply = dx * pl, px = s.vx, py = s.vy;
     const lightCol = new Float32Array(RW); for (let x = 0; x < RW; x++) { const u = (x / RW - 0.5) * 2; lightCol[x] = 1 - 0.7 * u * u; }   // the headlamp beam
     const shade = (col, k) => { if (k >= 1) return col; const r = (col & 255) * k, gg = ((col >> 8) & 255) * k, b2 = ((col >> 16) & 255) * k; return (255 << 24) | (b2 << 16) | (gg << 8) | r; };
@@ -1601,8 +1620,8 @@ GAMES.push({
     for (let y = Math.floor(half) + 1; y < RH; y++) {
       const rd = half / (y - half), sx = rd * (r1x - r0x) / RW, sy = rd * (r1y - r0y) / RW; let fx = px + rd * r0x, fy = py + rd * r0y; const L = lit(rd);
       const yc = RH - 1 - y;
-      for (let x = 0; x < RW; x++) { const tX = ((fx - Math.floor(fx)) * N) | 0, tY = ((fy - Math.floor(fy)) * N) | 0, k = L * lightCol[x];
-        buf[y * RW + x] = shade(tx.dirt[tY * N + tX], k); buf[yc * RW + x] = shade(tx.ceil[tY * N + tX], k * 0.9); fx += sx; fy += sy; }
+      for (let x = 0; x < RW; x++) { const tX = ((fx - Math.floor(fx)) * M) | 0, tY = ((fy - Math.floor(fy)) * M) | 0, k = L * lightCol[x];
+        buf[y * RW + x] = shade(HI.dirt[tY * M + tX], k); buf[yc * RW + x] = shade(HI.ceil[tY * M + tX], k * 0.9); fx += sx; fy += sy; }
     }
     // walls
     for (let x = 0; x < RW; x++) {
@@ -1612,8 +1631,8 @@ GAMES.push({
       for (let i = 0; i < 64; i++) { if (sdx < sdy) { sdx += ddx; mx += stx; side = 0; } else { sdy += ddy; my += sty; side = 1; } cell = (s.map[my] || [])[mx]; if (cell !== '.') break; }
       const perp = Math.max(0.05, side ? sdy - ddy : sdx - ddx); zb[x] = perp;
       const lh = RH / perp, top = Math.max(0, Math.floor(half - lh / 2)), bot = Math.min(RH, Math.ceil(half + lh / 2));
-      let wx = side ? px + perp * rx : py + perp * ry; wx -= Math.floor(wx); const tX = Math.min(N - 1, (wx * N) | 0), T2 = cell === 'S' ? tx.skirt : tx.block, k = lit(perp) * lightCol[x] * (side ? 0.78 : 1);
-      for (let y = top; y < bot; y++) { const tY = Math.min(N - 1, ((y - half + lh / 2) * N / lh) | 0), c = T2[tY * N + tX]; buf[y * RW + x] = (c & 0xffffff) === 0xfaf0c8 /* the daylight crack doesn't dim */ ? c : shade(c, k); }
+      let wx = side ? px + perp * rx : py + perp * ry; wx -= Math.floor(wx); const tX = Math.min(M - 1, (wx * M) | 0), T2 = cell === 'S' ? HI.skirt : HI.block, k = lit(perp) * lightCol[x] * (side ? 0.78 : 1);
+      for (let y = top; y < bot; y++) { const tY = Math.min(M - 1, ((y - half + lh / 2) * M / lh) | 0), c = T2[tY * M + tX]; buf[y * RW + x] = (c & 0xffffff) === 0xc8f0fa /* the daylight crack doesn't dim */ ? c : shade(c, k); }
     }
     // the broken joint (a billboard)
     if (!tx.trapI && MG('ut_trap')) { tx.trapI = TRL.imgTex('ut_trap', 12); tx.snapI = TRL.imgTex('ut_trap_snap', 13); tx.gloveI = TRL.imgTex('ut_glove', 11); }
@@ -1661,6 +1680,8 @@ GAMES.push({
       if (!blinkOff && (b.hp > 0 || b.q.length || b.pose === 7)) {
         const idle = [0, 0, 1, 0, 2][Math.floor(t / 0.6) % 5], f = b.pose != null ? b.pose : idle, ox = b.out ? b.out * 420 : 0, a = b.out ? Math.max(0, 1 - b.out * 1.5) : 1, h = 120 * b.F.sc;
         if (!TRL.UTS(b.F.spr, f, cx + ox, by, h, false, a)) R(cx - 30, by - 30, 60, 30, '#6a5a4c');
+        if (b.guards > 0) { b.gIn = Math.min(1, (b.gIn || 1) + 0.03); for (let k2 = 0; k2 < b.guards; k2++) { const side = k2 ? 1 : -1, gx = cx + side * (34 + (1 - b.gIn) * 140); g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(gx, by + 14, 34, 6, 0, 0, 7); g.fill();
+          TRL.UTS('ut_rat', [0, 2, 5][Math.floor(t * 3 + k2) % 3], gx, by + 16, 74, side < 0, 1); } }
         if (b.F.princess && !MG('ut_princess') && b.pose !== 7 && !b.out) { const tx2 = cx + ox + h * 0.32, ty2 = by - h * (f === 4 ? 0.98 : 0.66); g.fillStyle = '#f7d44a'; g.beginPath(); g.moveTo(tx2 - 9, ty2 + 5); g.lineTo(tx2 - 9, ty2 - 2); g.lineTo(tx2 - 4, ty2 + 2); g.lineTo(tx2, ty2 - 6); g.lineTo(tx2 + 4, ty2 + 2); g.lineTo(tx2 + 9, ty2 - 2); g.lineTo(tx2 + 9, ty2 + 5); g.fill(); C(tx2, ty2 - 6, 1.6, '#ff8ad0'); }   /* her tiara */
         if (b.F.gary && b.pose !== 7 && !b.out) { const vx2 = cx + ox - h * 0.02, vy2 = by - h * (f === 4 ? 0.55 : 0.38); R(vx2 - 12, vy2 - 8, 24, 14, '#3a5a8a'); R(vx2 - 1, vy2 - 8, 2, 14, '#e8dcc0'); C(vx2 + 5, vy2 - 2, 1.2, '#f7d44a'); C(vx2 + 5, vy2 + 2, 1.2, '#f7d44a'); }   /* Gary's tiny vest */
         if (b.stun > 0) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; T('*', cx + Math.cos(a) * 30, by - 70 + Math.sin(a) * 6, '#f7c418', 8, 'center'); }
@@ -1762,6 +1783,34 @@ GAMES.push({
   },
 
 });
+/* SAVE + RESUME for Under the Trailer: it's a long crawl, so your spot is kept if the phone locks or the page reloads */
+(() => {
+  const G = GAMES.find(q => q.id === 'crawl'), SKIP = new Set(['cv', 'cx', 'img', 'buf', 'zb', 'battle', 'talk', 'shop', 'bag', 'wake', 'wed', 'rnd', 'props', 'carlScr', 'end', 'ask', 'saveT', 'fx', 'pops', 'parts']);
+  const KEY = s => 'ddt_crawl_' + (new URLSearchParams(location.search).get('job') || 'arcade') + '_' + s.diff;
+  const save = s => { try { const o = {}; for (const k in s) { if (SKIP.has(k) || typeof s[k] === 'function') continue; o[k] = s[k] instanceof Set ? { __set: [...s[k]] } : s[k]; } localStorage.setItem(KEY(s), JSON.stringify(o)); } catch (e) {} };
+  const load = s => { try { const o = JSON.parse(localStorage.getItem(KEY(s)) || 'null'); return o && o.map ? o : null; } catch (e) { return null; } };
+  const clear = s => { try { localStorage.removeItem(KEY(s)); } catch (e) {} };
+  const init0 = G.init, upd0 = G.update, draw0 = G.draw;
+  G.init = function (s) { init0.call(this, s); const o = load(s); if (o) { s.ask = { o, sel: 0 }; s.saveT = 0; } };
+  G.update = function (s, dt, I) {
+    if (s.ask) {   /* CONTINUE or START OVER */
+      const A = s.ask; if (I.Up || I.Dp || I.Lp || I.Rp) { A.sel = 1 - A.sel; SFX('click'); }
+      let go = I.Ap ? A.sel : null; if (I.ptr.clicked) [0, 1].forEach(k => { if (I.ptr.y > 120 + k * 34 && I.ptr.y < 148 + k * 34) go = k; });
+      if (go === 0) { const o = A.o; for (const k in o) s[k] = o[k] && o[k].__set ? new Set(o[k].__set) : o[k]; s.mv = 0; (s.log = s.log || []).push('You crawl back in where you left off.'); SFX('ui_select'); s.ask = null; }
+      else if (go === 1) { clear(s); SFX('ui_select'); s.ask = null; }
+      return; }
+    const r = upd0.call(this, s, dt, I);
+    if (s.end) clear(s);
+    else if ((s.saveT = (s.saveT || 0) + dt) > 3 && !s.battle && !s.talk && !s.shop && !s.bag && !s.wake && !s.wed && !s.fixT) { s.saveT = 0; save(s); }
+    return r; };
+  G.draw = function (s) {
+    if (!s.ask) return draw0.call(this, s);
+    R(0, 0, W, H, '#14100b'); const o = s.ask.o;
+    T('UNDER THE TRAILER', W / 2, 52, '#e8c86a', 12, 'center'); T('You were in the middle of a crawl.', W / 2, 80, '#e8dcc0', 7, 'center');
+    T(`LEVEL ${o.lvl}  ·  ${o.crk} CRACKERS  ·  LIVES ${o.lives}${o.kingDone ? '  ·  THE KING IS BEATEN' : ''}`, W / 2, 96, '#9fd1ff', 6, 'center');
+    ['CONTINUE THE CRAWL', 'START OVER'].forEach((l, k) => { const on = s.ask.sel === k; R(W / 2 - 110, 120 + k * 34, 220, 28, on ? '#5a4420' : '#2a2018'); if (on) R(W / 2 - 110, 120 + k * 34, 220, 2, '#e8c86a'); T(l, W / 2, 129 + k * 34, on ? '#e8c86a' : '#e8dcc0', 8, 'center'); });
+  };
+})();
 
 // =====================================================================
 // PISS KITTY — something in this house pisses on everything and the old lady swears she has no cat.
@@ -2289,7 +2338,7 @@ GAMES.push({
   snap(s) { if (s.g[s.sc] && s.g[s.sc][s.sr]) return; let best = null, bd = 1e9; for (let c = 0; c < s.NC; c++) for (let r = 0; r < s.NR; r++) if (s.g[c][r]) { const d = Math.abs(c - s.sc) * 1.1 + Math.abs(r - s.sr); if (d < bd) { bd = d; best = [c, r]; } } if (best) { s.sc = best[0]; s.sr = best[1]; } },
   group(s, c, r) { const k = s.g[c][r].k, seen = new Set([c * 100 + r]), q = [[c, r]], out = [];
     while (q.length) { const [a, b] = q.pop(); out.push([a, b]); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = a + dx, y = b + dy, key = x * 100 + y; if (x < 0 || y < 0 || x >= s.NC || y >= s.NR || seen.has(key)) continue; const n = s.g[x][y]; if (n && n.k === k) { seen.add(key); q.push([x, y]); } } } return out; },
-  pop(s, cells) { for (const [c, r] of cells) { const b = s.g[c][r]; if (!b) continue; s.popping.push({ x: this.X(s, c), y: this.Y(s, r), k: b.k, t: 0 }); s.g[c][r] = null; s.cleared++; } SFX('squish', { vol: 0.5 }); },
+  pop(s, cells) { for (const [c, r] of cells) { const b = s.g[c][r]; if (!b) continue; s.popping.push({ x: this.X(s, c), y: this.Y(s, r), k: b.k, t: 0 }); s.g[c][r] = null; s.cleared++; } SFX('bead_pop' + (1 + Math.floor(Math.random() * 5)), { rate: 0.9 + Math.random() * 0.25 }); },
   fall(s) { let moved = false;   // gravity, inside the round pipe
     for (let c = 0; c < s.NC; c++) for (let r = s.NR - 1; r >= 0; r--) { if (!s.in[c][r] || s.g[c][r]) continue; for (let u = r - 1; u >= 0; u--) if (s.g[c][u]) { s.g[c][r] = s.g[c][u]; s.g[c][r].drop = (s.g[c][r].drop || 0) + (r - u); s.g[c][u] = null; moved = true; break; } }
     return moved; },
@@ -2303,14 +2352,14 @@ GAMES.push({
     if (s.done) { s.done += dt; if (s.done > 2.2) { const left = s.g.flat().filter(Boolean).length; s.end = s.win2 ? { win: true, stars: stars3(s.shots >= 4, s.shots >= 1), line: `Line's open. ${s.cleared} beads popped, best chain x${s.best}, ${s.shots} spray${s.shots === 1 ? '' : 's'} left in the bucket.` } : { win: false, stars: 0, line: `Bucket's empty. ${left} beads still in there, drinking.` }; } return; }
     if (s.busy > 0) { s.busy -= dt; if (s.busy <= 0) {   // after a pop: let things fall, then check for chain pops
         if (this.fall(s)) { s.busy = 0.28; return; }
-        const more = this.cascade(s); if (more.length) { s.chain++; s.best = Math.max(s.best, s.chain); this.pop(s, more); POP(s, 240, 60, `CHAIN x${s.chain}!`, '#7dffb0'); s.busy = 0.3; return; }
+        const more = this.cascade(s); if (more.length) { s.chain++; s.best = Math.max(s.best, s.chain); this.pop(s, more); POP(s, 240, 60, `CHAIN x${s.chain}!`, '#7dffb0'); SFX('bead_chain', { rate: 1 + Math.min(0.5, s.chain * 0.1) }); s.busy = 0.3; return; }
         s.chain = 0; this.snap(s); this.check(s); } return; }
     // pick a bead: stick steps from bead to bead, tap picks directly
     const step = (dc, dr) => { for (let n = 1; n < s.NC; n++) { const c = s.sc + dc * n, r = s.sr + dr * n; if (c < 0 || r < 0 || c >= s.NC || r >= s.NR) return; if (s.g[c][r]) { s.sc = c; s.sr = r; SFX('ui_tap', { vol: 0.2 }); return; } } };
     if (I.Lp) step(-1, 0); if (I.Rp) step(1, 0); if (I.Up) step(0, -1); if (I.Dp) step(0, 1);
     let fire = I.Ap;
     if (I.ptr.clicked && Math.hypot(I.ptr.x - s.cx, I.ptr.y - s.cy) < s.cr) { const c = Math.floor((I.ptr.x - (s.cx - s.cr)) / s.cell), r = Math.floor((I.ptr.y - (s.cy - s.cr)) / s.cell); if (s.g[c] && s.g[c][r]) { s.sc = c; s.sr = r; fire = true; } }
-    if (fire && s.g[s.sc][s.sr] && s.shots > 0) { s.shots--; s.spray = 0.35; const gr = this.group(s, s.sc, s.sr); this.pop(s, gr); if (gr.length >= 4) POP(s, 240, 48, `${gr.length} AT ONCE!`, '#f7c418'); s.chain = 1; s.busy = 0.3; }
+    if (fire && s.g[s.sc][s.sr] && s.shots > 0) { s.shots--; s.spray = 0.35; SFX('bead_drop'); const gr = this.group(s, s.sc, s.sr); this.pop(s, gr); if (gr.length >= 4) POP(s, 240, 48, `${gr.length} AT ONCE!`, '#f7c418'); s.chain = 1; s.busy = 0.3; }
   },
   check(s) { const left = s.g.flat().filter(Boolean).length;
     if (left <= s.N0 * 0.2) { s.done = 0.01; s.win2 = true; for (let c = 0; c < s.NC; c++) for (let r = 0; r < s.NR; r++) if (s.g[c][r]) { s.popping.push({ x: this.X(s, c), y: this.Y(s, r), k: s.g[c][r].k, t: -r * 0.03 }); s.g[c][r] = null; } SFX('drain'); POP(s, 240, 70, 'IT ALL LETS GO!', '#7dffb0'); }
