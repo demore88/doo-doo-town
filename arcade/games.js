@@ -528,9 +528,10 @@ const TUNNEL = {
         else { const m = hash(Math.floor(th * 7), Math.floor(w * 2.2)), m2 = hash(Math.floor(th * 15) + 7, Math.floor(w * 5)); r = 104 + m * 26; g_ = 86 + m * 18; bl = 70 + m * 10; if (m2 > 0.86) { r += 46; g_ += 18; bl -= 10; } if (m2 < 0.08) { r -= 30; g_ -= 26; bl -= 22; } }
         const jf = w / 4 - Math.floor(w / 4), jw = 0.012 + 0.04 / z;
         if (jf < jw) { if (PVC) { r *= 0.72; g_ *= 0.72; bl *= 0.70; } else { r *= 0.45; g_ *= 0.42; bl *= 0.40; } } else if (jf < jw * 2.4 && !PVC) { r *= 1.15; g_ *= 1.1; bl *= 1.05; }
-        for (const q of offs) { const dw = w - q.d; if (dw > -0.05 && dw < 0.6) { const c = Math.cos(th - q.ang), wid = 0.06 + 0.5 * Math.abs(c);   /* the whole joint steps: next pipe shifted toward q.ang */
-          if (c > 0.1 && dw < wid) { r = 14; g_ = 12; bl = 10; }   /* the gap where the next pipe dropped away */
-          else if (c < -0.1 && dw < wid) { r = PVC ? 240 : 196; g_ = PVC ? 236 : 150; bl = PVC ? 220 : 96; shine = dw < 0.06 ? 1 : 0; }   /* the lip of the next pipe, sticking into the flow, facing you */
+        for (const q of offs) { const dw = w - q.d; if (dw > -0.12 && dw < 1.5) { const c = Math.cos(th - q.ang), wid = 0.16 + 1.25 * Math.abs(c);   /* big, easy-to-read step */
+          if (dw < 0.05) { r = 6; g_ = 5; bl = 4; } else   /* the whole joint steps: next pipe shifted toward q.ang */
+          if (c > 0.05 && dw < wid) { r = 14; g_ = 12; bl = 10; }   /* the gap where the next pipe dropped away */
+          else if (c < -0.05 && dw < wid) { r = PVC ? 240 : 196; g_ = PVC ? 236 : 150; bl = PVC ? 220 : 96; shine = dw < 0.15 ? 1 : 0; }   /* the lip of the next pipe, sticking into the flow, facing you */
           else if (Math.abs(c) <= 0.1 && dw < 0.05) { r *= 0.4; g_ *= 0.4; bl *= 0.4; } } }
         for (const q of cracks) { const dw = w - q.d; if (Math.abs(dw) < 1.3) { let da = th - q.ang; da = Math.atan2(Math.sin(da), Math.cos(da));
           if (q.ang > 4.5) { if (Math.abs(dw) < 0.55 && Math.abs(da) < 0.5 - 0.25 * hash(Math.floor(dw * 9), Math.floor(da * 9))) { r = 8; g_ = 6; bl = 5; } }
@@ -564,7 +565,7 @@ GAMES.push({
   ctl: '▲ PUSH · ▼ BACK · ◀ ▶ KEEP LEVEL · SPACE = TAG',
   act: 'TAG',
   init(s) {
-    s.TIME = [120, 110, 100][s.diff]; s.d = 0; s.v = 0; s.FORK = 1e9; s.CLOG = 420 + s.rnd() * 140;   /* a long run: mostly good pipe, so you learn what NOT to tag */ s.CAP = 1e9; s.lvl = 0; s.lvlV = 0; s.push = 0; s.tumble = 0;   // one straight run of pipe, no branches
+    s.TIME = [120, 110, 100][s.diff]; s.d = 0; s.v = 0; s.FORK = 1e9; s.CLOG = 420 + s.rnd() * 140; s.FT = (70 + s.rnd() * 50) / s.CLOG;   /* the run is long to PLAY, but the counter reads real-world feet: the clog sits at 70-120 ft */   /* a long run: mostly good pipe, so you learn what NOT to tag */ s.CAP = 1e9; s.lvl = 0; s.lvlV = 0; s.push = 0; s.tumble = 0;   // one straight run of pipe, no branches
     s.good = s.rnd() < 0.5 ? -1 : 1; s.choice = 0; s.branch = 0; s.snag = 0; s.snags = 0; s.wrong = 0; s.misses = 0; s.msg = ''; s.msgT = 0; s.flash = 0;
     s.PVC = s.rnd() < 0.5;   // white plastic or old cast iron
     const kinds = ['roots', 'crack', 'offset', 'belly', 'grease', 'roots', 'offset'];
@@ -594,15 +595,15 @@ GAMES.push({
       if (dn) { s.snag = 0; s.push = 0; }
     }
     s.v += (want - s.v) * Math.min(1, dt * 4);
-    const before = s.d; s.d = Math.max(0, s.d + s.v * dt);
+    const before = s.d; s.d = Math.max(0, s.d + s.v * dt); if (s.d > s.CLOG - 1.2) { s.d = s.CLOG - 1.2; if (s.v > 2 && !s.wall) { s.shake = 0.25; SFX('clog', { vol: 0.5 }); say('HEAD IS UP AGAINST IT. TAG IT!', 1.4); } s.wall = 1; s.v = Math.min(s.v, 0); } else s.wall = 0;   /* the clog is a wall: you can't push past it */
     for (const o of s.def) if (o.kind === 'offset' && before < o.d - 0.8 && s.d >= o.d - 0.8 && !o.popped) {   // every offset joint catches the head
       o.popped = true; s.d = o.d - 0.85; s.v = 0; s.snag = 1; s.push = 0; s.snags++; s.shake = 0.3; SFX('clog', { vol: 0.5 }); say('OFFSET JOINT! PUSH HARD (TAP ▲ ▲ ▲)', 1.8); }
     // TAG
     if (I.Ap || (I.ptr.clicked && py >= 90 && py <= 210 && px >= 150 && px <= 330)) {
       const inBox = s.def.filter(o => !o.tagged && o.d - s.d > 0.4 && o.d - s.d < 6.5);
-      if (inBox.length) { const o = inBox[0]; o.tagged = true; s.flash = 0.25; SFX('ui_select'); POP(s, 240, 120, `TAGGED: ${this.label(o.kind)} @ ${o.d.toFixed(1)} FT`, '#7dffb0');
+      if (inBox.length) { const o = inBox[0]; o.tagged = true; s.flash = 0.25; SFX('ui_select'); POP(s, 240, 120, `TAGGED: ${this.label(o.kind)} @ ${(o.d * s.FT).toFixed(1)} FT`, '#7dffb0');
         if (o.kind === 'clog') { SFX('drain'); const all = s.def.filter(x => x.kind !== 'clog'), got = all.filter(x => x.tagged).length;
-          s.end = { win: true, stars: stars3(got === all.length && s.misses <= 2, got >= all.length / 2 && s.misses <= 5), line: `Found the clog at ${o.d.toFixed(0)} feet. Tagged ${got} of ${all.length} problems${s.misses ? `, ${s.misses} false tag${s.misses > 1 ? 's' : ''}` : ''}.` }; } }
+          s.end = { win: true, stars: stars3(got === all.length && s.misses <= 2, got >= all.length / 2 && s.misses <= 5), line: `Found the clog at ${(o.d * s.FT).toFixed(0)} feet. Tagged ${got} of ${all.length} problems${s.misses ? `, ${s.misses} false tag${s.misses > 1 ? 's' : ''}` : ''}.` }; } }
       else { s.misses++; SFX('click', { vol: 0.3 }); say('NOTHING IN THE BOX', 0.7); }
     }
     if (s.t >= s.TIME) s.end = { win: false, stars: 0, line: "Ran out of time. Customer's watching the clock. No report." };
@@ -634,7 +635,7 @@ GAMES.push({
             if (k > 2 && (i + k) % 2) { g.lineWidth = Math.max(0.5, r * 0.01); g.beginPath(); g.moveTo(nx, ny); g.lineTo(nx + ((k % 2) ? 1 : -1) * r * 0.05, ny + r * 0.04); g.stroke(); }   // root hairs
             px0 = nx; py0 = ny; } } }
       else if (o.kind === 'crack') { g.strokeStyle = '#1a1612'; g.lineWidth = Math.max(1, k * 0.8); g.beginPath(); g.moveTo(wx, wy - r * 0.3); for (let i = 1; i < 6; i++) g.lineTo(wx + (i % 2 ? 1 : -1) * r * 0.06, wy - r * 0.3 + i * r * 0.12); g.stroke(); }
-      else if (o.kind === 'offset') { g.fillStyle = s.PVC ? 'rgba(120,118,108,.9)' : 'rgba(20,18,16,.95)'; g.beginPath(); g.arc(x, y, r * 0.98, Math.PI * 0.85, Math.PI * 2.15); g.arc(x + r * 0.16, y + r * 0.12, r * 0.86, Math.PI * 2.15, Math.PI * 0.85, true); g.fill();   // the lip where one pipe sits lower than the next
+      else if (o.kind === 'offset') { g.fillStyle = s.PVC ? 'rgba(120,118,108,.9)' : 'rgba(20,18,16,.95)'; g.beginPath(); g.arc(x, y, r * 0.98, Math.PI * 0.85, Math.PI * 2.15); g.arc(x + r * 0.3, y + r * 0.24, r * 0.76, Math.PI * 2.15, Math.PI * 0.85, true); g.fill();   // the lip where one pipe sits lower than the next
         g.strokeStyle = s.PVC ? '#9a968a' : '#1a1612'; g.lineWidth = Math.max(2, r * 0.12); g.beginPath(); g.arc(x + r * 0.12, y + r * 0.08, r * 0.95, 0, 7); g.stroke(); g.strokeStyle = 'rgba(232,130,42,.9)'; g.lineWidth = Math.max(2, r * 0.07); g.beginPath(); g.arc(x + r * 0.12, y + r * 0.08, r * 0.9, -0.7, 1.1); g.stroke(); }   // the lip of the shifted pipe catches the light
       else if (o.kind === 'belly') { g.fillStyle = 'rgba(70,110,140,.75)'; g.beginPath(); g.ellipse(x, y + r * 0.62, r * 0.75, r * 0.3, 0, 0, Math.PI); g.fill(); R(x - r * 0.5, y + r * 0.6 + Math.sin(t * 2) * k, r, Math.max(1, k), 'rgba(200,230,255,.5)'); }
       else if (o.kind === 'grease') { for (let i = 0; i < 6; i++) { const bx = x + (i - 2.5) * r * 0.16 + Math.sin(i * 3.1) * r * 0.04, by = y + r * (0.32 + (i % 2) * 0.06) + Math.sin(t * 2 + i) * r * 0.015, br = r * (0.07 + (i % 3) * 0.025);   /* grease balls bobbing on the water */
@@ -660,7 +661,7 @@ GAMES.push({
     for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { g.beginPath(); g.moveTo(bx + sx * bs, by + sy * bs * 0.6); g.lineTo(bx + sx * bs, by + sy * bs); g.lineTo(bx + sx * bs * 0.6, by + sy * bs); g.stroke(); }
     // monitor overlay: footage counter, REC, scanlines
     for (let y = 16; y < H; y += 3) R(0, y, W, 1, 'rgba(0,0,0,.18)');
-    R(8, 20, 92, 20, 'rgba(0,0,0,.55)'); T(`${s.d.toFixed(1).padStart(5, '0')} FT`, 14, 30, '#7dffb0', 10);   // footage counter
+    R(8, 20, 92, 20, 'rgba(0,0,0,.55)'); T(`${(s.d * s.FT).toFixed(1).padStart(5, '0')} FT`, 14, 30, '#7dffb0', 10);   // footage counter
     { const gx = 240, gy = 252; R(gx - 60, gy - 5, 120, 10, 'rgba(0,0,0,.6)'); R(gx - 14, gy - 5, 28, 10, 'rgba(125,255,176,.25)'); R(gx - 2 + clamp(s.lvl, -1.2, 1.2) * 50, gy - 6, 4, 12, Math.abs(s.lvl) > 0.6 ? '#e9665a' : '#7dffb0'); T('LEVEL', gx - 66, gy, '#7dffb0', 5, 'right'); } T(s.PVC ? 'PVC 4"' : 'CAST IRON 4"', 12, 44, '#7dffb0', 5);
     if (Math.floor(t * 2) % 2) { C(W - 70, 28, 3, '#e9665a'); } T('REC', W - 62, 28, '#e9665a', 6);
     const tagged = s.def.filter(o => o.tagged && o.kind !== 'clog').length; T(`TAGS ${tagged}`, W - 12, 44, '#f7c418', 6, 'right');
