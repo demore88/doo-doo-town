@@ -1271,12 +1271,14 @@ TRL.UTS = (n, f, cx, by, h, flip, a) => { const im = MG(n); if (!im) return fals
   g.save(); if (a != null) g.globalAlpha = a; g.imageSmoothingEnabled = false; g.translate(cx, by); if (flip) g.scale(-1, 1); g.drawImage(im, f * cw, 0, cw, im.height, -w / 2, -h, w, h); g.restore(); return true; };
 TRL.hands = (s, VX, VY, VW, VH, t) => {
   const G2 = s.gear, wpn = G2.includes('cutter') ? 'cutter' : G2.includes('wrench') ? 'monkey' : G2.includes('pipewrench') ? 'pipe' : 'fist', lid = G2.includes('lid');
-  const bob = s.mv > 0 ? Math.sin(t * 16) * 3 : Math.sin(t * 2) * 1, sw = s.swing > 0 ? Math.sin((1 - s.swing / 0.35) * Math.PI) : 0, by = VY + VH, D = 3.6;
+  const bob = s.mv > 0 ? Math.sin(t * 16) * 4 : Math.sin(t * 2) * 1, sw = s.swing > 0 ? Math.sin((1 - s.swing / 0.35) * Math.PI) : 0, by = VY + VH, D = 3.6;
   const L = MG(lid ? (s.guard > 0 ? 'ut_h_lidup' : 'ut_h_lid') : s.lights > 0 ? 'ut_h_lighton' : 'ut_h_lightoff'), Rt = MG('ut_h_' + wpn);
   if (L && Rt) {   /* the painted hands: big, drawn smooth (not chunky) so you can tell what you're holding */
     const D2 = 3, arm = (im, x, y, w, h) => {   /* the arm keeps going down past the bottom of the picture, so it never looks cut off */
       const sy = im.height - 3; g.drawImage(im, 0, sy, im.width, 3, x, y + h - 2, w, 400); g.drawImage(im, x, y, w, h); };
-    g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    s.hu = (s.hu || 0) + ((s.battle || s.guard > 0 || s.swing > 0 ? 1 : 0) - (s.hu || 0)) * 0.12;   /* walking: hands hang low, just peeking up and bobbing; a fight brings them up */
+    const low = (1 - s.hu) * VH * 0.58;
+    g.save(); g.translate(0, low); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
     { const w = L.width / D2, h = L.height / D2, gu = s.guard > 0 ? Math.sin(Math.min(1, (0.6 - s.guard) / 0.12) * Math.PI / 2) * 16 : 0; arm(L, VX - w * 0.22, by - h * (L === MG('ut_h_lidup') ? 0.66 : 0.6) + bob * 1.5 - gu, w, h); }
     { const w = Rt.width / D2, h = Rt.height / D2, x = VX + VW - w * 0.8, y = by - h * (wpn === 'fist' ? 0.6 : 0.7) + bob * 1.5 - sw * 14;
       g.translate(x + w * 0.55, y + h * 0.9); g.rotate(-0.5 * sw); arm(Rt, -w * 0.55, -h * 0.9, w, h); }
