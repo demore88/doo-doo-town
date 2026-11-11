@@ -247,7 +247,7 @@ function drive3d(choice, opts) {
     const c = Math.floor(Math.random() * CAR_B.length), truck = Math.random() < MODE.trucks * (onc ? 0.5 : 1), sc = truck ? 1.6 : 1.3, img = onc ? (truck ? LOG_F : CAR_F[c]) : truck ? LOG_B : CAR_B[c];
     const nOur = ourLanes(z), lane = onc ? (oncLanes(z) > 1 && Math.random() < 0.5 ? 5 : 0) : nOur <= 2 ? (Math.random() < 0.65 ? 2 : 1) : 1 + Math.floor(Math.random() * nOur);
     // our-way traffic is slower than us (you catch up and pass); log trucks crawl
-    return { z, lane, off: LANE[lane], tgt: LANE[lane], speed: onc ? -rnd(25, 45) * MPH : (truck ? rnd(18, 24) : rnd(22, 34)) * MPH * (DRIVER === 'rod' ? 0.8 : 1),
+    return { z, lane, off: LANE[lane], tgt: LANE[lane], speed: onc ? -(opts.endless ? rnd(38, 55) : rnd(25, 45)) * MPH : (truck ? rnd(18, 24) : rnd(22, 34)) * MPH * (DRIVER === 'rod' ? 0.8 : 1),
       img, onc, hw: (img.width || (truck ? 50 : 44)) * sc / 320, sc, truck, blink: 0 };
   }
   // traffic lives in a window around the van: anything that falls behind gets sent back up the road (so it never runs dry)
@@ -303,7 +303,7 @@ function drive3d(choice, opts) {
   let grip = 0, gripSide = 1;   /* a raccoon on the glass */
   let glass = 0; if (!opts.arcade) try { glass = (DDT.get() || {}).glass || 0; } catch (e) {}   /* menu drives start with clean glass */
   // the Driving Game: score, near misses, and toolboxes on the road that patch the van back up
-  let score = 0, combo = 0, comboT = 0, distPts = 0; const KITS = [], KIT_IMG = new Image(); KIT_IMG.src = (typeof ART !== 'undefined' ? ART : 'assets/') + 'mg/sr2_toolbox.png';
+  let score = 0, combo = 0, comboT = 0, distPts = 0, slowT = 0; const KITS = [], KIT_IMG = new Image(); KIT_IMG.src = (typeof ART !== 'undefined' ? ART : 'assets/') + 'mg/sr2_toolbox.png';
   if (opts.endless) for (let z = rnd(12, 22) * SEG_PER_MI * SEG; z < (N - 80) * SEG; z += rnd(15, 25) * SEG_PER_MI * SEG) {   /* a toolbox every 20 miles or so */ const n = ourLanes(z); KITS.push({ z, off: LANE[1 + Math.floor(Math.random() * n)], got: false }); }
   const STATS = { cars: 0, trucks: 0, headons: 0, deer: 0, moose: 0, turkeys: 0, peeper: 0, lost: 0, cracks: 0 };   // this drive's tally, added to the player's record at the end
   let DEERINS = false; try { DEERINS = !!((DDT.get() || {}).inv || {}).deerins; } catch (e) {}
@@ -387,7 +387,7 @@ function drive3d(choice, opts) {
       // traffic
       for (const c of cars) {
         if (c.parked) { if (c.retry && !opts.endless && Math.random() < dt * 0.4) respawn(c, pos + PZ); continue; }
-        if (c.z - (pos + PZ) < -8 * SEG) respawn(c, pos + PZ);
+        if (c.z - (pos + PZ) < (opts.endless && !c.onc ? -45 : -8) * SEG) respawn(c, pos + PZ);   /* in the Driving Game the cars you pass keep driving behind you */
         const ahead = c.z - (pos + PZ);
         // slow cars in our lane brake for critters + peepers in fall
         let v = c.speed;
@@ -417,9 +417,18 @@ function drive3d(choice, opts) {
       if (opts.endless) {
         const tier = Math.floor(pos / SEG / SEG_PER_MI / 20), want = Math.min(4 + tier + (ourLanes(pos + PZ) + oncLanes(pos + PZ) - 3) * 2, 3 * (ourLanes(pos + PZ) + oncLanes(pos + PZ))), have = cars.filter(c => !c.parked).length;   /* a little more traffic every 20 miles, never bumper to bumper */
         if (have > want + 1) { const far = cars.filter(c => !c.parked && c.z - (pos + PZ) > DRAW * 0.7 * SEG); if (far[0]) { far[0].z = -1e12; far[0].parked = true; far[0].retry = 0; } }
-        if (have < want && Math.random() < dt * 2) { const z = pos + PZ + rnd(DRAW * 0.85, DRAW) * SEG, n = addCar(z, Math.random() < MODE.onc); if (!cars.some(o => !o.parked && o.lane === n.lane && Math.abs(o.z - z) < 4 * SEG)) cars.push(n); }   /* more lanes, more traffic */
+        if (have < want && Math.random() < dt * 2) { const inOnc = px < -1 / 3, z = pos + PZ + rnd(DRAW * 0.85, DRAW) * SEG, n = addCar(z, Math.random() < (inOnc ? 0.75 : 0.5)); if (n.onc && inOnc && Math.random() < 0.6) { n.lane = px < -1 && oncLanes(z) > 1 ? 5 : 0; n.off = n.tgt = LANE[n.lane]; }   /* camping in the oncoming lane brings oncoming traffic */ if (!cars.some(o => !o.parked && o.lane === n.lane && Math.abs(o.z - z) < 4 * SEG)) cars.push(n); }   /* more lanes, more traffic */
         comboT = Math.max(0, comboT - dt);
         for (const k of KITS) if (!k.got && live && Math.abs(k.z - (pos + PZ)) < SEG * 0.7 && Math.abs(px - k.off) < 0.3) { k.got = true; const fix = Math.min(1, crashes); crashes -= fix; glass = Math.max(0, glass - 3); score += 250; sfx('horn'); say(fix ? 'TOOLBOX! PATCHED A DENT +250' : 'TOOLBOX! +250', 1.4); }
+      }
+      if (opts.endless && live) {
+        slowT = speed < TOP * 0.45 ? slowT + dt : Math.max(0, slowT - dt * 2);
+        if (slowT > 2.5 && Math.random() < dt * 0.9 && !cars.some(o => o.tailgater && !o.parked && (pos + PZ) - o.z > 0 && (pos + PZ) - o.z < 30 * SEG)) { const lane = [1, 2, 3, 4].map(l => LANE[l]).filter(o => o <= (segAt(pos + PZ).rt || 1)).reduce((a, b) => Math.abs(b - px) < Math.abs(a - px) ? b : a, LANE[2]);   /* dawdle and someone comes up behind you, in your lane */
+          const n = addCar(pos + PZ - rnd(18, 26) * SEG, false); n.lane = LANE.indexOf(lane); n.off = n.tgt = lane; n.speed = rnd(34, 42) * MPH; n.tailgater = true; if (!cars.some(o => !o.parked && Math.abs(o.off - lane) < 0.3 && Math.abs(o.z - n.z) < 3 * SEG)) { cars.push(n); if (slowT < 4) say('SOMEONE IS COMING UP BEHIND YOU!', 1.2); } }
+        for (const c of cars) { if (c.parked || c.onc || c.spin > 0) continue; const behind = (pos + PZ) - c.z;
+          if (behind > 0 && behind < SEG * 0.9 && Math.abs(px - c.off) < c.hw + 0.13 && c.speed > speed + 2 * MPH && inv <= 0) {   /* REAR-ENDED */
+            crashes++; inv = 1.4; shake = 0.45; hurtGlass(1); speed = Math.min(TOP, speed + 6 * MPH); c.z = pos + PZ - SEG * 1.4; { const nl = c.lane === 1 ? 2 : 1; c.blink = 0.4; c.next = nl; c.prev = c.lane; c.tailgater = false; }   /* they bump you, then swing out and go around */
+            bursts.push({ t: 0, side: 0, big: false }); sfx('horn_angry'); say('REAR-ENDED!', 1.2); } }
       }
       // ---- no car can ever be inside another car ----
       // anything sharing a lane with a car just ahead of it is held back a safe gap and matches its speed;
@@ -558,7 +567,7 @@ function drive3d(choice, opts) {
           band(run, () => -1 / 3 - 0.022 * 1.4, w => lane(w) * 0.6, '#e9bd34'); band(run, () => -1 / 3 + 0.022 * 1.4, w => lane(w) * 0.6, '#e9bd34');   /* double yellow */
         }
         for (const L of LINES) { const { sg, p1, p2, lt, rt } = L; if (Math.floor(sg.i / 3) % 4 !== 0) continue;   /* dashed white between lanes going our way */
-          for (let lx = lt < -1.5 ? -1 : 1 / 3; lx < rt - 0.2; lx += lx < 0 ? 4 / 3 : 2 / 3) poly(p1.sx + p1.sw * lx, p1.sy, Math.max(0.55, lane(p1.sw) * 0.8), p2.sx + p2.sw * lx, p2.sy, Math.max(0.55, lane(p2.sw) * 0.8), '#e2e5e8', 0.6, true); } }
+          for (let lx = lt < -1.5 ? -1 : 1 / 3; lx < rt - 0.2; lx += lx < 0 ? 4 / 3 : 2 / 3) poly(p1.sx + p1.sw * lx, p1.sy, Math.max(0.22, lane(p1.sw) * 0.8), p2.sx + p2.sw * lx, p2.sy, Math.max(0.22, lane(p2.sw) * 0.8), '#e2e5e8', 0.6, true); } }   /* dashes taper with distance too */
       // the plow berm: a continuous 3D snowbank along both shoulders, far to near, its height rolling with the road
       if (SNOW) {   /* the plow berm, one smooth shape per side: no pieces, so no seams or stripes */
         const bh = (i, side) => 0.11 + 0.05 * Math.sin(i * 0.031 + side) + 0.035 * Math.sin(i * 0.117 + side * 2);
