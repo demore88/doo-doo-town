@@ -338,7 +338,7 @@ function drive3d(choice, opts) {
   // ---------- projection ----------
   function project(p, camX, camY, camZ) {
     const cz = p.z - camZ, sc = DEPTH / Math.max(1, cz);
-    p.sx = Math.round(W / 2 + sc * (p.wx - camX) * W / 2); p.sy = Math.round(H / 2 - sc * (p.y - camY) * H / 2 + (HORIZON - H / 2)); p.sw = Math.round(sc * ROADW * W / 2); p.sc = sc;
+    p.sx = W / 2 + sc * (p.wx - camX) * W / 2; p.sy = H / 2 - sc * (p.y - camY) * H / 2 + (HORIZON - H / 2); p.sw = sc * ROADW * W / 2; p.sc = sc;   /* exact, not rounded: rounding each strip on its own made the lines stair-step */
   }
   const segAt = z => segs[((Math.floor((z || 0) / SEG) % N) + N) % N];
   function poly(x1, y1, w1, x2, y2, w2, col) { r.fillStyle = col; r.beginPath(); r.moveTo(x1 - w1, y1 + 1); r.lineTo(x2 - w2, y2 - 1); r.lineTo(x2 + w2, y2 - 1); r.lineTo(x1 + w1, y1 + 1); r.closePath(); r.fill(); }   /* each strip overlaps its neighbours a pixel: no hairline seams when you're crawling */
@@ -528,12 +528,12 @@ function drive3d(choice, opts) {
         x += dx; dx += sg.curve;
         sg.clip = maxy; sg.s1 = p1; sg.s2 = p2; drawn.push(sg);
         if (p1.z - camZ <= DEPTH || p2.sy >= maxy || p2.sy >= p1.sy) continue;
-        r.fillStyle = sg.dark ? G2 : G1; r.fillRect(-10, p2.sy, W + 20, p1.sy - p2.sy + 1);
+        r.fillStyle = sg.dark ? G2 : G1; { const ya = Math.round(p2.sy), yb = Math.round(p1.sy); if (yb > ya) r.fillRect(-10, ya, W + 20, yb - ya); }   /* whole pixels, no overlap: the road strip drawn next covers its edge cleanly */
         const rum = w => w * 0.08, lane = w => w * 0.022;
         const rt = sg.rt || 1, lt = sg.lt || -1, cc = (rt + lt) / 2, hh = (rt - lt) / 2;   /* the road's centre and half-width: wider where it opens up */
         if (sg.river || sg.lake) { const wc = SNOW ? '#7896af' : '#4574a6';   // the river (or lake) off to the right
           poly(p1.sx + p1.sw * ((sg.lake ? 3.4 : 2.6) + rt - 1), p1.sy, p1.sw * (sg.lake ? 1.4 : 0.7), p2.sx + p2.sw * ((sg.lake ? 3.4 : 2.6) + rt - 1), p2.sy, p2.sw * (sg.lake ? 1.4 : 0.7), wc); }
-        poly(p1.sx + cc * p1.sw, p1.sy, p1.sw * (hh + 0.16), p2.sx + cc * p2.sw, p2.sy, p2.sw * (hh + 0.16), SNOW ? '#95908a' : '#7f674a');   // dirt (or slushy sand) shoulder
+        poly(p1.sx + cc * p1.sw, p1.sy - 1, p1.sw * (hh + 0.16), p2.sx + cc * p2.sw, p2.sy, p2.sw * (hh + 0.16), SNOW ? '#95908a' : '#7f674a');   // dirt (or slushy sand) shoulder: stops at its own strip so it never peeks under the road below
         poly(p1.sx + cc * p1.sw, p1.sy, p1.sw * hh, p2.sx + cc * p2.sw, p2.sy, p2.sw * hh, '#4f5258');   /* asphalt */
         for (const e of [lt + 0.05, rt - 0.05]) poly(p1.sx + e * p1.sw, p1.sy, Math.max(0.5, p1.sw * 0.012), p2.sx + e * p2.sw, p2.sy, Math.max(0.5, p2.sw * 0.012), '#e8eaec');   // solid white edge lines
         // (snow lives on the shoulder now, so the white edge line stays readable)
