@@ -16,6 +16,12 @@ function T(s, x, y, c, sz, al) {
   if (lum > 110) { const o = (sz || 8) <= 7 ? 1 / 3 : 2 / 3; g.fillStyle = '#000'; g.fillText(s, x + o, y + o); }   /* drop shadow: one screen pixel on small text so it stays sharp */   // drop shadow only behind light text; dark text on a light label stays crisp
   g.fillStyle = col; g.fillText(s, x, y); g.textAlign = 'left';
 }
+/* wrap text to a pixel width (measured, not guessed). Returns the lines; draws them if y != null. */
+function WRAP(s, x, y, maxW, c, sz, lh, maxLines, al) {
+  g.font = Math.max(5, sz || 8) + 'px "Press Start 2P", monospace'; const out = []; let ln = '';
+  for (const w of String(s).split(' ')) { const t2 = ln ? ln + ' ' + w : w; if (ln && g.measureText(t2).width > maxW) { out.push(ln); ln = w; } else ln = t2; }
+  if (ln) out.push(ln); const L = maxLines ? out.slice(-maxLines) : out;
+  if (y != null) L.forEach((l, i) => T(l, x, y + i * (lh || (sz || 8) + 4), c, sz, al)); return L; }
 function BAR(x, y, w, h, f, c, label) {
   R(x - 1, y - 1, w + 2, h + 2, '#000'); R(x, y, w, h, '#2c3326'); R(x, y, w * Math.max(0, Math.min(1, f)), h, c);
   if (label) T(label, x, y - 6, '#fff', 6);
@@ -1306,6 +1312,24 @@ TRL.hands = (s, VX, VY, VW, VH, t) => {
     else { R(22, -30, 12, 50, '#e07a1c'); R(22, -30, 3, 50, '#f2a04a'); C(28, -38, 11, '#c9ced6'); C(28, -38, 5, '#5a5f66'); R(16, -50, 24, 6, '#e07a1c'); glove(12, 14, 34, 22); }
     g.restore(); }
 };
+TRL.icon = (s, id, cx, cy, sz) => {   /* the pictures on the fight / bag buttons */
+  const G2 = s.gear, wpn = G2.includes('cutter') ? 'cutter' : G2.includes('wrench') ? 'monkey' : G2.includes('pipewrench') ? 'pipe' : 'fist';
+  const n = id === 'whack' ? 'ut_h_' + wpn : id === 'light' ? (s.lights > 0 ? 'ut_h_lighton' : 'ut_h_lightoff') : id === 'pb' ? 'ut_crackers' : (id === 'item' || id === 'run') ? 'ut_icon_' + (id === 'item' ? 'bag' : 'run') : null, im = n && MG(n);
+  g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  if (im) { const k = sz / Math.max(im.width, im.height), w = im.width * k, h = im.height * k; g.drawImage(im, cx - w / 2, cy - h / 2, w, h); }
+  else if (id === 'item') {   /* a beat-up canvas backpack (until there's art for it) */
+    const u = sz / 32; g.translate(cx, cy); g.scale(u, u);
+    g.fillStyle = '#4a3218'; g.fillRect(-11, -12, 3, 8); g.fillRect(8, -12, 3, 8);   // straps
+    g.fillStyle = '#7a5428'; g.beginPath(); g.roundRect(-12, -9, 24, 23, 5); g.fill();
+    g.fillStyle = '#5e3e1c'; g.beginPath(); g.roundRect(-12, -9, 24, 10, [5, 5, 2, 2]); g.fill();   // flap
+    g.fillStyle = '#8a6430'; g.beginPath(); g.roundRect(-7, 3, 14, 8, 2); g.fill();   // pocket
+    g.fillStyle = '#c9a24a'; g.fillRect(-1.5, -1, 3, 4);   // buckle
+    g.strokeStyle = '#3a2610'; g.lineWidth = 1; g.beginPath(); g.moveTo(-6, -14); g.quadraticCurveTo(0, -19, 6, -14); g.stroke(); }
+  else if (id === 'run') {   /* the way out: a lit crack, an arrow pointing at it */
+    const u = sz / 32; g.translate(cx, cy); g.scale(u, u);
+    g.fillStyle = '#2a2018'; g.fillRect(2, -13, 12, 26); g.fillStyle = '#f7e2a0'; g.fillRect(4, -11, 8, 22);
+    g.fillStyle = '#e8dcc0'; g.beginPath(); g.moveTo(-14, -3); g.lineTo(-4, -3); g.lineTo(-4, -8); g.lineTo(4, 0); g.lineTo(-4, 8); g.lineTo(-4, 3); g.lineTo(-14, 3); g.fill(); }
+  g.restore(); };
 TRL.imgTex = (n, w) => {   /* turn a sprite into a 32x32 billboard texture, sitting on the floor */
   const im = MG(n); if (!im) return null; const N = TRL.T, c = document.createElement('canvas'); c.width = c.height = N; const k = c.getContext('2d'); k.imageSmoothingEnabled = false;
   const h = Math.round(w * im.height / im.width); k.drawImage(im, Math.round((N - w) / 2), N - h, w, h);
@@ -1365,7 +1389,7 @@ GAMES.push({
     if (s.bag) return this.bagging(s, dt, I);
     if (s.shop) return this.shopping(s, dt, I);
     if (s.battle) return this.fight(s, dt, I);
-    if ((I.Bp) && !s.mv) { s.bag = { sel: 0, battle: false }; SFX('ui_tap'); return; }
+    { const [x, y, w, h] = this.bagBtn(), tap = I.ptr.clicked && I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h; if ((I.Bp || tap) && !s.mv) { s.bag = { sel: 0, battle: false }; SFX('ui_tap'); return; } if (tap) I.ptr.clicked = false; }
     const H = HERO(s), dur = 0.26 / H.spd;
     if (s.mv > 0) {   // gliding to the next square / turning
       s.mv -= dt; const k = 1 - Math.max(0, s.mv) / s.mvD;
@@ -1375,7 +1399,7 @@ GAMES.push({
     }
     let cmd = null;
     if (I.U || I.Up) cmd = 'F'; else if (I.D || I.Dp) cmd = 'B'; else if (I.Lp || I.L) cmd = 'L'; else if (I.Rp || I.R) cmd = 'R';
-    if (!cmd && I.ptr.clicked) { const x = I.ptr.x / W; cmd = x < 0.3 ? 'L' : x > 0.7 ? 'R' : 'F'; }
+    if (!cmd && I.ptr.clicked && I.ptr.x < 336 && I.ptr.y < 192) { const x = (I.ptr.x - 10) / 316; cmd = x < 0.3 ? 'L' : x > 0.7 ? 'R' : 'F'; }   /* tap the view: left third turns left, right third turns right, middle crawls */
     if (!cmd) return;
     s.fx0 = s.vx; s.fy0 = s.vy; s.fa0 = s.va; s.ta = s.va; s.mvD = dur;
     if (cmd === 'L' || cmd === 'R') { s.ta = s.va + (cmd === 'L' ? -1 : 1) * Math.PI / 2; s.dir = (s.dir + (cmd === 'L' ? 3 : 1)) % 4; s.mv = s.mvD = dur * 0.8; return; }
@@ -1565,7 +1589,7 @@ GAMES.push({
     const OPTS = this.opts(s);
     if (I.Up || I.Lp) b.sel = (b.sel + OPTS.length - 1) % OPTS.length; if (I.Dp || I.Rp) b.sel = (b.sel + 1) % OPTS.length;
     let pick = I.Ap ? b.sel : null;
-    if (I.ptr.clicked) for (let i = 0; i < OPTS.length; i++) { const [x, y, w, h] = this.optBox(i, OPTS.length); if (I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h) { b.sel = i; pick = i; } }
+    if (I.ptr.clicked) for (let i = 0; i < OPTS.length; i++) { const [x, y, w, h] = this.btnBox(i, OPTS.length); if (I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h) { b.sel = i; pick = i; } }
     if (pick === null) return;
     const o = OPTS[pick]; if (o.off) { SFX('click'); return; } SFX('ui_select');
     const foeTurn = () => {
@@ -1608,7 +1632,16 @@ GAMES.push({
     }
   },
   opts(s) { const K = s.battle && s.battle.F.king; return [{ id: 'whack', label: this.weapon(s) === 'fists' ? 'PUNCH' : 'WHACK' }, { id: 'light', label: `FLASHLIGHT x${s.lights}`, off: s.lights <= 0 }, { id: 'item', label: 'BAG' }, { id: 'pb', label: `TOSS A CRACKER x${s.crk}`, off: s.crk <= 0 || K }, { id: 'run', label: 'RUN', off: K }]; },
-  optBox(i, n = 4) { const gap = Math.min(22, Math.floor(86 / n)), h = gap - 2; return [340, 103 + i * gap, 130, h]; },   /* the command buttons, down the right-hand panel */
+  optBox(i, n = 4) { const gap = Math.min(34, Math.floor(164 / n)), h = gap - 3; return [342, 26 + i * gap, 126, h]; },   /* list buttons, down the whole right-hand column */
+  btnBox(i, n) { const W3 = 61, H3 = 49; if (i === 4 && n === 5) return [342, 26 + 2 * (H3 + 4), 126, H3]; return [342 + (i % 2) * (W3 + 4), 26 + Math.floor(i / 2) * (H3 + 4), W3, H3]; },   /* fight buttons: a 2x2 grid + one wide one */
+  bagBtn() { return [424, 132, 44, 50]; },
+  tile(s, o, [x, y, w, h], on, dim) {   /* a big tappable picture button */
+    R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, on ? '#f7c418' : '#8a6a30'); R(x, y + h - 1, w, 1, '#120e09'); if (on) { R(x, y, 1, h, '#f7c418'); R(x + w - 1, y, 1, h, '#f7c418'); }
+    g.save(); if (dim) g.globalAlpha = 0.38; const cx = x + w / 2, cy = y + (h - 12) / 2 + 1, sz = Math.min(w, h - 12) - 4; TRL.icon(s, o.id, cx, cy, sz);
+    const lab = o.id === 'whack' ? (this.weapon(s) === 'fists' ? 'PUNCH' : 'WHACK') : o.id === 'light' ? 'FLASHLIGHT' : o.id === 'item' ? 'BAG' : o.id === 'pb' ? 'CRACKER' : o.id === 'run' ? 'RUN' : o.label;
+    T(lab, cx, y + h - 7, on ? '#f7c418' : '#e8dcc0', 5, 'center');
+    const n2 = o.id === 'light' ? s.lights : o.id === 'pb' ? s.crk : null; if (n2 != null) { R(x + w - 15, y + 3, 12, 10, '#0a0806'); T(String(n2), x + w - 9, y + 8.5, n2 ? '#7bd65b' : '#8a5a50', 5, 'center'); }
+    g.restore(); },
   render(s) {   // the 3D view: raycast walls, cast floor + ceiling, then the broken joint as a sprite
     const { RW, RH, T: N, T2: M } = TRL, buf = s.buf, zb = s.zb, tx = TRL.tex, HI = tx.hi;
     const dx = Math.cos(s.va), dy = Math.sin(s.va), pl = 0.66, plx = -dy * pl, ply = dx * pl, px = s.vx, py = s.vy;
@@ -1690,13 +1723,13 @@ GAMES.push({
       // the monster's name plate along the top of the view
       R(cx - 70, VY + 4, 140, 22, 'rgba(10,8,6,.8)'); T(b.F.name, cx, VY + 12, b.F.king ? '#f7c418' : '#fff', 7, 'center'); BAR(cx - 50, VY + 19, 100, 4, b.hp / b.max, '#e9665a');
     }
-    if (!s.wed && !s.wake && !s.bag && !s.talk && !(s.fixT >= 3.4)) TRL.hands(s, VX, VY, VW, VH, t);
+    if (!s.wed && !s.wake && !s.bag && !s.talk && !s.shop && !(s.fixT >= 3.4)) TRL.hands(s, VX, VY, VW, VH, t);
     if (b && b.open > 0) { const k = b.open / 0.6; for (let i = 0; i < 9; i++) R(VX, VY + i * 20, VW * (1 - k), 20, '#000'); }   // the screen wipe into the fight
     if (s.flash > 0) { g.fillStyle = `rgba(255,250,220,${s.flash})`; g.fillRect(VX, VY, VW, VH); }
     if (s.wake) { const [who, , line] = s.wake.lines[s.wake.i]; R(VX, VY, VW, VH, 'rgba(20,12,6,.55)');
       if (MG('ut_carl')) { const im = MG('ut_carl'), cw = im.width / 4, h = VH * 1.25, w = h * cw / im.height; g.save(); g.imageSmoothingEnabled = false; g.drawImage(im, (who === 'CARL' ? 2 : 0) * cw, 0, cw, im.height, VX + VW / 2 - w / 2 + Math.sin(t * 1.5) * 3, VY + VH * 0.15, w, h); g.restore(); }   /* right up in your face */
       g.fillStyle = `rgba(255,190,120,${0.12 + 0.05 * Math.sin(t * 7)})`; g.fillRect(VX, VY, VW, VH);
-      R(VX + 8, VY + 6, VW - 16, 36, 'rgba(10,8,6,.88)'); if (!who) T(line, VX + VW / 2, VY + 22, '#e8c86a', 6, 'center'); else { T(who + ':', VX + 14, VY + 14, '#e8c86a', 6); const wr = []; let ln = ''; for (const w2 of line.split(' ')) { if ((ln + w2).length > 50) { wr.push(ln.trim()); ln = ''; } ln += w2 + ' '; } wr.push(ln.trim()); wr.slice(0, 2).forEach((l2, i) => T(l2, VX + 14, VY + 24 + i * 8, '#fff', 5)); } }
+      { const L2 = WRAP(line, 0, null, VW - 32, '#fff', 6, 10); R(VX + 8, VY + 6, VW - 16, 20 + L2.length * 10, 'rgba(10,8,6,.88)'); if (!who) WRAP(line, VX + VW / 2, VY + 18, VW - 32, '#e8c86a', 6, 10, 0, 'center'); else { T(who + ':', VX + 14, VY + 14, '#e8c86a', 6); WRAP(line, VX + 14, VY + 26, VW - 32, '#fff', 6, 10); } } }
     if (s.wed) { const W2 = s.wed, [who, line] = W2.lines[W2.i], k = W2.i;
       const grd = g.createLinearGradient(0, VY, 0, VY + VH); grd.addColorStop(0, '#2a1a12'); grd.addColorStop(1, '#5a3a22'); g.fillStyle = grd; g.fillRect(VX, VY, VW, VH);
       for (let i = 0; i < 6; i++) { const fx = VX + 20 + i * 56; R(fx, VY + 52, 3, 12, '#e8dcc0'); C(fx + 1.5, VY + 49 + Math.sin(t * 9 + i) * 1, 2.5, '#ffd27a'); }   /* candles on the dirt wall */
@@ -1709,29 +1742,40 @@ GAMES.push({
       else { TRL.UTS('ut_possum', sad ? 7 : k >= 9 && k <= 12 ? 4 : 0, VX + VW / 2, base + 4, 82, false); crown(VX + VW / 2 + 26, base - (k >= 9 && k <= 12 ? 78 : 55), 7); }   /* the Princess */
       if (k >= 9 && k <= 12) { g.globalAlpha = 0.5; g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(VX + VW / 2 + 4, base - 84); g.lineTo(VX + VW / 2 - 30, base - 20); g.lineTo(VX + VW / 2 + 24, base - 30); g.fill(); g.globalAlpha = 1; }   /* her veil */
       if (k >= 13 && k <= 14) for (let i = 0; i < 8; i++) T('♥', VX + 30 + (i * 41 + t * 30) % (VW - 40), VY + 60 + Math.sin(t * 2 + i) * 20, '#ff8ad0', 8, 'center');
-      R(VX + 8, VY + 6, VW - 16, 28, 'rgba(10,8,6,.85)');
-      if (!who) T(line, VX + VW / 2, VY + 20, '#e8c86a', 6, 'center'); else { T(who + ':', VX + 14, VY + 14, '#e8c86a', 6); T(line, VX + 14, VY + 26, '#fff', 6); }
+      { const L2 = WRAP(line, 0, null, VW - 32, '#fff', 6, 10); R(VX + 8, VY + 6, VW - 16, (who ? 20 : 10) + L2.length * 10, 'rgba(10,8,6,.85)');
+        if (!who) WRAP(line, VX + VW / 2, VY + 16, VW - 32, '#e8c86a', 6, 10, 0, 'center'); else { T(who + ':', VX + 14, VY + 14, '#e8c86a', 6); WRAP(line, VX + 14, VY + 26, VW - 32, '#fff', 6, 10); } }
     }
     if (s.bag) { R(VX, VY, VW, VH, 'rgba(10,8,6,.93)'); T('THE BAG', VX + 10, VY + 10, '#e8c86a', 8);
       const st = [['LEVEL', s.lvl], ['XP', `${s.xp} / ${s.lvl * 60}`], ['HP', `${Math.max(0, s.hp)} / ${s.hpMax}`], ['ATTACK', `${s.dmg[0] + s.atkB + s.lvl - 1}-${s.dmg[1] + s.atkB + s.lvl - 1}`], ['DEFENSE', s.def], ['CRACKERS', s.crk], ['FLASHLIGHTS', s.lights], ['TIME RESTED', `${s.restMin} MIN`]];
       st.forEach(([k, v], i) => { T(k, VX + 12, VY + 30 + i * 14, '#9fb3d9', 6); T(String(v), VX + 150, VY + 30 + i * 14, '#fff', 6, 'right'); });
-      const GN = { pipewrench: 'PIPE WRENCH', lid: 'TRASH CAN LID', crown: 'POSSUM CROWN', pads: 'KNEE PADS', hat: 'HARD HAT', waders: 'CHEST WADERS', wrench: 'BIGGER WRENCH', cutter: 'PIPE CUTTER' }; T('WEARING: ' + (s.gear.length ? s.gear.map(q => GN[q]).join(', ') : 'NOTHING SPECIAL'), VX + 12, VY + VH - 12, '#c9a46a', 5);
+      const GN = { pipewrench: 'PIPE WRENCH', lid: 'TRASH CAN LID', crown: 'POSSUM CROWN', pads: 'KNEE PADS', hat: 'HARD HAT', waders: 'CHEST WADERS', wrench: 'BIGGER WRENCH', cutter: 'PIPE CUTTER' }; { const wt = 'WEARING: ' + (s.gear.length ? s.gear.map(q => GN[q]).join(', ') : 'NOTHING SPECIAL'), L2 = WRAP(wt, 0, null, VW - 24, '#c9a46a', 5, 8); WRAP(wt, VX + 12, VY + VH - 6 - L2.length * 8, VW - 24, '#c9a46a', 5, 8); }
       this.bagList(s).forEach((o, i) => { const [x, y, w, h] = this.bagBox(i), on = i === s.bag.sel; R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); T(o.label, x + 6, y + h / 2 + 1, o.off ? '#5a5048' : on ? '#f7c418' : '#e8dcc0', 6); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); }); }
     if (s.fixT && s.fixT < 3.4) { R(VX + 20, VY + 70, VW - 40, 40, 'rgba(10,8,6,.85)'); T(s.fixT < 1.2 ? 'THERE IT IS. THE DRIP.' : s.fixT < 2.2 ? 'FERNCO ON...' : 'CLAMPS TIGHT. DONE!', VX + VW / 2, VY + 90, '#7bd65b', 9, 'center'); }
     if (s.talk) { const K = s.talk, [who, line] = K.lines[Math.min(K.i, K.lines.length - 1)];
       const sky = g.createLinearGradient(0, VY, 0, VY + VH); sky.addColorStop(0, '#8fc4ef'); sky.addColorStop(1, '#d8ecf8'); g.fillStyle = sky; g.fillRect(VX, VY, VW, VH); if (!BGI('bg_lawn')) R(VX, VY + VH * 0.62, VW, VH * 0.38, '#5f9a3e');
-      if (!who) { R(VX, VY, VW, VH, 'rgba(0,0,0,.85)'); T(line, VX + VW / 2, VY + VH / 2, '#e8c86a', 8, 'center'); }
-      else { R(VX + 12, VY + VH - 50, VW - 24, 40, 'rgba(10,8,6,.88)'); T(who + ':', VX + 22, VY + VH - 38, '#e8c86a', 7); const wr = []; let ln = ''; for (const w of line.split(' ')) { if ((ln + w).length > 40) { wr.push(ln.trim()); ln = ''; } ln += w + ' '; } wr.push(ln.trim()); wr.slice(0, 2).forEach((l, i) => T(l, VX + 22, VY + VH - 26 + i * 10, '#fff', 6)); if (K.t > 0.4 && Math.floor(t * 3) % 2) T('▼', VX + VW - 20, VY + VH - 16, '#e8c86a', 6); } }
+      if (!who) { R(VX, VY, VW, VH, 'rgba(0,0,0,.85)'); const L2 = WRAP(line, 0, null, VW - 40, '#e8c86a', 8, 13); WRAP(line, VX + VW / 2, VY + VH / 2 - (L2.length - 1) * 6.5, VW - 40, '#e8c86a', 8, 13, 0, 'center'); }
+      else { const L2 = WRAP(line, 0, null, VW - 52, '#fff', 6, 10), bh = 26 + L2.length * 10; R(VX + 12, VY + VH - 10 - bh, VW - 24, bh, 'rgba(10,8,6,.88)'); T(who + ':', VX + 22, VY + VH - bh + 2, '#e8c86a', 7); WRAP(line, VX + 22, VY + VH - bh + 14, VW - 52, '#fff', 6, 10); if (K.t > 0.4 && Math.floor(t * 3) % 2) T('▼', VX + VW - 20, VY + VH - 16, '#e8c86a', 6); } }
     if (s.fixT >= 3.4) {   // crawled back out into daylight
       const k = Math.min(1, (s.fixT - 3.4) / 0.6), sky = g.createLinearGradient(0, VY, 0, VY + VH); sky.addColorStop(0, '#8fc4ef'); sky.addColorStop(1, '#d8ecf8'); g.globalAlpha = k; g.fillStyle = sky; g.fillRect(VX, VY, VW, VH);
       if (!BGI('bg_lawn')) { R(VX, VY + VH * 0.62, VW, VH * 0.38, '#5f9a3e'); } g.globalAlpha = 1;
-      if (k >= 1) { R(VX + 12, VY + VH - 62, VW - 24, 52, 'rgba(10,8,6,.88)');
-        const me = HERO(s).name, them = me === 'ROD' ? 'MATT' : 'ROD', two = s.fixT > 6.2;
-        T(me + ':', VX + 22, VY + VH - 50, '#e8c86a', 7); T(s.epi[0], VX + 22, VY + VH - 38, '#fff', 6);
-        if (two) { T(them + ':', VX + 22, VY + VH - 24, '#e8c86a', 7); T(s.epi[1], VX + 70, VY + VH - 24, '#fff', 6); } } }
+      if (k >= 1) { const me = HERO(s).name, them = me === 'ROD' ? 'MATT' : 'ROD', two = s.fixT > 6.2, A = WRAP(s.epi[0], 0, null, VW - 52, '#fff', 6, 10), B2 = two ? WRAP(s.epi[1], 0, null, VW - 52, '#fff', 6, 10) : [], bh = 30 + A.length * 10 + (two ? 14 + B2.length * 10 : 0);
+        R(VX + 12, VY + VH - 10 - bh, VW - 24, bh, 'rgba(10,8,6,.88)'); let y = VY + VH - bh;
+        T(me + ':', VX + 22, y + 2, '#e8c86a', 7); WRAP(s.epi[0], VX + 22, y + 14, VW - 52, '#fff', 6, 10); y += 14 + A.length * 10;
+        if (two) { T(them + ':', VX + 22, y + 6, '#e8c86a', 7); WRAP(s.epi[1], VX + 22, y + 18, VW - 52, '#fff', 6, 10); } } }
     g.restore();
     // side panel: title, map + compass up top; commands in a fight, stink otherwise
-    const PX = 338, PW = 134; bevel(PX, 10, PW, 82);
+    const PX = 338, PW = 134, wedCh = s.wed && s.wed.lines[s.wed.i][2], fight = b && !s.bag;
+    if (wedCh || s.shop || fight) {   /* the right side becomes whatever the scene needs: big buttons you can tap with a thumb */
+      bevel(PX, 10, PW, 178);
+      if (fight) { T(b.F.name, PX + PW / 2, 18, '#e8c86a', 5, 'center'); const live = b.open <= 0 && !b.q.length; this.opts(s).forEach((o, i, A) => this.tile(s, o, this.btnBox(i, A.length), i === b.sel && live, !live || o.off)); }
+      else { const L = wedCh ? wedCh.map(q => ({ label: q })) : this.wares(s), sel = wedCh ? s.wed.sel : s.shop.sel;
+        T(wedCh ? 'WHAT DO YOU SAY?' : "CARL'S STUFF", PX + PW / 2, 18, '#e8c86a', 5, 'center');
+        L.forEach((o, i) => { const [x, y, w, h] = this.optBox(i, L.length), on = i === sel, priced = !!o.price;
+          R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, on ? '#f7c418' : '#8a6a30'); R(x, y + h - 1, w, 1, '#120e09');
+          const lw = w - 10 - (priced ? 30 : 0), L2 = WRAP(o.label, 0, null, lw, '#fff', 5, 8, 2); WRAP(o.label, x + 5, y + h / 2 + 1 - (L2.length - 1) * 4, lw, o.off ? '#5a5048' : on ? '#f7c418' : '#e8dcc0', 5, 8, 2);
+          if (priced) T(o.price + ' CRK', x + w - 4, y + h / 2 + 1, s.crk >= o.price && !o.off ? '#7bd65b' : '#8a5a50', 5, 'right'); }); } }
+    else {
+      bevel(PX, 10, PW, 82);
     { const z = this.zone(s); T(z < 0.2 ? 'THE ENTRANCE' : z < 0.45 ? 'THE DAMP PART' : z < 0.7 ? 'POSSUM COUNTRY' : z < 0.9 ? 'THE DEEP MUCK' : "THE KING'S HALL", PX + PW / 2, 18, '#e8c86a', 6, 'center'); T(`LV ${s.lvl}  ATK ${s.dmg[0] + s.atkB + s.lvl - 1}-${s.dmg[1] + s.atkB + s.lvl - 1}  DEF ${s.def}`, PX + PW / 2, 27, '#9fb3d9', 5, 'center'); }
     { const Z = 4, VWc = 29, VHc = 13, oc = Math.max(0, Math.min(s.C - VWc, Math.round(s.vx - VWc / 2))), orr = Math.max(0, Math.min(s.R - VHc, Math.round(s.vy - VHc / 2))), mw = Math.min(s.C, VWc) * Z, mh = Math.min(s.R, VHc) * Z, mx0 = PX + (PW - mw) / 2 - oc * Z, my0 = 35 - orr * Z;   // automap: a window around you, only where you've been
       R(PX + (PW - mw) / 2 - 1, 34, mw + 2, mh + 2, '#16110b'); g.save(); g.beginPath(); g.rect(PX + (PW - mw) / 2, 35, mw, mh); g.clip();
@@ -1741,17 +1785,13 @@ GAMES.push({
       if (s.escort && s.kingdom && Math.floor(t * 3) % 2) R(mx0 + s.kingdom.c * Z, my0 + s.kingdom.r * Z, Z, Z, '#f7d44a');   /* her kingdom */
       if (s.mapBought && Math.floor(t * 3) % 2) { T('X', mx0 + s.goal.c * Z + Z / 2, my0 + s.goal.r * Z + Z / 2, '#e9665a', 6, 'center'); }   /* his napkin map */
       const cx = mx0 + s.vx * Z, cy = my0 + s.vy * Z, a = s.va; g.fillStyle = '#f7c418'; g.beginPath(); g.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4); g.lineTo(cx + Math.cos(a + 2.4) * 3, cy + Math.sin(a + 2.4) * 3); g.lineTo(cx + Math.cos(a - 2.4) * 3, cy + Math.sin(a - 2.4) * 3); g.fill(); g.restore(); }
-    bevel(PX, 100, PW, 88);
-    if (s.wed && s.wed.lines[s.wed.i][2]) { const ch = s.wed.lines[s.wed.i][2]; ch.forEach((o, i) => { const [x, y, w, h] = this.optBox(i, ch.length), on = i === s.wed.sel; R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); T(o, x + 5, y + h / 2 + 1, on ? '#f7c418' : '#e8dcc0', 5); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); }); }
-    else if (s.shop) { const W2 = this.wares(s); W2.forEach((o, i) => { const [x, y, w, h] = this.optBox(i, W2.length), on = i === s.shop.sel;
-      R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); T(o.label, x + 5, y + h / 2 + 1, o.off ? '#5a5048' : on ? '#f7c418' : '#e8dcc0', 5); if (o.price) T(o.price + ' CRK', x + w - 4, y + h / 2 + 1, s.crk >= o.price && !o.off ? '#7bd65b' : '#8a5a50', 5, 'right'); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); }); }
-    else if (b && b.open <= 0 && !b.q.length && !s.bag) this.opts(s).forEach((o, i, A) => { const [x, y, w, h] = this.optBox(i, A.length), on = i === b.sel;
-      R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); R(x, y + h - 1, w, 1, '#120e09'); T(o.label, x + 6, y + h / 2 + 1, o.off ? '#5a5048' : on ? '#f7c418' : '#e8dcc0', 6); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); });
-    else if (b) T(b.q.length ? '...' : '', PX + PW / 2, 144, '#8a7a60', 7, 'center');
-    else { const stink = 1 - s.gd[s.pr][s.pc] / Math.max(1, s.gmax);
-      T('STINK', PX + 8, 110, '#c9a46a', 6); BAR(PX + 8, 116, PW - 16, 6, stink, stink > 0.75 ? '#a0d040' : '#8a6a3a');
-      if (stink > 0.75 && Math.floor(t * 3) % 2) T('SMELLS CLOSE', PX + PW / 2, 132, '#a0d040', 6, 'center');
-      T(s.escort ? 'ESCORTING THE PRINCESS' : s.married ? 'MARRIED (TO A POSSUM)' : 'B = BAG / REST', PX + 8, 138, s.escort || s.married ? '#ff8ad0' : '#9fd1ff', 5); T('LIVES ' + '♥'.repeat(s.lives) + '♡'.repeat(3 - s.lives), PX + PW - 8, 126, '#e9665a', 5, 'right'); T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); if (MG('ut_crackers')) { g.save(); g.imageSmoothingEnabled = false; g.drawImage(MG('ut_crackers'), PX + PW - 22, 154, 14, 14); g.restore(); } T('PB CRACKERS x' + s.crk, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
+      bevel(PX, 100, PW, 88);
+      const stink = 1 - s.gd[s.pr][s.pc] / Math.max(1, s.gmax);
+      T('STINK', PX + 8, 110, '#c9a46a', 6); T('♥'.repeat(s.lives) + '♡'.repeat(3 - s.lives), PX + PW - 8, 110, '#e9665a', 6, 'right'); BAR(PX + 8, 117, PW - 16, 6, stink, stink > 0.75 ? '#a0d040' : '#8a6a3a');
+      const st = s.escort ? ['ESCORTING THE PRINCESS', '#ff8ad0'] : stink > 0.75 ? ['SMELLS CLOSE!', Math.floor(t * 3) % 2 ? '#a0d040' : '#6a8a30'] : s.married ? ['MARRIED (TO A POSSUM)', '#ff8ad0'] : null;
+      if (st) T(st[0], PX + 8, 131, st[1], 5);
+      T('LIGHT x' + s.lights, PX + 8, 146, '#e8dcc0', 5); T('CRACKERS x' + s.crk, PX + 8, 160, '#e8dcc0', 5); T('BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 5);
+      this.tile(s, { id: 'item', label: 'BAG' }, this.bagBtn(), false, !!s.mv);   /* tap to open the bag */ }
     // bottom bar: the hero's portrait + health, and the message scroll
     bevel(10, 200, 56, 60);
     if (s.wake) { const [who, f] = s.wake.lines[s.wake.i], me = HERO(s).name.toLowerCase();
@@ -1774,11 +1814,14 @@ GAMES.push({
     T(`${Math.max(0, s.hp)} / ${s.hpMax}`, 160, 240, '#e8dcc0', 6, 'right'); T(s.venom > 0 ? 'ITCHY' : s.hp / s.hpMax > 0.5 ? 'GOOD' : s.hp / s.hpMax > 0.25 ? 'BITTEN' : 'BAD SHAPE', 80, 252, s.venom > 0 ? '#c080e0' : s.hp / s.hpMax > 0.5 ? '#7bd65b' : '#e9665a', 6);
     bevel(174, 200, 298, 60);
     { const log = s.log || (s.log = []);
-      if (s.shop) { T('CRAWLSPACE CARL:', 180, 212, '#e8c86a', 6); const wr = []; let ln = ''; for (const w of s.shop.say.split(' ')) { if ((ln + w).length > 44) { wr.push(ln.trim()); ln = ''; } ln += w + ' '; } wr.push(ln.trim()); wr.slice(0, 3).forEach((l, i) => T(l, 180, 226 + i * 11, '#fff', 6)); T('PB CRACKERS: ' + s.crk, 464, 212, '#7bd65b', 6, 'right'); }
-      else if (b && b.q.length) { const m = b.q[0], txt = m.text.slice(0, Math.floor(m.t * 60)); log.slice(-1).forEach(l => T(l, 180, 214, '#7a6a50', 6)); { const wr = []; let ln = ''; for (const w of txt.split(' ')) { if ((ln + w).length > 44) { wr.push(ln.trim()); ln = ''; } ln += w + ' '; } wr.push(ln.trim()); wr.slice(0, 2).forEach((l, i) => T(l, 180, 236 + i * 12, '#fff', 6)); }   /* wrapped to fit the scroll */ if (m.t > 0.4 && Math.floor(t * 3) % 2) T('▼', 464, 252, '#e8c86a', 6, 'right'); }
-      else if (b) { log.slice(-3).forEach((l, i) => T(l, 180, 214 + i * 13, i === 2 ? '#e8dcc0' : '#7a6a50', 6)); }
-      else if (s.steps < 2) { T('▲ CRAWL   ▼ BACK   ◀ ▶ TURN', 180, 214, '#e8dcc0', 6); T('Follow your nose. The STINK meter', 180, 230, '#7a6a50', 6); T('tells you when you are close.', 180, 242, '#7a6a50', 6); }
-      else log.slice(-3).forEach((l, i) => T(l, 180, 214 + i * 13, i === 2 ? '#e8dcc0' : '#7a6a50', 6)); }
+      const MW = 280, scroll = (entries) => {   /* the newest messages, wrapped to the scroll, as many lines as fit */
+        const lines = []; entries.forEach((e, k) => WRAP(e, 0, null, MW, '#fff', 6, 11).forEach(l => lines.push([l, k === entries.length - 1]))); lines.slice(-4).forEach(([l, last], i, A) => T(l, 180, 212 + (4 - A.length) * 11 + i * 11, last ? '#e8dcc0' : '#7a6a50', 6)); };
+      if (s.shop) { T('CRAWLSPACE CARL:', 180, 210, '#e8c86a', 6); T('PB CRACKERS: ' + s.crk, 464, 210, '#7bd65b', 6, 'right'); WRAP(s.shop.say, 180, 223, MW, '#fff', 6, 11, 3); }
+      else if (b && b.q.length) { const m = b.q[0], full = WRAP(m.text, 0, null, MW, '#fff', 6, 11), shown = m.text.slice(0, Math.floor(m.t * 60));   /* typed out, wrapped where the full line will wrap */
+        let left = shown.length; full.slice(-4).forEach((l, i, A) => { const cut = l.slice(0, Math.max(0, left)); left -= l.length + 1; T(cut, 180, 214 + i * 11, '#fff', 6); });
+        if (m.t > 0.4 && Math.floor(t * 3) % 2) T('▼', 464, 252, '#e8c86a', 6, 'right'); }
+      else if (s.steps < 2 && !b) { T('▲ CRAWL   ▼ BACK   ◀ ▶ TURN', 180, 214, '#e8dcc0', 6); WRAP('Follow your nose. The STINK meter tells you when you are close.', 180, 230, MW, '#7a6a50', 6, 11); }
+      else scroll(log.slice(-3)); }
     DRAWFX(s);
   },
 
