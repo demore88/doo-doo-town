@@ -1402,7 +1402,7 @@ GAMES.push({
     if (I.ptr.clicked && I.ptr.x > 338 && I.ptr.x < 472 && I.ptr.y > 10 && I.ptr.y < 92) { s.big = { stroke: null }; I.ptr.clicked = false; SFX('ui_tap'); return; }   /* tap the little map: the big one */
     { const [x, y, w, h] = this.bagBtn(), tap = I.ptr.clicked && I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h; if (I.Bp || tap) { s.bagQ = true; I.ptr.clicked = false; }   /* asked for the bag while crawling: it opens the moment you stop */
       if (s.bagQ && !(s.mv > 0)) { s.bagQ = false; s.bagPulse = false; s.bag = { sel: 0, battle: false }; SFX('ui_tap'); return; } }
-    const H = HERO(s), dur = 0.26 / H.spd;
+    const H = HERO(s), dur = 0.5;   /* one square every half second, even holding the stick */
     if (s.mv > 0) {   // gliding to the next square / turning
       s.mv -= dt; const k = 1 - Math.max(0, s.mv) / s.mvD;
       s.vx = lerp(s.fx0, s.pc + 0.5, k); s.vy = lerp(s.fy0, s.pr + 0.5, k); s.va = lerp(s.fa0, s.ta, k);
@@ -1414,13 +1414,13 @@ GAMES.push({
     if (!cmd && I.ptr.clicked && I.ptr.x < 336 && I.ptr.y < 192) { const x = (I.ptr.x - 10) / 316; cmd = x < 0.3 ? 'L' : x > 0.7 ? 'R' : 'F'; }   /* tap the view: left third turns left, right third turns right, middle crawls */
     if (!cmd) return;
     s.fx0 = s.vx; s.fy0 = s.vy; s.fa0 = s.va; s.ta = s.va; s.mvD = dur;
-    if (cmd === 'L' || cmd === 'R') { s.ta = s.va + (cmd === 'L' ? -1 : 1) * Math.PI / 2; s.dir = (s.dir + (cmd === 'L' ? 3 : 1)) % 4; s.mv = s.mvD = dur * 0.8; return; }
+    if (cmd === 'L' || cmd === 'R') { s.ta = s.va + (cmd === 'L' ? -1 : 1) * Math.PI / 2; s.dir = (s.dir + (cmd === 'L' ? 3 : 1)) % 4; s.mv = s.mvD = 0.3; return; }
     const v = [[1, 0], [0, 1], [-1, 0], [0, -1]][s.dir], sg = cmd === 'F' ? 1 : -1, nc = s.pc + v[0] * sg, nr = s.pr + v[1] * sg;
     if (s.escort && !s.married && s.kingdom && nc === s.kingdom.c && nr === s.kingdom.r && cmd === 'F') { this.wedding(s); return; }   /* you brought her home */
     const carlHere = s.carls.find(q => q.c === nc && q.r === nr);
     if (carlHere && cmd === 'F') { this.openShop(s, carlHere); return; }   /* crawl up to Carl: he's sitting right there */
     if (!this.open(s, nc, nr) || carlHere || (s.kingdom && nc === s.kingdom.c && nr === s.kingdom.r)) { s.shake = 0.15; return; }   /* bumping a pier: just a shake, no sound */
-    s.pc = nc; s.pr = nr; s.mv = s.mvD = cmd === 'B' ? dur * 1.3 : dur; s.arrived = true;   /* crawling is silent: the ambience covers it */
+    s.pc = nc; s.pr = nr; s.mv = s.mvD = cmd === 'B' ? dur * 1.2 : dur; s.arrived = true;   /* crawling is silent: the ambience covers it */
   },
   arrive(s) {
     const fresh = !s.seen.has(s.pr * 100 + s.pc); s.seen.add(s.pr * 100 + s.pc); s.steps++; s.since++;
