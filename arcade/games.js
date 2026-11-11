@@ -1677,7 +1677,7 @@ GAMES.push({
 // 19. SUPER RON — a side-scroller starring Ron, God of Drains. Rod has notes.
 const SR_TILE = 16, SR_GROUND = 15;                       // ground top is row 15 (y = 240)
 const SR_LEVEL = (() => {
-  const L = { len: 210, pits: [[38, 40], [74, 76], [118, 120], [150, 152], [176, 178]], pipes: [[16, 2], [28, 3], [46, 3], [60, 2], [88, 3], [102, 3], [132, 3], [162, 2], [186, 3]],
+  const L = { len: 230, pits: [[38, 40], [74, 76], [118, 120], [150, 152], [176, 178]], pipes: [[16, 2], [28, 3], [46, 3], [60, 2], [88, 3], [102, 3], [132, 3], [162, 2], [186, 3]],
     blocks: [[10, 11], [11, 11], [12, 11], [52, 11], [53, 11], [54, 10], [55, 10], [80, 11], [81, 11], [96, 11], [97, 11], [98, 11], [140, 10], [141, 10], [142, 10], [168, 11], [169, 11]],
     plungers: [[11, 9], [12, 9], [20, 12], [21, 12], [33, 13], [39, 11], [54, 8], [55, 8], [66, 13], [67, 13], [75, 11], [76, 11], [92, 13], [97, 9], [110, 13], [111, 13], [119, 11], [126, 13], [141, 8], [151, 11], [152, 11], [158, 13], [170, 9], [177, 11], [192, 13], [193, 13]],
     grease: [24, 35, 57, 69, 84, 95, 108, 128, 138, 158, 172, 182, 196], wipes: [44, 82, 114, 146, 180],
@@ -1721,7 +1721,7 @@ GAMES.push({
     s.cam = 0; s.hearts = s.heartsMax = [4, 3, 2][s.diff]; s.time = [130, 110, 95][s.diff]; s.inv = 0; s.hits = 0; s.got = 0; s.total = L.plungers.length + L.blocks.filter((_, i) => i % 4 !== 1).length;   // the ones floating, plus the ones hiding in toolboxes (every 4th box has an espresso instead)
     s.plg = L.plungers.map(([c, r]) => ({ x: c * SR_TILE + 8, y: r * SR_TILE + 8, got: false }));
     s.bonked = new Set(); s.pops = [];
-    s.foes = [...L.grease.filter(c => c < L.len - 23).map(c => ({ k: 'g', x: c * SR_TILE, y: SR_GROUND * SR_TILE, vx: -26, vy: 0, dead: 0 })),
+    s.foes = [...L.grease.filter(c => c < L.len - 42).map(c => ({ k: 'g', x: c * SR_TILE, y: SR_GROUND * SR_TILE, vx: -26, vy: 0, dead: 0 })),
               ...L.wipes.map(c => ({ k: 'w', x: c * SR_TILE, y: 150, y0: 150, vx: -18, dead: 0, ph: c }))];
     s.said = {}; s.bub = null; s.check = { x: 40, y: SR_GROUND * SR_TILE }; s.won = false; s.flush = 0;
     SR_BROKE = new Set(); s.big = false; s.items = []; s.debris = []; s.bumps = []; s.score = 0; s.combo = 0; s.runT = 0; s.texts = [];
@@ -1798,7 +1798,7 @@ GAMES.push({
     s.bumps.forEach(b => b.t -= dt); s.bumps = s.bumps.filter(b => b.t > 0);
     s.texts.forEach(o => { o.t -= dt; o.y -= 24 * dt; }); s.texts = s.texts.filter(o => o.t > 0);
     // ---------- THE FATBERG: the boss, guarding the golden toilet ----------
-    const AR0 = (L.len - 22) * SR_TILE, AR1 = (L.len - 9) * SR_TILE;   // the arena
+    const AR0 = (L.len - 41) * SR_TILE, AR1 = (L.len - 11) * SR_TILE;   /* the arena: a full screen wide */
     if (!s.boss && !s.bossDone && p.x > AR0 + 40) { s.boss = { x: AR1 - 30, vx: -40, hp: 3, inv: 0, t: 0, spit: 2, hop: 0, vy: 0, y: SR_GROUND * SR_TILE, roar: 1.2 }; s.globs = []; SFX('gurgle'); s.quip('boss', "That's a FATBERG. Every wipe anybody ever flushed. Stomp it, Ron."); }
     if (s.boss) { const B = s.boss; B.t += dt; B.inv = Math.max(0, B.inv - dt);
       p.x = clamp(p.x, AR0 + 8, AR1 - 6);   // no leaving mid-fight, and no jumping past him
@@ -1824,7 +1824,7 @@ GAMES.push({
     if (!s.bossDone && p.x > AR1 - 6) { p.x = AR1 - 6; p.vx = Math.min(0, p.vx); }   // the toilet is behind the Fatberg: beat him first
     // the golden toilet
     if (s.bossDone && p.x > (L.len - 4) * SR_TILE && !s.won) { s.won = true; SFX('flush_big'); s.quip('end', "This isn't how drains work. What IS this?"); s.bub = { txt: "This isn't how drains work. What IS this?", t: 9, face: 'confused' }; }
-    s.cam = clamp(p.x - 180, 0, L.len * SR_TILE - W);
+    { const want = s.boss ? AR0 : clamp(p.x - 180, 0, L.len * SR_TILE - W); s.cam = s.boss || s.camEase > 0 ? s.cam + (want - s.cam) * Math.min(1, dt * 5) : want; s.camEase = s.boss ? 1 : Math.max(0, (s.camEase || 0) - dt); }   /* the camera eases onto the arena for the fight, and back off after */
     s.pops.forEach(o => { o.t -= dt; o.y -= 30 * dt; }); s.pops = s.pops.filter(o => o.t > 0);
     function hurt(s, fell) {
       if (!fell && s.big) { s.big = false; s.inv = 1.6; SFX('bubble'); s.p.vy = -150; s.quip('shrink', 'Caffeine crash. Happens.'); return; }   // the espresso takes the hit
