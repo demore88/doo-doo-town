@@ -1285,6 +1285,10 @@ TRL.hands = (s, VX, VY, VW, VH, t) => {
     else { R(22, -30, 12, 50, '#e07a1c'); R(22, -30, 3, 50, '#f2a04a'); C(28, -38, 11, '#c9ced6'); C(28, -38, 5, '#5a5f66'); R(16, -50, 24, 6, '#e07a1c'); glove(12, 14, 34, 22); }
     g.restore(); }
 };
+TRL.imgTex = (n, w) => {   /* turn a sprite into a 32x32 billboard texture, sitting on the floor */
+  const im = MG(n); if (!im) return null; const N = TRL.T, c = document.createElement('canvas'); c.width = c.height = N; const k = c.getContext('2d'); k.imageSmoothingEnabled = false;
+  const h = Math.round(w * im.height / im.width); k.drawImage(im, Math.round((N - w) / 2), N - h, w, h);
+  const d = new Uint32Array(k.getImageData(0, 0, N, N).data.buffer).slice(); for (let i = 0; i < d.length; i++) if ((d[i] >>> 24) < 128) d[i] = 0; else d[i] = d[i] | 0xff000000; return d; };
 TRL.music = { h: null, tick: 0, amb: null, atick: 0 };
 TRL.bgm = on => { const M = TRL.music; if (on && !M.h && typeof DDTSfx !== 'undefined') M.h = DDTSfx.loop('ut_battle'); if (!on && M.h) { M.h.stop(); M.h = null; } };
 TRL.amb = on => { const M = TRL.music; if (on && !M.amb && typeof DDTSfx !== 'undefined') M.amb = [DDTSfx.loop('ut_amb_a'), DDTSfx.loop('ut_amb_b')]; if (!on && M.amb) { M.amb.forEach(h => h.stop()); M.amb = null; } };   /* the two crawlspace tracks, layered */
@@ -1320,7 +1324,7 @@ GAMES.push({
     s.hobo = s.carls[0];
     s.shop = null; s.mapBought = false;
     { const free = []; for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) if (m[r][c] === '.' && !(c === 1 && r === 1) && !(c === best[0] && r === best[1]) && !s.carls.some(q => q.c === c && q.r === r) && !(s.kingdom && s.kingdom.c === c && s.kingdom.r === r)) free.push([c, r]);
-      s.traps = []; for (let i = 0; i < [22, 26, 30][s.diff] && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.traps.push({ c, r }); } }   /* rat traps, baited with the good crackers */
+      s.traps = []; for (let i = 0; i < [22, 26, 30][s.diff] && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.traps.push({ c, r }); } s.gloves = []; for (let i = 0; i < 3 && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.gloves.push({ c, r }); } }   /* rat traps, baited with the good crackers */
     s.pc = 1; s.pr = 1; s.dir = m[1][2] === '.' ? 0 : 1; s.vx = 1.5; s.vy = 1.5; s.va = s.dir * Math.PI / 2; s.mv = 0;
     s.seen = new Set([101]); s.steps = 0; s.since = 0;
     const H = HERO(s), rod = H.name === 'ROD';
@@ -1363,7 +1367,8 @@ GAMES.push({
   },
   arrive(s) {
     s.seen.add(s.pr * 100 + s.pc); s.steps++; s.since++;
-    { const k = (s.traps || []).findIndex(q => q.c === s.pc && q.r === s.pr); if (k >= 0) { s.traps.splice(k, 1); s.crk++; s.shake = 0.15; SFX('click'); (s.log = s.log || []).push(['You slide a peanut butter cracker off a rat trap... SNAP! Missed your fingers.', 'A rat trap with a little cracker on it. Mine now.', 'Peanut butter cracker off a trap. Slightly chewed.'][Math.floor(s.rnd() * 3)]); } }
+    { const gl = (s.gloves || []).find(q => !q.got && q.c === s.pc && q.r === s.pr); if (gl) { gl.got = true; (s.log = s.log || []).push(['A muddy work glove. ...Carl\'s? It\'s warm.', 'Somebody\'s glove. Blue. Crunchy.', 'A glove. You do not put it on.'][Math.floor(s.rnd() * 3)]); } }
+    { const k = (s.traps || []).findIndex(q => !q.got && q.c === s.pc && q.r === s.pr); if (k >= 0) { s.traps[k].got = true; s.crk++; s.shake = 0.15; SFX('click'); (s.log = s.log || []).push(['You slide a peanut butter cracker off a rat trap... SNAP! Missed your fingers.', 'A rat trap with a little cracker on it. Mine now.', 'Peanut butter cracker off a trap. Slightly chewed.'][Math.floor(s.rnd() * 3)]); } }
     if (s.venom > 0) { s.venom--; if (s.hp > 1) { s.hp--; (s.log = s.log || []).push('The spider bite itches. -1 HP'); } }
     if (s.pc === s.goal.c && s.pr === s.goal.r) { s.fixT = 0.01; s.score += 500; TRL.amb(false);
       const met = s.met || [], big = ['THE RAT KING', 'BROWN RECLUSE', 'RACCOON', 'BIG BUFF RAT', 'POSSUM', 'SEWER RAT'].find(n => met.includes(n));   /* ...and then nobody believes you */
@@ -1600,7 +1605,8 @@ GAMES.push({
       for (let y = top; y < bot; y++) { const tY = Math.min(N - 1, ((y - half + lh / 2) * N / lh) | 0), c = T2[tY * N + tX]; buf[y * RW + x] = (c & 0xffffff) === 0xfaf0c8 /* the daylight crack doesn't dim */ ? c : shade(c, k); }
     }
     // the broken joint (a billboard)
-    const BB = [[s.goal, tx.pipe[Math.floor(s.t * 3) % 2]], ...(s.traps || []).map(q => [q, tx.trap])].map(([o, P]) => { const sx = o.c + 0.5 - px, sy = o.r + 0.5 - py; return { o, P, d: sx * sx + sy * sy }; }).sort((a, b2) => b2.d - a.d);
+    if (!tx.trapI && MG('ut_trap')) { tx.trapI = TRL.imgTex('ut_trap', 12); tx.snapI = TRL.imgTex('ut_trap_snap', 13); tx.gloveI = TRL.imgTex('ut_glove', 11); }
+    const BB = [[s.goal, tx.pipe[Math.floor(s.t * 3) % 2]], ...(s.traps || []).map(q => [q, q.got ? (tx.snapI || null) : (tx.trapI || tx.trap)]).filter(q => q[1]), ...(s.gloves || []).filter(q => !q.got && tx.gloveI).map(q => [q, tx.gloveI])].map(([o, P]) => { const sx = o.c + 0.5 - px, sy = o.r + 0.5 - py; return { o, P, d: sx * sx + sy * sy }; }).sort((a, b2) => b2.d - a.d);
     for (const { o, P: PP } of BB) { const sx = o.c + 0.5 - px, sy = o.r + 0.5 - py, inv = 1 / (plx * dy - dx * ply), tX = inv * (dy * sx - dx * sy), tY = inv * (-ply * sx + plx * sy);
       if (tY > 0.1) { const scx = (RW / 2) * (1 + tX / tY), sh = Math.abs(RH / tY), x0 = Math.floor(scx - sh / 2), y0 = Math.floor(half - sh / 2), P = PP, k = lit(tY) * 1.2 + (PP === tx.hobo[0] || PP === tx.hobo[1] ? 0.4 : 0);
         for (let x = Math.max(0, x0); x < Math.min(RW, x0 + sh); x++) { if (tY >= zb[x]) continue; const u = Math.min(N - 1, ((x - x0) * N / sh) | 0);
@@ -1702,7 +1708,7 @@ GAMES.push({
     else { const stink = 1 - s.gd[s.pr][s.pc] / Math.max(1, s.gmax);
       T('STINK', PX + 8, 110, '#c9a46a', 6); BAR(PX + 8, 116, PW - 16, 6, stink, stink > 0.75 ? '#a0d040' : '#8a6a3a');
       if (stink > 0.75 && Math.floor(t * 3) % 2) T('SMELLS CLOSE', PX + PW / 2, 132, '#a0d040', 6, 'center');
-      T(s.escort ? 'ESCORTING THE PRINCESS' : s.married ? 'MARRIED (TO A POSSUM)' : 'B = BAG / REST', PX + 8, 138, s.escort || s.married ? '#ff8ad0' : '#9fd1ff', 5); T('LIVES ' + '♥'.repeat(s.lives) + '♡'.repeat(3 - s.lives), PX + PW - 8, 126, '#e9665a', 5, 'right'); T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PB CRACKERS x' + s.crk, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
+      T(s.escort ? 'ESCORTING THE PRINCESS' : s.married ? 'MARRIED (TO A POSSUM)' : 'B = BAG / REST', PX + 8, 138, s.escort || s.married ? '#ff8ad0' : '#9fd1ff', 5); T('LIVES ' + '♥'.repeat(s.lives) + '♡'.repeat(3 - s.lives), PX + PW - 8, 126, '#e9665a', 5, 'right'); T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); if (MG('ut_crackers')) { g.save(); g.imageSmoothingEnabled = false; g.drawImage(MG('ut_crackers'), PX + PW - 22, 154, 14, 14); g.restore(); } T('PB CRACKERS x' + s.crk, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
     // bottom bar: the hero's portrait + health, and the message scroll
     bevel(10, 200, 56, 60);
     if (s.wake) { const [who, f] = s.wake.lines[s.wake.i], me = HERO(s).name.toLowerCase();
