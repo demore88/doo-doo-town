@@ -1450,7 +1450,7 @@ GAMES.push({
     let r = s.rnd() * pool.reduce((a, f) => a + f.w, 0), F = force || pool[0]; if (!force) for (const f of pool) { if ((r -= f.w) <= 0) { F = f; break; } }
     if (F.king) s.kingSeen = true;
     const hp = Math.round((F.hp[0] + Math.floor(s.rnd() * (F.hp[1] - F.hp[0] + 1))) * (F.king ? [1.1, 1.4, 1.7][s.diff] : 1.5 + this.zone(s) * 0.6));   /* deeper ones are tougher */
-    s.battle = { F, hp, max: hp, sel: 0, q: [], stun: 0, open: 0.6, blink: 0, dmgT: 0, pose: 2, poseT: 0.8, out: 0 }; s.since = 0; s.fights++; s.flash = 0.6; (s.met = s.met || []).push(F.name); TRL.bgm(true); TRL.cry(F, true);
+    s.battle = { F, hp, max: hp, sel: 4, q: [], stun: 0, open: 0.6, blink: 0, dmgT: 0, pose: 2, poseT: 0.8, out: 0 }; s.since = 0; s.fights++; s.flash = 0.6; (s.met = s.met || []).push(F.name); TRL.bgm(true); TRL.cry(F, true);
     this.say(s, F.princess ? 'THE POSSUM PRINCESS blocks your way. She expects tribute.' : F.gary ? 'It is GARY. Gary is a raccoon in a tiny vest. Gary has done this before.' : F.king ? 'THE RAT KING rises from the muck, cape and all!' : F.name === 'BIG BUFF RAT' ? 'A BIG BUFF RAT flexes at you. It has been working out.' : F.venom ? 'A BROWN RECLUSE drops down from a joist!' : F.thief ? 'A RACCOON was already down here. It is not happy.' : F.possum ? 'A POSSUM hisses at you from behind a pier!' : `A ${F.name} jumps out of the dark!`);
   },
   // CRAWLSPACE CARL: lives down here. Has for years. Sells what he's got.
@@ -1551,7 +1551,7 @@ GAMES.push({
     let pick = I.Ap ? B.sel : null;
     if (I.ptr.clicked) for (let i = 0; i < L.length; i++) { const [x, y, w, h] = this.bagBox(i); if (I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h) { B.sel = i; pick = i; } }
     if (pick === null) return; const it = L[pick];
-    if (it.id === 'close') { s.bag = null; if (B.battle) s.battle.sel = 0; SFX('ui_tap'); return; }
+    if (it.id === 'close') { s.bag = null; if (B.battle) s.battle.sel = 4; SFX('ui_tap'); return; }
     if (it.off) { SFX('click'); return; } SFX('ui_select');
     const heal = n => { const h0 = s.hp; s.hp = Math.min(s.hpMax, s.hp + n); return s.hp - h0; };
     let msg = '';
@@ -1676,7 +1676,7 @@ GAMES.push({
       else { this.say(s, "You're stuck in the muck!"); b.after = () => foeTurn(); }
     }
   },
-  opts(s) { const K = s.battle && s.battle.F.king; return [{ id: 'whack', label: this.weapon(s) === 'fists' ? 'PUNCH' : 'WHACK' }, { id: 'light', label: `FLASHLIGHT x${s.lights}`, off: s.lights <= 0 }, { id: 'item', label: 'BAG' }, { id: 'pb', label: `TOSS A CRACKER x${s.crk}`, off: s.crk <= 0 || K }, { id: 'run', label: 'RUN', off: K }]; },
+  opts(s) { const K = s.battle && s.battle.F.king; return [{ id: 'light', label: `FLASHLIGHT x${s.lights}`, off: s.lights <= 0 }, { id: 'run', label: 'RUN', off: K }, { id: 'pb', label: `TOSS A CRACKER x${s.crk}`, off: s.crk <= 0 || K }, { id: 'item', label: 'BAG' }, { id: 'whack', label: this.weapon(s) === 'fists' ? 'PUNCH' : 'WHACK' }]; },   /* flashlight | run / cracker | bag / big WHACK across the bottom */
   optBox(i, n = 4) { const gap = Math.min(34, Math.floor(164 / n)), h = gap - 3; return [342, 26 + i * gap, 126, h]; },   /* list buttons, down the whole right-hand column */
   btnBox(i, n) { const W3 = 61, H3 = 49; if (i === 4 && n === 5) return [342, 26 + 2 * (H3 + 4), 126, H3]; return [342 + (i % 2) * (W3 + 4), 26 + Math.floor(i / 2) * (H3 + 4), W3, H3]; },   /* fight buttons: a 2x2 grid + one wide one */
   bagBtn() { return [424, 132, 44, 50]; },
