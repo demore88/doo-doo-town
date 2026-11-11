@@ -17,9 +17,9 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794418588"></script>
-<script src="../js/music.js?v=1794418588"></script>
-<script src="../js/sfx.js?v=1794418588"></script>
+<script src="../js/state.js?v=1794419792"></script>
+<script src="../js/music.js?v=1794419792"></script>
+<script src="../js/sfx.js?v=1794419792"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('spooky');
@@ -73,7 +73,14 @@ const SND = {
   snag() { tone(160, 0.15, 'square', 0.05, 0, 90); },
   ding() { tone(1320, 0.3, 'triangle', 0.05); tone(1760, 0.4, 'triangle', 0.04, 0.12); },
 };
-if (typeof DDTSfx !== 'undefined') DDTSfx.patch(SND);   // recorded sounds where we have them
+if (typeof DDTSfx !== 'undefined') {
+  DDTSfx.patch(SND);   // recorded sounds where we have them
+  SND.chirp = (n = 3) => DDTSfx.play('alien_voice', { offset: Math.random() * 13, dur: Math.min(2.4, 0.35 + n * 0.3) });   /* a slice of the alien talking */
+  SND.beam = () => DDTSfx.play('teleporter');
+}
+// background bed for each scene (kept quiet). amb('x') swaps it, amb() stops it.
+let AMB = null, AMBN = '';
+function amb(name, vol = 1) { if (AMBN === name) return; if (AMB) AMB.stop(); AMB = null; AMBN = name || ''; if (name && typeof DDTSfx !== 'undefined') AMB = DDTSfx.loop(name, { vol }); }
 
 // ---------- input ----------
 const keys = {}, hit = {};
@@ -149,11 +156,16 @@ function crewDraw(who, x, y, f, s, a) {
   else g.drawImage(I, fi * fw, 0, fw, I.height, Math.round(x - w / 2), Math.round(y - h), w, h);
   g.imageSmoothingEnabled = false;
 }
-function rodBed(lie, dy = 0) {   /* hip under the covers at (200,194); lie 1 = flat on his back, head on the pillow; 0 = sitting up facing the window */
+function rodBed(lie, dy = 0) {
+  const up = (1 - lie) * 7;   /* the covers come up with him when he sits up */   /* hip under the covers at (200,194); lie 1 = flat on his back, head on the pillow; 0 = sitting up facing the window */
   const I = IMG.rod; if (!I) return; const fw = I.width / 9, w = 24 * 2 * 0.94, h = 40 * 2 * 0.94;
-  g.save(); g.beginPath(); g.rect(0, 0, 188, H); g.rect(188, 0, W, 186); g.clip();   /* only what's outside the blanket shows */
+  g.save(); g.beginPath(); g.rect(0, 0, 188, H); g.rect(188, 0, W, 186 - up); g.clip();   /* only what's outside the blanket shows */
   g.translate(200, 194 + dy); g.rotate(-Math.PI / 2 * lie); g.imageSmoothingEnabled = true;
-  g.drawImage(I, 6 * fw, 0, fw, I.height, -w / 2, -h * 0.56, w, h); g.restore(); g.imageSmoothingEnabled = false;
+  g.drawImage(I, 6 * fw, 0, fw, I.height, -w / 2, -h * 0.56, w, h);
+  const P = (fx, fy) => [-w / 2 + fx * w, -h * 0.56 + fy * h];   /* sleep mask: over his eyes asleep, pulled down around his neck once he's up */
+  if (lie > 0.5) { const [x0, y0] = P(0.40, 0.205), [x1] = P(0.65, 0); R(x0, y0, x1 - x0, 3.2, '#2b2b3d'); R(x0 + 4, y0, x1 - x0 - 4, 0.8, '#55557a'); }
+  else { const [x0, y0] = P(0.46, 0.335), [x1] = P(0.60, 0); R(x0, y0, x1 - x0, 2.2, '#2b2b3d'); }
+  g.restore(); g.imageSmoothingEnabled = false;
 }
 function rod(x, y, f = 0, s = 2, a = 1) {      // x,y = feet, center
   crewDraw('rod', x, y, f, s, a); g.globalAlpha = 1;
@@ -248,14 +260,14 @@ function bedroom(dawn = false) {
   if (dawn) { g.fillStyle = 'rgba(255,170,90,0.16)'; g.fillRect(0, 0, W, H); g.fillStyle = 'rgba(255,200,120,0.18)'; g.beginPath(); g.moveTo(wx, wy); g.lineTo(wx + ww, wy); g.lineTo(wx + ww - 30, 270); g.lineTo(wx - 120, 270); g.fill(); }
   else { g.fillStyle = 'rgba(8,12,40,0.35)'; g.fillRect(0, 0, W, H); g.fillStyle = `rgba(120,170,255,${0.08 + flick * 0.08})`; g.beginPath(); g.moveTo(115, 156); g.lineTo(300, 120); g.lineTo(330, 260); g.lineTo(115, 186); g.fill(); R(83, 159, 32, 25, `rgba(150,200,255,${0.15 + flick * 0.25})`); }
 }
-function bed(front) {   /* the bed is in the painting: this is Rod's plaid comforter, drawn over him */
-  if (!front) return;
-  g.save(); g.beginPath(); g.moveTo(188, 206); g.lineTo(188, 189); g.quadraticCurveTo(204, 180, 240, 184); g.quadraticCurveTo(280, 187, 326, 186); g.lineTo(328, 208); g.lineTo(188, 208); g.closePath();
+function bed(front, lie = 1) {   /* the bed is in the painting: this is Rod's plaid comforter, drawn over him */
+  if (!front) return; const up = (1 - lie) * 7;
+  g.save(); g.beginPath(); g.moveTo(188, 206); g.lineTo(188, 189 - up); g.quadraticCurveTo(206, 180 - up, 244 + up, 184); g.quadraticCurveTo(280, 187, 326, 186); g.lineTo(328, 208); g.lineTo(188, 208); g.closePath();
   g.fillStyle = '#7a2c2c'; g.fill(); g.clip();
-  for (let x = 190; x < 330; x += 12) { R(x, 180, 4, 30, 'rgba(40,10,14,.45)'); R(x + 7, 180, 1, 30, 'rgba(240,200,170,.25)'); }
-  for (let y = 186; y < 210; y += 8) { R(188, y, 142, 3, 'rgba(40,10,14,.4)'); R(188, y + 5, 142, 1, 'rgba(240,200,170,.2)'); }
+  for (let x = 190; x < 330; x += 12) { R(x, 160, 4, 50, 'rgba(40,10,14,.45)'); R(x + 7, 160, 1, 50, 'rgba(240,200,170,.25)'); }
+  for (let y = 162; y < 210; y += 8) { R(188, y, 142, 3, 'rgba(40,10,14,.4)'); R(188, y + 5, 142, 1, 'rgba(240,200,170,.2)'); }
   R(188, 204, 142, 4, 'rgba(0,0,0,.25)'); g.restore();
-  R(186, 187, 9, 19, '#e6dccb'); R(186, 187, 9, 2, '#fff8ea'); R(193, 187, 2, 19, '#c9bda8');   /* sheet folded over the top */
+  R(186, 187 - up, 9, 19 + up, '#e6dccb'); R(186, 187 - up, 9, 2, '#fff8ea'); R(193, 187 - up, 2, 19 + up, '#c9bda8');   /* sheet folded over the top */
 }
 function shipRoom() {
   if (bg('bg_ship')) return;
@@ -342,12 +354,12 @@ SCENES.window = async () => {
   view = () => {
     bedroom(); bed(false);
     if (st.inBed) rodBed(st.lie);
-    bed(true);
+    bed(true, st.inBed ? st.lie : 1);
     if (!st.inBed) rod(st.rodX, 252, st.rodF, 2, st.rodA);
     if (st.zz) { const t = performance.now() / 1000; for (let i = 0; i < 3; i++) { const p = (t * 0.5 + i / 3) % 1; T('z', 176 + p * 30, 178 - p * 40, `rgba(255,255,255,${1 - p})`, 6 + i * 2, 'left', false); } }
   };
   await fadeIn(900);
-  window.RAIN = DDTSfx.loop('rain_loop', { vol: 0.6 });
+  window.RAIN = DDTSfx.loop('rain_loop', { vol: 0.6 }); amb('tv_static');   /* the TV left on, quietly hissing */
   await card(['SEPTEMBER 10, 2022', '2:29 AM', "ROD'S HOUSE"], 2000);
   await wait(800);
   await tween(st, 'alienY', 70, 2600);
@@ -378,6 +390,7 @@ SCENES.beam = async () => {
     if (!spr('ufo', Math.floor(t * 6) % 3, sx, sy, 58, { mid: true })) { E(sx, sy, 56, 13, '#7c8698'); E(sx, sy - 9, 24, 13, '#a6d8ff'); }
     rod(st.rodX, st.rodY, st.rodY < 232 ? 0 : 6, st.rodS, st.rodA);
   };
+  amb('alien_ship');
   await fadeIn(700);
   await card(['2:31 AM'], 900);
   await tween(st, 'shipY', 70, 2000);
@@ -463,6 +476,7 @@ const MatchGame = {
 };
 SCENES.lang = async () => {
   if (window.RAIN) RAIN.stop();   // inside the ship now
+  amb('inside_alien_ship');
   view = shipLangRoom; st.tilt = 0;
   await fadeIn(700);
   SND.chirp(5); st.words = ['me', 'no', 'you']; await wait(1400); st.words = null;
@@ -494,7 +508,7 @@ SCENES.lang = async () => {
 };
 
 SCENES.toilet = async () => {
-  Object.assign(st, { rodX: 150, rodF: 6, hoseT: 0, alienTilt: 0 });
+  Object.assign(st, { rodX: 150, rodF: 6, hoseT: 0, alienTilt: 0 }); amb('inside_alien_ship');
   view = () => { shipRoom(); sparkPanel(222, 112); spaceToilet(300, 226, st.hoseT, true); rod(st.rodX, 226, st.rodF); alien(400, 226, { s: 1.4, point: st.point, tilt: st.alienTilt }); if (st.words) bubble(400, 142, st.words, 3); };
   await fadeIn(600);
   st.point = [300, 196]; SND.chirp(2); await wait(1200); st.point = null;
@@ -568,6 +582,7 @@ const CableGame = {
   },
 };
 SCENES.cable = async () => {
+  amb('inside_alien_ship');
   view = () => {};
   await fadeIn(300);
   for (;;) {
@@ -581,7 +596,7 @@ SCENES.cable = async () => {
 };
 
 SCENES.reveal = async () => {
-  Object.assign(st, { cableUp: 0, holo: 0, rodF: 6, happy: false });
+  Object.assign(st, { cableUp: 0, holo: 0, rodF: 6, happy: false }); amb('inside_alien_ship');
   view = () => {
     shipRoom(); spaceToilet(300, 226, 0, !st.happy);
     rod(196, 226, st.rodF);
@@ -616,7 +631,7 @@ SCENES.reveal = async () => {
 };
 
 SCENES.dropoff = async () => {   /* dropped back off in the front yard at sunrise, just before the alarm */
-  Object.assign(st, { shipY: -60, shipX: 290, beam: 0, rodX: 290, rodY: 108, rodA: 0, rodF: 0 });
+  Object.assign(st, { shipY: -60, shipX: 290, beam: 0, rodX: 290, rodY: 108, rodA: 0, rodF: 0 }); if (window.RAIN) RAIN.stop(); amb('alien_ship');
   view = () => {
     if (!bg('bg_yard_dawn')) { R(0, 0, W, H, '#f2a65a'); R(0, 236, W, 34, '#2f5a2a'); }
     if (IMG.van) { const fw = (IMG.van.width / Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35)))), vh = 112 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.drawImage(IMG.van, 0, 0, fw, IMG.van.height, 352, 258 - vh, 112, vh); g.imageSmoothingEnabled = false; }
@@ -634,6 +649,7 @@ SCENES.dropoff = async () => {   /* dropped back off in the front yard at sunris
   await tween(st, 'beam', 0, 400);
   SND.chirp(3); await wait(300);
   await Promise.all([tween(st, 'shipX', 560, 900, t => t * t), tween(st, 'shipY', -60, 900, t => t * t)]);   /* and gone */
+  amb();
   await wait(900);
   tone(880, 0.1, 'square', 0.04); tone(880, 0.1, 'square', 0.04, 0.25); tone(880, 0.1, 'square', 0.04, 0.5); tone(880, 0.1, 'square', 0.04, 0.75);   /* his phone alarm */
   await wait(900);

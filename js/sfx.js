@@ -7,10 +7,10 @@
 // Independent of the music: the ♪ button only turns the music off.
 // =====================================================================
 const DDTSfx = (() => {
-  const NAMES = ['moose', 'raccoon', 'animal_hit', 'animal_hit_2', 'car_crash', 'squirrel_death_1', 'squirrel_death_2', 'squirrel_death_3', 'deer_glass', 'flush', 'flush_big', 'clog', 'gurgle', 'drain', 'splash', 'squish', 'bubble', 'bubbles_loop', 'drips_loop',
+  const NAMES = ['alien_ship', 'teleporter', 'inside_alien_ship', 'alien_voice', 'tv_static', 'moose', 'raccoon', 'animal_hit', 'animal_hit_2', 'car_crash', 'squirrel_death_1', 'squirrel_death_2', 'squirrel_death_3', 'deer_glass', 'flush', 'flush_big', 'clog', 'gurgle', 'drain', 'splash', 'squish', 'bubble', 'bubbles_loop', 'drips_loop',
     'drill_loop', 'drill_burst', 'drill_stop', 'door', 'click', 'faucet', 'van_arrive', 'rain_loop', 'jackhammer',
     'van_drive_loop', 'engine_start', 'seatbelt', 'van_door_open', 'van_door_close', 'slide_door', 'horn', 'horn_angry', 'phone_ring', 'vm_ping', 'ui_tap', 'ui_select', 'espresso_loop'];
-  const VOL = { moose: 0.95, raccoon: 0.9, animal_hit: 0.9, animal_hit_2: 0.9, car_crash: 0.85, squirrel_death_1: 0.9, squirrel_death_2: 0.9, squirrel_death_3: 0.9, deer_glass: 0.9, flush: 0.8, flush_big: 0.8, clog: 0.7, gurgle: 0.8, drain: 0.7, splash: 0.9, squish: 0.8, bubble: 0.7, bubbles_loop: 0.5, drips_loop: 0.45,
+  const VOL = { alien_ship: 0.22, inside_alien_ship: 0.16, tv_static: 0.07, teleporter: 0.7, alien_voice: 0.6, moose: 0.95, raccoon: 0.9, animal_hit: 0.9, animal_hit_2: 0.9, car_crash: 0.85, squirrel_death_1: 0.9, squirrel_death_2: 0.9, squirrel_death_3: 0.9, deer_glass: 0.9, flush: 0.8, flush_big: 0.8, clog: 0.7, gurgle: 0.8, drain: 0.7, splash: 0.9, squish: 0.8, bubble: 0.7, bubbles_loop: 0.5, drips_loop: 0.45,
     drill_loop: 0.45, drill_burst: 0.6, drill_stop: 0.6, door: 0.8, click: 0.5, faucet: 0.6, van_arrive: 0.55, rain_loop: 0.45, jackhammer: 0.5,
     van_drive_loop: 0.35, engine_start: 0.55, seatbelt: 0.6, van_door_open: 0.7, van_door_close: 0.75, slide_door: 0.6, horn: 0.5, horn_angry: 0.5,
     phone_ring: 0.6, vm_ping: 0.6, ui_tap: 0.45, ui_select: 0.5, espresso_loop: 0.04 };
@@ -30,14 +30,16 @@ const DDTSfx = (() => {
     return (loading[name] = fetch(`${root}assets/sfx/${name}.mp3`).then(r => r.arrayBuffer()).then(a => new Promise((res, rej) => ac.decodeAudioData(a, res, rej)))
       .then(b => (buf[name] = b)).catch(() => null));
   }
-  function start(name, { vol = 1, loop = false, rate = 1 } = {}) {
+  function start(name, { vol = 1, loop = false, rate = 1, offset = 0, dur = 0 } = {}) {   /* offset/dur: play just a slice of a longer clip */
     const h = { src: null, stopped: false, stop() { this.stopped = true; try { this.src && this.src.stop(); } catch (e) {} } };
     if (muted()) return h;
     get(name).then(b => {
       if (!b || h.stopped || !ctx()) return;
       const s = ac.createBufferSource(), v = ac.createGain(); s.buffer = b; s.loop = loop; s.playbackRate.value = rate;
       if (loop) { s.loopStart = 0.05; s.loopEnd = b.duration - 0.05; }
-      v.gain.value = (VOL[name] ?? 0.7) * vol; s.connect(v).connect(out); s.start(); h.src = s;
+      const gv = (VOL[name] ?? 0.7) * vol; v.gain.value = gv; s.connect(v).connect(out);
+      if (dur > 0) { const o = Math.min(offset, Math.max(0, b.duration - dur)), t0 = ac.currentTime; v.gain.setValueAtTime(0, t0); v.gain.linearRampToValueAtTime(gv, t0 + 0.04); v.gain.setValueAtTime(gv, t0 + dur - 0.12); v.gain.linearRampToValueAtTime(0, t0 + dur); s.start(t0, o, dur); }
+      else s.start(0, offset); h.src = s;
     });
     return h;
   }
