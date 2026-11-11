@@ -1271,7 +1271,14 @@ TRL.UTS = (n, f, cx, by, h, flip, a) => { const im = MG(n); if (!im) return fals
   g.save(); if (a != null) g.globalAlpha = a; g.imageSmoothingEnabled = false; g.translate(cx, by); if (flip) g.scale(-1, 1); g.drawImage(im, f * cw, 0, cw, im.height, -w / 2, -h, w, h); g.restore(); return true; };
 TRL.hands = (s, VX, VY, VW, VH, t) => {
   const G2 = s.gear, wpn = G2.includes('cutter') ? 'cutter' : G2.includes('wrench') ? 'monkey' : G2.includes('pipewrench') ? 'pipe' : 'fist', lid = G2.includes('lid');
-  const bob = s.mv > 0 ? Math.sin(t * 16) * 3 : Math.sin(t * 2) * 1, sw = s.swing > 0 ? Math.sin((1 - s.swing / 0.35) * Math.PI) : 0, by = VY + VH;
+  const bob = s.mv > 0 ? Math.sin(t * 16) * 3 : Math.sin(t * 2) * 1, sw = s.swing > 0 ? Math.sin((1 - s.swing / 0.35) * Math.PI) : 0, by = VY + VH, D = 3.6;
+  const L = MG(lid ? (s.guard > 0 ? 'ut_h_lidup' : 'ut_h_lid') : s.lights > 0 ? 'ut_h_lighton' : 'ut_h_lightoff'), Rt = MG('ut_h_' + wpn);
+  if (L && Rt) {   /* the painted hands: drawn smooth (not chunky) so you can tell what you're holding */
+    g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    { const w = L.width / D, h = L.height / D, gu = s.guard > 0 ? Math.sin(Math.min(1, (0.6 - s.guard) / 0.12) * Math.PI / 2) * 5 : 0; g.drawImage(L, VX + 18, by - h + 8 + bob * 0.8 - gu, w, h); }
+    { const w = Rt.width / D, h = Rt.height / D, x = VX + VW - w - 24, y = by - h + 10 + bob - sw * 8;
+      g.translate(x + w * 0.55, y + h * 0.75); g.rotate(-0.6 * sw); g.drawImage(Rt, -w * 0.55, -h * 0.75, w, h); }
+    g.restore(); return; }
   const glove = (x, y, w, h) => { R(x, y, w, h, '#8a5a2e'); R(x, y, w, 2, '#b07a44'); R(x + 2, y + 3, w - 4, 1, '#6a4422'); for (let i = 1; i < 4; i++) R(x + (w / 4) * i, y, 1, 4, '#5a3a1c'); };   /* leather work gloves */
   // left: the flashlight, or the trash can lid strapped on
   { const x = VX + 40, y = by - 46 + bob;
@@ -1335,7 +1342,7 @@ GAMES.push({
   },
   open(s, c, r) { return s.map[r] && s.map[r][c] === '.'; },
   update(s, dt, I) {
-    s.t += dt; FX(s, dt); s.flash = Math.max(0, s.flash - dt); s.shake = Math.max(0, (s.shake || 0) - dt); s.swing = Math.max(0, (s.swing || 0) - dt);
+    s.t += dt; FX(s, dt); s.flash = Math.max(0, s.flash - dt); s.shake = Math.max(0, (s.shake || 0) - dt); s.swing = Math.max(0, (s.swing || 0) - dt); s.guard = Math.max(0, (s.guard || 0) - dt);
     if (s.fixT) { s.fixT += dt * (s.fixT > 3.4 && (I.Ap || I.ptr.clicked) ? 6 : 1); if (s.fixT > 9.4) { const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.t < 50 + s.gmax * 2, f >= 0.3), line: s.epi[1] + (s.restMin ? ` (Rested ${s.restMin} min.)` : ''), extraTime: s.restMin }); } return; }
     if (!s.battle) { TRL.music.atick = performance.now(); TRL.amb(true); } else TRL.amb(false);
     if (s.talk) { const K = s.talk; K.t += dt; if ((K.t > 0.4 && (I.Ap || I.ptr.clicked)) || K.t > 4.5) { K.i++; K.t = 0; if (K.i >= K.lines.length) { const me = HERO(s).name, them = me === 'ROD' ? 'Matt' : 'Rod'; s.talk.i = K.lines.length - 1; s.end = { win: true, stars: 1, carl: true, extraTime: s.restMin, line: `${them} fixed it. ${me === 'ROD' ? 'Rod' : 'Matt'} is still talking about Carl.` }; } } return; }
@@ -1554,7 +1561,7 @@ GAMES.push({
       if (b.F.thief && s.crk > 0 && s.rnd() < 0.35) { const n2 = b.F.gary ? Math.min(2, s.crk) : 1; this.say(s, b.F.gary ? `GARY pockets ${n2} of your crackers. In his VEST.` : 'The RACCOON snatches one of your crackers!', () => { s.crk -= n2; b.stolen = (b.stolen || 0) + n2; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); }); return; }
       const d = Math.max(1, Math.round((b.F.atk[0] + s.rnd() * (b.F.atk[1] - b.F.atk[0])) * (s.k || 1) * (1 + (b.F.king ? 0 : this.zone(s) * 0.25))) - s.def);   /* your gear soaks some of it */
       this.say(s, b.F.king ? `THE RAT KING rakes you with royal claws! -${d} HP` : b.F.venom ? `The BROWN RECLUSE bites! -${d} HP. That's gonna itch.` : b.F.thief ? `The RACCOON claws you! -${d} HP` : `The ${b.F.name} bites! -${d} HP`,
-        () => { s.hp -= d; s.hits++; s.shake = 0.35; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); if (b.F.venom) s.venom = 6; });
+        () => { s.hp -= d; s.hits++; s.shake = 0.35; s.guard = 0.6; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); if (b.F.venom) s.venom = 6; });
       b.after = () => { if (s.hp <= 0) { s.hp = 0; TRL.bgm(false); s.battle = null; if (s.lives > 0) this.respawn(s); else this.defeated(s); } };
     };
     const won = () => { this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { const loot = b.F.king ? 4 : b.F.gary ? 5 : 1 + Math.floor(s.rnd() * 2); s.crk += loot + (b.stolen || 0); if (b.stolen) (s.log = s.log || []).push(`You get your ${b.stolen} stolen cracker${b.stolen > 1 ? 's' : ''} back, too.`); this.gainXP(s, b.F.pts); if (b.F.king) s.kingDone = true; (s.log = s.log || []).push(`It dropped ${loot} peanut butter cracker${loot > 1 ? 's' : ''}. Where was it keeping those.`); s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
@@ -1606,7 +1613,15 @@ GAMES.push({
     }
     // the broken joint (a billboard)
     if (!tx.trapI && MG('ut_trap')) { tx.trapI = TRL.imgTex('ut_trap', 12); tx.snapI = TRL.imgTex('ut_trap_snap', 13); tx.gloveI = TRL.imgTex('ut_glove', 11); }
-    const BB = [[s.goal, tx.pipe[Math.floor(s.t * 3) % 2]], ...(s.traps || []).map(q => [q, q.got ? (tx.snapI || null) : (tx.trapI || tx.trap)]).filter(q => q[1]), ...(s.gloves || []).filter(q => !q.got && tx.gloveI).map(q => [q, tx.gloveI])].map(([o, P]) => { const sx = o.c + 0.5 - px, sy = o.r + 0.5 - py; return { o, P, d: sx * sx + sy * sy }; }).sort((a, b2) => b2.d - a.d);
+    const art = !!MG('ut_trap');   /* with the painted finds loaded, traps and gloves get drawn smooth on top of the view (see draw), not as chunky blocks */
+    s.props = [];
+    if (art) for (const [q, n, w] of [...(s.traps || []).map(q => [q, q.got ? 'ut_trap_snap' : 'ut_trap', q.got ? 13 : 12]), ...(s.gloves || []).filter(q => !q.got).map(q => [q, 'ut_glove', 11])]) {
+      const sx = q.c + 0.5 - px, sy = q.r + 0.5 - py, inv = 1 / (plx * dy - dx * ply), tX = inv * (dy * sx - dx * sy), tY = inv * (-ply * sx + plx * sy); if (tY <= 0.15 || tY > 9) continue;
+      const scx = (RW / 2) * (1 + tX / tY), hw = (w / N) * (RH / tY) / 2; let a = 1e9, b2 = -1e9;
+      for (let x = Math.max(0, Math.floor(scx - hw)); x < Math.min(RW, Math.ceil(scx + hw)); x++) if (tY < zb[x]) { a = Math.min(a, x); b2 = Math.max(b2, x + 1); }
+      if (b2 > a) s.props.push({ n, w: w / N, x: scx / RW, z: tY, a: a / RW, b: b2 / RW, k: Math.min(1, lit(tY) * 1.2 * lightCol[Math.max(0, Math.min(RW - 1, Math.round(scx)))]) }); }
+    s.props.sort((p1, p2) => p2.z - p1.z);
+    const BB = [[s.goal, tx.pipe[Math.floor(s.t * 3) % 2]], ...(art ? [] : (s.traps || []).map(q => [q, tx.trap]))].map(([o, P]) => { const sx = o.c + 0.5 - px, sy = o.r + 0.5 - py; return { o, P, d: sx * sx + sy * sy }; }).sort((a, b2) => b2.d - a.d);
     for (const { o, P: PP } of BB) { const sx = o.c + 0.5 - px, sy = o.r + 0.5 - py, inv = 1 / (plx * dy - dx * ply), tX = inv * (dy * sx - dx * sy), tY = inv * (-ply * sx + plx * sy);
       if (tY > 0.1) { const scx = (RW / 2) * (1 + tX / tY), sh = Math.abs(RH / tY), x0 = Math.floor(scx - sh / 2), y0 = Math.floor(half - sh / 2), P = PP, k = lit(tY) * 1.2 + (PP === tx.hobo[0] || PP === tx.hobo[1] ? 0.4 : 0);
         for (let x = Math.max(0, x0); x < Math.min(RW, x0 + sh); x++) { if (tY >= zb[x]) continue; const u = Math.min(N - 1, ((x - x0) * N / sh) | 0);
@@ -1630,6 +1645,9 @@ GAMES.push({
     const sh = s.shake > 0 ? (Math.random() - 0.5) * 6 * s.shake * 3 : 0;
     g.save(); g.beginPath(); g.rect(VX, VY, VW, VH); g.clip();
     g.imageSmoothingEnabled = false; g.drawImage(s.cv, VX + sh, VY, VW, VH);
+    for (const P of s.props || []) { const im = MG(P.n); if (!im) continue; const sz = VH / P.z, w = P.w * sz, h = w * im.height / im.width, cx = VX + sh + P.x * VW, fy = VY + VH / 2 + sz / 2;
+      g.save(); g.beginPath(); g.rect(VX + sh + P.a * VW, VY, (P.b - P.a) * VW, VH); g.clip(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.filter = `brightness(${Math.max(0.08, P.k).toFixed(2)})`;
+      g.drawImage(im, cx - w / 2, fy - h, w, h); g.restore(); }
     if (s.carlScr && MG('ut_carl') && !(b && b.open <= 0)) { const C2 = s.carlScr, im = MG('ut_carl'), cw = im.width / 4, h = VH * C2.h * 0.82, w = h * cw / im.height, fx = VX + sh + C2.x * VW, fy = VY + VH / 2 + VH * C2.h / 2;
       const S2 = s.shop, f = S2 && S2.buyT > 0 ? 3 : S2 && S2.t < 1.6 ? 2 : Math.floor(t * 2.2) % 2;   /* candle flicker · talking · handing it over */
       g.save(); g.filter = `brightness(${C2.k.toFixed(2)})`; g.imageSmoothingEnabled = false; g.drawImage(im, f * cw, 0, cw, im.height, fx - w / 2, fy - h, w, h); g.restore(); }
