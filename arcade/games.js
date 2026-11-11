@@ -1601,8 +1601,9 @@ GAMES.push({
       for (let i = 0; i < 6; i++) { const fx = VX + 20 + i * 56; R(fx, VY + 52, 3, 12, '#e8dcc0'); C(fx + 1.5, VY + 49 + Math.sin(t * 9 + i) * 1, 2.5, '#ffd27a'); }   /* candles on the dirt wall */
       const crown = (x, y, sz) => { g.fillStyle = '#f7d44a'; g.beginPath(); g.moveTo(x - sz, y + sz * 0.6); g.lineTo(x - sz, y - sz * 0.2); g.lineTo(x - sz * 0.45, y + sz * 0.25); g.lineTo(x, y - sz * 0.7); g.lineTo(x + sz * 0.45, y + sz * 0.25); g.lineTo(x + sz, y - sz * 0.2); g.lineTo(x + sz, y + sz * 0.6); g.fill(); C(x, y - sz * 0.7, sz * 0.18, '#ff8ad0'); };
       const dead = k >= 13 && k <= 13, sad = k >= 16, base = VY + VH - 18;
-      TRL.UTS('ut_possum', dead ? 7 : (Math.floor(t * 1.5) % 3 === 0 ? 1 : 0), VX + 60, base, 70, false); crown(VX + 78, base - 50, 9);   /* the King */
-      TRL.UTS('ut_possum', dead ? 7 : (Math.floor(t * 1.5 + 1) % 3 === 0 ? 1 : 0), VX + VW - 60, base, 66, true); crown(VX + VW - 78, base - 47, 6);   /* the Queen */
+      if (MG('ut_royals')) { const kf = dead ? 3 : k >= 14 ? 2 : [1, 3, 6, 9, 11].includes(k) ? 1 : 0, qf = dead ? 7 : k >= 15 ? 6 : [2, 5, 14].includes(k) ? 5 : 4;
+        TRL.UTS('ut_royals', kf, VX + 62, base, 84, false); TRL.UTS('ut_royals', qf, VX + VW - 62, base, 78, true); }   /* the King (scepter, cape) and the Queen (pearls, lace) */
+      else { TRL.UTS('ut_possum', dead ? 7 : 0, VX + 60, base, 70, false); crown(VX + 78, base - 50, 9); TRL.UTS('ut_possum', dead ? 7 : 0, VX + VW - 60, base, 66, true); crown(VX + VW - 78, base - 47, 6); }
       if (MG('ut_princess')) TRL.UTS('ut_princess', sad ? 7 : k === 5 || k === 6 ? 6 : k >= 9 && k <= 12 ? 3 : k >= 13 && k <= 14 ? (Math.floor(t * 3) % 2 ? 4 : 5) : Math.floor(t * 1.2) % 3 === 0 ? 1 : 0, VX + VW / 2, base + 4, 92, false);
       else { TRL.UTS('ut_possum', sad ? 7 : k >= 9 && k <= 12 ? 4 : 0, VX + VW / 2, base + 4, 82, false); crown(VX + VW / 2 + 26, base - (k >= 9 && k <= 12 ? 78 : 55), 7); }   /* the Princess */
       if (k >= 9 && k <= 12) { g.globalAlpha = 0.5; g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(VX + VW / 2 + 4, base - 84); g.lineTo(VX + VW / 2 - 30, base - 20); g.lineTo(VX + VW / 2 + 24, base - 30); g.fill(); g.globalAlpha = 1; }   /* her veil */
@@ -1652,12 +1653,14 @@ GAMES.push({
       T(s.escort ? 'ESCORTING THE PRINCESS' : s.married ? 'MARRIED (TO A POSSUM)' : 'B = BAG / REST', PX + 8, 138, s.escort || s.married ? '#ff8ad0' : '#9fd1ff', 5); T('FLASHLIGHT x' + s.lights, PX + 8, 150, '#e8dcc0', 6); T('PB CRACKERS x' + s.crk, PX + 8, 162, '#e8dcc0', 6); T('CRITTERS BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 6); }
     // bottom bar: the hero's portrait + health, and the message scroll
     bevel(10, 200, 56, 60);
-    if (s.shop && MG('ut_carl_face')) { const S = s.shop, tw = Math.floor(t / 3.1) % 3 === 2 && (t % 3.1) < 0.18, f = tw ? 7 : S.flip != null && S.t > 1.1 ? S.flip : S.face;
+    if (s.wed && /POSSUM (KING|QUEEN)/.test(s.wed.lines[s.wed.i][0]) && MG('ut_royal_face')) { const k = s.wed.i, king = s.wed.lines[k][0] === 'POSSUM KING', f = king ? ({ 1: 0, 3: 1, 6: 1, 9: 1, 11: 1 }[k] ?? 3) : ({ 2: 4, 5: 4, 14: 7 }[k] ?? 6);   /* the in-laws */
+      R(10, 200, 56, 60, '#0a0806'); g.imageSmoothingEnabled = true; g.drawImage(MG('ut_royal_face'), f * 96, 0, 96, 96, 10, 202, 56, 56); g.imageSmoothingEnabled = false; }
+    else if (s.shop && MG('ut_carl_face')) { const S = s.shop, tw = Math.floor(t / 3.1) % 3 === 2 && (t % 3.1) < 0.18, f = tw ? 7 : S.flip != null && S.t > 1.1 ? S.flip : S.face;
       R(10, 200, 56, 60, '#0a0806'); g.imageSmoothingEnabled = true; g.drawImage(MG('ut_carl_face'), f * 96, 0, 96, 96, 10, 202, 56, 56); g.imageSmoothingEnabled = false; }
     else { const H = HERO(s), sp = s.talk ? s.talk.lines[s.talk.i][0] : null, other = s.fixT > 6.2, im = TRL.face(sp ? sp.toLowerCase() : (H.name === 'ROD') !== other ? 'rod' : 'matt', sp || other ? 1 : s.hp / s.hpMax); if (im) { g.imageSmoothingEnabled = true; g.drawImage(im, 10, 200, 56, 60); g.imageSmoothingEnabled = false; } else R(10, 200, 56, 60, '#2a2a36');
       if (s.shake > 0.2) { g.fillStyle = 'rgba(233,102,90,.45)'; g.fillRect(10, 200, 56, 60); } }
     bevel(74, 200, 92, 60);
-    T(HERO(s).name, 80, 210, '#e8c86a', 7); T('HP', 80, 226, '#fff', 6); BAR(96, 222, 64, 7, s.hp / s.hpMax, s.hp / s.hpMax > 0.5 ? '#7bd65b' : s.hp / s.hpMax > 0.25 ? '#f7c418' : '#e9665a');
+    T(s.wed && /POSSUM (KING|QUEEN)/.test(s.wed.lines[s.wed.i][0]) ? s.wed.lines[s.wed.i][0].replace('POSSUM ', '') : HERO(s).name, 80, 210, '#e8c86a', 7); T('HP', 80, 226, '#fff', 6); BAR(96, 222, 64, 7, s.hp / s.hpMax, s.hp / s.hpMax > 0.5 ? '#7bd65b' : s.hp / s.hpMax > 0.25 ? '#f7c418' : '#e9665a');
     T(`${Math.max(0, s.hp)} / ${s.hpMax}`, 160, 240, '#e8dcc0', 6, 'right'); T(s.venom > 0 ? 'ITCHY' : s.hp / s.hpMax > 0.5 ? 'GOOD' : s.hp / s.hpMax > 0.25 ? 'BITTEN' : 'BAD SHAPE', 80, 252, s.venom > 0 ? '#c080e0' : s.hp / s.hpMax > 0.5 ? '#7bd65b' : '#e9665a', 6);
     bevel(174, 200, 298, 60);
     { const log = s.log || (s.log = []);
