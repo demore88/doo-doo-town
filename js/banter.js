@@ -44,7 +44,7 @@ const VAN_TALK = [
   [['ROD', 'rod_normal', "Put your feet down off the dash."], ['MATT', 'matt_stare', 'They\'re clean.'], ['ROD', 'rod_stare', "Nothing about you is clean, Matt. You were in a septic tank."]],
   [['MATT', 'matt_happy', 'Pop quiz. Two-inch or three-inch on a kitchen line?'], ['ROD', 'rod_smug', 'Inch and a half. Trick question.'], ['MATT', 'matt_shocked', "How'd you know it was a trick question?"]],
   [['ROD', 'rod_suspicious', 'Why is there a hot dog in the glovebox?'], ['MATT', 'matt_normal', 'Emergency hot dog.'], ['ROD', 'rod_gross', 'From when?'], ['MATT', 'matt_stare', '...Define "when."']],
-  [['MATT', 'matt_normal', 'We should get a van dog.'], ['ROD', 'rod_stare', 'Last dog that got in this van ate your lunch.'], ['MATT', 'matt_happy', 'Biscuit was a good boy.'], ['ROD', 'rod_annoyed', 'Biscuit was a thief.']],
+  [['MATT', 'matt_normal', 'We should get a van dog.'], ['ROD', 'rod_stare', 'Last dog that got in this van ate your lunch.'], ['MATT', 'matt_happy', 'Biscuit was a good boy.'], ['ROD', 'rod_annoyed', 'Biscuit was a damn thief.']],
   [['ROD', 'rod_normal', "Customer asked me if we're brothers."], ['MATT', 'matt_happy', 'What\'d you say?'], ['ROD', 'rod_tired', 'I said "no" and then I thought about it for a long time.']],
   [['MATT', 'matt_happy', "If we ever get a second van, I'm naming it."], ['ROD', 'rod_suspicious', 'What.'], ['MATT', 'matt_happy', 'Van Halen.'], ['ROD', 'rod_stare', "We're never getting a second van."]],
   [['ROD', 'rod_normal', 'Turn that down.'], ['MATT', 'matt_normal', "It's not on."], ['ROD', 'rod_suspicious', "Then what's making that noise?"], ['MATT', 'matt_shocked', "...Is that the transmission?"]],
