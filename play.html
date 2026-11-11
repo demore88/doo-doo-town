@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794372289"></script>
-<script src="js/calls.js?v=1794372289"></script>
-<script src="js/placeholders.js?v=1794372289"></script>
-<script src="js/music.js?v=1794372289"></script>
-<script src="js/sfx.js?v=1794372289"></script>
+<script src="js/state.js?v=1794372784"></script>
+<script src="js/calls.js?v=1794372784"></script>
+<script src="js/placeholders.js?v=1794372784"></script>
+<script src="js/music.js?v=1794372784"></script>
+<script src="js/sfx.js?v=1794372784"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -1183,7 +1183,7 @@ async function yearEnd() {
     const title = s.rep >= 40 ? 'LEGENDS OF THE NORTH COUNTRY' : s.rep >= 20 ? 'THE GUYS YOU CALL' : s.rep >= 0 ? 'HONEST WORK' : 'MAYBE TRY THE OTHER GUYS';
     T(title, 240, 110, '#7dffb0', 8, 'center');
     T('MT. WASHINGTON SEWER & DRAIN', 240, 160, '#fff', 7, 'center');
-    T('603-356-6555 · 603-752-2145', 240, 178, '#f7c418', 7, 'center');
+    T('WE KEEP NH FLOWING', 240, 178, '#f7c418', 7, 'center');   /* phone numbers live on the main menu only */
     T('TAP FOR YOUR SHARE CARD', 240, 220, '#9fb3d9', 6, 'center');
   };
   await fadeIn(600); SND.ding();
@@ -1219,8 +1219,7 @@ async function drawShareCard(s) {
   txt(`${s.jobs || 0} JOBS  ·  ${s.stars || 0} STARS  ·  $${paid.toLocaleString()} OF THE LOAN PAID`, Z / 2, 850, '#fff', 20);
   k.fillStyle = '#f7c418'; k.fillRect(0, 900, Z, 180); k.fillStyle = '#10151f'; k.fillRect(0, 906, Z, 168);
   txt('MT. WASHINGTON SEWER & DRAIN', Z / 2, 950, '#fff', 34);
-  txt('603-356-6555  ·  603-752-2145', Z / 2, 1010, '#f7c418', 32);
-  txt('WE KEEP NH FLOWING', Z / 2, 1052, '#9fb3d9', 18);
+  txt('WE KEEP NH FLOWING', Z / 2, 1022, '#f7c418', 30);
   return cv;
 }
 async function shareCard(s) {

@@ -26,7 +26,7 @@ function drive3d(choice, opts) {
                 { cruise: 0.86, cars: 9, onc: 0.4, crit: 5, blink: 0.03, trucks: 0.25 },
                 { cruise: 1.0, cars: 10, onc: 0.4, crit: 8, blink: 0.05, trucks: 0.3 }][choice];
   const CRUISE = MODE.cruise * TOP * (choice === 2 ? 0.92 : 1), BOOST = TOP;
-  const LANE = [-2 / 3, 0, 2 / 3, 4 / 3, 2];   /* lanes 3 and 4 only exist where the road opens up (the Driving Game) */                           // left lane = oncoming · the two on the right go our way
+  const LANE = [-2 / 3, 0, 2 / 3, 4 / 3, 2, -4 / 3];   /* 0 and 5 come at you (5 only where the road opens up); 1-4 go your way (3 and 4 only where it opens up) */                           // left lane = oncoming · the two on the right go our way
   const TRACK = 1450;                                        // ~35-65 s depending on driver and mode
   const PZ = CAMH * DEPTH;                                   // player's distance in front of the camera
   const MIN_PER_S = 0.7;                                     // the clock runs a bit slower than real time so a longer drive isn't automatically late
@@ -110,9 +110,10 @@ function drive3d(choice, opts) {
   });
   add(60, 0, -lastY()); while (legAt.length < segs.length) legAt.push(LEGS_HERE.length - 1);   // level out at the destination
   segs.forEach((sg, k) => { const L = LEGS_HERE[legAt[k]]; sg.leg = legAt[k]; sg.river = L.scene.includes('river') && !(k % 1) ; sg.lake = L.scene.includes('lake'); });
-  segs.forEach((sg, k) => { sg.rt = 1; if (opts.endless) { const mi = k / SEG_PER_MI, w = (a, b) => Math.max(0, Math.min(1, (mi - a) / (b - a))); sg.rt = 1 + (2 / 3) * w(12, 13) + (2 / 3) * w(35, 36); } });   /* the road opens to 4 lanes, then 5 */
+  segs.forEach((sg, k) => { sg.rt = 1; sg.lt = -1; if (opts.endless) { const mi = k / SEG_PER_MI, w = (a, b) => Math.max(0, Math.min(1, (mi - a) / (b - a))); sg.lt = -1 - (2 / 3) * w(12, 13); sg.rt = 1 + (4 / 3) * w(35, 36.5); } });   /* mile 12: two lanes each way · mile 35: four your way, still two coming at you (six in all) */
   const N = segs.length, LEN = N * SEG;
-  const rtAt = z => { const sg = segs[Math.max(0, Math.min(segs.length - 1, Math.floor(z / SEG)))]; return sg ? sg.rt : 1; }, ourLanes = z => Math.max(2, Math.round((rtAt(z) + 1) / (2 / 3)) - 1);   /* how many lanes go our way here */
+  const sgAt = z => segs[Math.max(0, Math.min(segs.length - 1, Math.floor(z / SEG)))], rtAt = z => { const sg = sgAt(z); return sg ? sg.rt : 1; }, ltAt = z => { const sg = sgAt(z); return sg ? sg.lt : -1; };
+  const ourLanes = z => Math.max(2, Math.round((rtAt(z) + 1) / (2 / 3)) - 1), oncLanes = z => ltAt(z) < -1.5 ? 2 : 1;   /* how many lanes each way here */
 
   // ---------- sprite art (drawn once into little canvases) ----------
   function art(w, h, fn) { const c = document.createElement('canvas'); c.width = w; c.height = h; const k = c.getContext('2d'); fn(k, (x, y, ww, hh, col) => { k.fillStyle = col; k.fillRect(x, y, ww, hh); }); return c; }
@@ -241,7 +242,7 @@ function drive3d(choice, opts) {
   const cars = [];   // { z, off, speed, img, onc }
   function addCar(z, onc) {
     const c = Math.floor(Math.random() * CAR_B.length), truck = Math.random() < MODE.trucks * (onc ? 0.5 : 1), sc = truck ? 1.6 : 1.3, img = onc ? (truck ? LOG_F : CAR_F[c]) : truck ? LOG_B : CAR_B[c];
-    const nOur = ourLanes(z), lane = onc ? 0 : nOur <= 2 ? (Math.random() < 0.65 ? 2 : 1) : 1 + Math.floor(Math.random() * nOur);
+    const nOur = ourLanes(z), lane = onc ? (oncLanes(z) > 1 && Math.random() < 0.5 ? 5 : 0) : nOur <= 2 ? (Math.random() < 0.65 ? 2 : 1) : 1 + Math.floor(Math.random() * nOur);
     // our-way traffic is slower than us (you catch up and pass); log trucks crawl
     return { z, lane, off: LANE[lane], tgt: LANE[lane], speed: onc ? -rnd(25, 45) * MPH : (truck ? rnd(18, 24) : rnd(22, 34)) * MPH * (DRIVER === 'rod' ? 0.8 : 1),
       img, onc, hw: (img.width || (truck ? 50 : 44)) * sc / 320, sc, truck, blink: 0 };
@@ -263,7 +264,12 @@ function drive3d(choice, opts) {
   };
   const critters = [];
   const CK = FALL ? ['peeper', 'peeper', 'moose', 'deer', 'turkeys'] : ['moose', 'deer', 'turkeys', 'moose'];
-  for (let i = 0; i < MODE.crit * (opts.endless ? Math.round(N / 1400) : 1); i++) { const sg0 = Math.floor(rnd(opts.endless ? 0.01 : 0.12, 0.92) * N); critters.push({ seg: sg0, kind: CK[Math.floor(Math.random() * CK.length)], off: Math.random() < .5 ? -1.6 : (segs[sg0] ? segs[sg0].rt : 1) + 0.6, dir: 0, hit: false, snap: 0, flash: 0 }); }   /* the Driving Game gets wildlife all the way along */
+  if (!opts.endless) for (let i = 0; i < MODE.crit; i++) critters.push({ seg: Math.floor(rnd(0.12, 0.92) * N), kind: CK[Math.floor(Math.random() * CK.length)], off: Math.random() < .5 ? -1.6 : 1.6, dir: 0, hit: false, snap: 0, flash: 0 });
+  else for (let mi = 0.6; mi < N / SEG_PER_MI - 1; mi += 1) {   /* the Driving Game: turkeys first, then deer join in, then moose; more of them the farther you go */
+    const n = Math.min(4, Math.floor(0.4 + mi / 9 + Math.random()));
+    for (let j = 0; j < n; j++) { const sg0 = Math.floor((mi + Math.random()) * SEG_PER_MI), pool = mi < 5 ? ['turkeys'] : mi < 14 ? ['turkeys', 'deer', 'deer'] : ['turkeys', 'deer', 'deer', 'moose'], sgo = segs[sg0] || {};
+      const kind = pool[Math.floor(Math.random() * pool.length)];
+      critters.push({ seg: sg0, kind, spd: kind === 'deer' ? Math.min(1.7, 1 + mi * 0.025) : 1, off: Math.random() < .5 ? (sgo.lt || -1) - 0.6 : (sgo.rt || 1) + 0.6, dir: 0, hit: false, snap: 0, flash: 0 }); } }   /* deer get quicker the farther you go, topping out at 1.7x */
   const CIMG = { moose: ANIM.moose[0], deer: ANIM.deer[0], turkeys: ANIM.turkeys[0], peeper: PEEPER }, CW = { moose: 0.36, deer: 0.18, turkeys: 0.1, peeper: 0.08 },   // half-widths, matching how big they're drawn
        
         CSPD = { moose: 0.25, deer: 0.9, turkeys: 0.3, peeper: 0.35 }, PEN = { moose: 20, deer: 12, turkeys: 5, peeper: 8 };
@@ -361,9 +367,9 @@ function drive3d(choice, opts) {
       px += steer * dt * 2.1 * (0.35 + 0.65 * ratio);
       px -= seg.curve * ratio * ratio * dt * 0.42;
       // off the road: grass (or a snowbank) slows you down hard
-      const RT = seg.rt || 1, offR = px < -1 || px > RT, outBy = px < -1 ? -1 - px : px - RT;
+      const RT = seg.rt || 1, LT = seg.lt || -1, offR = px < LT || px > RT, outBy = px < LT ? LT - px : px - RT;
       if (offR) { const deep = SNOW && outBy > 0.1, floor = (deep ? 0.07 : SNOW ? 0.15 : 0.22) * MAX; if (live) { penalty += dt * (deep ? 0.9 : 0.4); offT = (offT || 0) + dt; } /* stuck in it: minutes tick away */ if (speed > floor) speed = floor + (speed - floor) * Math.pow(0.1, dt); /* grass/snow drags you to a crawl, never backwards */ shake = Math.max(shake, 0.08); if (SNOW && Math.abs(px) > 1.15) { px = Math.sign(px) * 1.15; if (msgT <= 0) say('SNOWBANK!', 0.8); } }
-      px = Math.max(-1.6, Math.min(RT + 0.6, px));
+      px = Math.max(LT - 0.6, Math.min(RT + 0.6, px));
       if (live) { pos += speed * dt; play += dt; }
       // frost heaves bounce the van
       const dy = seg.p2.y - seg.p1.y; bounce = bounce * 0.86 + Math.max(0, dy) * 0.012 * ratio;
@@ -399,7 +405,7 @@ function drive3d(choice, opts) {
         }
       }
       if (opts.endless) {
-        const want = Math.round(MODE.cars * (1 + 0.65 * (ourLanes(pos + PZ) - 2)) * (1 + Math.min(1, pos / SEG / SEG_PER_MI / 60) * 0.5)), have = cars.filter(c => !c.parked).length;
+        const want = Math.round(MODE.cars * (1 + 0.65 * (ourLanes(pos + PZ) + oncLanes(pos + PZ) - 3)) * (1 + Math.min(1, pos / SEG / SEG_PER_MI / 60) * 0.5)), have = cars.filter(c => !c.parked).length;
         if (have < want && Math.random() < dt * 2) { const z = pos + PZ + rnd(DRAW * 0.85, DRAW) * SEG, n = addCar(z, Math.random() < MODE.onc); if (!cars.some(o => !o.parked && o.lane === n.lane && Math.abs(o.z - z) < 4 * SEG)) cars.push(n); }   /* more lanes, more traffic */
         comboT = Math.max(0, comboT - dt);
         for (const k of KITS) if (!k.got && live && Math.abs(k.z - (pos + PZ)) < SEG * 0.7 && Math.abs(px - k.off) < 0.3) { k.got = true; const fix = Math.min(2, crashes); crashes -= fix; glass = Math.max(0, glass - 3); score += 250; sfx('horn'); say(fix ? `TOOLBOX! PATCHED ${fix} DENT${fix > 1 ? 'S' : ''} +250` : 'TOOLBOX! +250', 1.4); }
@@ -458,7 +464,7 @@ function drive3d(choice, opts) {
         if (cr.react > 0) { cr.react += dt; if (cr.react < 2.6) continue; }   // the moose takes its time
         if (cr.dir) {
           if (cr.kind === 'peeper' && !cr.snapped && Math.abs(cr.off) < 0.4) { cr.snapped = true; cr.snap = 1.6; }
-          if (cr.snap > 0) { cr.snap -= dt; cr.flash = (cr.flash + dt) % 0.4; } else cr.off += cr.dir * CSPD[cr.kind] * dt * 1.4;
+          if (cr.snap > 0) { cr.snap -= dt; cr.flash = (cr.flash + dt) % 0.4; } else cr.off += cr.dir * CSPD[cr.kind] * (cr.spd || 1) * dt * 1.4;
         }
         if (live && !cr.hit && inv <= 0 && Math.abs(dz - PZ) < SEG * 1.1 && Math.abs(px - cr.off) < CW[cr.kind] + 0.1) {
           const covered = cr.kind === 'deer' && DEERINS;   // deer insurance: no lost time, no cracked glass
@@ -510,17 +516,17 @@ function drive3d(choice, opts) {
         if (p1.z - camZ <= DEPTH || p2.sy >= maxy || p2.sy >= p1.sy) continue;
         r.fillStyle = sg.dark ? G2 : G1; r.fillRect(-10, p2.sy, W + 20, p1.sy - p2.sy + 1);
         const rum = w => w * 0.08, lane = w => w * 0.022;
-        const rt = sg.rt || 1, cc = (rt - 1) / 2, hh = (rt + 1) / 2;   /* the road's centre and half-width, in lanes-units: wider where it opens up */
+        const rt = sg.rt || 1, lt = sg.lt || -1, cc = (rt + lt) / 2, hh = (rt - lt) / 2;   /* the road's centre and half-width: wider where it opens up */
         if (sg.river || sg.lake) { const wc = SNOW ? '#7896af' : '#4574a6';   // the river (or lake) off to the right
           poly(p1.sx + p1.sw * ((sg.lake ? 3.4 : 2.6) + rt - 1), p1.sy, p1.sw * (sg.lake ? 1.4 : 0.7), p2.sx + p2.sw * ((sg.lake ? 3.4 : 2.6) + rt - 1), p2.sy, p2.sw * (sg.lake ? 1.4 : 0.7), wc); }
         poly(p1.sx + cc * p1.sw, p1.sy, p1.sw * (hh + 0.16), p2.sx + cc * p2.sw, p2.sy, p2.sw * (hh + 0.16), SNOW ? '#95908a' : '#7f674a');   // dirt (or slushy sand) shoulder
         poly(p1.sx + cc * p1.sw, p1.sy, p1.sw * hh, p2.sx + cc * p2.sw, p2.sy, p2.sw * hh, '#4f5258');   /* asphalt */
-        for (const e of [-0.95, rt - 0.05]) poly(p1.sx + e * p1.sw, p1.sy, Math.max(0.5, p1.sw * 0.012), p2.sx + e * p2.sw, p2.sy, Math.max(0.5, p2.sw * 0.012), '#e8eaec');   // solid white edge lines
+        for (const e of [lt + 0.05, rt - 0.05]) poly(p1.sx + e * p1.sw, p1.sy, Math.max(0.5, p1.sw * 0.012), p2.sx + e * p2.sw, p2.sy, Math.max(0.5, p2.sw * 0.012), '#e8eaec');   // solid white edge lines
         // (snow lives on the shoulder now, so the white edge line stays readable)
         { const yx = w => -w / 3;   // double yellow: oncoming lane on the left
           poly(p1.sx + yx(p1.sw) - lane(p1.sw) * 1.4, p1.sy, lane(p1.sw) * 0.6, p2.sx + yx(p2.sw) - lane(p2.sw) * 1.4, p2.sy, lane(p2.sw) * 0.6, '#f2c12e');
           poly(p1.sx + yx(p1.sw) + lane(p1.sw) * 1.4, p1.sy, lane(p1.sw) * 0.6, p2.sx + yx(p2.sw) + lane(p2.sw) * 1.4, p2.sy, lane(p2.sw) * 0.6, '#f2c12e');
-          if (Math.floor(sg.i / 3) % 4 === 0) for (let lx = 1 / 3; lx < rt - 0.2; lx += 2 / 3) poly(p1.sx + p1.sw * lx, p1.sy, lane(p1.sw) * 0.8, p2.sx + p2.sw * lx, p2.sy, lane(p2.sw) * 0.8, '#eef0f2'); }   /* dashed white between every lane going our way */   // dashed white between our two lanes: short dash, long gap
+          if (Math.floor(sg.i / 3) % 4 === 0) for (let lx = lt < -1.5 ? -1 : 1 / 3; lx < rt - 0.2; lx += lx < 0 ? 4 / 3 : 2 / 3) poly(p1.sx + p1.sw * lx, p1.sy, lane(p1.sw) * 0.8, p2.sx + p2.sw * lx, p2.sy, lane(p2.sw) * 0.8, '#eef0f2'); }   /* dashed white between every lane going our way */   // dashed white between our two lanes: short dash, long gap
         maxy = p1.sy;
       }
       // sprites, cars, critters back to front
@@ -535,7 +541,7 @@ function drive3d(choice, opts) {
       };
       for (let n = drawn.length - 1; n > 0; n--) {
         const sg = drawn[n], p = sg.s1; if (!p || p.sc <= 0) continue;
-        for (const sp of sg.sprites) S(sp.img, sp.scale * 2.6, p.sx, p.sy, sp.off > 0 ? sp.off + (sg.rt || 1) - 1 : sp.off, p.sw, sg.clip);
+        for (const sp of sg.sprites) S(sp.img, sp.scale * 2.6, p.sx, p.sy, sp.off > 0 ? sp.off + (sg.rt || 1) - 1 : sp.off + (sg.lt || -1) + 1, p.sw, sg.clip);
         if (KITS.length && KIT_IMG.complete && KIT_IMG.naturalWidth) for (const k of KITS) if (!k.got && segAt(k.z) === sg) S(KIT_IMG, 0.09, p.sx, p.sy, k.off, p.sw, sg.clip);   /* a toolbox lying in the lane */
         if (RIVAL && rz > pos && segAt(rz) === sg) { makeRival(); if (rivalImg) S(rivalImg, 0.62, p.sx, p.sy, roff, p.sw, sg.clip); }
         for (const c of cars) if (!c.parked && segAt(c.z) === sg) { const b = S(c.img, c.sc, p.sx, p.sy, c.off, p.sw, sg.clip, c.rot);
@@ -628,7 +634,7 @@ function drive3d(choice, opts) {
       const mins = Math.round(opts.leave + play * MIN_PER_S + penalty), late = mins > opts.due;
       r.fillStyle = 'rgba(16,21,31,.92)'; r.fillRect(0, 0, W, 20);
       r.font = '8px "Press Start 2P", monospace'; r.textBaseline = 'middle'; r.textAlign = 'left';
-      if (opts.endless) { const mi = pos / SEG / SEG_PER_MI, lanes = ourLanes(pos + PZ) + 1; r.fillStyle = '#f7c418'; r.fillText('THE DRIVING GAME', 6, 10); r.textAlign = 'right'; r.fillStyle = lanes > 3 ? '#e9665a' : '#fff'; r.fillText(`${lanes} LANES`, 474, 10); r.textAlign = 'left'; }   /* no clock, no destination: just the road */
+      if (opts.endless) { const mi = pos / SEG / SEG_PER_MI, lanes = ourLanes(pos + PZ) + oncLanes(pos + PZ); r.fillStyle = '#f7c418'; r.fillText('THE DRIVING GAME', 6, 10); r.textAlign = 'right'; r.fillStyle = lanes > 3 ? '#e9665a' : '#fff'; r.fillText(`${lanes} LANES`, 474, 10); r.textAlign = 'left'; }   /* no clock, no destination: just the road */
       else {
       r.fillStyle = late ? '#e9665a' : '#fff'; r.fillText(opts.clock(mins), 6, 10);
       r.fillStyle = '#f7c418'; r.fillText('DUE ' + opts.clock(opts.due).replace(/ ?[AP]M/, ''), 82, 10);

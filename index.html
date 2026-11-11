@@ -42,7 +42,7 @@
   #panel .btn{margin-top:1em;min-width:auto}
   #toast{position:absolute;left:50%;bottom:17%;transform:translateX(-50%);background:#10151fee;border:3px solid #f7c418;padding:.8em 1.2em;
     font-size:clamp(7px,1.2vw,13px);display:none;text-align:center;white-space:nowrap}
-  #footer{pointer-events:none}   /* just a sign: taps go through it to the game (the drive's brake corners live under it) */
+  #footer{pointer-events:none} body.embed #footer,body.cutting #footer{display:none}   /* the phone numbers show on the main menu only */   /* just a sign: taps go through it to the game (the drive's brake corners live under it) */
   #footer{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:clamp(7px,1.35vw,15px);color:#fff;background:#10151fe6;
     border-top:3px solid #f7c418;padding:.7em 0;text-shadow:2px 2px 0 #000;letter-spacing:.03em}
   #footer b{color:#f7c418;font-weight:normal}
@@ -185,10 +185,10 @@
 
 <audio id="music" src="assets/doo_doo_town.mp3" loop preload="auto"></audio>
 <audio id="call" src="assets/call_fluffernutter.mp3" preload="auto"></audio>
-<script src="js/state.js?v=1794372289"></script>
-<script src="js/sfx.js?v=1794372289"></script>
-<script src="js/drive3d.js?v=1794372289"></script>
-<script src="js/music.js?v=1794372289"></script>
+<script src="js/state.js?v=1794372784"></script>
+<script src="js/sfx.js?v=1794372784"></script>
+<script src="js/drive3d.js?v=1794372784"></script>
+<script src="js/music.js?v=1794372784"></script>
 <script>
 const W = 480, H = 270, LOOP_W = 6688;           // strip loop width at 270px tall
 const cv = document.getElementById('c'), g = cv.getContext('2d');
