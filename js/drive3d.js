@@ -515,7 +515,7 @@ function drive3d(choice, opts) {
           cr.hit = true; if (!covered) crashes++; STATS[cr.kind] = (STATS[cr.kind] || 0) + 1; if (!covered) { hurtGlass(glassFor[cr.kind]); penalty += PEN[cr.kind]; STATS.lost += PEN[cr.kind]; } inv = 1.4; shake = cr.kind === 'moose' ? 0.7 : 0.3; speed *= cr.kind === 'moose' ? 0.1 : covered ? 0.92 : 0.4;
           cr.dir = Math.sign(cr.off - px) || 1; cr.snap = 0;
           if (cr.kind !== 'moose') { cr.fly = 0.001; cr.flyDir = cr.dir; }   /* up and over the roof; the moose just keeps walking */
-          sfx(Math.random() < 0.5 ? 'animal_hit' : 'animal_hit_2'); if (cr.kind === 'moose') sfx('horn_angry', { vol: 0.5 });
+          sfx(Math.random() < 0.5 ? 'animal_hit' : 'animal_hit_2'); if (cr.kind === 'moose') sfx('moose');
           say({ moose: 'HIT THE MOOSE! +20 MIN', deer: covered ? 'OH DEER. INSURANCE HAS IT!' : 'OH DEER. +12 MIN', turkeys: 'FEATHERS! +5 MIN', peeper: 'SLAMMED THE BRAKES! +8 MIN' }[cr.kind]);
         }
       }
