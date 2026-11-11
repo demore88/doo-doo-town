@@ -1398,8 +1398,9 @@ GAMES.push({
     if (s.shop) return this.shopping(s, dt, I);
     if (s.battle) return this.fight(s, dt, I);
     if (s.big) return this.bigStep(s, dt, I);
-    if (I.ptr.clicked && I.ptr.x > 338 && I.ptr.x < 472 && I.ptr.y > 10 && I.ptr.y < 92 && !s.mv) { s.big = { stroke: null }; I.ptr.clicked = false; SFX('ui_tap'); return; }   /* tap the little map: the big one */
-    { const [x, y, w, h] = this.bagBtn(), tap = I.ptr.clicked && I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h; if ((I.Bp || tap) && !s.mv) { s.bag = { sel: 0, battle: false }; SFX('ui_tap'); return; } if (tap) I.ptr.clicked = false; }
+    if (I.ptr.clicked && I.ptr.x > 338 && I.ptr.x < 472 && I.ptr.y > 10 && I.ptr.y < 92) { s.big = { stroke: null }; I.ptr.clicked = false; SFX('ui_tap'); return; }   /* tap the little map: the big one */
+    { const [x, y, w, h] = this.bagBtn(), tap = I.ptr.clicked && I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h; if (I.Bp || tap) { s.bagQ = true; I.ptr.clicked = false; }   /* asked for the bag while crawling: it opens the moment you stop */
+      if (s.bagQ && !(s.mv > 0)) { s.bagQ = false; s.bag = { sel: 0, battle: false }; SFX('ui_tap'); return; } }
     const H = HERO(s), dur = 0.26 / H.spd;
     if (s.mv > 0) {   // gliding to the next square / turning
       s.mv -= dt; const k = 1 - Math.max(0, s.mv) / s.mvD;
@@ -1842,7 +1843,7 @@ GAMES.push({
       const st = s.escort ? ['ESCORTING THE PRINCESS', '#ff8ad0'] : stink > 0.75 ? ['SMELLS CLOSE!', Math.floor(t * 3) % 2 ? '#a0d040' : '#6a8a30'] : s.married ? ['MARRIED (TO A POSSUM)', '#ff8ad0'] : null;
       if (st) T(st[0], PX + 8, 131, st[1], 5);
       T('LIGHT x' + s.lights, PX + 8, 146, '#e8dcc0', 5); T('CRACKERS x' + s.crk, PX + 8, 160, '#e8dcc0', 5); T('BEATEN: ' + s.won, PX + 8, 174, '#e8dcc0', 5);
-      this.tile(s, { id: 'item', label: 'BAG' }, this.bagBtn(), false, !!s.mv);   /* tap to open the bag */ }
+      this.tile(s, { id: 'item', label: 'BAG' }, this.bagBtn(), !!s.bagQ, false);   /* tap to open the bag */ }
     // bottom bar: the hero's portrait + health, and the message scroll
     bevel(10, 200, 56, 60);
     if (s.wake) { const [who, f] = s.wake.lines[s.wake.i], me = HERO(s).name.toLowerCase();
@@ -1880,7 +1881,7 @@ GAMES.push({
 });
 /* SAVE + RESUME for Under the Trailer: it's a long crawl, so your spot is kept if the phone locks or the page reloads */
 (() => {
-  const G = GAMES.find(q => q.id === 'crawl'), SKIP = new Set(['cv', 'cx', 'img', 'buf', 'zb', 'battle', 'talk', 'shop', 'bag', 'wake', 'wed', 'rnd', 'props', 'carlScr', 'end', 'ask', 'saveT', 'lvlUp', 'big', 'fx', 'pops', 'parts']);
+  const G = GAMES.find(q => q.id === 'crawl'), SKIP = new Set(['cv', 'cx', 'img', 'buf', 'zb', 'battle', 'talk', 'shop', 'bag', 'wake', 'wed', 'rnd', 'props', 'carlScr', 'end', 'ask', 'saveT', 'lvlUp', 'big', 'bagQ', 'fx', 'pops', 'parts']);
   const KEY = s => 'ddt_crawl_' + (new URLSearchParams(location.search).get('job') || 'arcade') + '_' + s.diff;
   const save = s => { try { const o = {}; for (const k in s) { if (SKIP.has(k) || typeof s[k] === 'function') continue; o[k] = s[k] instanceof Set ? { __set: [...s[k]] } : s[k]; } localStorage.setItem(KEY(s), JSON.stringify(o)); } catch (e) {} };
   const load = s => { try { const o = JSON.parse(localStorage.getItem(KEY(s)) || 'null'); return o && o.map ? o : null; } catch (e) { return null; } };
