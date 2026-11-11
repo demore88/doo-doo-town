@@ -304,12 +304,13 @@ function drive3d(choice, opts) {
   let grip = 0, gripSide = 1, sqCall = null;
   // the squirrel's family calls the van. Each caller has an avatar (assets/drive/sq_<who>.png; a squirrel stand-in until the art exists).
   const SQ = window.SQ_CALLERS || {}, SQ_SEEN = (() => { try { return JSON.parse(localStorage.getItem('ddt_sq_seen') || '{}'); } catch (e) { return {}; } })();
-  const SQ_IMG = {}; const sqImg = w => SQ_IMG[w] || (SQ_IMG[w] = DI('sq_' + w));
+  const SQ_IMG = {}; const sqImg = (w, n) => { const k = w + '_' + (n || 0); return SQ_IMG[k] || (SQ_IMG[k] = DI('sq_' + k)); };
+  const SQ_FACE = { baby: [1, 0] };   /* which face first, which face later in the call (the baby starts hopeful, then sad) */
   function startSqCall(force) {   /* pick a caller, then a call you haven't heard yet */
     const whos = Object.keys(SQ); if (!whos.length) return; const who = force && SQ[force] ? force : whos[Math.floor(Math.random() * whos.length)], C = SQ[who];
     const seen = SQ_SEEN[who] || []; let fresh = C.calls.map((_, i) => i).filter(i => !seen.includes(i)); if (!fresh.length) { fresh = C.calls.map((_, i) => i); SQ_SEEN[who] = []; }
     const k = fresh[Math.floor(Math.random() * fresh.length)]; (SQ_SEEN[who] = SQ_SEEN[who] || []).push(k); try { localStorage.setItem('ddt_sq_seen', JSON.stringify(SQ_SEEN)); } catch (e) {}
-    sqImg(who); sqCall = { c: { who, name: C.name, lines: C.calls[k] }, t: 0, ring: 1.6 }; sfx('phone_ring'); }   /* a raccoon on the glass */
+    sqImg(who, 0); sqImg(who, 1); sqCall = { c: { who, name: C.name, lines: C.calls[k] }, t: 0, ring: 1.6 }; sfx('phone_ring'); }   /* a raccoon on the glass */
   let glass = 0; if (!opts.arcade) try { glass = (DDT.get() || {}).glass || 0; } catch (e) {}   /* menu drives start with clean glass */
   // the Driving Game: score, near misses, and toolboxes on the road that patch the van back up
   let score = 0, combo = 0, comboT = 0, distPts = 0, slowT = 0; const DS = { kits: 0, kitsUsed: 0, near: 0, bestCombo: 0, rear: 0 };   /* the Driving Game record */ const KITS = [], KIT_IMG = new Image(); KIT_IMG.src = (typeof ART !== 'undefined' ? ART : 'assets/') + 'mg/sr2_toolbox.png';
@@ -724,7 +725,7 @@ function drive3d(choice, opts) {
         const pw = 84, ph = 150, px0 = W - 6 - pw + (1 - slide + end) * (pw + 12), py0 = 64, shake = sqCall.ring > 0 ? Math.sin(t * 60) * 1.5 : 0, X = px0 + shake;
         r.fillStyle = '#16181c'; r.fillRect(X, py0, pw, ph); r.fillStyle = '#2a2d33'; r.fillRect(X + 2, py0 + 2, pw - 4, ph - 4); r.fillStyle = '#0e1116'; r.fillRect(X + 5, py0 + 12, pw - 10, ph - 26);   /* the phone and its screen */
         r.fillStyle = '#3a3e46'; r.fillRect(X + pw / 2 - 8, py0 + 6, 16, 2); r.fillRect(X + pw / 2 - 6, py0 + ph - 10, 12, 4);
-        const im = sqImg(c.who), fb = ANIM.squirrel[0], ax = X + pw / 2 - 22, ay = py0 + 18;
+        const ord = SQ_FACE[c.who] || [0, 1], later = sqCall.ring <= 0 && sqCall.t >= (c.lines.length - 1) * 2.8 * 0.6, im = sqImg(c.who, ord[later ? 1 : 0]), fb = ANIM.squirrel[0], ax = X + pw / 2 - 22, ay = py0 + 18;   /* the face changes partway through the call */
         r.fillStyle = '#2a3346'; r.fillRect(ax, ay, 44, 44);
         if (im.complete && im.naturalWidth) r.drawImage(im, ax, ay, 44, 44); else if (fb.complete && fb.naturalWidth) r.drawImage(fb, ax + 3, ay + 8, 38, 38 * fb.height / fb.width);
         r.font = '5px "Press Start 2P", monospace'; r.textAlign = 'center'; r.fillStyle = '#f7c418';
