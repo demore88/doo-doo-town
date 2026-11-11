@@ -1261,7 +1261,7 @@ TRL.FOES = [   /* spr: 8-frame strip (0 idle 1 sniff 2 stalk 3 run 4 rear up 5 a
   { name: 'BIG BUFF RAT', spr: 'ut_buffrat', snd: 'rat_screech', hp: [16, 20], atk: [4, 6], w: 3, sc: 1.05, pts: 45, z: 0.3 },
   { name: 'RACCOON', spr: 'ut_raccoon', snd: 'raccoon', off: 2.5, hp: [20, 24], atk: [5, 7], w: 3, sc: 1.05, pts: 60, thief: true, z: 0.5 },
   { name: 'BROWN RECLUSE', spr: 'ut_spider', snd: 'spider', hp: [12, 15], atk: [4, 6], w: 2, sc: 0.8, pts: 55, venom: true, z: 0.65 },
-  { name: 'THE POSSUM PRINCESS', spr: 'ut_possum', snd: 'possum_hiss', hp: [18, 22], atk: [3, 5], w: 0.5, sc: 1.05, pts: 80, possum: true, princess: true, z: 0.25, once: true },
+  { name: 'THE POSSUM PRINCESS', spr: 'ut_princess', snd: 'possum_hiss', hp: [18, 22], atk: [3, 5], w: 0.5, sc: 1.05, pts: 80, possum: true, princess: true, z: 0.25, once: true },
   { name: 'GARY', spr: 'ut_raccoon', snd: 'raccoon', off: 2.5, hp: [24, 28], atk: [5, 8], w: 0.5, sc: 1.1, pts: 90, thief: true, gary: true, z: 0.55, once: true },
   { name: 'THE RAT KING', spr: 'ut_ratking', snd: 'rat_screech', hp: [80, 80], atk: [7, 11], w: 0, sc: 1.35, king: true, pts: 400, z: 9 },
 ];
@@ -1586,7 +1586,7 @@ GAMES.push({
       if (!blinkOff && (b.hp > 0 || b.q.length || b.pose === 7)) {
         const idle = [0, 0, 1, 0, 2][Math.floor(t / 0.6) % 5], f = b.pose != null ? b.pose : idle, ox = b.out ? b.out * 420 : 0, a = b.out ? Math.max(0, 1 - b.out * 1.5) : 1, h = 120 * b.F.sc;
         if (!TRL.UTS(b.F.spr, f, cx + ox, by, h, false, a)) R(cx - 30, by - 30, 60, 30, '#6a5a4c');
-        if (b.F.princess && b.pose !== 7 && !b.out) { const tx2 = cx + ox + h * 0.32, ty2 = by - h * (f === 4 ? 0.98 : 0.66); g.fillStyle = '#f7d44a'; g.beginPath(); g.moveTo(tx2 - 9, ty2 + 5); g.lineTo(tx2 - 9, ty2 - 2); g.lineTo(tx2 - 4, ty2 + 2); g.lineTo(tx2, ty2 - 6); g.lineTo(tx2 + 4, ty2 + 2); g.lineTo(tx2 + 9, ty2 - 2); g.lineTo(tx2 + 9, ty2 + 5); g.fill(); C(tx2, ty2 - 6, 1.6, '#ff8ad0'); }   /* her tiara */
+        if (b.F.princess && !MG('ut_princess') && b.pose !== 7 && !b.out) { const tx2 = cx + ox + h * 0.32, ty2 = by - h * (f === 4 ? 0.98 : 0.66); g.fillStyle = '#f7d44a'; g.beginPath(); g.moveTo(tx2 - 9, ty2 + 5); g.lineTo(tx2 - 9, ty2 - 2); g.lineTo(tx2 - 4, ty2 + 2); g.lineTo(tx2, ty2 - 6); g.lineTo(tx2 + 4, ty2 + 2); g.lineTo(tx2 + 9, ty2 - 2); g.lineTo(tx2 + 9, ty2 + 5); g.fill(); C(tx2, ty2 - 6, 1.6, '#ff8ad0'); }   /* her tiara */
         if (b.F.gary && b.pose !== 7 && !b.out) { const vx2 = cx + ox - h * 0.02, vy2 = by - h * (f === 4 ? 0.55 : 0.38); R(vx2 - 12, vy2 - 8, 24, 14, '#3a5a8a'); R(vx2 - 1, vy2 - 8, 2, 14, '#e8dcc0'); C(vx2 + 5, vy2 - 2, 1.2, '#f7d44a'); C(vx2 + 5, vy2 + 2, 1.2, '#f7d44a'); }   /* Gary's tiny vest */
         if (b.stun > 0) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; T('*', cx + Math.cos(a) * 30, by - 70 + Math.sin(a) * 6, '#f7c418', 8, 'center'); }
       }
@@ -1603,8 +1603,9 @@ GAMES.push({
       const dead = k >= 13 && k <= 13, sad = k >= 16, base = VY + VH - 18;
       TRL.UTS('ut_possum', dead ? 7 : (Math.floor(t * 1.5) % 3 === 0 ? 1 : 0), VX + 60, base, 70, false); crown(VX + 78, base - 50, 9);   /* the King */
       TRL.UTS('ut_possum', dead ? 7 : (Math.floor(t * 1.5 + 1) % 3 === 0 ? 1 : 0), VX + VW - 60, base, 66, true); crown(VX + VW - 78, base - 47, 6);   /* the Queen */
-      TRL.UTS('ut_possum', sad ? 7 : k >= 9 && k <= 12 ? 4 : 0, VX + VW / 2, base + 4, 82, false); crown(VX + VW / 2 + 26, base - (k >= 9 && k <= 12 ? 78 : 55), 7);   /* the Princess */
-      if (k >= 9 && k <= 15) { g.globalAlpha = 0.55; g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(VX + VW / 2 + 18, base - (k <= 12 ? 74 : 52)); g.lineTo(VX + VW / 2 - 30, base - 10); g.lineTo(VX + VW / 2 + 40, base - 6); g.fill(); g.globalAlpha = 1; }   /* her veil */
+      if (MG('ut_princess')) TRL.UTS('ut_princess', sad ? 7 : k === 5 || k === 6 ? 6 : k >= 9 && k <= 12 ? 3 : k >= 13 && k <= 14 ? (Math.floor(t * 3) % 2 ? 4 : 5) : Math.floor(t * 1.2) % 3 === 0 ? 1 : 0, VX + VW / 2, base + 4, 92, false);
+      else { TRL.UTS('ut_possum', sad ? 7 : k >= 9 && k <= 12 ? 4 : 0, VX + VW / 2, base + 4, 82, false); crown(VX + VW / 2 + 26, base - (k >= 9 && k <= 12 ? 78 : 55), 7); }   /* the Princess */
+      if (k >= 9 && k <= 12) { g.globalAlpha = 0.5; g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(VX + VW / 2 + 4, base - 84); g.lineTo(VX + VW / 2 - 30, base - 20); g.lineTo(VX + VW / 2 + 24, base - 30); g.fill(); g.globalAlpha = 1; }   /* her veil */
       if (k >= 13 && k <= 14) for (let i = 0; i < 8; i++) T('♥', VX + 30 + (i * 41 + t * 30) % (VW - 40), VY + 60 + Math.sin(t * 2 + i) * 20, '#ff8ad0', 8, 'center');
       R(VX + 8, VY + 6, VW - 16, 28, 'rgba(10,8,6,.85)');
       if (!who) T(line, VX + VW / 2, VY + 20, '#e8c86a', 6, 'center'); else { T(who + ':', VX + 14, VY + 14, '#e8c86a', 6); T(line, VX + 14, VY + 26, '#fff', 6); }
