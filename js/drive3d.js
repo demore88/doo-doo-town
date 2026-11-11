@@ -255,6 +255,7 @@ function drive3d(choice, opts) {
   if (RACE) { MODE.cars = Math.max(2, Math.round(MODE.cars * 0.45)); MODE.crit = Math.max(1, Math.round(MODE.crit * 0.5)); }   // less traffic in the way of the race
   for (let i = 0; i < (opts.endless ? 4 : Math.round(MODE.cars * Math.min(1, Math.max(0.6, BUSY_MAX)))); i++) { let c, tries = 0; do { c = addCar(rnd(14, DRAW) * SEG, Math.random() < MODE.onc); tries++; } while (tries < 10 && cars.some(o => o.lane === c.lane && Math.abs(o.z - c.z) < 4 * SEG)); cars.push(c); }
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__cars = cars;
+  if (typeof DDT !== 'undefined' && DDT.DEV) window.__sqcall = w => startSqCall(w || 'baby');
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__jump = mi => { pos = mi * SEG_PER_MI * SEG; };   /* dev: jump down the road */
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__critter = (kind, ahead) => critters.push({ seg: Math.floor((pos + PZ) / SEG) + (ahead || 30), kind, off: ahead < 4 ? px : px + 1.2, dir: ahead < 4 ? 1 : 0, hit: false, snap: 0, flash: 0 });   /* dev: drop an animal ahead */   // dev: lets the test harness check for overlaps
   const respawn = (c, base) => {   // reappear far up the road (out at the horizon), in a lane with room, and never in the last stretch before town
@@ -300,7 +301,19 @@ function drive3d(choice, opts) {
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__moose = () => { const c = { kind: 'moose', seg: Math.floor((pos + PZ) / SEG), off: px, dir: -1, hit: true, react: 0.001 }; critters.push(c); }; window.__crash = () => bursts.push({ t: 0, side: 0.3, big: false }); window.__turk = () => critters.push({ kind: 'turkeys', seg: 0, off: 0, dir: 1, hit: true, fly: 0.001, flyDir: 1 }); window.__deer = (d = 1) => critters.push({ kind: 'deer', seg: 0, off: 0, dir: d, hit: true, fly: 0.001, flyDir: d });   // dev: test the windshield deer
   const sfx = (n, o) => { if (window.DDTSfx) DDTSfx.play(n, o); };
   // ---------- the windshield: cracks that stick around (and grow with every hit), bugs, mud, and now and then some weather ----------
-  let grip = 0, gripSide = 1;   /* a raccoon on the glass */
+  let grip = 0, gripSide = 1, sqCall = null;
+  // the squirrel's family calls the van. Each caller has an avatar (assets/drive/sq_<who>.png; a squirrel stand-in until the art exists).
+  const SQ_CALLS = [
+    { who: 'baby', name: 'BABY SQUIRREL', lines: ['Hello? Is this the blue van?', 'Have you seen my mommy?', 'Someone said they saw your van go by...', 'She was getting us acorns.'] },
+    { who: 'wife', name: 'MRS. SQUIRREL', lines: ['Is this Mt. Washington Sewer and Drain?', 'My husband went out for nuts an hour ago.', 'Gary from the oak tree says he saw a van.', 'He said it was YELLOW AND BLUE.'] },
+    { who: 'grandma', name: 'GRANDMA SQUIRREL', lines: ["Speak up, dear, I'm old.", 'Did my grandson come by your truck?', 'He never calls.', 'Well. He never will now, will he.'] },
+    { who: 'lawyer', name: 'SQUIRREL ATTORNEY', lines: ['Good afternoon. Chester P. Nutworth, Esquire.', 'I represent the family of the deceased.', 'We have dashcam footage from a crow.', 'Expect to hear from us.'] },
+    { who: 'brother', name: 'BIG BROTHER SQUIRREL', lines: ['Yeah. You. In the van.', 'That was my little brother, man.', 'I know where you park.', "Check your engine bay tonight. I'm serious."] },
+    { who: 'kid', name: 'SQUIRREL KID', lines: ['Is my dad okay?', 'He was gonna take me to the bird feeder.', 'Mom is crying...', 'Can YOU take me to the bird feeder?'] },
+    { who: 'pastor', name: 'REVEREND SQUIRREL', lines: ['Bless you, my child.', 'Our brother crossed over today. On Route 16.', 'Services are Sunday under the big maple.', 'Please. Bring nuts.'] },
+  ];
+  const SQ_IMG = {}; const sqImg = w => SQ_IMG[w] || (SQ_IMG[w] = DI('sq_' + w));
+  function startSqCall(force) { const c = force ? SQ_CALLS.find(q => q.who === force) || SQ_CALLS[0] : SQ_CALLS[Math.floor(Math.random() * SQ_CALLS.length)]; sqImg(c.who); sqCall = { c, t: 0, ring: 1.2 }; sfx('phone_ring'); }   /* a raccoon on the glass */
   let glass = 0; if (!opts.arcade) try { glass = (DDT.get() || {}).glass || 0; } catch (e) {}   /* menu drives start with clean glass */
   // the Driving Game: score, near misses, and toolboxes on the road that patch the van back up
   let score = 0, combo = 0, comboT = 0, distPts = 0, slowT = 0; const DS = { kits: 0, kitsUsed: 0, near: 0, bestCombo: 0, rear: 0 };   /* the Driving Game record */ const KITS = [], KIT_IMG = new Image(); KIT_IMG.src = (typeof ART !== 'undefined' ? ART : 'assets/') + 'mg/sr2_toolbox.png';
@@ -496,7 +509,7 @@ function drive3d(choice, opts) {
         }
         if (live && !cr.hit && (cr.kind === 'squirrel' || cr.kind === 'raccoon') && Math.abs(dz - PZ) < SEG * 1.1 && Math.abs(px - cr.off) < CW[cr.kind] + 0.1) {
           cr.hit = true; cr.gone = true; STATS[cr.kind] = (STATS[cr.kind] || 0) + 1;
-          if (cr.kind === 'squirrel') { sfx('squish'); say('SQUISH.', 0.9); }   /* no damage, just guilt */
+          if (cr.kind === 'squirrel') { sfx('squish'); say('SQUISH.', 0.9); if (!sqCall && Math.random() < 0.01) setTimeout(() => startSqCall(), 1400); }   /* 1 in 100: the family calls */   /* no damage, just guilt */
           else { grip = 3.4; gripSide = Math.sign(cr.off - px) || 1; shake = 0.3; speed *= 0.85; penalty += PEN.raccoon; sfx('squish', { rate: 0.7 }); say('A RACCOON IS ON THE WINDSHIELD!', 1.6); }   /* it grabs on and won't let go */
           continue; }
         if (live && !cr.hit && inv <= 0 && Math.abs(dz - PZ) < SEG * 1.1 && Math.abs(px - cr.off) < CW[cr.kind] + 0.1) {
@@ -508,7 +521,7 @@ function drive3d(choice, opts) {
           say({ moose: 'HIT THE MOOSE! +20 MIN', deer: covered ? 'OH DEER. INSURANCE HAS IT!' : 'OH DEER. +12 MIN', turkeys: 'FEATHERS! +5 MIN', peeper: 'SLAMMED THE BRAKES! +8 MIN' }[cr.kind]);
         }
       }
-      inv = Math.max(0, inv - dt); msgT = Math.max(0, msgT - dt); shake = Math.max(0, shake - dt); grip = Math.max(0, grip - dt);
+      inv = Math.max(0, inv - dt); msgT = Math.max(0, msgT - dt); shake = Math.max(0, shake - dt); grip = Math.max(0, grip - dt); if (sqCall) { if (sqCall.ring > 0) sqCall.ring -= dt; else { sqCall.t += dt; if (sqCall.t > sqCall.c.lines.length * 2.6 + 0.6) sqCall = null; } }
       if (window.DRV && DRV.src) DRV.src.playbackRate.value = 0.7 + 0.6 * ratio;
       draw(gas, brake, steer);
       if (opts.endless) { const mi = pos / SEG / SEG_PER_MI; if (crashes >= 20 || pos >= (N - 40) * SEG) { done = true; removeEventListener('keydown', kd); removeEventListener('keyup', ku); rc.onpointerdown = rc.onpointerup = rc.onpointermove = rc.onpointercancel = null;
@@ -710,6 +723,15 @@ function drive3d(choice, opts) {
         { const x = 6, w = 132; r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(x, 26, w, 18); const f = 1 - crashes / 20; r.fillStyle = '#2c3326'; r.fillRect(x + 6, 31, w - 52, 8); r.fillStyle = crashes > 14 ? '#e9665a' : crashes > 8 ? '#f7c418' : '#7bd65b'; r.fillRect(x + 6, 31, (w - 52) * f, 8); r.fillStyle = '#fff'; r.textAlign = 'right'; r.fillText(`${20 - crashes}`, x + w - 6, 35); r.textAlign = 'left'; }   /* van health, top left */
         box(150, 84, `${mi.toFixed(1)} MI`, '#7bd65b'); box(242, 150, `${(score + Math.floor(distPts)).toLocaleString()} PTS`, '#f7c418'); }
 
+      if (sqCall) { const c = sqCall.c, bx = 96, by = 50, bw = W - 192, bh = 56;   /* incoming call from the squirrel's family */
+        r.fillStyle = 'rgba(16,21,31,.94)'; r.fillRect(bx, by, bw, bh); r.fillStyle = '#f7c418'; r.fillRect(bx, by, bw, 2);
+        const im = sqImg(c.who), fb = ANIM.squirrel[0]; r.fillStyle = '#2a3346'; r.fillRect(bx + 5, by + 5, 46, 46);
+        if (im.complete && im.naturalWidth) r.drawImage(im, bx + 5, by + 5, 46, 46); else if (fb.complete && fb.naturalWidth) r.drawImage(fb, bx + 8, by + 14, 40, 40 * fb.height / fb.width);
+        r.font = '6px "Press Start 2P", monospace'; r.textAlign = 'left'; r.fillStyle = '#f7c418';
+        if (sqCall.ring > 0) { r.fillText((Math.floor(t * 4) % 2 ? '📞 ' : '') + 'INCOMING CALL...', bx + 58, by + 16); r.fillStyle = '#fff'; r.fillText(c.name, bx + 58, by + 30); }
+        else { r.fillText(c.name, bx + 58, by + 14); const li = Math.min(c.lines.length - 1, Math.floor(sqCall.t / 2.6)), shown = Math.floor((sqCall.t - li * 2.6) * 30);
+          r.fillStyle = '#fff'; const txt = c.lines[li].slice(0, shown), words = txt.split(' '); let line = '', y = by + 28;
+          for (const w of words) { if ((line + w).length > 30) { r.fillText(line, bx + 58, y); y += 10; line = ''; } line += w + ' '; } r.fillText(line, bx + 58, y); } }
       // phone buttons (also show what the keys do)
       if (true) {   // brake in both corners, gas = both thumbs (keyboard: ▲)
         r.fillStyle = brake ? 'rgba(233,102,90,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40); r.fillRect(W - 96, H - 46, 92, 40);
@@ -733,7 +755,7 @@ function drive3d(choice, opts) {
         r.fillStyle = '#9fb3d9'; r.fillText(`${DRIVER === 'matt' ? 'MATT' : 'ROD'} DRIVES · TOP ${DRIVER === 'matt' ? 60 : 40} MPH`, 240, 124); r.fillText('WATCH FOR BLINKERS + MOOSE', 240, 138);
         r.fillStyle = '#f7c418'; r.font = '12px "Press Start 2P", monospace'; r.fillText(t < 1.2 ? 'READY' : 'GO!', 240, 154); r.textAlign = 'left';
       }
-      if (msgT > 0) { r.font = '10px "Press Start 2P", monospace'; r.textAlign = 'center'; r.fillStyle = '#000'; r.fillText(msg, 241, 69); r.fillStyle = '#f7c418'; r.fillText(msg, 240, 68); r.textAlign = 'left'; }
+      if (msgT > 0) { const my = sqCall ? 124 : 68; r.font = '10px "Press Start 2P", monospace'; r.textAlign = 'center'; r.fillStyle = '#000'; r.fillText(msg, 241, my + 1); r.fillStyle = '#f7c418'; r.fillText(msg, 240, my); r.textAlign = 'left'; }   /* drop below the phone call while one is on */
     }
     requestAnimationFrame(frame);
   });
