@@ -1377,7 +1377,7 @@ GAMES.push({
     s.hobo = s.carls[0];
     s.shop = null; s.maps = [false, false, false]; s.scrib = []; s.big = null;
     { const free = []; for (let r = 1; r < R_ - 1; r++) for (let c = 1; c < C - 1; c++) if (m[r][c] === '.' && !(c === 1 && r === 1) && !(c === best[0] && r === best[1]) && !s.carls.some(q => q.c === c && q.r === r) && !(s.kingdom && s.kingdom.c === c && s.kingdom.r === r)) free.push([c, r]);
-      s.traps = []; for (let i = 0; i < [16, 15, 14][s.diff] && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.traps.push({ c, r }); } s.gloves = []; for (let i = 0; i < 3 && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.gloves.push({ c, r }); } }   /* rat traps, baited with the good crackers */
+      s.traps = []; for (let i = 0; i < [14, 13, 12][s.diff] && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.traps.push({ c, r }); } s.gloves = []; for (let i = 0; i < 3 && free.length; i++) { const [c, r] = free.splice(Math.floor(s.rnd() * free.length), 1)[0]; s.gloves.push({ c, r }); } }   /* rat traps, baited with the good crackers */
     s.pc = 1; s.pr = 1; s.dir = m[1][2] === '.' ? 0 : 1; s.vx = 1.5; s.vy = 1.5; s.va = s.dir * Math.PI / 2; s.mv = 0;
     s.seen = new Set([101]); s.steps = 0; s.since = 0;
     const H = HERO(s), rod = H.name === 'ROD';
@@ -1433,8 +1433,8 @@ GAMES.push({
       s.epi = [brag, nope[Math.floor(s.rnd() * nope.length)]]; if (s.carls.every(c => c.met)) s.epi[1] = "...Hey. Whose blue Econoline is that? It's been out front for fifteen years."; return; }
     if (s.gd[s.pr][s.pc] === 1 && !s.kingDone) { this.ambush(s, TRL.FOES.find(f => f.king)); return; }   /* he guards the drip */
     this.carlHint(s);
-    const chance = [0.07, 0.08, 0.09][s.diff] * (fresh ? 1 : 0.4);   /* fewer fights, and backtracking through places you've cleared is calmer */
-    if (s.since > 6 && s.gd[s.pr][s.pc] > 2 && s.rnd() < chance) this.ambush(s);
+    const chance = [0.09, 0.105, 0.12][s.diff] * (fresh ? 1 : 0.7);   /* fewer fights, and backtracking through places you've cleared is calmer */
+    if (s.since > 4 && s.gd[s.pr][s.pc] > 2 && s.rnd() < chance) this.ambush(s);
   },
   zone(s) { return s.d0[s.pr][s.pc] / s.dmax; },
   carlHint(s) {   // close to a Carl you haven't met: you hear him, and which way
@@ -1449,7 +1449,7 @@ GAMES.push({
     const z = this.zone(s), pool = TRL.FOES.filter(f => !f.king && f.z <= z && !(f.once && (s.met || []).includes(f.name)));
     let r = s.rnd() * pool.reduce((a, f) => a + f.w, 0), F = force || pool[0]; if (!force) for (const f of pool) { if ((r -= f.w) <= 0) { F = f; break; } }
     if (F.king) s.kingSeen = true;
-    const hp = Math.round((F.hp[0] + Math.floor(s.rnd() * (F.hp[1] - F.hp[0] + 1))) * (F.king ? [1.0, 1.2, 1.45][s.diff] : 1.5 + this.zone(s) * 0.6));   /* deeper ones are tougher */
+    const hp = Math.round((F.hp[0] + Math.floor(s.rnd() * (F.hp[1] - F.hp[0] + 1))) * (F.king ? [1.1, 1.3, 1.55][s.diff] : 1.5 + this.zone(s) * 0.6));   /* deeper ones are tougher */
     s.battle = { F, hp, max: hp, sel: 4, q: [], stun: 0, open: 0.6, blink: 0, dmgT: 0, pose: 2, poseT: 0.8, out: 0 }; s.since = 0; s.fights++; s.flash = 0.6; (s.met = s.met || []).push(F.name); TRL.bgm(true); TRL.cry(F, true);
     this.say(s, F.princess ? 'THE POSSUM PRINCESS blocks your way. She expects tribute.' : F.gary ? 'It is GARY. Gary is a raccoon in a tiny vest. Gary has done this before.' : F.king ? 'THE RAT KING rises from the muck, cape and all!' : F.name === 'BIG BUFF RAT' ? 'A BIG BUFF RAT flexes at you. It has been working out.' : F.venom ? 'A BROWN RECLUSE drops down from a joist!' : F.thief ? 'A RACCOON was already down here. It is not happy.' : F.possum ? 'A POSSUM hisses at you from behind a pier!' : `A ${F.name} jumps out of the dark!`);
   },
@@ -1542,7 +1542,7 @@ GAMES.push({
   bagList(s) { const I2 = s.items, inB = s.bag && s.bag.battle; const L = [
       { id: 'aid', label: `BAND-AIDS x${I2.aid}`, off: !I2.aid }, { id: 'beans', label: `COLD BEANS x${I2.beans}`, off: !I2.beans }, { id: 'tonic', label: `CARL'S TONIC x${I2.tonic}`, off: !I2.tonic } ];
     if (inB) L.push({ id: 'poison', label: `RAT POISON x${I2.poison}`, off: !I2.poison });
-    else L.push({ id: 'rest', label: 'REST (+30 MIN)', off: s.hp >= s.hpMax });
+    else L.push({ id: 'rest', label: 'REST (+30 MIN)', off: s.hp >= s.hpMax }, { id: 'bang', label: 'BANG ON PIPE +5 MIN', off: s.gd[s.pr][s.pc] <= 2 });   /* call a critter over: fight on purpose */
     L.push({ id: 'close', label: 'CLOSE' }); return L; },
   bagging(s, dt, I) {
     const B = s.bag, L = this.bagList(s);
@@ -1559,6 +1559,7 @@ GAMES.push({
     if (it.id === 'beans') { s.items.beans--; msg = `Cold beans. +${heal(25)} HP. Armpit-warm.`; }
     if (it.id === 'tonic') { s.items.tonic--; msg = `Carl's Tonic. +${heal(999)} HP. Your eyes water. You feel AMAZING.`; s.venom = 0; }
     if (it.id === 'poison') { s.items.poison--; const b = s.battle; msg = `You fling the rat poison. 25 damage!`; b.hp -= 25; b.blink = 0.4; b.dmgT = 0.7; b.dmg = 25; b.pose = 6; b.poseT = 0.6; }
+    if (it.id === 'bang') { s.restMin += 5; s.bag = null; (s.log = s.log || []).push((L => L[Math.floor(s.rnd() * L.length)])(['You bang on the pipe. CLANG CLANG CLANG. Something heard that.', 'You whack a joist. The dark goes quiet... then it scurries.', 'You yell "HERE RATTY RATTY." You regret it immediately.'])); this.ambush(s); return; }
     if (it.id === 'rest') { s.restMin += 30; if (s.rnd() < 0.3) { msg = `You lie down in the dirt... something is chewing your boot.`; s.bag = null; (s.log = s.log || []).push(msg); this.ambush(s); return; }
       msg = `You lie down in the muck and rest. +${heal(Math.round(s.hpMax * 0.6))} HP. (+30 min on the job)`; }
     s.bag = null; (s.log = s.log || []).push(msg);
@@ -1651,8 +1652,8 @@ GAMES.push({
       if (b.F.princess) {   /* beat her in a fair fight and she's smitten anyway: the escort (and the wedding) still happen */
         this.say(s, 'THE POSSUM PRINCESS stops. She has never lost before.', () => { b.pose = 4; b.poseT = 1.2; });
         this.say(s, 'She is... impressed. She bats her eyes at you.');
-        this.say(s, 'She takes your hand. She would like to go HOME now. (A crown on your map marks her kingdom.)', () => { this.gainXP(s, Math.round(b.F.pts * 1.7)); s.score += b.F.pts; s.won++; s.escort = true; b.out = 0.01; });
-        b.after = () => this.endFight(s); return; } this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { const loot = b.F.king ? 4 : b.F.gary ? 3 : s.rnd() < [0.85, 0.78, 0.7][s.diff] ? 1 : 0;   /* most critters aren't carrying crackers */ s.crk += loot + (b.stolen || 0); if (b.stolen) (s.log = s.log || []).push(`You get your ${b.stolen} stolen cracker${b.stolen > 1 ? 's' : ''} back, too.`); this.gainXP(s, Math.round(b.F.pts * 1.7)); if (b.F.king) s.kingDone = true; if (loot) (s.log = s.log || []).push(`It dropped ${loot} peanut butter cracker${loot > 1 ? 's' : ''}. Where was it keeping those.`); s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
+        this.say(s, 'She takes your hand. She would like to go HOME now. (A crown on your map marks her kingdom.)', () => { this.gainXP(s, Math.round(b.F.pts * 1.35)); s.score += b.F.pts; s.won++; s.escort = true; b.out = 0.01; });
+        b.after = () => this.endFight(s); return; } this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { const loot = b.F.king ? 4 : b.F.gary ? 3 : s.rnd() < [0.7, 0.63, 0.56][s.diff] ? 1 : 0;   /* most critters aren't carrying crackers */ s.crk += loot + (b.stolen || 0); if (b.stolen) (s.log = s.log || []).push(`You get your ${b.stolen} stolen cracker${b.stolen > 1 ? 's' : ''} back, too.`); this.gainXP(s, Math.round(b.F.pts * 1.35)); if (b.F.king) s.kingDone = true; if (loot) (s.log = s.log || []).push(`It dropped ${loot} peanut butter cracker${loot > 1 ? 's' : ''}. Where was it keeping those.`); s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
     b.wonFn = won; b.foeTurnFn = foeTurn;
     if (o.id === 'item') { s.bag = { sel: 0, battle: true }; return; }
     if (o.id === 'whack' && b.guards > 0) {   /* the guards are in the way: you have to get through them first */
@@ -1669,7 +1670,7 @@ GAMES.push({
       if (s.rnd() < (b.F.king ? 0.4 : 0.85)) { b.stun = b.F.king ? 1 : 2; this.say(s, `The ${b.F.name} is blinded!`); } else this.say(s, 'It just squints at you.');
       b.after = () => foeTurn();
     } else if (o.id === 'pb') {
-      if (b.F.princess) { s.crk--; this.say(s, 'You offer the Princess a peanut butter cracker...'); this.say(s, 'She accepts. She knights you with a twig. DEF +1!', () => { SFX('ut_knight', { vol: 0.7 }); s.def++; b.pose = 4; b.poseT = 1; }); this.say(s, 'She takes your hand. She would like to go HOME now. (A crown on your map marks her kingdom.)', () => { this.gainXP(s, Math.round(b.F.pts * 1.7)); s.escort = true; b.out = 0.01; }); b.after = () => this.endFight(s); return; }
+      if (b.F.princess) { s.crk--; this.say(s, 'You offer the Princess a peanut butter cracker...'); this.say(s, 'She accepts. She knights you with a twig. DEF +1!', () => { SFX('ut_knight', { vol: 0.7 }); s.def++; b.pose = 4; b.poseT = 1; }); this.say(s, 'She takes your hand. She would like to go HOME now. (A crown on your map marks her kingdom.)', () => { this.gainXP(s, Math.round(b.F.pts * 1.35)); s.escort = true; b.out = 0.01; }); b.after = () => this.endFight(s); return; }
       s.crk--; this.say(s, 'You flick a peanut butter cracker down the row...'); this.say(s, `The ${b.F.name} goes for it. You crawl away.`, () => { b.pose = 3; b.poseT = 9; b.out = 0.01; }); b.after = () => this.endFight(s);
     } else if (o.id === 'run') {
       if (s.rnd() < s.runOdds * (b.F.king ? 0.5 : 1)) { this.say(s, 'You scramble away through the muck!', () => SFX('ut_flee', { vol: 0.6 })); b.after = () => this.endFight(s); }
