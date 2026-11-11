@@ -32,6 +32,14 @@
   .box{max-width:44em;margin:4% auto;background:#10151f;border:4px solid #f7c418;box-shadow:6px 6px 0 #000;padding:3% 4%}
   #result{background:rgba(11,14,21,.25)} #result .box{max-width:26em;margin:2% auto;background:rgba(16,21,31,.72);border-width:3px;padding:1.4% 2.4%;line-height:1.6}
   #result .big{font-size:1.5em;margin:.1em 0} #result .stars{font-size:1.2em} #result p{margin:.4em 0}
+  @keyframes resin{from{transform:translateY(-14px) scale(.96);opacity:0}to{transform:none;opacity:1}}
+  @keyframes starpop{0%{transform:scale(0) rotate(-40deg);opacity:0}60%{transform:scale(1.7) rotate(8deg);opacity:1}100%{transform:scale(1)}}
+  @keyframes bestglow{0%,100%{color:#f7c418}50%{color:#fff}}
+  #result .box{animation:resin .28s ease-out both}
+  #result .stars span{display:inline-block} #result .stars .on{animation:starpop .36s ease-out both} #result .stars .off{opacity:.45}
+  #result .best{text-align:center;font-size:.8em;margin:.2em 0;animation:bestglow .7s linear infinite}
+  #result .tip{text-align:center;font-size:.7em;color:#9fb3d9;margin:.3em 0}
+  .scr{animation:scrin .22s ease-out both} @keyframes scrin{from{opacity:0}to{opacity:1}}
   .box h2{color:#f7c418;margin:0 0 .3em;font-size:1.5em}
   .box .tag{color:#9fb3d9;margin-bottom:1em}
   .box ul{padding-left:1.2em;margin:.6em 0}
@@ -99,9 +107,9 @@
   <div class="scr" id="result"><div class="box" id="resbox"></div></div>
 </div></div>
 <audio id="music" src="../assets/doo_doo_town.mp3" loop preload="auto"></audio>
-<script src="../js/state.js?v=1794345469"></script>
-<script src="../js/sfx.js?v=1794345469"></script>
-<script src="games.js?v=1794345469"></script>
+<script src="../js/state.js?v=1794360683"></script>
+<script src="../js/sfx.js?v=1794360683"></script>
+<script src="games.js?v=1794360683"></script>
 <script>
 const cv = document.getElementById('c'); g = cv.getContext('2d'); const SCALE = 3; g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
 const $ = s => document.querySelector(s);
@@ -215,17 +223,26 @@ $('#quit').onclick = quit;
 function start() {
   const G = GAMES[cur];
   s = { hero, H: HEROES[hero], diff, k: DIFF_K[diff], rnd: rng((Date.now() ^ (cur * 7919)) >>> 0), t: 0, shake: 0, room: DDT.param('room') || '', camera: DDT.param('cam') === '1', item: DDT.param('item') || '' };   // room: kitchen = black grease, not brown
+  { // fair challenge: a game you keep acing gets a little tougher; one you keep failing eases off a little
+    const aced = Math.min(4, store.get('aced_' + G.id) || 0), fails = Math.min(3, store.get('fails_' + G.id) || 0);
+    s.k *= Math.max(0.78, Math.min(1.28, 1 + aced * 0.06 - fails * 0.09)); }
   G.init(s); if (DDT.param('boots') === '1' && s.pantsMax) { s.pantsMax++; s.pants++; }   // boots or waders: one more pair of pants in the messy games
   for (const k in held) { held[k] = 0; edge[k] = 0; } ptr.down = false; ptr.clicked = false;
   phase = 'ready'; readyT = 1.6; screen(''); $('#quit').style.display = ''; showPad();
 }
 function finish() {
   const G = GAMES[cur], e = s.end; phase = 'result'; showPad(); store.set('seen_' + G.id, 1);
-  const key = G.id + '_' + diff, prev = store.get(key) || 0; if (e.win && e.stars > prev) store.set(key, e.stars);
-  if (e.win) { beep(523, .12); setTimeout(() => beep(659, .12), 120); setTimeout(() => beep(784, .25), 240); } else { beep(196, .4, 'sawtooth', .05, -80); }
+  const key = G.id + '_' + diff, prev = store.get(key) || 0, newBest = e.win && e.stars > prev; if (newBest) store.set(key, e.stars);
+  const streak = e.win ? (store.get('streak') || 0) + 1 : 0; store.set('streak', streak);
+  if (e.win) { store.set('fails_' + G.id, 0); if (e.stars === 3) store.set('aced_' + G.id, (store.get('aced_' + G.id) || 0) + 1); } else { store.set('fails_' + G.id, (store.get('fails_' + G.id) || 0) + 1); store.set('aced_' + G.id, Math.max(0, (store.get('aced_' + G.id) || 0) - 1)); }   // wins in a row, across games
+  if (e.win) { for (let i = 0; i < e.stars; i++) setTimeout(() => beep([659, 784, 1047][i], .14), 380 + i * 300); if (e.stars === 3) setTimeout(() => { beep(1319, .3); }, 1300); }   // one ding per star, rising
+  else { beep(196, .4, 'sawtooth', .05, -80); }
+  const starHtml = e.win ? [0, 1, 2].map(i => i < e.stars ? `<span class="on" style="animation-delay:${0.38 + i * 0.3}s">★</span>` : '<span class="off">☆</span>').join('') : '<span class="off">☆☆☆</span>';
+  const extra = (newBest && prev ? '<div class="best">NEW BEST!</div>' : e.win && e.stars === 3 ? '<div class="best">PERFECT JOB!</div>' : '') + (streak >= 3 ? `<div class="best">${streak} IN A ROW!</div>` : '')
+    + (!e.win ? `<div class="tip">TIP: ${G.how[Math.min(G.how.length - 1, 1 + Math.floor(Math.random() * (G.how.length - 1)))]}</div>` : e.stars < 3 ? '<div class="tip">3 stars is out there. Cleaner and faster.</div>' : '');
   $('#resbox').innerHTML = `<div class="big" style="color:${e.win ? '#7bd65b' : '#e9665a'}">${e.win ? 'JOB DONE!' : 'NOT THIS TIME'}</div>
-    <div class="stars">${e.win ? '★'.repeat(e.stars) + '☆'.repeat(3 - e.stars) : '☆☆☆'}</div>
-    <p style="text-align:center">${e.line}</p>
+    <div class="stars">${starHtml}</div>
+    <p style="text-align:center">${e.line}</p>${extra}
     <div class="row"><button class="btn" id="again">RETRY</button>${cur < GAMES.length - 1 ? '<button class="btn" id="next">NEXT GAME &gt;</button>' : ''}<button class="btn" id="all">ALL GAMES</button></div>`;
   screen('result'); $('#quit').style.display = 'none';
   $('#again').onclick = start; $('#all').onclick = toMenu; if ($('#next')) $('#next').onclick = () => openIntro(cur + 1);
@@ -239,11 +256,11 @@ function finish() {
 }
 
 // ---------- loop ----------
-let prevShake = 0, prevPants = null;
+let prevShake = 0, prevPants = null, endT = 0;
 function frame(ms) {
   g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
   const dt = Math.min(1 / 30, (ms - last) / 1000 || 0); last = ms;
-  if (phase === 'ready' || phase === 'play' || phase === 'result') {
+  if (phase === 'ready' || phase === 'play' || phase === 'result' || phase === 'ending') {
     const G = GAMES[cur];
     if (phase === 'play') {
       const I = { L: held.L, R: held.R, U: held.U, D: held.D, A: held.A, Lp: edge.L, Rp: edge.R, Up: edge.U, Dp: edge.D, Ap: edge.A, ptr: { ...ptr } };
@@ -252,12 +269,14 @@ function frame(ms) {
       G.update(s, dt, I);
       if ((s.shake || 0) > prevShake + 0.01) beep(110, .18, 'sawtooth', .06, -40);
       prevShake = s.shake || 0;
-      if (s.end) finish();
+      if (s.end) { phase = 'ending'; endT = 0.75; if (s.end.win) beep(880, .08); }   // hold on the final moment before the results slide in
+    } else if (phase === 'ending') { endT -= dt; if (s.fx || s.pops) { try { if (typeof FX === 'function') FX(s, dt); } catch (e) {} } if (endT <= 0) finish();
     } else if (phase === 'ready') { readyT -= dt; for (const k in edge) edge[k] = 0; ptr.clicked = false; if (readyT <= 0) { phase = 'play'; beep(1046, .1); } }
     g.save();
     if (s.shake > 0) { s.shake = Math.max(0, s.shake - dt); g.translate((Math.random() - .5) * 6, (Math.random() - .5) * 6); }
     G.draw(s, {}); g.restore();
-    if (phase === 'ready') { R(0, 110, W, 50, 'rgba(16,21,31,.85)'); T(readyT > 0.8 ? 'GET READY' : 'GO!', 240, 135, '#f7c418', 16, 'center'); }
+    if (phase === 'ending') { const k = Math.max(0, endT / 0.75); if (s.end.win) { g.globalAlpha = k * k * 0.55; R(0, 0, W, H, '#fff'); g.globalAlpha = 1; } else { g.globalAlpha = (1 - k) * 0.5; R(0, 0, W, H, '#200'); g.globalAlpha = 1; } }
+    if (phase === 'ready') { const go = readyT <= 0.8, k = go ? 1 + Math.max(0, readyT - 0.55) * 2.4 : 1; R(0, 110, W, 50, 'rgba(16,21,31,.85)'); T(go ? 'GO!' : 'GET READY', 240, 135, go ? '#7dffb0' : '#f7c418', 16 * k, 'center'); }
   } else { R(0, 0, W, H, '#0b0e15'); }
   requestAnimationFrame(frame);
 }

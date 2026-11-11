@@ -51,10 +51,15 @@ window.DDT_RADIO = (() => {
   f.src = p + (p.includes('?') ? '&' : '?') + 't=' + Date.now();   // never an old saved copy of the first screen
   // Every screen change loads into a fresh frame (the old one stays up until the new one is ready, then goes away).
   // Chrome can keep a finger "stuck" to an old screen; a brand-new frame always starts with clean touches.
+  // Screen changes dip to black and back (a short fade), so nothing pops or flashes between screens.
+  const veil = document.createElement('div'); veil.style.cssText = 'position:fixed;inset:0;background:#0b0e15;opacity:0;pointer-events:none;transition:opacity .16s ease;z-index:5'; document.body.appendChild(veil);
   window.ddtLoad = url => {
     const nf = document.createElement('iframe'); nf.className = 'gf'; nf.allow = 'autoplay; fullscreen'; nf.style.visibility = 'hidden';
-    f.after(nf); nf.addEventListener('load', () => { nf.style.visibility = ''; const old = f; f = nf; old.remove(); try { document.title = nf.contentDocument.title; } catch (e) {} nf.focus(); }, { once: true });
-    nf.src = url;
+    veil.style.transition = 'opacity .16s ease'; veil.style.opacity = '1';
+    let done = false; const show = () => { if (done) return; done = true; nf.style.visibility = ''; const old = f; f = nf; old.remove(); try { document.title = nf.contentDocument.title; } catch (e) {} nf.focus();
+      setTimeout(() => { veil.style.transition = 'opacity .28s ease'; veil.style.opacity = '0'; }, 90); };   // give the new screen a beat to draw its first frame
+    f.after(nf); nf.addEventListener('load', show, { once: true }); setTimeout(show, 4000);   // never get stuck on black
+    setTimeout(() => { nf.src = url; }, 150);   // let the fade-out land before the swap
   };
   window.ddtFS = () => {
     const d = document.documentElement; if (document.fullscreenElement || !d.requestFullscreen) return;

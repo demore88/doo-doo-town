@@ -216,8 +216,9 @@ GAMES.push({
     else if (s.t >= s.DUR) s.end = { win: true, stars: stars3(s.hits === 0, s.hits <= 1), line: s.hits ? `Hit ${s.hits}x. You live to tell Rod.` : 'Untouched. Rod is impressed.' };
   },
   draw(s) {
-    R(0, 0, W, H, '#8a8f94');
-    for (let y = 16; y < H; y += 20) for (let x = 0; x < W; x += 20) R(x + 1, y + 1, 18, 18, '#949aa0');
+    R(0, 0, W, H, '#5d9a48');   // the customer's lawn, seen from above
+    for (let i = 0; i < 140; i++) { const x = (i * 97) % W, y = 16 + (i * 61) % (H - 16); R(x, y, 2, 3, i % 3 ? '#6aae52' : '#4f8a3e'); if (i % 17 === 0) { R(x + 5, y + 1, 2, 2, '#f2e36a'); } }
+    for (let i = 0; i < 6; i++) { g.fillStyle = 'rgba(40,70,30,.18)'; g.beginPath(); g.ellipse((i * 173) % W, 30 + (i * 89) % 220, 40, 14, 0, 0, 7); g.fill(); }
     const cx = 240, cy = 140;
     C(cx, cy, 24, 'rgba(107,68,35,.35)');
     for (let j = 0; j < s.jets; j++) {
@@ -439,8 +440,9 @@ GAMES.push({
     R(0, 60, 40, 30, '#d6d6d6'); R(36, 54, 12, 42, '#bbb');
     g.strokeStyle = '#7a4a1e'; g.lineWidth = 10; g.lineCap = 'round'; g.beginPath(); g.moveTo(46, 75); g.quadraticCurveTo(46 + (s.land - 46) * .7, 30, s.land, FL - 6); g.stroke();
     if (s.swap <= 0) {
-      g.fillStyle = '#e07a1f'; g.beginPath(); g.moveTo(s.px - 24, FL - 52); g.lineTo(s.px + 24, FL - 52); g.lineTo(s.px + 19, FL); g.lineTo(s.px - 19, FL); g.fill();
-      const fh = s.fill / 100 * 48; R(s.px - 19, FL - fh, 38, fh, '#5a3a1c');
+      const fh = s.fill / 100 * 48;
+      if (MG('bucket')) { SPI('bucket', s.px, FL, 1.75); g.fillStyle = '#5a3a1c'; g.beginPath(); g.ellipse(s.px, FL - 50 + (1 - s.fill / 100) * 6, 17, 3 + s.fill / 40, 0, 0, 7); g.fill(); R(s.px + 26, FL - 50, 4, 50, 'rgba(0,0,0,.45)'); R(s.px + 26, FL - fh, 4, fh, s.fill > 80 ? '#e9665a' : '#c98a3a'); }   // the real bucket, with a fill gauge beside it
+      else { g.fillStyle = '#e07a1f'; g.beginPath(); g.moveTo(s.px - 24, FL - 52); g.lineTo(s.px + 24, FL - 52); g.lineTo(s.px + 19, FL); g.lineTo(s.px - 19, FL); g.fill(); R(s.px - 19, FL - fh, 38, fh, '#5a3a1c'); }
       if (s.fill >= 100) T('FULL! SPACE', s.px, FL - 62, '#e9665a', 8, 'center'); else if (s.fill > 80) T('ALMOST', s.px, FL - 62, '#f7c418', 6, 'center');
     } else T('SWAP...', s.px, FL - 30, '#f7c418', 8, 'center');
     HUD(s, 'OVERFLOW CONTROL', s.DUR - s.t);
@@ -665,7 +667,9 @@ GAMES.push({
     else if (s.t >= s.TIME) s.end = { win: false, stars: 0, line: 'Still down there. Somewhere.' };
   },
   draw(s) {
-    R(0, 0, W, H, '#cfd6da'); R(0, 200, W, 70, '#9aa3a8');
+    R(0, 0, W, 150, '#bfd6cf'); for (let x = 0; x < W; x += 24) for (let y = 16; y < 150; y += 24) { R(x, y, 23, 23, (x / 24 + y / 24) % 2 ? '#c9dfd8' : '#c3d9d2'); }   // tiled bathroom wall
+    R(0, 150, W, 4, '#8fa8a0'); R(0, 154, W, H - 154, '#8d8f96'); for (let x = -20; x < W; x += 40) { R(x + ((154 % 80) / 2), 154, 1, H, '#7d7f86'); } for (let y = 174; y < H; y += 24) R(0, y, W, 1, '#7d7f86');
+    R(196, 96, 88, 70, '#f4f4f2'); R(192, 90, 96, 10, '#e2e4e0'); R(270, 104, 10, 4, '#b9bec5');   // the tank
     g.fillStyle = '#f4f4f2'; g.beginPath(); g.ellipse(240, 200, 120, 46, 0, 0, 7); g.fill();
     g.fillStyle = '#b9d4e0'; g.beginPath(); g.ellipse(240, 200, 92, 30, 0, 0, 7); g.fill();
     const depth = 1 - s.prog / 100, wob = s.sw * 70 + (s.tug > 0 ? Math.sin(s.t * 40) * 4 : 0) + (s.warn > 0 ? Math.sin(s.t * 30) * 1.5 : 0);
@@ -1040,11 +1044,12 @@ GAMES.push({
   },
   draw(s) {
     R(0, 0, W, H, '#6f9a4f'); for (let i = 0; i < 60; i++) R((i * 71) % W, (i * 43) % H, 3, 2, '#7fae5c');
-    const P = s.pen; R(P.x - 4, P.y - 30, 64, P.h + 60, '#2c6cd6'); R(P.x, P.y, P.w, P.h, '#3b3d44'); R(P.x - 4, P.y - 30, 64, 12, '#f7c418');
-    T('VAN', P.x + 26, P.y - 24, '#000', 6, 'center');
+    const P = s.pen; R(P.x - 6, P.y - 34, 70, P.h + 68, '#f2c21a'); R(P.x - 6, P.y - 34, 70, 16, '#2c4f9c'); R(P.x - 6, P.y + P.h + 20, 70, 14, '#2c4f9c'); R(P.x - 2, P.y - 16, 62, 10, '#9fd1ff'); R(P.x, P.y, P.w, P.h, '#3b3d44'); R(P.x, P.y, P.w, 3, '#22242a');   // the van from above: yellow body, blue ends, open side door
+    for (let i = 0; i < 2; i++) { R(P.x - 10, P.y - 24 + i * (P.h + 36), 5, 14, '#111'); }
+    T('VAN', P.x + 28, P.y - 26, '#fff', 6, 'center');
     R(200, 200, 26, 26, '#555'); C(213, 213, 9, '#222');                         // the inspection hole
     s.dogs.forEach((d, i) => { if (SPI((i % 2 ? 'lab_' : 'dog_') + (Math.floor(s.t * 8 + i) % 2), d.x, d.y + 6, 0.6, d.vx < 0)) return; R(d.x - 6, d.y - 4, 12, 8, d.col); R(d.x + (d.vx >= 0 ? 4 : -8), d.y - 6, 4, 4, d.col); R(d.x + (d.vx >= 0 ? -8 : 6), d.y - 3, 3, 2, d.col); });
-    HERO_AT(s, s.px, s.py + 14, 2, { face: 'U' });
+    HERO_AT(s, s.px, s.py + 12, 1.35, { face: 'U' });
     HUD(s, 'DOG ROUNDUP', s.TIME - s.t); T('IN VAN ' + (s.n || 0) + '/5', 6, 28, '#fff', 8);
   },
 });
@@ -1348,7 +1353,7 @@ GAMES.push({
     if (s.duck) { const x = s.duck.x; R(x - 8, 22, 14, 9, '#f7c418'); R(x + 2, 17, 8, 8, '#f7c418'); R(x + 9, 20, 4, 3, '#e8822a'); R(x + 5, 19, 2, 2, '#000'); }
     for (const f of s.foes) {
       const x = f.x, y = f.y, fr = s.march % 2;   // two-step shuffle, in time with the march
-      if (f.k === 'towel') { R(x - 10, y - 6, 20, 12, '#e85a8e'); R(x - 12, y - 3, 24, 2, '#fff'); R(x - 12, y + 2, 24, 2, '#fff'); R(x - 12 + (fr ? 0 : 20), y + 7, 4, 3, '#e85a8e'); }
+      if (f.k === 'towel') { R(x - 10, y - 6, 20, 12, '#f1f3f5'); R(x - 10, y - 6, 20, 2, '#d9dde2'); R(x - 8, y - 2, 16, 1, '#8fb8e8'); R(x - 8, y + 2, 16, 1, '#8fb8e8'); R(x - 5, y - 4, 3, 2, '#222'); R(x + 2, y - 4, 3, 2, '#222'); R(x - 8 + (fr ? 0 : 12), y + 6, 4, 3, '#c9cdd2'); R(x + 4 - (fr ? 0 : 12), y + 6, 4, 3, '#c9cdd2'); }   // paper towel: white, blue print, little eyes and feet
       else if (f.k === 'grease' && SPC('grease', x, y, 0.5 + fr * 0.04)) {}
       else if (f.k !== 'grease' && SPC('tp', x, y, 0.5 + fr * 0.04)) {}
       else if (f.k === 'grease') { C(x, y, 9, '#2b2620'); C(x - 3, y - 3, 3, '#5a5040'); R(x - 9 + fr * 2, y + 6, 4, 4, '#2b2620'); R(x + 5 - fr * 2, y + 6, 4, 4, '#2b2620'); R(x - 4, y - 1, 2, 2, '#f7c418'); R(x + 2, y - 1, 2, 2, '#f7c418'); }
@@ -2010,7 +2015,7 @@ GAMES.push({
     // the bucket under the cleanout
     const bx = 44, by = 196;
     if (s.swap > 0) { T('SWAP!', bx + 16, by - 8, '#f7c418', 6, 'center'); g.globalAlpha = 0.4; }
-    R(bx, by, 32, 28, '#e8762b'); R(bx + 2, by + 28 - 26 * Math.min(1, s.bucket), 28, 26 * Math.min(1, s.bucket), '#7fc4ff'); R(bx - 2, by - 2, 36, 3, '#c45f1e'); g.globalAlpha = 1;
+    if (MG('bucket')) { SPI('bucket', bx + 16, by + 28, 1.15); g.fillStyle = 'rgba(127,196,255,.95)'; g.beginPath(); g.ellipse(bx + 16, by - 4 + (1 - Math.min(1, s.bucket)) * 6, 11, 2 + Math.min(1, s.bucket) * 2, 0, 0, 7); g.fill(); } else { R(bx, by, 32, 28, '#e8762b'); R(bx + 2, by + 28 - 26 * Math.min(1, s.bucket), 28, 26 * Math.min(1, s.bucket), '#7fc4ff'); R(bx - 2, by - 2, 36, 3, '#c45f1e'); } g.globalAlpha = 1;
     if (s.bucket > 0.8 && Math.floor(s.t * 6) % 2) T('!', bx + 16, by - 18, '#e9665a', 10, 'center');
     if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) SPR(s.hero || 'rod', 6, 104, 240);
     DRAWFX(s);
