@@ -250,7 +250,7 @@ function drive3d(choice, opts) {
     const nOur = ourLanes(z), lane = onc ? (oncLanes(z) > 1 && Math.random() < 0.5 ? 5 : 0) : nOur <= 2 ? (Math.random() < 0.65 ? 2 : 1) : 1 + Math.floor(Math.random() * nOur);
     // our-way traffic is slower than us (you catch up and pass); log trucks crawl
     return { z, lane, off: LANE[lane], tgt: LANE[lane], speed: onc ? -(opts.endless ? rnd(38, 55) : rnd(25, 45)) * MPH : (truck ? rnd(18, 24) : rnd(22, 34)) * MPH * (DRIVER === 'rod' && !opts.endless ? 0.8 : 1),
-      img, onc, hw: (img.width || (truck ? 50 : 44)) * sc / 320, sc, truck, blink: 0 };
+      img, onc, hw: (img.width || (truck ? 50 : 44)) * sc / 320, sc, truck, blink: 0, wo: 0, ...(!truck && Math.random() < 0.02 ? (Math.random() < 0.5 ? { drunk: 1, ph: Math.random() * 6.28 } : { texting: 1, wv: (Math.random() < 0.5 ? -1 : 1) * 0.12 }) : {}) };   /* 2%: drunk or texting, weaving all over */
   }
   // traffic lives in a window around the van: anything that falls behind gets sent back up the road (so it never runs dry)
   const BUSY_MAX = Math.max(...LEGS_HERE.map(L => L.busy || 1));
@@ -426,7 +426,12 @@ function drive3d(choice, opts) {
         if (c.blink > 0) { c.blink -= dt; if (c.blink <= 0) { c.lane = c.next; c.tgt = LANE[c.lane]; c.blink = -1.2; } }
         else if (c.blink < 0) c.blink = Math.min(0, c.blink + dt);
         if (c.spin > 0) { c.spin -= dt; c.rot = (c.rot || 0) + c.spinDir * dt * 14 * Math.min(1, c.spin); c.off += c.spinDir * dt * 0.9; c.tgt = c.off; if (c.spin <= 0) { c.z = -1e12; c.parked = true; c.retry = 1; c.rot = 0; } continue; }
+        c.off -= c.wo || 0;   /* weaving rides on top of the car's lane position */
         if (c.off !== c.tgt) { const d = c.tgt - c.off; c.off += Math.sign(d) * Math.min(Math.abs(d), dt * 0.55); }
+        if (c.drunk) c.wo = 0.3 * Math.sin(t * 1.3 + c.ph) + 0.1 * Math.sin(t * 3.1 + c.ph * 2);   /* drunk: big lazy swerves across the lines */
+        else if (c.texting) { c.wo += c.wv * dt; if (Math.abs(c.wo) > 0.34) { c.wv = -Math.sign(c.wo) * (0.1 + Math.random() * 0.12); c.wo = Math.sign(c.wo) * 0.2; } }   /* texting: drifts... looks up... jerks back... drifts the other way */
+        c.off += c.wo || 0;
+        if ((c.drunk || c.texting) && !c.warned && live && c.z - (pos + PZ) > 0 && c.z - (pos + PZ) < 45 * SEG) { c.warned = 1; say(c.drunk ? 'DRUNK DRIVER! GIVE HIM ROOM' : 'THAT GUY IS TEXTING!', 1.4); }
         const VAN_HW = 0.16;   // the van, measured the same way as the cars it can hit
         if (opts.endless && live && c.prevAhead > 0 && ahead <= 0 && !c.nm) { const gap = Math.abs(px - c.off) - (c.hw + VAN_HW); c.nm = 1;
           if (gap > -0.02 && gap < 0.2 && inv <= 0) { combo = comboT > 0 ? combo + 1 : 1; comboT = 2.5; DS.near++; DS.bestCombo = Math.max(DS.bestCombo, combo); if (Math.random() < 0.05) sfx(c.onc ? 'horn_angry' : 'horn'); if (c.yukon) say(["ROD: SO CLOSE.", "ROD: NEXT TIME.", "ROD: SHE DIDN'T EVEN SIGNAL."][Math.floor(Math.random() * 3)], 1.6);   /* now and then, they lean on the horn */ const pts = 100 * combo * (c.onc ? 2 : 1); score += pts; say(`${c.onc ? 'WHOA! ' : ''}NEAR MISS +${pts}${combo > 1 ? ` (x${combo})` : ''}`, 1); } }   /* threading the needle pays */
