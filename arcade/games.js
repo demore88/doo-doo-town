@@ -1206,130 +1206,212 @@ GAMES.push({
 });
 
 // =====================================================================
-// 15. UNDER THE TRAILER — a Pac-Man homage in a dark crawlspace. Grab the parts, dodge the rats, fix the joint.
-const CRAWL_MAP = [
-  '#######################',
-  '#.....#.........#.....#',
-  '#.###.#.###.###.#.###.#',
-  '#.#.................#.#',
-  '#.#.###.##.#.##.###.#.#',
-  '#.......#..#..#.......#',
-  '#.#.###.#.###.#.###.#.#',
-  '#.#.................#.#',
-  '#.###.#.###.###.#.###.#',
-  '#.....#.........#.....#',
-  '#######################',
+// 15. UNDER THE TRAILER — an old-school first-person crawl. Feel your way through the piers and the muck,
+// follow your nose to the broken joint, and fight off the rats the old-fashioned way: turn-based.
+const TRL = { RW: 240, RH: 135, T: 32 };
+TRL.rgb = (r, gg, b) => (255 << 24) | (Math.max(0, Math.min(255, b)) << 16) | (Math.max(0, Math.min(255, gg)) << 8) | Math.max(0, Math.min(255, r));
+TRL.tex = (() => {   // little 32x32 textures, painted once
+  const N = TRL.T, mk = f => { const a = new Uint32Array(N * N); for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) a[y * N + x] = f(x, y); return a; };
+  let seed = 7; const rn = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const n2 = Array.from({ length: N * N }, rn);
+  const block = mk((x, y) => { const row = y >> 4, jx = (x + (row ? 16 : 0)) % 32, mortar = (y & 15) < 2 || jx < 2, v = n2[y * N + x] * 22;   // cinder block piers
+    if (mortar) return TRL.rgb(70 + v / 2, 68 + v / 2, 64 + v / 2); const stain = y > 22 ? (y - 22) * 3 : 0; return TRL.rgb(118 + v - stain, 116 + v - stain * 1.2, 110 + v - stain * 1.6); });
+  const skirt = mk((x, y) => { const v = n2[y * N + x] * 14, seam = x % 8 === 0, crack = (x === 13 || x === 14) && y > 4 && y < 9;   // vinyl skirting, a crack of daylight
+    if (crack) return TRL.rgb(250, 240, 200); if (seam) return TRL.rgb(120 + v, 112 + v, 96 + v); const dirt = y > 20 ? (y - 20) * 5 : 0; return TRL.rgb(176 + v - dirt, 166 + v - dirt, 140 + v - dirt * 1.3); });
+  const dirt = mk((x, y) => { const v = n2[y * N + x], d = Math.hypot(x - 20, y - 11);   // muck, with a wet spot
+    if (v > 0.93) return TRL.rgb(130, 120, 100); if (d < 6) return TRL.rgb(48 + v * 10, 40 + v * 10, 28 + v * 8); return TRL.rgb(92 + v * 26, 72 + v * 20, 48 + v * 14); });
+  const ceil = mk((x, y) => { const v = n2[y * N + x] * 20, j = x % 16 < 5;   // floor joists with pink insulation sagging between
+    if (j) return TRL.rgb(120 + v, 86 + v * 0.8, 54 + v * 0.5); if (v > 18) return TRL.rgb(200, 150, 160); return TRL.rgb(214 + v, 132 + v, 150 + v); });
+  // the broken joint: PVC coming down out of the floor, snapped off short of the run, dripping
+  const pipe = f => mk((x, y) => { const pv = x >= 13 && x <= 18, top = y < 13, run = y >= 23 && y <= 27 && x >= 19, end = run && x <= 20;
+    if (pv && top) return x === 14 ? TRL.rgb(255, 255, 250) : x === 18 ? TRL.rgb(170, 166, 156) : TRL.rgb(226, 222, 210);   /* white PVC coming down from the floor */
+    if (pv && y === 13) return TRL.rgb(120, 110, 96);   /* snapped-off end */
+    if (end) return TRL.rgb(40, 30, 20);   /* the open end of the run, lying in the muck */
+    if (run) return y === 23 ? TRL.rgb(250, 250, 244) : y === 27 ? TRL.rgb(150, 146, 136) : TRL.rgb(222, 218, 206);
+    const dy = 16 + ((f * 9 + 0) % 14); if (x >= 15 && x <= 16 && y >= dy && y <= dy + 2) return TRL.rgb(120, 86, 40);   // the drip
+    if (y >= 28 && Math.abs(x - 16) < 7 - (31 - y)) return TRL.rgb(96, 70, 34);   // puddle
+    return 0; });
+  return { block, skirt, dirt, ceil, pipe: [pipe(0), pipe(1)] };
+})();
+TRL.FOES = [
+  { name: 'SEWER RAT', hp: [7, 10], atk: [2, 4], w: 6, sc: 1, pts: 50 },
+  { name: "BIG OL' RAT", hp: [13, 17], atk: [3, 6], w: 3, sc: 1.5, pts: 120 },
+  { name: 'THE RAT KING', hp: [22, 26], atk: [4, 7], w: 1, sc: 1.2, king: true, pts: 300 },
 ];
 GAMES.push({
-  id: 'crawl', name: 'UNDER THE TRAILER', tag: 'Dark crawlspace · detached pipe',
-  how: ['Army-crawl through the crawlspace with the arrows. Pick up the crumbs of insulation for points.', 'Find the 3 parts: a FERNCO, a CLAMP and a length of PIPE. Then reach the broken joint (the drip).', 'The rats chase you. Grab a FLASHLIGHT and they run. Bump a scared rat to shoo it home.', 'Three rat bites and you are out of pants.'],
-  dpad: 'omni',
-  ctl: 'ARROWS = CRAWL',
-  act: null, phone: 'swipe or hold the d-pad to crawl.',
+  id: 'crawl', name: 'UNDER THE TRAILER', tag: 'Dark crawlspace · detached pipe · rats',
+  how: ['Somewhere under this trailer the sewer pipe came apart. Crawl through the dark and find it.', '▲ crawl forward, ▼ back up, ◀ ▶ turn. On the phone you can also tap the left / middle / right of the view.', 'Follow the STINK meter: the stronger it gets, the closer you are. The map in the corner fills in as you go.', 'Rats jump you in the dark. Pick WHACK, FLASHLIGHT, PEANUT BUTTER or RUN, then press the action button. Out of health and you crawl out.'],
+  dpad: true,
+  ctl: '▲ ▼ CRAWL · ◀ ▶ TURN · SPACE = PICK',
+  act: 'PICK', phone: 'd-pad to crawl and turn (or tap the view), PICK in fights.',
   init(s) {
-    s.Z = 20; s.ox = 10; s.oy = 30; s.map = CRAWL_MAP.map(r => r.split(''));
-    s.dots = new Set(); for (let r = 0; r < s.map.length; r++) for (let c = 0; c < 23; c++) if (s.map[r][c] === '.') s.dots.add(r * 100 + c);
-    s.p = { c: 11, r: 9, x: 11, y: 9, d: [0, 0], want: [0, 0] }; s.dots.delete(911);
-    s.parts = [{ c: 1, r: 1, k: 'FERNCO' }, { c: 21, r: 9, k: 'CLAMP' }, { c: 1, r: 9, k: 'PIPE' }]; s.got = [];
-    s.lights = [{ c: 21, r: 1 }, { c: 11, r: 3 }]; s.scare = 0; s.joint = { c: 11, r: 1 };
-    for (const o of [...s.parts, ...s.lights, s.joint]) s.dots.delete(o.r * 100 + o.c);
-    s.D0 = s.dots.size;
-    const nR = [2, 3, 4][s.diff], homes = [[9, 5], [13, 5], [10, 5], [12, 7]];
-    s.rats = []; for (let i = 0; i < nR; i++) s.rats.push({ c: homes[i][0], r: homes[i][1], x: homes[i][0], y: homes[i][1], d: [0, 0], home: homes[i], wait: i * 1.6, out: 0 });
-    s.pantsMax = s.pants = 3; s.inv = 0; s.hits = 0; s.score = 0; s.SP = 4.6 * HERO(s).spd; s.RSP = [2.8, 3.3, 3.8][s.diff];
+    const [w, h] = [[5, 4], [6, 5], [7, 6]][s.diff], C = w * 2 + 1, R_ = h * 2 + 1;
+    const m = Array.from({ length: R_ }, (_, r) => Array.from({ length: C }, (_, c) => (r === 0 || c === 0 || r === R_ - 1 || c === C - 1) ? 'S' : '#'));
+    const st = [[1, 1]]; m[1][1] = '.';   // carve a maze between the piers...
+    while (st.length) { const [c, r] = st[st.length - 1], nb = [[2, 0], [-2, 0], [0, 2], [0, -2]].map(([dx, dy]) => [c + dx, r + dy, dx, dy]).filter(([x, y]) => x > 0 && y > 0 && x < C - 1 && y < R_ - 1 && m[y][x] === '#');
+      if (!nb.length) { st.pop(); continue; } const [x, y, dx, dy] = nb[Math.floor(s.rnd() * nb.length)]; m[r + dy / 2][c + dx / 2] = '.'; m[y][x] = '.'; st.push([x, y]); }
+    for (let i = 0; i < w * h * 0.35; i++) { const c = 1 + Math.floor(s.rnd() * (C - 2)), r = 1 + Math.floor(s.rnd() * (R_ - 2)); if (m[r][c] === '#' && (c % 2) !== (r % 2)) m[r][c] = '.'; }   // ...with a few loops, so it isn't one long hallway
+    s.map = m; s.C = C; s.R = R_;
+    // the broken joint: the farthest spot from the access hatch
+    const dist = (c0, r0) => { const D = Array.from({ length: R_ }, () => Array(C).fill(-1)), q = [[c0, r0]]; D[r0][c0] = 0;
+      while (q.length) { const [c, r] = q.shift(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = c + dx, y = r + dy; if (m[y][x] === '.' && D[y][x] < 0) { D[y][x] = D[r][c] + 1; q.push([x, y]); } } } return D; };
+    const D0 = dist(1, 1); let best = [1, 1]; for (let r = 0; r < R_; r++) for (let c = 0; c < C; c++) if (D0[r][c] > D0[best[1]][best[0]]) best = [c, r];
+    s.goal = { c: best[0], r: best[1] }; s.gd = dist(best[0], best[1]); s.gmax = s.gd[1][1];
+    s.pc = 1; s.pr = 1; s.dir = m[1][2] === '.' ? 0 : 1; s.vx = 1.5; s.vy = 1.5; s.va = s.dir * Math.PI / 2; s.mv = 0;
+    s.seen = new Set([101]); s.steps = 0; s.since = 0;
+    const H = HERO(s), rod = H.name === 'ROD';
+    s.hpMax = s.hp = rod ? 36 : 28; s.dmg = rod ? [3, 6] : [4, 7]; s.runOdds = rod ? 0.5 : 0.7;
+    s.lights = 3; s.pb = 2; s.score = 0; s.fights = 0; s.won = 0; s.hits = 0; s.battle = null; s.flash = 0; s.fixT = 0;
+    s.cv = document.createElement('canvas'); s.cv.width = TRL.RW; s.cv.height = TRL.RH; s.cx = s.cv.getContext('2d'); s.img = s.cx.createImageData(TRL.RW, TRL.RH); s.buf = new Uint32Array(s.img.data.buffer); s.zb = new Float32Array(TRL.RW);
   },
-  open(s, c, r) { return r >= 0 && r < s.map.length && c >= 0 && c < 23 && s.map[r][c] !== '#'; },
-  // one grid step-mover shared by you and the rats: glide between cell centers, pick a new way at each center
-  step(s, a, sp, dt, choose) {
-    let left = sp * dt;
-    while (left > 0) {
-      const tx = a.c + a.d[0], ty = a.r + a.d[1];
-      if (a.d[0] || a.d[1]) {
-        const dist = Math.abs(tx - a.x) + Math.abs(ty - a.y), m = Math.min(left, dist);
-        a.x += a.d[0] * m; a.y += a.d[1] * m; left -= m;
-        // reverse at any time (feels right in pac-man)
-        if (dist - m > 1e-6) { if (a.want && a.want[0] === -a.d[0] && a.want[1] === -a.d[1] && (a.want[0] || a.want[1])) { a.c = tx; a.r = ty; a.d = a.want.slice(); } return; }
-        a.c = tx; a.r = ty; a.x = tx; a.y = ty;
-      }
-      const nd = choose(a); if (!nd || !(nd[0] || nd[1]) || !this.open(s, a.c + nd[0], a.r + nd[1])) { a.d = [0, 0]; return; }
-      a.d = nd; if (left <= 0) return;
-    }
-  },
+  open(s, c, r) { return s.map[r] && s.map[r][c] === '.'; },
   update(s, dt, I) {
-    s.t += dt; FX(s, dt); s.inv -= dt; s.scare -= dt;
-    const p = s.p;
-    if (I.L) p.want = [-1, 0]; if (I.R) p.want = [1, 0]; if (I.U) p.want = [0, -1]; if (I.D) p.want = [0, 1];
-    if (I.ptr.down) { const vx = I.ptr.x - (s.ox + p.x * s.Z + 10), vy = I.ptr.y - (s.oy + p.y * s.Z + 10); if (Math.hypot(vx, vy) > 12) p.want = Math.abs(vx) > Math.abs(vy) ? [Math.sign(vx), 0] : [0, Math.sign(vy)]; }
-    this.step(s, p, s.SP, dt, a => this.open(s, a.c + a.want[0], a.r + a.want[1]) ? a.want.slice() : a.d);
-    const k = p.r * 100 + p.c;
-    if (s.dots.delete(k)) { s.score += 10; if (s.dots.size % 4 === 0) SFX('ui_tap', { vol: 0.25 }); }
-    for (const pt of s.parts) if (!pt.got && pt.c === p.c && pt.r === p.r) { pt.got = true; s.got.push(pt.k); s.score += 200; POP(s, s.ox + p.c * s.Z + 10, s.oy + p.r * s.Z - 4, 'GOT ' + pt.k, '#9fe07a'); SFX('ui_select'); }
-    for (const L of s.lights) if (!L.got && L.c === p.c && L.r === p.r) { L.got = true; s.scare = [7, 6, 5][s.diff] * HERO(s).steady; POP(s, s.ox + p.c * s.Z + 10, s.oy + p.r * s.Z - 4, 'FLASHLIGHT!', '#f7c418'); SFX('click'); }
-    if (p.c === s.joint.c && p.r === s.joint.r) {
-      if (s.got.length === 3) { SFX('drill_stop'); return (s.end = { win: true, stars: stars3(s.hits === 0 && s.dots.size < s.D0 * 0.5, s.hits < 2), line: 'Fernco on, clamps tight. No more drip.' }); }
-      if (!s.warned) { s.warned = 1.5; POP(s, s.ox + p.c * s.Z + 10, s.oy + p.r * s.Z + 26, `NEED ${3 - s.got.length} MORE PART${s.got.length === 2 ? '' : 'S'}`, '#e9665a'); }
+    s.t += dt; FX(s, dt); s.flash = Math.max(0, s.flash - dt); s.shake = Math.max(0, (s.shake || 0) - dt);
+    if (s.fixT) { s.fixT += dt; if (s.fixT > 3.2) { const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.t < 50 + s.gmax * 2, f >= 0.3), line: s.won ? `Fernco on, clamps tight. ${s.won} rat${s.won > 1 ? 's' : ''} sent packing.` : 'Fernco on, clamps tight. No more drip.' }); } return; }
+    if (s.battle) return this.fight(s, dt, I);
+    const H = HERO(s), dur = 0.26 / H.spd;
+    if (s.mv > 0) {   // gliding to the next square / turning
+      s.mv -= dt; const k = 1 - Math.max(0, s.mv) / s.mvD;
+      s.vx = lerp(s.fx0, s.pc + 0.5, k); s.vy = lerp(s.fy0, s.pr + 0.5, k); s.va = lerp(s.fa0, s.ta, k);
+      if (s.mv <= 0) { s.va = s.ta = ((s.ta % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2); s.vx = s.pc + 0.5; s.vy = s.pr + 0.5; if (s.arrived) { s.arrived = false; this.arrive(s); } }
+      return;
     }
-    if (s.warned) { s.warned -= dt; if (s.warned <= 0 && !(p.c === s.joint.c && p.r === s.joint.r)) s.warned = 0; }
-    // rats: chase when it is dark, scatter when the flashlight is on
-    for (const r of s.rats) {
-      if (r.wait > 0) { r.wait -= dt; continue; }
-      const scared = s.scare > 0 && !r.shooed, sp = r.shooed ? 6 : scared ? s.RSP * 0.6 : s.RSP;
-      this.step(s, r, sp, dt, a => {
-        const opts = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(d => this.open(s, a.c + d[0], a.r + d[1]) && !(d[0] === -a.d[0] && d[1] === -a.d[1] && (a.d[0] || a.d[1])));
-        if (!opts.length) return [-a.d[0], -a.d[1]];
-        const corner = [[1, 1], [21, 1], [1, 9], [21, 9]][s.rats.indexOf(r) % 4], scatter = (s.t % 20) < 6;   // like the ghosts: they wander off to their corners every so often
-        const tgt = r.shooed ? { c: r.home[0], r: r.home[1] } : scatter ? { c: corner[0], r: corner[1] } : { c: p.c + p.d[0] * 2, r: p.r + p.d[1] * 2 };
-        if (s.rnd() < [0.35, 0.22, 0.12][s.diff]) return opts[Math.floor(s.rnd() * opts.length)];
-        const dist = d => Math.hypot(a.c + d[0] - tgt.c, a.r + d[1] - tgt.r);
-        opts.sort((u, v) => (scared ? dist(v) - dist(u) : dist(u) - dist(v))); return opts[0];
-      });
-      if (r.shooed && r.c === r.home[0] && r.r === r.home[1]) { r.shooed = false; r.wait = 2; }
-      if (Math.hypot(r.x - p.x, r.y - p.y) < 0.6) {
-        if (scared) { r.shooed = true; s.score += 200; POP(s, s.ox + r.x * s.Z + 10, s.oy + r.y * s.Z, 'SHOO!', '#f7c418'); SFX('squish'); }
-        else if (!r.shooed && s.inv <= 0) {
-          s.pants--; s.hits++; s.inv = 1.8; s.shake = 0.35; PUFF(s, s.ox + p.x * s.Z + 10, s.oy + p.y * s.Z + 10, '#8a7a6a', 14, 70); POP(s, s.ox + p.x * s.Z + 10, s.oy + p.y * s.Z - 6, 'RAT BITE!', '#e9665a'); SFX('clog');
-          if (s.pants <= 0) return (s.end = { win: false, stars: 0, line: 'The rats own this crawlspace. We are coming back with traps.' });
-        }
-      }
+    let cmd = null;
+    if (I.U || I.Up) cmd = 'F'; else if (I.D || I.Dp) cmd = 'B'; else if (I.Lp || I.L) cmd = 'L'; else if (I.Rp || I.R) cmd = 'R';
+    if (!cmd && I.ptr.clicked) { const x = I.ptr.x / W; cmd = x < 0.3 ? 'L' : x > 0.7 ? 'R' : 'F'; }
+    if (!cmd) return;
+    s.fx0 = s.vx; s.fy0 = s.vy; s.fa0 = s.va; s.ta = s.va; s.mvD = dur;
+    if (cmd === 'L' || cmd === 'R') { s.ta = s.va + (cmd === 'L' ? -1 : 1) * Math.PI / 2; s.dir = (s.dir + (cmd === 'L' ? 3 : 1)) % 4; s.mv = s.mvD = dur * 0.8; return; }
+    const v = [[1, 0], [0, 1], [-1, 0], [0, -1]][s.dir], sg = cmd === 'F' ? 1 : -1, nc = s.pc + v[0] * sg, nr = s.pr + v[1] * sg;
+    if (!this.open(s, nc, nr)) { s.shake = 0.15; if (!s.bonk || s.t - s.bonk > 0.6) { s.bonk = s.t; SFX('click', { vol: 0.4 }); } return; }
+    s.pc = nc; s.pr = nr; s.mv = s.mvD = cmd === 'B' ? dur * 1.3 : dur; s.arrived = true; SFX('ui_tap', { vol: 0.12 });
+  },
+  arrive(s) {
+    s.seen.add(s.pr * 100 + s.pc); s.steps++; s.since++;
+    if (s.pc === s.goal.c && s.pr === s.goal.r) { s.fixT = 0.01; s.score += 500; SFX('drill_stop'); return; }
+    const chance = [0.09, 0.12, 0.15][s.diff];
+    if (s.since > 3 && s.gd[s.pr][s.pc] > 1 && s.rnd() < chance) this.ambush(s);
+  },
+  ambush(s) {
+    const deep = 1 - s.gd[s.pr][s.pc] / s.gmax, pool = TRL.FOES.filter(f => !f.king || (deep > 0.55 && s.diff > 0 && !s.kingSeen));
+    let r = s.rnd() * pool.reduce((a, f) => a + f.w, 0), F = pool[0]; for (const f of pool) { if ((r -= f.w) <= 0) { F = f; break; } }
+    if (F.king) s.kingSeen = true;
+    const hp = F.hp[0] + Math.floor(s.rnd() * (F.hp[1] - F.hp[0] + 1));
+    s.battle = { F, hp, max: hp, sel: 0, q: [], stun: 0, open: 0.6, blink: 0, dmgT: 0 }; s.since = 0; s.fights++; s.flash = 0.6; SFX('clog');
+    this.say(s, F.king ? 'THE RAT KING rises from the muck!' : `A ${F.name} jumps out of the dark!`);
+  },
+  say(s, text, fx) { s.battle.q.push({ text, fx, t: 0 }); },
+  // turn-based: messages play one at a time (tap / PICK to hurry them), then the menu comes back
+  fight(s, dt, I) {
+    const b = s.battle, tap = I.Ap || I.ptr.clicked;
+    if (b.open > 0) { b.open -= dt; return; }
+    b.blink = Math.max(0, b.blink - dt); b.dmgT = Math.max(0, b.dmgT - dt);
+    if (b.q.length) { const m = b.q[0]; if (!m.t && m.fx) m.fx(); m.t += dt; if ((m.t > 0.25 && tap) || m.t > 1.6) { b.q.shift(); if (!b.q.length && b.after) { const a = b.after; b.after = null; a(); } } return; }
+    const OPTS = this.opts(s);
+    if (I.Up || I.Lp) b.sel = (b.sel + OPTS.length - 1) % OPTS.length; if (I.Dp || I.Rp) b.sel = (b.sel + 1) % OPTS.length;
+    let pick = I.Ap ? b.sel : null;
+    if (I.ptr.clicked) for (let i = 0; i < OPTS.length; i++) { const [x, y, w, h] = this.optBox(i); if (I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h) { b.sel = i; pick = i; } }
+    if (pick === null) return;
+    const o = OPTS[pick]; if (o.off) { SFX('click'); return; } SFX('ui_select');
+    const foeTurn = () => {
+      if (b.stun > 0) { b.stun--; this.say(s, `The ${b.F.name} is still seeing spots.`); return; }
+      if (s.rnd() < 0.12) { this.say(s, `The ${b.F.name} lunges... and misses!`); return; }
+      const d = Math.max(1, Math.round((b.F.atk[0] + s.rnd() * (b.F.atk[1] - b.F.atk[0])) * (s.k || 1)));
+      this.say(s, b.F.king ? `THE RAT KING bites all at once! -${d} HP` : `The ${b.F.name} bites! -${d} HP`, () => { s.hp -= d; s.hits++; s.shake = 0.35; SFX('squish'); });
+      b.after = () => { if (s.hp <= 0) { s.hp = 0; s.end = { win: false, stars: 0, line: 'The rats own this crawlspace. We are coming back with traps.' }; } };
+    };
+    const won = () => { this.say(s, `The ${b.F.name} runs off squeaking! +${b.F.pts} PTS`, () => { s.score += b.F.pts; s.won++; SFX('ui_select'); }); b.after = () => { s.battle = null; }; };
+    if (o.id === 'whack') {
+      if (s.rnd() < 0.1) this.say(s, 'You swing the pipe wrench... and hit a pier. CLANG.', () => SFX('click'));
+      else { const crit = s.rnd() < 0.12, d = Math.round((s.dmg[0] + s.rnd() * (s.dmg[1] - s.dmg[0])) * (crit ? 2 : 1));
+        this.say(s, crit ? `CRITICAL WHACK! ${d} damage!` : `You whack it with the pipe wrench! ${d} damage.`, () => { b.hp -= d; b.blink = 0.4; b.dmgT = 0.7; b.dmg = d; s.shake = 0.12; SFX('drill_stop', { vol: 0.5 }); }); }
+      b.after = () => { if (b.hp <= 0) won(); else { foeTurn(); } };
+    } else if (o.id === 'light') {
+      s.lights--; this.say(s, 'You blast it with the flashlight!', () => { s.flash = 0.35; SFX('click'); });
+      if (s.rnd() < (b.F.king ? 0.4 : 0.85)) { b.stun = b.F.king ? 1 : 2; this.say(s, `The ${b.F.name} is blinded!`); } else this.say(s, 'It just squints at you.');
+      b.after = () => foeTurn();
+    } else if (o.id === 'pb') {
+      s.pb--; this.say(s, 'You toss a spoonful of peanut butter down the row...'); this.say(s, `The ${b.F.name} goes for it. You crawl away.`); b.after = () => { s.battle = null; };
+    } else if (o.id === 'run') {
+      if (s.rnd() < s.runOdds * (b.F.king ? 0.5 : 1)) { this.say(s, 'You scramble away through the muck!'); b.after = () => { s.battle = null; }; }
+      else { this.say(s, "You're stuck in the muck!"); b.after = () => foeTurn(); }
     }
+  },
+  opts(s) { return [{ id: 'whack', label: 'WHACK' }, { id: 'light', label: `FLASHLIGHT x${s.lights}`, off: s.lights <= 0 }, { id: 'pb', label: `PEANUT BUTTER x${s.pb}`, off: s.pb <= 0 }, { id: 'run', label: 'RUN' }]; },
+  optBox(i) { return [16 + (i % 2) * 150, 214 + Math.floor(i / 2) * 22, 144, 20]; },
+  render(s) {   // the 3D view: raycast walls, cast floor + ceiling, then the broken joint as a sprite
+    const { RW, RH, T: N } = TRL, buf = s.buf, zb = s.zb, tx = TRL.tex;
+    const dx = Math.cos(s.va), dy = Math.sin(s.va), pl = 0.66, plx = -dy * pl, ply = dx * pl, px = s.vx, py = s.vy;
+    const lightCol = new Float32Array(RW); for (let x = 0; x < RW; x++) { const u = (x / RW - 0.5) * 2; lightCol[x] = 1 - 0.7 * u * u; }   // the headlamp beam
+    const shade = (col, k) => { if (k >= 1) return col; const r = (col & 255) * k, gg = ((col >> 8) & 255) * k, b2 = ((col >> 16) & 255) * k; return (255 << 24) | (b2 << 16) | (gg << 8) | r; };
+    const lit = d => Math.min(1, 0.95 / (0.45 + d * d * 0.85)) + 0.02;   /* it's DARK under there: just your headlamp */
+    // floor & ceiling
+    const r0x = dx - plx, r0y = dy - ply, r1x = dx + plx, r1y = dy + ply, half = RH / 2;
+    for (let y = Math.floor(half) + 1; y < RH; y++) {
+      const rd = half / (y - half), sx = rd * (r1x - r0x) / RW, sy = rd * (r1y - r0y) / RW; let fx = px + rd * r0x, fy = py + rd * r0y; const L = lit(rd);
+      const yc = RH - 1 - y;
+      for (let x = 0; x < RW; x++) { const tX = ((fx - Math.floor(fx)) * N) | 0, tY = ((fy - Math.floor(fy)) * N) | 0, k = L * lightCol[x];
+        buf[y * RW + x] = shade(tx.dirt[tY * N + tX], k); buf[yc * RW + x] = shade(tx.ceil[tY * N + tX], k * 0.9); fx += sx; fy += sy; }
+    }
+    // walls
+    for (let x = 0; x < RW; x++) {
+      const cam = 2 * x / RW - 1, rx = dx + plx * cam, ry = dy + ply * cam;
+      let mx = Math.floor(px), my = Math.floor(py); const ddx = Math.abs(1 / rx), ddy = Math.abs(1 / ry), stx = rx < 0 ? -1 : 1, sty = ry < 0 ? -1 : 1;
+      let sdx = (rx < 0 ? px - mx : mx + 1 - px) * ddx, sdy = (ry < 0 ? py - my : my + 1 - py) * ddy, side = 0, cell = '.';
+      for (let i = 0; i < 64; i++) { if (sdx < sdy) { sdx += ddx; mx += stx; side = 0; } else { sdy += ddy; my += sty; side = 1; } cell = (s.map[my] || [])[mx]; if (cell !== '.') break; }
+      const perp = Math.max(0.05, side ? sdy - ddy : sdx - ddx); zb[x] = perp;
+      const lh = RH / perp, top = Math.max(0, Math.floor(half - lh / 2)), bot = Math.min(RH, Math.ceil(half + lh / 2));
+      let wx = side ? px + perp * rx : py + perp * ry; wx -= Math.floor(wx); const tX = Math.min(N - 1, (wx * N) | 0), T2 = cell === 'S' ? tx.skirt : tx.block, k = lit(perp) * lightCol[x] * (side ? 0.78 : 1);
+      for (let y = top; y < bot; y++) { const tY = Math.min(N - 1, ((y - half + lh / 2) * N / lh) | 0), c = T2[tY * N + tX]; buf[y * RW + x] = (c & 0xffffff) === 0xfaf0c8 /* the daylight crack doesn't dim */ ? c : shade(c, k); }
+    }
+    // the broken joint (a billboard)
+    { const sx = s.goal.c + 0.5 - px, sy = s.goal.r + 0.5 - py, inv = 1 / (plx * dy - dx * ply), tX = inv * (dy * sx - dx * sy), tY = inv * (-ply * sx + plx * sy);
+      if (tY > 0.1) { const scx = (RW / 2) * (1 + tX / tY), sh = Math.abs(RH / tY), x0 = Math.floor(scx - sh / 2), y0 = Math.floor(half - sh / 2), P = tx.pipe[Math.floor(s.t * 3) % 2], k = lit(tY) * 1.2;
+        for (let x = Math.max(0, x0); x < Math.min(RW, x0 + sh); x++) { if (tY >= zb[x]) continue; const u = Math.min(N - 1, ((x - x0) * N / sh) | 0);
+          for (let y = Math.max(0, y0); y < Math.min(RH, y0 + sh); y++) { const c = P[Math.min(N - 1, ((y - y0) * N / sh) | 0) * N + u]; if (c) buf[y * RW + x] = shade(c, Math.min(1, k * lightCol[x])); } } } }
+    s.cx.putImageData(s.img, 0, 0);
   },
   draw(s) {
-    const Z = s.Z, X = c => s.ox + c * Z, Y = r => s.oy + r * Z;
-    R(0, 0, W, H, '#14110e');
-    const dirt = MG('bg_crawl'); if (dirt) g.drawImage(dirt, 0, 40, 480, 230, X(0), Y(0), 23 * Z, s.map.length * Z);
-    for (let r = 0; r < s.map.length; r++) for (let c = 0; c < 23; c++) {
-      if (s.map[r][c] === '#') { R(X(c), Y(r), Z, Z, '#5a5a56'); R(X(c), Y(r), Z, 3, '#7a7a72'); R(X(c), Y(r) + Z - 2, Z, 2, '#3a3a38'); if ((r * 7 + c) % 5 === 0) R(X(c) + 6, Y(r) + 8, 6, 3, '#2a2a28'); }   // cinder blocks + piers
-      else if (!dirt) { R(X(c), Y(r), Z, Z, '#4a3a28'); if ((r * 13 + c * 7) % 6 === 0) R(X(c) + 4, Y(r) + 12, 3, 2, '#3a2c1e'); }   // dirt
+    this.render(s);
+    const sh = s.shake > 0 ? (Math.random() - 0.5) * 6 * s.shake * 3 : 0;
+    g.imageSmoothingEnabled = false; g.drawImage(s.cv, sh, 0, W, H);
+    if (s.flash > 0) { g.fillStyle = `rgba(255,250,220,${s.flash})`; g.fillRect(0, 0, W, H); }
+    if (s.battle) return this.drawFight(s);
+    HUD(s, 'UNDER THE TRAILER', null);
+    // health + stink
+    T('HP', 8, 26, '#fff', 7); BAR(26, 22, 80, 7, s.hp / s.hpMax, s.hp / s.hpMax > 0.5 ? '#7bd65b' : s.hp / s.hpMax > 0.25 ? '#f7c418' : '#e9665a');
+    const stink = 1 - s.gd[s.pr][s.pc] / Math.max(1, s.gmax);
+    T('STINK', 8, 40, '#c9a46a', 7); BAR(48, 36, 58, 7, stink, stink > 0.75 ? '#a0d040' : '#8a6a3a');
+    if (stink > 0.75 && Math.floor(s.t * 3) % 2) T('SMELLS CLOSE...', 8, 54, '#a0d040', 6);
+    // the automap: only what you've crawled through
+    const Z = 5, mx0 = W - s.C * Z - 8, my0 = 22; R(mx0 - 3, my0 - 3, s.C * Z + 6, s.R * Z + 6, 'rgba(10,8,6,.7)');
+    for (const k of s.seen) { const c = k % 100, r = Math.floor(k / 100); R(mx0 + c * Z, my0 + r * Z, Z, Z, '#6a5a44');
+      for (const [ddx, ddy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (s.map[r + ddy][c + ddx] !== '.') R(mx0 + (c + ddx) * Z, my0 + (r + ddy) * Z, Z, Z, '#3a3a38'); }
+    { const cx = mx0 + s.vx * Z, cy = my0 + s.vy * Z, a = s.va; g.fillStyle = '#f7c418'; g.beginPath(); g.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4); g.lineTo(cx + Math.cos(a + 2.4) * 3, cy + Math.sin(a + 2.4) * 3); g.lineTo(cx + Math.cos(a - 2.4) * 3, cy + Math.sin(a - 2.4) * 3); g.fill(); }
+    if (s.steps < 2) T('▲ CRAWL   ◀ ▶ TURN   FOLLOW THE STINK', W / 2, H - 14, '#fff', 7, 'center');
+    if (s.fixT) { R(80, 100, 320, 60, 'rgba(16,21,31,.92)'); T(s.fixT < 1.2 ? 'THERE IT IS. THE DRIP.' : s.fixT < 2.2 ? 'FERNCO ON...' : 'CLAMPS TIGHT. DONE!', W / 2, 130, '#7bd65b', 9, 'center'); }
+    DRAWFX(s);
+  },
+  drawFight(s) {   // the battle screen: a dark box, the rat, and an old-school text window + menu
+    const b = s.battle, t = s.t;
+    if (b.open > 0) { const k = b.open / 0.6; for (let i = 0; i < 12; i++) R(0, i * 23, W * (1 - k) * (i % 2 ? 1 : 1.1), 23, '#000'); return; }   // the classic wipe
+    R(0, 0, W, H, 'rgba(0,0,0,.78)');
+    R(70, 24, 340, 170, '#0a0806'); g.strokeStyle = '#fff'; g.lineWidth = 2; g.strokeRect(71, 25, 338, 168);
+    const cx = 240, by = 170 + Math.sin(t * 3) * 2, blinkOff = b.blink > 0 && Math.floor(t * 20) % 2;
+    if (!blinkOff && b.hp > 0 || b.q.length) {
+      if (b.F.king) { for (const [ox, oy, f] of [[-34, -4, 0], [34, -4, 1], [0, 6, 0]]) { if (!SPI('rat_' + ((Math.floor(t * 4) + (ox > 0 ? 1 : 0)) % 2), cx + ox, by + oy, 2.0, ox > 0)) R(cx + ox - 20, by + oy - 20, 40, 20, '#6a5a4c'); }
+        g.fillStyle = '#f7c418'; g.beginPath(); const kx = cx - 2, ky = by - 70; g.moveTo(kx - 18, ky + 14); g.lineTo(kx - 18, ky); g.lineTo(kx - 9, ky + 8); g.lineTo(kx, ky - 4); g.lineTo(kx + 9, ky + 8); g.lineTo(kx + 18, ky); g.lineTo(kx + 18, ky + 14); g.fill(); C(kx, ky - 4, 2, '#e9665a'); }
+      else if (!SPI('rat_' + (Math.floor(t * 4) % 2), cx, by, 2.4 * b.F.sc, false)) R(cx - 30, by - 30, 60, 30, '#6a5a4c');
+      if (!blinkOff && b.stun > 0) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; T('*', cx + Math.cos(a) * 26, by - 64 + Math.sin(a) * 6, '#f7c418', 8, 'center'); }
     }
-    for (const k of s.dots) { const c = k % 100, r = Math.floor(k / 100); R(X(c) + 9, Y(r) + 9, 3, 3, '#f0b8c8'); }   // pink insulation crumbs
-    for (const pt of s.parts) if (!pt.got) { const x = X(pt.c) + 10, y = Y(pt.r) + 10, b = Math.sin(s.t * 5) * 2;
-      if (SPC(pt.k === 'FERNCO' ? 'coupling' : pt.k === 'CLAMP' ? 'waxring' : 'pvc_1', x, y + b, pt.k === 'PIPE' ? 0.45 : 0.5)) continue;
-      if (pt.k === 'FERNCO') { R(x - 6, y - 5 + b, 12, 10, '#2b2b2b'); R(x - 7, y - 4 + b, 14, 2, '#c9c4b8'); R(x - 7, y + 2 + b, 14, 2, '#c9c4b8'); }
-      else if (pt.k === 'CLAMP') { C(x, y + b, 6, '#c9c4b8'); C(x, y + b, 3, '#4a3a28'); R(x + 4, y - 2 + b, 5, 4, '#c9c4b8'); }
-      else { R(x - 8, y - 3 + b, 16, 6, '#e8e4d8'); R(x - 8, y - 3 + b, 16, 2, '#fff'); } }
-    for (const L of s.lights) if (!L.got) { const x = X(L.c) + 10, y = Y(L.r) + 10; if (SPC('flashlight', x, y, 0.5)) continue; R(x - 6, y - 3, 10, 6, '#f7c418'); R(x + 4, y - 4, 3, 8, '#fff6c0'); }
-    // the broken joint: a dripping pipe
-    { const x = X(s.joint.c), y = Y(s.joint.r); R(x - 4, y + 2, 12, 6, '#e8e4d8'); R(x + 14, y + 4, 10, 6, '#e8e4d8'); const d = (s.t * 1.5) % 1; R(x + 10, y + 8 + d * 10, 2, 3, '#7a5a2e'); }
-    for (const r of s.rats) { const x = X(r.x) + 10, y = Y(r.y) + 12, scared = s.scare > 0 && !r.shooed, col = r.shooed ? '#3a3a3a' : scared && (s.scare > 1.5 || Math.floor(s.t * 8) % 2) ? '#6a8ad8' : '#6a5a4c';
-      if (SPI('rat_' + (Math.floor(s.t * 8) % 2), x, y + 5, 0.55, (r.d && r.d[0]) < 0, r.shooed ? 0.3 : scared && Math.floor(s.t * 8) % 2 ? 0.55 : 1)) continue;
-      R(x - 7, y - 4, 12, 7, col); R(x + 4, y - 3, 4, 4, col); R(x + 6, y - 2, 1, 1, '#e9665a'); R(x - 11, y - 1, 5, 1, '#c9a0a0'); R(x - 5 + Math.floor(s.t * 10) % 2 * 3, y + 3, 2, 2, col); }
-    // you: crawling on your belly, headlamp ahead
-    const p = s.p, px = X(p.x) + 10, py = Y(p.y) + 10;
-    if (s.inv <= 0 || Math.floor(s.t * 10) % 2) {   /* seen from above, army-crawling: arms reaching, legs kicking, headlamp on */
-      const moving = !!(p.d[0] || p.d[1]); if (moving) s.head = Math.atan2(p.d[1], p.d[0]); const ang = s.head || 0, ph = moving ? Math.sin(s.t * 14) : 0, rod = s.hero === 'rod';
-      g.save(); g.translate(px, py); g.rotate(ang);
-      g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(-1, 2, 12, 6, 0, 0, 7); g.fill();
-      R(-13, -4 + ph * 1.5, 7, 3, '#3a3a40'); R(-13, 1 - ph * 1.5, 7, 3, '#3a3a40'); R(-15, -4 + ph * 1.5, 3, 3, '#5a3a1c'); R(-15, 1 - ph * 1.5, 3, 3, '#5a3a1c');   /* legs and boots */
-      g.fillStyle = rod ? '#22325e' : '#2a3d78'; g.beginPath(); g.ellipse(-1, 0, 7, 5.5, 0, 0, 7); g.fill(); R(-5, -1, 6, 1, 'rgba(255,255,255,.18)');   /* back, work shirt */
-      R(3, -6, 5 + ph * 2, 3, rod ? '#22325e' : '#2a3d78'); R(3, 3, 5 - ph * 2, 3, rod ? '#22325e' : '#2a3d78'); R(8 + ph * 2, -6, 3, 3, '#e8b48a'); R(8 - ph * 2, 3, 3, 3, '#e8b48a');   /* arms reaching forward in turn */
-      g.fillStyle = '#1e2a4a'; g.beginPath(); g.arc(6, 0, 4, 0, 7); g.fill(); if (!rod) R(2, -2, 2, 4, '#1e2a4a'); else R(9, -2, 2, 4, '#1e2a4a');   /* ball cap (Matt wears his backwards) */
-      C(10, 0, 1.5, '#fff6c0');   /* headlamp */
-      g.restore(); }
-    // darkness: you only see around your headlamp (wider with a flashlight)
-    const rad = s.scare > 0 ? 180 : 105, gr = g.createRadialGradient(px, py, rad * 0.35, px, py, rad);
-    gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(6,5,4,0.74)'); g.fillStyle = gr; g.fillRect(0, 16, W, H - 16);
-    DRAWFX(s); HUD(s, 'UNDER THE TRAILER', null); PANTS(s, 6, 20);
-    T('PARTS ' + ['FERNCO', 'CLAMP', 'PIPE'].map(k => s.got.includes(k) ? k : '----').join(' '), W - 6, 24, '#9fe07a', 6, 'right');
+    if (b.dmgT > 0) T('-' + b.dmg, cx + 40, 90 - (0.7 - b.dmgT) * 30, '#fff', 12, 'center');
+    T(b.F.name, cx, 38, b.F.king ? '#f7c418' : '#fff', 8, 'center'); BAR(cx - 50, 46, 100, 5, b.hp / b.max, '#e9665a');
+    // the window: message, or the menu
+    R(8, 200, W - 16, 64, '#0a0806'); g.strokeStyle = '#fff'; g.lineWidth = 2; g.strokeRect(9, 201, W - 18, 62);
+    T(`${HERO(s).name}  HP ${Math.max(0, s.hp)}/${s.hpMax}`, W - 20, 210, s.hp / s.hpMax > 0.3 ? '#fff' : '#e9665a', 6, 'right');
+    if (b.q.length) { const m = b.q[0], txt = m.text.slice(0, Math.floor(m.t * 60)); T(txt, 20, 228, '#fff', 8); if (m.t > 0.4 && Math.floor(t * 3) % 2) T('▼', W - 24, 252, '#fff', 7); }
+    else { this.opts(s).forEach((o, i) => { const [x, y, w, h] = this.optBox(i); if (i === b.sel) T('▶', x - 2, y + 10, '#f7c418', 8); T(o.label, x + 10, y + 10, o.off ? '#555' : i === b.sel ? '#f7c418' : '#fff', 7); }); }
+    DRAWFX(s);
   },
 });
 
