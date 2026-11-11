@@ -1250,12 +1250,12 @@ TRL.face = (who, hp) => { const F = TRL.faces, ld = n => { if (F[n] === undefine
   if (F[n] === undefined) { F[n] = null; const im = new Image(); im.onload = () => F[n] = im; im.onerror = () => { F[n] = false; }; im.src = '../assets/' + n + '.png'; }
   return F[n] || F[who + '_normal'] || null; };
 TRL.FOES = [   /* spr: 8-frame strip (0 idle 1 sniff 2 stalk 3 run 4 rear up 5 attack 6 hurt 7 down) */
-  { name: 'SEWER RAT', spr: 'ut_rat', snd: 'rat_screech', hp: [7, 10], atk: [2, 4], w: 5, sc: 1, pts: 50 },
-  { name: 'BIG BUFF RAT', spr: 'ut_buffrat', snd: 'rat_screech', hp: [13, 17], atk: [3, 6], w: 3, sc: 1.3, pts: 120 },
+  { name: 'SEWER RAT', spr: 'ut_rat', snd: 'rat_screech', hp: [7, 10], atk: [2, 4], w: 5, sc: 0.7, pts: 50 },
+  { name: 'BIG BUFF RAT', spr: 'ut_buffrat', snd: 'rat_screech', hp: [13, 17], atk: [3, 6], w: 3, sc: 1.05, pts: 120 },
   { name: 'POSSUM', spr: 'ut_possum', snd: 'possum_hiss', hp: [10, 13], atk: [2, 5], w: 2, sc: 1.05, pts: 90, possum: true },
-  { name: 'RACCOON', spr: 'ut_raccoon', snd: 'raccoon', off: 2.5, hp: [12, 15], atk: [3, 5], w: 2, sc: 1.1, pts: 110, thief: true },
+  { name: 'RACCOON', spr: 'ut_raccoon', snd: 'raccoon', off: 2.5, hp: [12, 15], atk: [3, 5], w: 2, sc: 1.05, pts: 110, thief: true },
   { name: 'BROWN RECLUSE', spr: 'ut_spider', snd: 'spider', hp: [5, 8], atk: [2, 3], w: 2, sc: 0.8, pts: 80, venom: true },
-  { name: 'THE RAT KING', spr: 'ut_ratking', snd: 'rat_screech', hp: [22, 26], atk: [4, 7], w: 1, sc: 1.45, king: true, pts: 300 },
+  { name: 'THE RAT KING', spr: 'ut_ratking', snd: 'rat_screech', hp: [22, 26], atk: [4, 7], w: 1, sc: 1.35, king: true, pts: 300 },
 ];
 TRL.cry = (F, long) => SFX(F.snd, { offset: F.off || 0, dur: long ? 1.6 : 1.0 });   /* each critter's own noise */
 TRL.UTS = (n, f, cx, by, h, flip, a) => { const im = MG(n); if (!im) return false; const cw = im.width / 8, w = h * cw / im.height;   /* one frame of a creature strip */
