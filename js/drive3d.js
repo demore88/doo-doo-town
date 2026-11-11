@@ -305,7 +305,8 @@ function drive3d(choice, opts) {
   // the squirrel's family calls the van. Each caller has an avatar (assets/drive/sq_<who>.png; a squirrel stand-in until the art exists).
   const SQ = window.SQ_CALLERS || {}, SQ_SEEN = (() => { try { return JSON.parse(localStorage.getItem('ddt_sq_seen') || '{}'); } catch (e) { return {}; } })();
   const SQ_IMG = {}; const sqImg = (w, n) => { const k = w + '_' + (n || 0); return SQ_IMG[k] || (SQ_IMG[k] = DI('sq_' + k)); };
-  const SQ_FACE = { baby: [1, 0] };   /* which face first, which face later in the call (the baby starts hopeful, then sad) */
+  const SQ_FACE = { baby: [1, 0] };
+  const SQ_SIBS = { baby: ['BABY ACORN', 'BABY BUNNY'], kid: ['CAP KID', 'LITTLE BROTHER'] };   /* two kids on one phone: they pass it back and forth every line */   /* which face first, which face later in the call (the baby starts hopeful, then sad) */
   function startSqCall(force) {   /* pick a caller, then a call you haven't heard yet */
     const whos = Object.keys(SQ); if (!whos.length) return; const who = force && SQ[force] ? force : whos[Math.floor(Math.random() * whos.length)], C = SQ[who];
     const seen = SQ_SEEN[who] || []; let fresh = C.calls.map((_, i) => i).filter(i => !seen.includes(i)); if (!fresh.length) { fresh = C.calls.map((_, i) => i); SQ_SEEN[who] = []; }
@@ -725,11 +726,11 @@ function drive3d(choice, opts) {
         const pw = 84, ph = 150, px0 = W - 6 - pw + (1 - slide + end) * (pw + 12), py0 = 64, shake = sqCall.ring > 0 ? Math.sin(t * 60) * 1.5 : 0, X = px0 + shake;
         r.fillStyle = '#16181c'; r.fillRect(X, py0, pw, ph); r.fillStyle = '#2a2d33'; r.fillRect(X + 2, py0 + 2, pw - 4, ph - 4); r.fillStyle = '#0e1116'; r.fillRect(X + 5, py0 + 12, pw - 10, ph - 26);   /* the phone and its screen */
         r.fillStyle = '#3a3e46'; r.fillRect(X + pw / 2 - 8, py0 + 6, 16, 2); r.fillRect(X + pw / 2 - 6, py0 + ph - 10, 12, 4);
-        const ord = SQ_FACE[c.who] || [0, 1], later = sqCall.ring <= 0 && sqCall.t >= (c.lines.length - 1) * 2.8 * 0.6, im = sqImg(c.who, ord[later ? 1 : 0]), fb = ANIM.squirrel[0], ax = X + pw / 2 - 22, ay = py0 + 18;   /* the face changes partway through the call */
+        const sib = SQ_SIBS[c.who], li0 = sqCall.ring > 0 ? 0 : Math.min(c.lines.length - 1, Math.floor(sqCall.t / 2.8)), ord = SQ_FACE[c.who] || [0, 1], later = sqCall.ring <= 0 && sqCall.t >= (c.lines.length - 1) * 2.8 * 0.6, face = sib ? li0 % 2 : ord[later ? 1 : 0], im = sqImg(c.who, face), fb = ANIM.squirrel[0], ax = X + pw / 2 - 22, ay = py0 + 18;   /* the face changes partway through the call */
         r.fillStyle = '#2a3346'; r.fillRect(ax, ay, 44, 44);
         if (im.complete && im.naturalWidth) r.drawImage(im, ax, ay, 44, 44); else if (fb.complete && fb.naturalWidth) r.drawImage(fb, ax + 3, ay + 8, 38, 38 * fb.height / fb.width);
         r.font = '5px "Press Start 2P", monospace'; r.textAlign = 'center'; r.fillStyle = '#f7c418';
-        const nm = c.name.split(' '), nl = c.name.length > 12 && nm.length > 1 ? [nm.slice(0, -1).join(' '), nm[nm.length - 1]] : [c.name]; nl.forEach((l, k) => r.fillText(l, X + pw / 2, ay + 52 + k * 7));
+        const nmTxt = sib ? sib[face] : c.name, nm = nmTxt.split(' '), nl = nmTxt.length > 12 && nm.length > 1 ? [nm.slice(0, -1).join(' '), nm[nm.length - 1]] : [nmTxt]; nl.forEach((l, k) => r.fillText(l, X + pw / 2, ay + 52 + k * 7));
         const ty = ay + 54 + nl.length * 7;
         if (sqCall.ring > 0) { r.fillStyle = Math.floor(t * 4) % 2 ? '#7bd65b' : '#3a8a3a'; r.fillRect(X + 10, ty + 4, pw - 20, 12); r.fillStyle = '#fff'; r.fillText('INCOMING CALL', X + pw / 2, ty + 11); }
         else { const li = Math.min(c.lines.length - 1, Math.floor(sqCall.t / 2.8)), shown = Math.floor((sqCall.t - li * 2.8) * 28), txt = c.lines[li].slice(0, shown);
