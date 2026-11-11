@@ -787,7 +787,8 @@ GAMES.push({
       for (const [r, a, b] of cells) s.grid[r][c] = { t: (a + 2) % 4 === b ? 'S' : 'C', rot: Math.floor(s.rnd() * 4), wet: 0 };
       row = tgt;
     }
-    s.wait = ([16, 13, 11][s.diff] + 10) * HERO(s).steady;   // +10s to plan the route before the water comes s.flow = null; s.SPEED = [0.95, 0.8, 0.68][s.diff] * HERO(s).steady;
+    s.wait = ([16, 13, 11][s.diff] + 10) * HERO(s).steady;   /* +10s to plan the route before the water comes */
+    s.flow = null; s.SPEED = [0.95, 0.8, 0.68][s.diff] * HERO(s).steady;
   },
   sides(p) { if (p.t === 'X') return [0, 1, 2, 3]; if (p.t === 'S') return p.rot % 2 ? [0, 2] : [1, 3]; return [p.rot % 4, (p.rot + 1) % 4]; },
   update(s, dt, I) {
@@ -803,7 +804,8 @@ GAMES.push({
     if (!s.flow) { s.wait -= dt; if (s.wait <= 0 || s.done) { s.flow = { c: 0, r: s.src, from: 3, k: 0 }; SFX('faucet'); } return; }
     const f = s.flow, p = s.grid[f.r][f.c];
     if (f.k === 0 && !this.sides(p).includes(f.from)) return this.leak(s, f);
-    f.k += dt / (s.done ? 0.12 : s.SPEED); p.wet = Math.min(1, f.k);
+    if (!f.run) { const sd = this.sides(p); f.run = { a: f.from, b: p.t === 'X' ? (f.from + 2) % 4 : sd.find(x => x !== f.from), w: 0 }; (p.flows = p.flows || []).push(f.run); }   /* which way the water runs through this piece */
+    f.k += dt / (s.done ? 0.12 : s.SPEED); p.wet = Math.min(1, f.k); f.run.w = p.wet;
     if (f.k >= 1) {
       const sd = this.sides(p); const out = p.t === 'X' ? (f.from + 2) % 4 : sd.find(x => x !== f.from);
       const nc = f.c + (out === 1 ? 1 : out === 3 ? -1 : 0), nr = f.r + (out === 2 ? 1 : out === 0 ? -1 : 0);
@@ -823,10 +825,20 @@ GAMES.push({
   draw(s) {
     R(0, 0, W, H, '#5f6a5a'); for (let i = 0; i < 40; i++) R((i * 97) % W, 20 + (i * 53) % 250, 3, 2, '#55604f');   // the driveway
     // hose bib + toilet
-    R(s.ox - 26, s.oy + s.src * s.Z + 12, 22, 14, '#9a9a96'); R(s.ox - 8, s.oy + s.src * s.Z + 15, 8, 8, '#5fa8e0');
-    const ty = s.oy + s.dst * s.Z, bx = s.ox + s.C * s.Z + 4; if (!SPI('bucket', bx + 12, ty + 36, 0.9)) { R(bx, ty + 8, 24, 26, '#e8822a'); R(bx - 2, ty + 6, 28, 4, '#c96a1a'); R(bx + 2, ty + 14, 20, 6, '#f4f4f2'); g.strokeStyle = '#999'; g.lineWidth = 1; g.beginPath(); g.arc(bx + 12, ty + 6, 12, Math.PI, 0); g.stroke(); }
+    { const DRY = MG('pd_dry'), WET = MG('pd_wet'), sy = s.oy + s.src * s.Z;
+      if (DRY && WET) {   /* PVC stubs in and out: the supply comes in on the left (always full), the drop to the bucket on the right */
+        g.drawImage(DRY, 28, 0, 29, 57, s.ox - s.Z / 2, sy, s.Z / 2, s.Z); g.drawImage(WET, 7 * 57 + 28, 0, 29, 57, s.ox - s.Z / 2, sy, s.Z / 2, s.Z);
+        R(s.ox - s.Z / 2 - 9, sy + 11, 10, 16, '#b08a3a'); R(s.ox - s.Z / 2 - 9, sy + 11, 10, 2, '#d8b45a'); R(s.ox - s.Z / 2 - 7, sy + 5, 6, 7, '#c0392b'); R(s.ox - s.Z / 2 - 9, sy + 4, 10, 3, '#e04a3a');   /* the brass spigot with its red handle */
+        const dy2 = s.oy + s.dst * s.Z; g.drawImage(DRY, 0, 0, 29, 57, s.ox + s.C * s.Z, dy2, s.Z / 2, s.Z); if (s.end && s.end.win) g.drawImage(WET, 7 * 57, 0, 29, 57, s.ox + s.C * s.Z, dy2, s.Z / 2, s.Z);
+      } else { R(s.ox - 26, sy + 12, 22, 14, '#9a9a96'); R(s.ox - 8, sy + 15, 8, 8, '#5fa8e0'); } }
+    const ty = s.oy + s.dst * s.Z, bx = s.ox + s.C * s.Z + 4 + (MG('pd_dry') ? s.Z / 2 - 4 : 0); if (!SPI('bucket', bx + 12, ty + 36, 0.9)) { R(bx, ty + 8, 24, 26, '#e8822a'); R(bx - 2, ty + 6, 28, 4, '#c96a1a'); R(bx + 2, ty + 14, 20, 6, '#f4f4f2'); g.strokeStyle = '#999'; g.lineWidth = 1; g.beginPath(); g.arc(bx + 12, ty + 6, 12, Math.PI, 0); g.stroke(); }
     for (let r = 0; r < s.Rw; r++) for (let c = 0; c < s.C; c++) {
       const p = s.grid[r][c], x = s.ox + c * s.Z, y = s.oy + r * s.Z;
+      { const DRY = MG('pd_dry'), WET = MG('pd_wet');   /* the 3D-rendered PVC tiles: dry piece, then the water inside it, filling from the side it came in */
+        if (DRY && WET) { const sd = this.sides(p), key = p.t === 'X' ? 'X' : ['T', 'R', 'B', 'L'].filter((_, i) => sd.includes(i)).join(''), di = { RL: 0, TB: 1, TR: 2, RB: 3, BL: 4, TL: 5, X: 6 }[key];
+          g.drawImage(DRY, di * 57, 0, 57, 57, x, y, s.Z, s.Z);
+          for (const fl of p.flows || []) if (fl.w > 0) { const row = ['31', '13', '02', '20', '01', '10', '12', '21', '23', '32', '30', '03'].indexOf('' + fl.a + fl.b), lv = Math.min(7, Math.ceil(fl.w * 8) - 1); if (row >= 0) g.drawImage(WET, lv * 57, row * 57, 57, 57, x, y, s.Z, s.Z); }
+          continue; } }
       { const sd = this.sides(p), key = p.t === 'X' ? 'X' : ['T', 'R', 'B', 'L'].filter((_, i) => sd.includes(i)).join('').replace('TRBL', 'X');
         const name = { TR: 'TR', RB: 'RB', BL: 'BL', TL: 'LT', RL: 'LR', TB: 'TB', X: 'X' }[key], im = name && MG((p.wet > 0 ? 'ptw_' : 'pt_') + name);
         if (im) { g.drawImage(im, x, y, s.Z, s.Z); continue; } }   // the drawn tiles; plain shapes below are the fallback
