@@ -295,14 +295,14 @@ function drive3d(choice, opts) {
   rc.onpointermove = e => { if (pts.has(e.pointerId)) { pts.set(e.pointerId, zone(e)); retouch(); } };
   rc.onpointerup = rc.onpointercancel = rc.onlostpointercapture = e => { pts.delete(e.pointerId); retouch(); };
   addEventListener('pointerup', e => { if (pts.delete(e.pointerId)) retouch(); }); addEventListener('blur', () => { pts.clear(); retouch(); });
-  const say = (m, s = 1.4) => { msg = m; msgT = s; };
+  const say = (m, s = 1.4) => { msg = opts.endless && m ? m.replace(/ ?\+\d+ MIN/, '') : m; msgT = s; };   /* no clock in the Driving Game, so no lost-minutes */
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__moose = () => { const c = { kind: 'moose', seg: Math.floor((pos + PZ) / SEG), off: px, dir: -1, hit: true, react: 0.001 }; critters.push(c); }; window.__crash = () => bursts.push({ t: 0, side: 0.3, big: false }); window.__turk = () => critters.push({ kind: 'turkeys', seg: 0, off: 0, dir: 1, hit: true, fly: 0.001, flyDir: 1 }); window.__deer = (d = 1) => critters.push({ kind: 'deer', seg: 0, off: 0, dir: d, hit: true, fly: 0.001, flyDir: d });   // dev: test the windshield deer
   const sfx = (n, o) => { if (window.DDTSfx) DDTSfx.play(n, o); };
   // ---------- the windshield: cracks that stick around (and grow with every hit), bugs, mud, and now and then some weather ----------
   let grip = 0, gripSide = 1;   /* a raccoon on the glass */
   let glass = 0; if (!opts.arcade) try { glass = (DDT.get() || {}).glass || 0; } catch (e) {}   /* menu drives start with clean glass */
   // the Driving Game: score, near misses, and toolboxes on the road that patch the van back up
-  let score = 0, combo = 0, comboT = 0; const KITS = [], KIT_IMG = new Image(); KIT_IMG.src = (typeof ART !== 'undefined' ? ART : 'assets/') + 'mg/sr2_toolbox.png';
+  let score = 0, combo = 0, comboT = 0, distPts = 0; const KITS = [], KIT_IMG = new Image(); KIT_IMG.src = (typeof ART !== 'undefined' ? ART : 'assets/') + 'mg/sr2_toolbox.png';
   if (opts.endless) for (let z = rnd(12, 22) * SEG_PER_MI * SEG; z < (N - 80) * SEG; z += rnd(15, 25) * SEG_PER_MI * SEG) {   /* a toolbox every 20 miles or so */ const n = ourLanes(z); KITS.push({ z, off: LANE[1 + Math.floor(Math.random() * n)], got: false }); }
   const STATS = { cars: 0, trucks: 0, headons: 0, deer: 0, moose: 0, turkeys: 0, peeper: 0, lost: 0, cracks: 0 };   // this drive's tally, added to the player's record at the end
   let DEERINS = false; try { DEERINS = !!((DDT.get() || {}).inv || {}).deerins; } catch (e) {}
@@ -341,7 +341,7 @@ function drive3d(choice, opts) {
     p.sx = Math.round(W / 2 + sc * (p.wx - camX) * W / 2); p.sy = Math.round(H / 2 - sc * (p.y - camY) * H / 2 + (HORIZON - H / 2)); p.sw = Math.round(sc * ROADW * W / 2); p.sc = sc;
   }
   const segAt = z => segs[((Math.floor((z || 0) / SEG) % N) + N) % N];
-  function poly(x1, y1, w1, x2, y2, w2, col) { r.fillStyle = col; r.beginPath(); r.moveTo(x1 - w1, y1 + 1); r.lineTo(x2 - w2, y2); r.lineTo(x2 + w2, y2); r.lineTo(x1 + w1, y1 + 1); r.closePath(); r.fill(); }
+  function poly(x1, y1, w1, x2, y2, w2, col) { r.fillStyle = col; r.beginPath(); r.moveTo(x1 - w1, y1 + 1); r.lineTo(x2 - w2, y2 - 1); r.lineTo(x2 + w2, y2 - 1); r.lineTo(x1 + w1, y1 + 1); r.closePath(); r.fill(); }   /* each strip overlaps its neighbours a pixel: no hairline seams when you're crawling */
 
   // ---------- backdrop: sky, the Presidentials, a few clouds ----------
   const MTN = art(960, 80, (k, P) => {
@@ -373,10 +373,10 @@ function drive3d(choice, opts) {
       px -= seg.curve * ratio * ratio * dt * 0.42;
       // off the road: grass (or a snowbank) slows you down hard
       const RT = seg.rt || 1, LT = seg.lt || -1, offR = px < LT || px > RT, outBy = px < LT ? LT - px : px - RT;
-      if (SNOW && outBy > 0.08) { px = px < LT ? LT - 0.06 : RT + 0.06; speed *= Math.pow(0.35, dt); shake = Math.max(shake, 0.15); if (!draw.bankT || t - draw.bankT > 2) { draw.bankT = t; say('SNOWBANK!', 0.8); } }   /* the plow berm won't let you off the road */
+      if ((SNOW || opts.endless) && outBy > -0.04) { px = px < LT + 0.1 ? LT + 0.16 : RT - 0.16; speed *= Math.pow(0.35, dt);   /* no hiding on the shoulder: the bank kicks you back into the lane */ shake = Math.max(shake, 0.15); if (!draw.bankT || t - draw.bankT > 2) { draw.bankT = t; say('SNOWBANK!', 0.8); } }   /* the plow berm won't let you off the road */
       if (offR) { const deep = SNOW && outBy > 0.1, floor = (deep ? 0.07 : SNOW ? 0.15 : 0.22) * MAX; if (live) { penalty += dt * (deep ? 0.9 : 0.4); offT = (offT || 0) + dt; } /* stuck in it: minutes tick away */ if (speed > floor) speed = floor + (speed - floor) * Math.pow(0.1, dt); /* grass/snow drags you to a crawl, never backwards */ shake = Math.max(shake, 0.08); if (SNOW && Math.abs(px) > 1.15) { px = Math.sign(px) * 1.15; if (msgT <= 0) say('SNOWBANK!', 0.8); } }
       px = Math.max(LT - 0.6, Math.min(RT + 0.6, px));
-      if (live) { pos += speed * dt; play += dt; }
+      if (live) { pos += speed * dt; play += dt; if (opts.endless && px > LT + 0.08 && px < RT - 0.08) distPts += speed * dt / (SEG * SEG_PER_MI) * 100 * Math.pow(Math.min(1, speed / TOP), 1.5); }   /* points only while you're in a lane */   /* 100 a mile flat out; crawling earns a lot less */
       // frost heaves bounce the van
       const dy = seg.p2.y - seg.p1.y; bounce = bounce * 0.86 + Math.max(0, dy) * 0.012 * ratio;
       skyX -= seg.curve * ratio * dt * 6;
@@ -466,12 +466,14 @@ function drive3d(choice, opts) {
       // critters wander onto the road when you get close
       for (const cr of critters) {
         const dz = cr.seg * SEG - pos;
-        if (!cr.dir && dz > 0 && dz < 60 * SEG) { cr.dir = -Math.sign(cr.off); say({ moose: 'MOOSE!', deer: 'DEER!', turkeys: 'TURKEYS!', peeper: 'LEAF PEEPER IN THE ROAD!', squirrel: 'SQUIRREL!', raccoon: 'RACCOON!' }[cr.kind]); }
+        if (!cr.dir && dz > 0 && dz < (cr.kind === 'moose' ? 110 : 60) * SEG) { cr.dir = -Math.sign(cr.off); if (cr.kind === 'moose') { const sg = segs[cr.seg] || {}, nl = Math.max(2, Math.round(((sg.rt || 1)) / (2 / 3)) + 1); cr.stopAt = LANE[1 + Math.floor(Math.random() * Math.min(nl, 4))] + (Math.random() - 0.5) * 0.15; } say({ moose: 'MOOSE!', deer: 'DEER!', turkeys: 'TURKEYS!', peeper: 'LEAF PEEPER IN THE ROAD!', squirrel: 'SQUIRREL!', raccoon: 'RACCOON!' }[cr.kind]); }
         if (cr.fly > 0) { cr.fly += dt; continue; }
         if (cr.react > 0) { cr.react += dt; if (cr.react < 2.6) continue; }   // the moose takes its time
         if (cr.dir) {
           if (cr.kind === 'peeper' && !cr.snapped && Math.abs(cr.off) < 0.4) { cr.snapped = true; cr.snap = 1.6; }
-          if (cr.snap > 0) { cr.snap -= dt; cr.flash = (cr.flash + dt) % 0.4; } else cr.off += cr.dir * CSPD[cr.kind] * (cr.spd || 1) * dt * 1.4;
+          if (cr.snap > 0) { cr.snap -= dt; cr.flash = (cr.flash + dt) % 0.4; } else if (cr.stopAt != null && Math.abs(cr.off - cr.stopAt) < 0.05) { /* the moose has planted itself in the road: it isn't moving for you */ }
+          else if (cr.stopAt != null) cr.off += Math.sign(cr.stopAt - cr.off) * Math.min(Math.abs(cr.stopAt - cr.off), 0.9 * dt);
+          else cr.off += cr.dir * CSPD[cr.kind] * (cr.spd || 1) * dt * 1.4;
         }
         if (live && !cr.hit && (cr.kind === 'squirrel' || cr.kind === 'raccoon') && Math.abs(dz - PZ) < SEG * 1.1 && Math.abs(px - cr.off) < CW[cr.kind] + 0.1) {
           cr.hit = true; cr.gone = true; STATS[cr.kind] = (STATS[cr.kind] || 0) + 1;
@@ -492,7 +494,7 @@ function drive3d(choice, opts) {
       draw(gas, brake, steer);
       if (opts.endless) { const mi = pos / SEG / SEG_PER_MI; if (crashes >= 20 || pos >= (N - 40) * SEG) { done = true; removeEventListener('keydown', kd); removeEventListener('keyup', ku); rc.onpointerdown = rc.onpointerup = rc.onpointermove = rc.onpointercancel = null;
           say(crashes >= 20 ? 'THE VAN IS TOTALED.' : 'YOU DROVE OFF THE MAP!', 2.5); draw(false, true, 0); if (rainSnd) { rainSnd.stop(); rainSnd = null; }
-          setTimeout(() => { rc.style.display = 'none'; res({ crashes, mins: 0, miles: mi, score: score + Math.floor(mi * 100) }); }, 1400); return; } }   /* the Driving Game: three crashes and you're done */
+          setTimeout(() => { rc.style.display = 'none'; res({ crashes, mins: 0, miles: mi, score: score + Math.floor(distPts) }); }, 1400); return; } }   /* the Driving Game: three crashes and you're done */
       if (!opts.endless && pos >= (N - 40) * SEG) {
         done = true; removeEventListener('keydown', kd); removeEventListener('keyup', ku); rc.onpointerdown = rc.onpointerup = rc.onpointermove = rc.onpointercancel = null;
         const mins = Math.round(opts.leave + play * MIN_PER_S + penalty);
@@ -542,16 +544,18 @@ function drive3d(choice, opts) {
         maxy = p1.sy;
       }
       // the plow berm: a continuous 3D snowbank along both shoulders, far to near, its height rolling with the road
-      if (SNOW) { const q4 = (ax, ay, bx, by, cx, cy, dx, dy, col) => { r.fillStyle = col; r.beginPath(); r.moveTo(ax, ay); r.lineTo(bx, by); r.lineTo(cx, cy); r.lineTo(dx, dy); r.closePath(); r.fill(); };
+      if (SNOW) { const q4 = (ax, ay, bx, by, cx, cy, dx, dy, col) => { r.fillStyle = col; r.strokeStyle = col; r.lineWidth = 1.2; r.beginPath(); r.moveTo(ax, ay); r.lineTo(bx, by); r.lineTo(cx, cy); r.lineTo(dx, dy); r.closePath(); r.fill(); r.stroke(); };   /* stroked in its own colour so the pieces meet with no seams */
         const bh = (i, side) => 0.11 + 0.05 * Math.sin(i * 0.031 + side) + 0.035 * Math.sin(i * 0.117 + side * 2) + 0.015 * Math.sin(i * 0.43 + side);
-        for (let n = drawn.length - 1; n >= 0; n--) { const sg = drawn[n], a = sg.s1, b = sg.s2; if (!a || !b || a.sc <= 0 || b.sc <= 0 || b.sy >= a.sy || a.z - (pos - (pos >= LEN ? LEN : 0)) <= DEPTH) continue;
+        for (let n = drawn.length - 1; n >= 0; n--) { const sg = drawn[n], a = sg.s1, b = sg.s2; if (!a || !b || a.sc <= 0 || b.sc <= 0 || b.sy >= a.sy || a.z - camZ <= DEPTH || a.sy > H + 40) continue;
+          r.save(); r.beginPath(); r.rect(-10, -10, W + 20, sg.clip + 10); r.clip();   /* only where the nearer road isn't in front of it */
           const rt = sg.rt || 1, lt = sg.lt || -1, i = sg.i;
           for (const side of [-1, 1]) { const base = side < 0 ? lt - 0.16 : rt + 0.16, crest = base + side * 0.34, outer = base + side * 1.05, h1 = bh(i, side), h2 = bh(i + 1, side);
             const X = (p, o) => p.sx + o * p.sw, Yc = (p, h) => p.sy - h * p.sw;
             q4(X(a, crest), Yc(a, h1), X(a, outer), a.sy, X(b, outer), b.sy, X(b, crest), Yc(b, h2), side < 0 ? '#e9eff5' : '#c3cfdb');   /* back slope */
             q4(X(a, base), a.sy, X(a, crest), Yc(a, h1), X(b, crest), Yc(b, h2), X(b, base), b.sy, side < 0 ? '#c9d5e0' : '#edf2f7');   /* the face toward the road */
             q4(X(a, base), a.sy, X(a, base + side * 0.05), a.sy - h1 * a.sw * 0.18, X(b, base + side * 0.05), b.sy - h2 * b.sw * 0.18, X(b, base), b.sy, '#9c958c');   /* road grit thrown up along the bottom */
-            r.fillStyle = '#ffffff'; r.fillRect(X(b, crest) - 1, Yc(b, h2) - 0.5, Math.max(1, Math.abs(X(a, crest) - X(b, crest)) + 1), Math.max(1, a.sw * 0.006)); } } }   /* a bright line along the crest */
+          }
+          r.restore(); } }
       // sprites, cars, critters back to front
       const S = (img, sc, sx, sy, off, sw, clip, rot) => {
         const wpx = img.width * sc * sw / 160, hpx = img.height * sc * sw / 160, X = sx + sw * off - wpx / 2, Y = sy - hpx;
@@ -593,7 +597,7 @@ function drive3d(choice, opts) {
         if (gas && speed > CRUISE * 0.9) { r.fillStyle = 'rgba(200,200,205,.6)'; for (let i = 0; i < 3; i++) r.fillRect(vx + 20 + Math.random() * 4, vy + 50 + i * 3, 3, 2); }
       }
       if (grip > 0) { const e = 3.4 - grip, off = grip < 0.5 ? (0.5 - grip) * 260 : 0, wob = Math.sin(t * 9) * 4, cx = W / 2 + gripSide * 40 + wob, cy = H / 2 - 10 + off;   /* the raccoon, spread-eagled on the glass, then sliding off */
-        if (GRIP.complete && GRIP.naturalWidth) { const fw = GRIP.width / 8, fh = GRIP.height, fi = grip < 0.6 ? 7 : e < 0.25 ? 0 : 1 + Math.floor(e * 4) % 6, dh = 210, dw = fw * dh / fh;
+        if (GRIP.complete && GRIP.naturalWidth) { const fw = GRIP.width / 8, fh = GRIP.height, fi = grip < 0.6 ? 7 : grip < 1.1 ? 6 : e < 0.25 ? 0 : [1, 2, 3, 1, 4, 3][Math.floor(e * 4) % 6],   /* grumpy, staring, hissing, swiping; no tongue */ dh = 210, dw = fw * dh / fh;
           r.save(); r.translate(cx, cy); if (gripSide < 0) r.scale(-1, 1); r.drawImage(GRIP, fi * fw, 0, fw, fh, -dw / 2, -dh / 2, dw, dh); r.restore(); }
         else { const im = ANIM.raccoon[0]; if (im.complete && im.naturalWidth) { const sc = 5.2; r.save(); r.translate(cx, cy); r.rotate(-0.25 * gripSide + Math.sin(t * 7) * 0.06); r.drawImage(im, -im.width * sc / 2, -im.height * sc / 2, im.width * sc, im.height * sc); r.restore();
           r.fillStyle = '#2a2420'; for (const [dx, dy] of [[-80, -40], [80, -36], [-70, 40], [74, 44]]) r.fillRect(cx + dx, cy + dy, 12, 8); } }   /* stand-in until the grip art arrives: the road raccoon, huge, with paws on the glass */
@@ -678,7 +682,7 @@ function drive3d(choice, opts) {
       const mph = Math.round(speed / MPH);
       r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(W - 78, 26, 72, 18); r.fillStyle = speed > TOP * 0.97 ? '#f7c418' : '#7bd65b'; r.textAlign = 'right'; r.fillText(mph + ' MPH', W - 10, 35); r.textAlign = 'left';
       if (crashes) { r.fillStyle = '#e9665a'; r.textAlign = 'right'; r.fillText('CRASHES ' + crashes, W - 6, 52); r.textAlign = 'left'; }
-      if (opts.endless) { const mi = pos / SEG / SEG_PER_MI; r.fillStyle = '#7dffb0'; r.textAlign = 'center'; r.fillText(`${mi.toFixed(1)} MI   SCORE ${(score + Math.floor(mi * 100)).toLocaleString()}`, W / 2, 52);   /* the Driving Game score */
+      if (opts.endless) { const mi = pos / SEG / SEG_PER_MI; r.fillStyle = '#7dffb0'; r.textAlign = 'center'; r.fillText(`${mi.toFixed(1)} MI   SCORE ${(score + Math.floor(distPts)).toLocaleString()}`, W / 2, 52);   /* the Driving Game score */
         r.fillStyle = 'rgba(0,0,0,.55)'; r.fillRect(W / 2 - 50, 58, 100, 6); r.fillStyle = crashes > 14 ? '#e9665a' : crashes > 8 ? '#f7c418' : '#7dffb0'; r.fillRect(W / 2 - 50, 58, 100 * (1 - crashes / 20), 6); r.fillStyle = '#fff'; r.font = r.font; r.fillText(`VAN ${20 - crashes}/20`, W / 2, 72); r.textAlign = 'left'; }
       // phone buttons (also show what the keys do)
       if (true) {   // brake in both corners, gas = both thumbs (keyboard: ▲)
