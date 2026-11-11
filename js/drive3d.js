@@ -164,7 +164,7 @@ function drive3d(choice, opts) {
   const BLDG = [0, 1, 2, 3, 4].map(i => DI(`bldg_${SNOW ? 'winter' : 'summer'}_${i}`));
   const MTN_IMG = DI(`mtn_${SK}`);
   const CAR_B = [...Array(12).keys()].map(i => DI(`car_back_${i}`)), CAR_F = [...Array(12).keys()].map(i => DI(`car_front_${i}`));
-  const LOG_B = DI('logtruck_back'), LOG_F = DI('logtruck_front');
+  const LOG_B = DI('logtruck_back'), LOG_F = DI('logtruck_front'), YUKON = DI('yukon_back');   /* The Kid's Mom's Yukon. Plate: DRAINS. */
   const DSPLAT = DI('deer_splat');
   const FEATH = DI('feathers');
   const CRASH = DI('crash');
@@ -245,6 +245,8 @@ function drive3d(choice, opts) {
   const cars = [];   // { z, off, speed, img, onc }
   function addCar(z, onc) {
     const c = Math.floor(Math.random() * CAR_B.length), truck = Math.random() < MODE.trucks * (onc ? 0.5 : 1), sc = truck ? 1.6 : 1.3, img = onc ? (truck ? LOG_F : CAR_F[c]) : truck ? LOG_B : CAR_B[c];
+    if (!onc && YUKON.complete && YUKON.naturalWidth && Math.random() < 0.015 && !cars.some(q => q.yukon && !q.parked)) { const ln = Math.random() < 0.5 ? 1 : 2;
+      return { z, lane: ln, off: LANE[ln], tgt: LANE[ln], speed: rnd(20, 27) * MPH, img: YUKON, onc: false, hw: YUKON.width * (1.3 / 6) / 320, sc: 1.3 / 6, truck: false, blink: 0, yukon: true }; }
     const nOur = ourLanes(z), lane = onc ? (oncLanes(z) > 1 && Math.random() < 0.5 ? 5 : 0) : nOur <= 2 ? (Math.random() < 0.65 ? 2 : 1) : 1 + Math.floor(Math.random() * nOur);
     // our-way traffic is slower than us (you catch up and pass); log trucks crawl
     return { z, lane, off: LANE[lane], tgt: LANE[lane], speed: onc ? -(opts.endless ? rnd(38, 55) : rnd(25, 45)) * MPH : (truck ? rnd(18, 24) : rnd(22, 34)) * MPH * (DRIVER === 'rod' ? 0.8 : 1),
@@ -256,6 +258,8 @@ function drive3d(choice, opts) {
   for (let i = 0; i < (opts.endless ? 4 : Math.round(MODE.cars * Math.min(1, Math.max(0.6, BUSY_MAX)))); i++) { let c, tries = 0; do { c = addCar(rnd(14, DRAW) * SEG, Math.random() < MODE.onc); tries++; } while (tries < 10 && cars.some(o => o.lane === c.lane && Math.abs(o.z - c.z) < 4 * SEG)); cars.push(c); }
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__cars = cars;
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__sqcall = w => startSqCall(w || 'baby');
+  if (typeof DDT !== 'undefined' && DDT.DEV) { window.__kidsmom = () => startKidsMomCall(); window.__yukon = () => { let n; for (let i = 0; i < 400; i++) { n = addCar(pos + PZ + 12 * SEG, false); if (n.yukon) break; } cars.push(n); }; }
+  if (typeof DDT !== 'undefined' && DDT.DEV) { window.__kidsmom = () => startKidsMomCall(); window.__yukon = () => { const n = addCar(pos + PZ + 12 * SEG, false); for (let i = 0; i < 300 && !n.yukon; i++) Object.assign(n, addCar(pos + PZ + 12 * SEG, false)); cars.push(n); }; }
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__jump = mi => { pos = mi * SEG_PER_MI * SEG; };   /* dev: jump down the road */
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__critter = (kind, ahead) => critters.push({ seg: Math.floor((pos + PZ) / SEG) + (ahead || 30), kind, off: ahead < 4 ? px : px + 1.2, dir: ahead < 4 ? 1 : 0, hit: false, snap: 0, flash: 0 });   /* dev: drop an animal ahead */   // dev: lets the test harness check for overlaps
   const respawn = (c, base) => {   // reappear far up the road (out at the horizon), in a lane with room, and never in the last stretch before town
@@ -307,6 +311,11 @@ function drive3d(choice, opts) {
   const SQ_IMG = {}; const sqImg = (w, n) => { const k = w + '_' + (n || 0); return SQ_IMG[k] || (SQ_IMG[k] = DI('sq_' + k)); };
   const SQ_FACE = { baby: [1, 0] };
   const SQ_SIBS = { kid: ['SQUIRREL KID', 'LITTLE BROTHER'] };   /* two kids on one phone: they pass it back and forth every line */   /* which face first, which face later in the call (the baby starts hopeful, then sad) */
+  const KMC = window.KIDSMOM_CALLS || [], ROD_FACE = new Image(); ROD_FACE.src = (window.DDT && DDT.root || '') + 'assets/rod_annoyed.png'; let kmDone = false;
+  function startKidsMomCall() { if (!KMC.length) return; let seen = []; try { seen = JSON.parse(localStorage.getItem('ddt_km_seen') || '[]'); } catch (e) {}
+    let fresh = KMC.map((_, i) => i).filter(i => !seen.includes(i)); if (!fresh.length) { fresh = KMC.map((_, i) => i); seen = []; }
+    const k = fresh[Math.floor(Math.random() * fresh.length)]; seen.push(k); try { localStorage.setItem('ddt_km_seen', JSON.stringify(seen)); } catch (e) {}
+    sqCall = { c: { who: 'kidsmom', name: "THE KID'S MOM", lines: KMC[k] }, t: 0, ring: 1.6 }; kmDone = true; sfx('phone_ring'); }
   function startSqCall(force) {   /* pick a caller, then a call you haven't heard yet */
     const whos = Object.keys(SQ); if (!whos.length) return; const who = force && SQ[force] ? force : whos[Math.floor(Math.random() * whos.length)], C = SQ[who];
     const seen = SQ_SEEN[who] || []; let fresh = C.calls.map((_, i) => i).filter(i => !seen.includes(i)); if (!fresh.length) { fresh = C.calls.map((_, i) => i); SQ_SEEN[who] = []; }
@@ -415,14 +424,14 @@ function drive3d(choice, opts) {
         if (c.off !== c.tgt) { const d = c.tgt - c.off; c.off += Math.sign(d) * Math.min(Math.abs(d), dt * 0.55); }
         const VAN_HW = 0.16;   // the van, measured the same way as the cars it can hit
         if (opts.endless && live && c.prevAhead > 0 && ahead <= 0 && !c.nm) { const gap = Math.abs(px - c.off) - (c.hw + VAN_HW); c.nm = 1;
-          if (gap > -0.02 && gap < 0.2 && inv <= 0) { combo = comboT > 0 ? combo + 1 : 1; comboT = 2.5; DS.near++; DS.bestCombo = Math.max(DS.bestCombo, combo); if (Math.random() < 0.05) sfx(c.onc ? 'horn_angry' : 'horn');   /* now and then, they lean on the horn */ const pts = 100 * combo * (c.onc ? 2 : 1); score += pts; say(`${c.onc ? 'WHOA! ' : ''}NEAR MISS +${pts}${combo > 1 ? ` (x${combo})` : ''}`, 1); } }   /* threading the needle pays */
+          if (gap > -0.02 && gap < 0.2 && inv <= 0) { combo = comboT > 0 ? combo + 1 : 1; comboT = 2.5; DS.near++; DS.bestCombo = Math.max(DS.bestCombo, combo); if (Math.random() < 0.05) sfx(c.onc ? 'horn_angry' : 'horn'); if (c.yukon) say(["ROD: SO CLOSE.", "ROD: NEXT TIME.", "ROD: SHE DIDN'T EVEN SIGNAL."][Math.floor(Math.random() * 3)], 1.6);   /* now and then, they lean on the horn */ const pts = 100 * combo * (c.onc ? 2 : 1); score += pts; say(`${c.onc ? 'WHOA! ' : ''}NEAR MISS +${pts}${combo > 1 ? ` (x${combo})` : ''}`, 1); } }   /* threading the needle pays */
         c.prevAhead = ahead;
         if (live && inv <= 0 && ahead > -SEG * 0.6 && ahead < SEG * (c.truck ? 1.6 : 1.1) && Math.abs(px - c.off) < c.hw + VAN_HW - 0.03) {
           bursts.push({ t: 0, side: Math.max(-1, Math.min(1, (c.off - px) * 2.5)), big: c.onc || c.truck }); crashes++; inv = 1.4; shake = c.onc ? 0.6 : 0.35; hurtGlass(glassFor[c.onc ? 'onc' : c.truck ? 'truck' : 'car']);
           const p = c.onc ? 20 : c.truck ? 14 : 10; /* a crash costs real time: exchanging info, checking the bumper */ penalty += p; STATS[c.onc ? 'headons' : c.truck ? 'trucks' : 'cars']++; STATS.lost += p; speed = c.onc ? 0 : Math.min(speed, Math.abs(c.speed) * 0.6);
           if (!c.truck) { c.spin = 1.6; c.spinDir = px < c.off ? 1 : -1; c.speed *= 0.3; }   // the car you hit spins out (log trucks just shrug)
           px += c.onc ? (px < c.off ? -0.4 : 0.4) : (px < c.off ? -0.3 : 0.3);
-          sfx('car_crash'); sfx(c.onc ? 'horn_angry' : 'horn', { vol: 0.5 }); say(c.onc ? `HEAD-ON! +${p} MIN` : c.truck ? `LOG TRUCK! +${p} MIN` : `BONK! +${p} MIN`);
+          sfx('car_crash'); sfx(c.onc ? 'horn_angry' : 'horn', { vol: 0.5 }); if (c.yukon) { say(['ROD: WORTH IT.', "ROD: THAT'S THE KID'S MOM'S YUKON.", 'ROD: PUT IT ON MY TAB.', 'ROD: I PAID FOR THAT BUMPER. TWICE.'][Math.floor(Math.random() * 4)], 2); } else say(c.onc ? `HEAD-ON! +${p} MIN` : c.truck ? `LOG TRUCK! +${p} MIN` : `BONK! +${p} MIN`);
         }
       }
       if (opts.endless) {
@@ -519,7 +528,8 @@ function drive3d(choice, opts) {
           say({ moose: 'HIT THE MOOSE! +20 MIN', deer: covered ? 'OH DEER. INSURANCE HAS IT!' : 'OH DEER. +12 MIN', turkeys: 'FEATHERS! +5 MIN', peeper: 'SLAMMED THE BRAKES! +8 MIN' }[cr.kind]);
         }
       }
-      inv = Math.max(0, inv - dt); msgT = Math.max(0, msgT - dt); shake = Math.max(0, shake - dt); grip = Math.max(0, grip - dt); if (grip <= 0 && racSnd) { racSnd.stop(); racSnd = null; } if (sqCall) { if (sqCall.ring > 0) sqCall.ring -= dt; else { sqCall.t += dt; if (sqCall.t > sqCall.c.lines.length * 2.8 + 0.6) sqCall = null; } }
+      inv = Math.max(0, inv - dt); msgT = Math.max(0, msgT - dt); shake = Math.max(0, shake - dt); grip = Math.max(0, grip - dt); if (grip <= 0 && racSnd) { racSnd.stop(); racSnd = null; } if (!sqCall && !kmDone && live && play > 45 && Math.random() < dt / 300) startKidsMomCall();   /* every so often, she calls */
+      if (sqCall) { if (sqCall.ring > 0) sqCall.ring -= dt; else { sqCall.t += dt; if (sqCall.t > sqCall.c.lines.length * 2.8 + 0.6) sqCall = null; } }
       if (window.DRV && DRV.src) DRV.src.playbackRate.value = 0.7 + 0.6 * ratio;
       draw(gas, brake, steer);
       if (opts.endless) { const mi = pos / SEG / SEG_PER_MI; if (crashes >= 20 || pos >= (N - 40) * SEG) { done = true; removeEventListener('keydown', kd); removeEventListener('keyup', ku); rc.onpointerdown = rc.onpointerup = rc.onpointermove = rc.onpointercancel = null;
@@ -729,14 +739,15 @@ function drive3d(choice, opts) {
         const pw = 84, ph = 150, px0 = W - 6 - pw + (1 - slide + end) * (pw + 12), py0 = 64, shake = sqCall.ring > 0 ? Math.sin(t * 60) * 1.5 : 0, X = px0 + shake;
         r.fillStyle = '#16181c'; r.fillRect(X, py0, pw, ph); r.fillStyle = '#2a2d33'; r.fillRect(X + 2, py0 + 2, pw - 4, ph - 4); r.fillStyle = '#0e1116'; r.fillRect(X + 5, py0 + 12, pw - 10, ph - 26);   /* the phone and its screen */
         r.fillStyle = '#3a3e46'; r.fillRect(X + pw / 2 - 8, py0 + 6, 16, 2); r.fillRect(X + pw / 2 - 6, py0 + ph - 10, 12, 4);
-        const sib = SQ_SIBS[c.who], li0 = sqCall.ring > 0 ? 0 : Math.min(c.lines.length - 1, Math.floor(sqCall.t / 2.8)), ord = SQ_FACE[c.who] || [0, 1], later = sqCall.ring <= 0 && sqCall.t >= (c.lines.length - 1) * 2.8 * 0.6, face = sib ? li0 % 2 : ord[later ? 1 : 0], im = sqImg(c.who, face), fb = ANIM.squirrel[0], ax = X + pw / 2 - 22, ay = py0 + 18;   /* the face changes partway through the call */
+        const sib = SQ_SIBS[c.who], li0 = sqCall.ring > 0 ? 0 : Math.min(c.lines.length - 1, Math.floor(sqCall.t / 2.8)), ord = SQ_FACE[c.who] || [0, 1], later = sqCall.ring <= 0 && sqCall.t >= (c.lines.length - 1) * 2.8 * 0.6, face = sib ? li0 % 2 : ord[later ? 1 : 0], im = c.who === 'kidsmom' ? null : sqImg(c.who, face), rodTalking = c.who === 'kidsmom' && sqCall.ring <= 0 && /^ROD: /.test(c.lines[Math.min(c.lines.length - 1, Math.floor(sqCall.t / 2.8))] || ''), fb = ANIM.squirrel[0], ax = X + pw / 2 - 22, ay = py0 + 18;   /* the face changes partway through the call */
         r.fillStyle = '#2a3346'; r.fillRect(ax, ay, 44, 44);
-        if (im.complete && im.naturalWidth) r.drawImage(im, ax, ay, 44, 44); else if (fb.complete && fb.naturalWidth) r.drawImage(fb, ax + 3, ay + 8, 38, 38 * fb.height / fb.width);
+        if (c.who === 'kidsmom') { if (rodTalking && ROD_FACE.complete && ROD_FACE.naturalWidth) r.drawImage(ROD_FACE, ax, ay, 44, 44); else { r.fillStyle = '#3a3e48'; r.beginPath(); r.arc(ax + 22, ay + 17, 9, 0, 7); r.fill(); r.beginPath(); r.ellipse(ax + 22, ay + 44, 17, 14, 0, Math.PI, 0); r.fill(); } }   /* no photo: a caller silhouette, and Rod's face when he answers */
+        else if (im.complete && im.naturalWidth) r.drawImage(im, ax, ay, 44, 44); else if (fb.complete && fb.naturalWidth) r.drawImage(fb, ax + 3, ay + 8, 38, 38 * fb.height / fb.width);
         r.font = '5px "Press Start 2P", monospace'; r.textAlign = 'center'; r.fillStyle = '#f7c418';
-        const nmTxt = sib ? sib[face] : c.name, nm = nmTxt.split(' '), nl = nmTxt.length > 12 && nm.length > 1 ? [nm.slice(0, -1).join(' '), nm[nm.length - 1]] : [nmTxt]; nl.forEach((l, k) => r.fillText(l, X + pw / 2, ay + 52 + k * 7));
+        const nmTxt = rodTalking ? 'ROD' : sib ? sib[face] : c.name, nm = nmTxt.split(' '), nl = nmTxt.length > 12 && nm.length > 1 ? [nm.slice(0, -1).join(' '), nm[nm.length - 1]] : [nmTxt]; nl.forEach((l, k) => r.fillText(l, X + pw / 2, ay + 52 + k * 7));
         const ty = ay + 54 + nl.length * 7;
         if (sqCall.ring > 0) { r.fillStyle = Math.floor(t * 4) % 2 ? '#7bd65b' : '#3a8a3a'; r.fillRect(X + 10, ty + 4, pw - 20, 12); r.fillStyle = '#fff'; r.fillText('INCOMING CALL', X + pw / 2, ty + 11); }
-        else { const li = Math.min(c.lines.length - 1, Math.floor(sqCall.t / 2.8)), shown = Math.floor((sqCall.t - li * 2.8) * 28), txt = c.lines[li].slice(0, shown);
+        else { const li = Math.min(c.lines.length - 1, Math.floor(sqCall.t / 2.8)), shown = Math.floor((sqCall.t - li * 2.8) * 28), txt = c.lines[li].replace(/^ROD: /, '').slice(0, shown);
           r.fillStyle = '#e8ecf2'; r.fillRect(X + 7, ty, pw - 14, 46); r.fillStyle = '#16181c'; r.textAlign = 'left';
           let line = '', yy = ty + 8; for (const w of txt.split(' ')) { if ((line + w).length > 12) { r.fillText(line, X + 10, yy); yy += 7; line = ''; } line += w + ' '; } r.fillText(line, X + 10, yy);
           r.fillStyle = '#e9665a'; r.textAlign = 'center'; r.fillText(`${Math.floor(sqCall.t / 60)}:${String(Math.floor(sqCall.t) % 60).padStart(2, '0')}`, X + pw / 2, py0 + ph - 18); }

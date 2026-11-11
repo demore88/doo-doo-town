@@ -139,3 +139,22 @@ window.SQ_CALLERS = {
     ['Alright, I gotta go.', 'The widow\'s calling me "Gary dear."', 'I think I made a huge mistake.'],
   ]},
 };
+
+// "The Kid's Mom" calls Rod. Never named, no photo: the joke is Rod's grudge. Lines starting "ROD:" are Rod answering.
+window.KIDSMOM_CALLS = [
+  ['I need money for the kids.', 'ROD: Didn\'t I just give you money?', 'That was LAST week.', 'ROD: It was Tuesday.'],
+  ['The kids need new shoes.', 'ROD: They have shoes.', 'Those are last year\'s shoes.', 'ROD: Feet don\'t grow that fast.'],
+  ['Are you working right now?', 'ROD: I\'m in a septic tank.', 'So you\'re getting paid.', 'ROD: ...'],
+  ['I saw your van on Route 16.', 'ROD: And?', 'You looked like you had money.', 'ROD: I looked like I had a clog.'],
+  ['The Yukon needs new tires.', 'ROD: The Yukon I paid for?', 'The Yukon the KIDS ride in.', 'ROD: Then the kids can buy tires.'],
+  ['Can you take the kids this weekend?', 'ROD: It\'s my weekend anyway.', 'Great. Bring money.', 'ROD: For WHAT.'],
+  ['I need two hundred dollars.', 'ROD: For what?', 'Stuff.', 'ROD: I\'m going to need more than "stuff."'],
+  ['Your kid says you swear at the radio.', 'ROD: Only at that one song.', 'Language, Rod.', 'ROD: Money, apparently.'],
+  ['The kids want a dog.', 'ROD: Get them a dog.', 'Dogs cost money.', 'ROD: I KNEW it.'],
+  ['I need you to Venmo me.', 'ROD: Didn\'t I just give you money?', 'That money is gone.', 'ROD: Gone where?', 'Gone.'],
+  ['School pictures are due.', 'ROD: How much?', 'Ninety dollars.', 'ROD: For PICTURES? I have a phone.'],
+  ['You forgot the child support.', 'ROD: It went out on the first.', 'It didn\'t go through.', 'ROD: It went through. I have the receipt.', '...Okay it went through.'],
+  ['Hi, it\'s me.', 'ROD: I know who it is.', 'I need a favor.', 'ROD: Is the favor money?', '...Kind of.'],
+  ['My furnace is making a noise.', 'ROD: Call a furnace guy.', 'You\'re a plumber.', 'ROD: And you\'re not my problem.'],
+  ['Did you get my text?', 'ROD: All nine of them.', 'So?', 'ROD: So I\'m driving.', 'So send money when you stop.'],
+];
