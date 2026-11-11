@@ -643,6 +643,7 @@ function drive3d(choice, opts) {
           const k = f / HIT, sc = 1.2 + k * 1.8, fx = W / 2 + 10 * side + (side > 0 ? W - 80 - W / 2 : 80 - W / 2) * k, fy = H - 70 - Math.sin(k * Math.PI * 0.9) * 120;
           r.save(); r.translate(fx, fy); r.rotate(side * k * Math.PI * 4); r.drawImage(img, -img.width * sc / 2, -img.height * sc / 2, img.width * sc, img.height * sc); r.restore();
         } else if (DSPLAT.complete && DSPLAT.naturalWidth) {   // SPLAT: face on the glass, licking it, sliding down out of view
+          if (!cr.glassSnd) { cr.glassSnd = 1; sfx('deer_glass'); }   /* the squeak and smear down the windshield */
           const e = f - HIT, fi = Math.min(5, Math.floor(e / 0.4)), fade = e > 2.6 ? Math.max(0, 1 - (e - 2.6) / 0.45) : 1;
           if (!cr.splat) { cr.splat = 1; shake = Math.max(shake, 0.35); sfx('horn'); say('SPLAT!', 1.4); }
           const fw = DSPLAT.width / 6, fh = DSPLAT.height, dw = fw / 2, dh = fh / 2, pop = e < 0.12 ? 1.12 - e : 1;   /* sheet is 2x for the 2x canvas */
