@@ -812,10 +812,11 @@ GAMES.push({
   act: 'DROP',
   init(s) {
     s.TIME = 30; s.tries = [4, 3, 3][s.diff]; s.used = 0; s.px = 240; s.py = 130; s.ang = s.rnd() * 6; s.drop = 0; s.res = ''; s.resT = 0;
-    s.cx = 240; s.cy = 140; s.rad = 1; s.boost = 0; s.DROP = 0.65; s.GRAB = 9 * Math.sqrt(HERO(s).steady); s.SINK = [0.028, 0.036, 0.045][s.diff];
+    s.cx = 240; s.cy = 140; if (MG('claw_toilet') && MG('claw_water')) { s.cx = 31 + 280; s.cy = 26 + 125; s.RX = 82; s.RY = 58; s.T3D = 1; }   /* the 3D-rendered toilet: swirl sized to its bowl */
+    s.rad = 1; s.boost = 0; s.DROP = 0.65; s.GRAB = 9 * Math.sqrt(HERO(s).steady); s.SINK = [0.028, 0.036, 0.045][s.diff];
     s.wads = []; for (let i = 0; i < [1, 2, 3][s.diff]; i++) s.wads.push({ ang: s.rnd() * 6, r: 0.45 + s.rnd() * 0.5, w: (0.6 + s.rnd() * 0.6) * (s.rnd() < 0.5 ? 1 : -1) });
   },
-  pos(s, a, r) { r = r == null ? s.rad : r; return [s.cx + Math.cos(a) * 100 * r, s.cy + Math.sin(a) * 58 * r]; },
+  pos(s, a, r) { r = r == null ? s.rad : r; return [s.cx + Math.cos(a) * (s.RX || 100) * r, s.cy + Math.sin(a) * (s.RY || 58) * r]; },
   update(s, dt, I) {
     s.t += dt; s.resT = Math.max(0, s.resT - dt); s.boost = Math.max(0, s.boost - dt);
     // speed surges and lulls (a toilet swirl is never steady), faster as it nears the drain, faster still if you clipped it
@@ -838,12 +839,21 @@ GAMES.push({
     else if ((s.used >= s.tries && s.drop <= 0) || s.t >= s.TIME) s.end = { win: false, stars: 0, line: 'Out of grabs. It went down the drain.' };
   },
   draw(s) {
-    const bowlBg = MG('bg_bowl');
+    if (s.T3D) {   /* the 3D model, rendered top-down into pixel art, with live water in its bowl */
+      BATHFLOOR(0); g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(31 + 212, 26 + 128, 214, 118, 0, 0, 7); g.fill();
+      g.drawImage(MG('claw_toilet'), 31, 26);
+      const WC = this._wc || (this._wc = (() => { const c = document.createElement('canvas'), m = MG('claw_water'); c.width = m.width; c.height = m.height; const k = c.getContext('2d'); k.drawImage(m, 0, 0); k.globalCompositeOperation = 'source-in';
+        const gr = k.createRadialGradient(280, 125, 4, 280, 125, 100); gr.addColorStop(0, '#2a6a8c'); gr.addColorStop(0.6, '#5aa0c4'); gr.addColorStop(1, '#9fd0e4'); k.fillStyle = gr; k.fillRect(0, 0, c.width, c.height); return c; })());
+      g.drawImage(WC, 31, 26);
+      g.save(); g.beginPath(); g.ellipse(s.cx, s.cy, s.RX + 8, s.RY + 8, 0, 0, 7); g.clip(); g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1.5;
+      for (let i = 0; i < 4; i++) { const a = s.t * (1.1 + i * 0.3) + i * 2; g.beginPath(); g.ellipse(s.cx, s.cy, 20 + i * 20, 14 + i * 14, 0, a, a + 1.2); g.stroke(); }
+      const gr2 = g.createRadialGradient(s.cx, s.cy, 1, s.cx, s.cy, 16); gr2.addColorStop(0, '#0d1c26'); gr2.addColorStop(1, 'rgba(20,50,66,0)'); g.fillStyle = gr2; g.beginPath(); g.ellipse(s.cx, s.cy, 18, 12, 0, 0, 7); g.fill(); g.restore(); }
+    const bowlBg = s.T3D ? null : MG('bg_bowl');
     if (bowlBg) { g.drawImage(bowlBg, 240 - 234.5 * 1.07, 140 - 148 * 1.07, W * 1.07, H * 1.07);   /* water centred on the swirl */
       g.save(); g.beginPath(); g.ellipse(s.cx, s.cy + 2, 100, 64, 0, 0, 7); g.clip(); g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1.5;
       for (let i = 0; i < 3; i++) { const a = s.t * (1.1 + i * 0.3) + i * 2; g.beginPath(); g.ellipse(s.cx, s.cy, 30 + i * 24, 18 + i * 15, 0, a, a + 1.2); g.stroke(); } g.restore(); }
-    else BATHFLOOR(0), BOWL(s.cx, s.cy, 152, 106, s.t);
-    if (!bowlBg) { const gr = g.createRadialGradient(s.cx, s.cy, 1, s.cx, s.cy, 18); gr.addColorStop(0, '#0d1c26'); gr.addColorStop(1, 'rgba(20,50,66,0)'); g.fillStyle = gr; g.beginPath(); g.ellipse(s.cx, s.cy, 20, 13, 0, 0, 7); g.fill(); }   // the drain, waiting
+    else if (!s.T3D) BATHFLOOR(0), BOWL(s.cx, s.cy, 152, 106, s.t);
+    if (!bowlBg && !s.T3D) { const gr = g.createRadialGradient(s.cx, s.cy, 1, s.cx, s.cy, 18); gr.addColorStop(0, '#0d1c26'); gr.addColorStop(1, 'rgba(20,50,66,0)'); g.fillStyle = gr; g.beginPath(); g.ellipse(s.cx, s.cy, 20, 13, 0, 0, 7); g.fill(); }   // the drain, waiting
     if (s.diff === 0) for (let i = 0; i < 24; i++) { const [x, y] = this.pos(s, i / 24 * Math.PI * 2); R(x - 1, y - 1, 2, 2, 'rgba(255,255,255,.5)'); }   // easy mode shows the lap
     for (const o of s.wads) { const [x, y] = this.pos(s, o.ang, o.r); if (!SPC('tp', x, y, 0.6)) { R(x - 6, y - 4, 12, 8, '#f4f4f0'); R(x - 4, y - 6, 8, 3, '#e8e8e2'); R(x - 2, y - 1, 3, 2, '#d8d8d0'); } }
     const [ox, oy] = this.pos(s, s.ang);
