@@ -645,6 +645,7 @@ GAMES.push({
   how: ['This is the camera monitor: you are looking down the pipe. Push the camera with ▲ (▼ backs up). Watch the footage counter.', 'The head rolls and wanders as it goes. Keep it LEVEL with ◀ ▶ or the picture tumbles and you lose time.', 'Offset joints catch the head: keep pushing ▲ hard to pop it over the lip.', 'Tag every problem with SPACE when it is in the yellow box. Most of the line is GOOD pipe: tagging good pipe counts against you. Find the clog.'],
   dpad: 'omni',
   ctl: '▲ PUSH · ▼ BACK · ◀ ▶ KEEP LEVEL · SPACE = TAG',
+  leave(s) { if (s && s.rl) { s.rl.stop(); s.rl = null; } },
   act: 'TAG',
   init(s) {
     s.TIME = [120, 110, 100][s.diff]; s.d = 0; s.v = 0; s.FORK = 1e9; s.CLOG = 420 + s.rnd() * 140; s.FT = (70 + s.rnd() * 50) / s.CLOG;   /* the run is long to PLAY, but the counter reads real-world feet: the clog sits at 70-120 ft */   /* a long run: mostly good pipe, so you learn what NOT to tag */ s.CAP = 1e9; s.lvl = 0; s.lvlV = 0; s.push = 0; s.tumble = 0;   // one straight run of pipe, no branches
@@ -677,6 +678,7 @@ GAMES.push({
       if (dn) { s.snag = 0; s.push = 0; }
     }
     s.v += (want - s.v) * Math.min(1, dt * 4);
+    if (!s.rl && typeof DDTSfx !== 'undefined') s.rl = DDTSfx.loop('reel_loop', { vol: 0 }); if (s.rl && s.rl.vol) s.rl.vol(Math.min(1, Math.abs(s.v) / 6));   /* the cable reel clicks while the camera moves */
     const before = s.d; s.d = Math.max(0, s.d + s.v * dt); if (s.d > s.CLOG - 1.2) { s.d = s.CLOG - 1.2; if (s.v > 2 && !s.wall) { s.shake = 0.25; say('HEAD IS UP AGAINST IT. TAG IT!', 1.4); } s.wall = 1; s.v = Math.min(s.v, 0); } else s.wall = 0;   /* the clog is a wall: you can't push past it */
     for (const o of s.def) if (o.kind === 'offset' && before < o.d - 0.8 && s.d >= o.d - 0.8 && !o.popped) {   // every offset joint catches the head
       o.popped = true; s.d = o.d - 0.85; s.v = 0; s.snag = 1; s.push = 0; s.snags++; s.shake = 0.3; SFX('metal_knock', { vol: 0.45 }); say('OFFSET JOINT! PUSH HARD (TAP ▲ ▲ ▲)', 1.8); }
@@ -788,7 +790,7 @@ GAMES.push({
     s.grace = Math.max(0, (s.grace || 0) - dt); if (!inCloud && s.grace > 0) s.grace = Math.min(s.grace, 0.3);   /* after a gag you get a moment to walk out before it builds again */
     if (inCloud && !s.hold && !(s.grace > 0)) {   // breathing the cloud
       s.gag += 34 * (0.55 + S) * s.k / H.grip * dt;
-      if (s.wasHold && s.lungs <= 0.5) { s.gag += 30; s.gasp = 0.8; POP(s, s.px, 150, '*GASP*', '#e9665a'); }
+      if (s.wasHold && s.lungs <= 0.5) { s.gag += 30; s.gasp = 0.8; POP(s, s.px, 150, '*GASP*', '#e9665a'); SFX('gasp'); }
     }
     s.lungs = Math.max(0, s.lungs);
     s.wasHold = s.hold;
