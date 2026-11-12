@@ -94,12 +94,12 @@ function drive3d(choice, opts) {
   if (!LEGS_HERE || !LEGS_HERE.length) LEGS_HERE = [{ rt: (opts.route || 'Route 16').toUpperCase().replace('ROUTE', 'RT'), name: '', mi: 12, curve: 3.5, hill: 700, heave: 0.2, busy: 1, scene: [] }];
   const TOTAL_MI = LEGS_HERE.reduce((a, L) => a + L.mi, 0);
   const RACE = !!opts.rival, DRIFT = !!opts.drift;   // DRIFT: the midnight downhill race on the Auto Road, all hairpins   // racing the Clog Kings: a long open-road run, about two minutes flat out
-  const SEG_PER_MI = RACE ? (125 * TOP * 0.88 / SEG) / TOTAL_MI : opts.endless ? 40 : Math.max(48, Math.min(110, 1450 / TOTAL_MI));            // short hops still feel like a drive; long hauls don't drag forever
+  let SEG_PER_MI = RACE ? (125 * TOP * 0.88 / SEG) / TOTAL_MI : opts.endless ? 40 : Math.max(48, Math.min(110, 1450 / TOTAL_MI));            // short hops still feel like a drive; long hauls don't drag forever
   const legAt = [];   // which leg each segment belongs to
   add(40, 0, 0); for (let i = 0; i < 40; i++) legAt.push(0);
   if (DRIFT) {   /* long, sharp hairpins, back and forth, all the way down the mountain */
     let dir = Math.random() < 0.5 ? 1 : -1; const P = [];
-    for (let k = 0; k < 20; k++) { const kind = k % 4 === 3 ? 'ess' : k % 3 === 1 ? 'sweeper' : 'hairpin'; P.push(kind); }
+    for (let k = 0; k < 32; k++) { const kind = k % 4 === 3 ? 'ess' : k % 3 === 1 ? 'sweeper' : 'hairpin'; P.push(kind); }
     for (const kind of P) {
       add(Math.round(rnd(14, 30)), 0, -rnd(200, 500));   /* a short straight to set up */
       if (kind === 'hairpin') add(Math.round(rnd(140, 180)), dir * rnd(10, 12.5), -rnd(600, 1200));
@@ -107,6 +107,7 @@ function drive3d(choice, opts) {
       else { add(Math.round(rnd(60, 75)), dir * 8, -rnd(300, 600)); dir = -dir; add(Math.round(rnd(60, 75)), dir * 8, -rnd(300, 600)); }
       dir = -dir; }
     while (legAt.length < segs.length) legAt.push(0);
+    SEG_PER_MI = (segs.length + 60) / 7.6;   /* the whole Auto Road: 7.6 miles, summit to base */
   }
   LEGS_HERE.forEach((L, li) => {
     const n = DRIFT ? 0 : Math.round(L.mi * SEG_PER_MI), start = segs.length;
@@ -313,9 +314,9 @@ function drive3d(choice, opts) {
   addEventListener('keydown', kd); addEventListener('keyup', ku);
   const pts = new Map();
   function zone(e) { const b = rc.getBoundingClientRect(), x = (e.clientX - b.left) / b.width, y = (e.clientY - b.top) / b.height;
-    if (DRIFT) { if (y > 0.74 && (x < 0.22 || x > 0.78)) return 'X'; if (y > 0.6 && (x < 0.15 || x > 0.85)) return 'D'; } if (y > 0.74 && (x < 0.22 || x > 0.78)) return 'D'; return x < 0.5 ? 'L' : 'R'; }   // brake in both bottom corners, steer with either side
+    if (DRIFT) { if (y > 0.8 && x < 0.21) return 'XL'; if (y > 0.8 && x > 0.79) return 'XR'; if (y > 0.8 && x > 0.4 && x < 0.6) return 'D'; return x < 0.5 ? 'L' : 'R'; }   /* DRIFT LEFT / DRIFT RIGHT in the corners steer AND drift; BRAKE alone in the middle; anywhere else just steers */ if (y > 0.74 && (x < 0.22 || x > 0.78)) return 'D'; return x < 0.5 ? 'L' : 'R'; }   // brake in both bottom corners, steer with either side
   // phone: one thumb steers. Both thumbs down (left AND right) = gas. No thumbs = cruise.
-  function retouch() { touch.L = touch.R = touch.U = touch.D = touch.X = 0; for (const z of pts.values()) touch[z] = 1; if (TILT) { touch.U = (touch.L || touch.R) && !touch.D ? 1 : 0; touch.L = touch.R = 0; return; } if (touch.L && touch.R && !touch.D) touch.U = 1; }
+  function retouch() { touch.L = touch.R = touch.U = touch.D = touch.X = 0; for (const z of pts.values()) { if (z === 'XL') { touch.X = 1; touch.L = 1; } else if (z === 'XR') { touch.X = 1; touch.R = 1; } else touch[z] = 1; } if (TILT) { touch.U = (touch.L || touch.R) && !touch.D ? 1 : 0; touch.L = touch.R = 0; return; } if (touch.L && touch.R && !touch.D) touch.U = 1; }
   const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   /* TILT STEER (menu toggle): turn the phone like a steering wheel. Hold anywhere = gas, bottom corners = brake.
      Works out which way is "down" on the screen from the phone's orientation, so it doesn't matter how far back you hold it. */
@@ -845,10 +846,12 @@ function drive3d(choice, opts) {
         r.textAlign = 'left'; }
       // phone buttons (also show what the keys do)
       if (true) {   // brake in both corners, gas = both thumbs (keyboard: ▲)
-        if (DRIFT) { const dh = key.X || touch.X;   /* DRIFT in both bottom corners, small BRAKE buttons above them */
-          for (const bx of [4, W - 96]) { r.fillStyle = dh ? 'rgba(247,196,24,.7)' : 'rgba(16,21,31,.55)'; r.fillRect(bx, H - 46, 92, 40); r.fillStyle = brake ? 'rgba(233,102,90,.7)' : 'rgba(16,21,31,.5)'; r.fillRect(bx + (bx < W / 2 ? 0 : 32), H - 76, 60, 24);
-            r.fillStyle = '#fff'; r.textAlign = 'center'; r.fillText(dh ? 'DRIFT!' : 'DRIFT', bx + 46, H - 26); r.fillText('BRAKE', bx + (bx < W / 2 ? 30 : 62), H - 62);
-            r.fillStyle = '#222'; r.fillRect(bx, H - 50, 92, 4); r.fillStyle = dmeter > 0.8 ? '#ff7a2a' : '#f7c418'; r.fillRect(bx, H - 50, 92 * dmeter, 4); } r.textAlign = 'left'; }
+        if (DRIFT) { const dh = key.X || touch.X, dl = dh && (key.L || touch.L), dr = dh && (key.R || touch.R);   /* ◀ DRIFT and DRIFT ▶ in the corners, BRAKE on its own in the middle */
+          r.textAlign = 'center';
+          r.fillStyle = dl ? 'rgba(247,196,24,.75)' : 'rgba(16,21,31,.55)'; r.fillRect(4, H - 46, 96, 40); r.fillStyle = '#fff'; r.fillText('◀ DRIFT', 52, H - 26);
+          r.fillStyle = dr ? 'rgba(247,196,24,.75)' : 'rgba(16,21,31,.55)'; r.fillRect(W - 100, H - 46, 96, 40); r.fillStyle = '#fff'; r.fillText('DRIFT ▶', W - 52, H - 26);
+          r.fillStyle = brake ? 'rgba(233,102,90,.75)' : 'rgba(16,21,31,.5)'; r.fillRect(W / 2 - 40, H - 34, 80, 28); r.fillStyle = '#fff'; r.fillText(brake ? 'BRAKE!' : 'BRAKE', W / 2, H - 18);
+          for (const bx of [4, W - 100]) { r.fillStyle = '#222'; r.fillRect(bx, H - 50, 96, 4); r.fillStyle = dmeter > 0.8 ? '#ff7a2a' : '#f7c418'; r.fillRect(bx, H - 50, 96 * dmeter, 4); } r.textAlign = 'left'; }
         else { r.fillStyle = brake ? 'rgba(233,102,90,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40); r.fillRect(W - 96, H - 46, 92, 40);
         r.fillStyle = '#fff'; r.textAlign = 'center'; r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', 50, H - 26); r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', W - 50, H - 26); }
         if (gas) { r.fillStyle = '#7bd65b'; r.textAlign = 'right'; r.fillText('GAS!', W - 10, crashes ? 66 : 52); } r.textAlign = 'left';
@@ -860,13 +863,13 @@ function drive3d(choice, opts) {
       if (t < 2.0 && helpSeen) {   // seen the controls before: just the road name and the go signal
         r.fillStyle = 'rgba(16,21,31,.85)'; r.fillRect(150, 80, 180, RIVAL ? 58 : 46); r.textAlign = 'center';
         const L0 = LEGS_HERE[0]; r.fillStyle = '#9fb3d9'; r.fillText(L0 && L0.name ? `${L0.rt} · ${L0.name}` : (opts.route || 'ROUTE 2').toUpperCase(), 240, 94);
-        if (RIVAL) { r.fillStyle = '#e9665a'; r.fillText('RACE THE CLOG KINGS!', 240, 108); }
+        if (RIVAL) { r.fillStyle = '#e9665a'; r.fillText(DRIFT ? 'THE SUMMIT · 6,288 FT · 7.6 MILES DOWN' : 'RACE THE CLOG KINGS!', 240, 108); }
         r.fillStyle = '#f7c418'; r.font = '12px "Press Start 2P", monospace'; r.fillText(t < 1.2 ? 'READY' : 'GO!', 240, RIVAL ? 126 : 114); r.font = '8px "Press Start 2P", monospace'; r.textAlign = 'left';
       } else if (t < 2.0) {
         r.fillStyle = 'rgba(16,21,31,.9)'; r.fillRect(110, 70, 260, 90);
         r.fillStyle = '#f7c418'; r.textAlign = 'center'; r.fillText((opts.route || 'ROUTE 2').toUpperCase(), 240, 86);
-        r.fillStyle = '#fff'; r.fillText(DRIFT ? (TOUCH ? 'STEER WITH EITHER SIDE · HOLD DRIFT INTO THE HAIRPINS' : '◀ ▶ STEER   SPACE: HOLD TO DRIFT   ▼ BRAKE') : TILT ? 'TILT TO STEER · HOLD = GAS' : TOUCH ? 'ONE THUMB STEERS · BOTH = GAS' : '◀ ▶ STEER   ▲ GAS   ▼ BRAKE', 240, 106);
-        if (RIVAL) { r.fillStyle = '#e9665a'; r.fillText('RACE THE CLOG KINGS!', 240, 96); }
+        r.fillStyle = '#fff'; r.fillText(DRIFT ? (TOUCH ? 'TAP A SIDE TO STEER · HOLD ◀ DRIFT / DRIFT ▶ IN THE HAIRPINS' : '◀ ▶ STEER   SPACE: HOLD TO DRIFT   ▼ BRAKE') : TILT ? 'TILT TO STEER · HOLD = GAS' : TOUCH ? 'ONE THUMB STEERS · BOTH = GAS' : '◀ ▶ STEER   ▲ GAS   ▼ BRAKE', 240, 106);
+        if (RIVAL) { r.fillStyle = '#e9665a'; r.fillText(DRIFT ? 'THE SUMMIT · 6,288 FT · 7.6 MILES DOWN' : 'RACE THE CLOG KINGS!', 240, 96); }
         r.fillStyle = '#9fb3d9'; r.fillText(`${DRIVER === 'matt' ? 'MATT' : 'ROD'} DRIVES · TOP ${opts.endless || RACE ? 50 : DRIVER === 'matt' ? 60 : 40} MPH`, 240, 124); r.fillText('WATCH FOR BLINKERS + MOOSE', 240, 138);
         r.fillStyle = '#f7c418'; r.font = '12px "Press Start 2P", monospace'; r.fillText(t < 1.2 ? 'READY' : 'GO!', 240, 154); r.textAlign = 'left';
       }
