@@ -1970,6 +1970,7 @@ GAMES.push({
     if (s.gag >= s.GAG) s.end = { win: false, stars: 0, line: "Gagged out. Had to step outside. Something in there is STILL peeing." };
   },
   drawCat(s, x, y, k) {   /* a hairless cat, standing up like a little man */
+    if (MG('pk_0')) { const run = k > 3.6, f = run ? 1 + Math.floor(s.t * 11) % 5 : 0; return SPI('pk_' + f, x, y + 6, 1.15, false, Math.min(1, k * 2)); }   /* the drawn Piss Kitty: stands there, sprays, struts off */
     const up = Math.min(1, k * 2), skin = '#e6b7a6', dk = '#c48f80';
     g.save(); g.translate(x, y);
     g.fillStyle = skin; g.beginPath(); g.ellipse(0, -18 - up * 10, 11, 16 + up * 6, 0, 0, 7); g.fill();   // body
@@ -2004,7 +2005,7 @@ GAMES.push({
       R(0, 0, W, H, `rgba(0,0,0,${Math.min(0.55, k * 0.4)})`);
       const run = Math.max(0, k - 3.6), cx = sp[1] + run * 260, cy = sp[2] + 20;
       this.drawCat(s, cx, cy, k);
-      if (k > 1.8 && k < 3.6) { g.strokeStyle = '#e6d040'; g.lineWidth = 2; g.beginPath(); g.moveTo(cx + 2, cy - 14); g.quadraticCurveTo(cx - 30, cy - 40, cx - 60, cy + 10); g.stroke(); T('PSSSSSHHHH', cx - 50, cy - 46, '#e6d040', 7, 'center'); }   // right on your boot
+      if (k > 1.8 && k < 3.6) { g.strokeStyle = '#e6d040'; g.lineWidth = 2; g.beginPath(); const rx = MG('pk_0') ? cx - 32 : cx + 2, ry = MG('pk_0') ? cy - 32 : cy - 14; g.moveTo(rx, ry); g.quadraticCurveTo(rx - 30, ry - 24, rx - 62, cy + 10); g.stroke(); T('PSSSSSHHHH', cx - 50, cy - 46, '#e6d040', 7, 'center'); }   // right on your boot
       T(k < 1.2 ? '...' : k < 1.8 ? 'PISS KITTY.' : k < 3.6 ? '' : 'AND HE IS GONE.', W / 2, 70, '#f7c418', 12, 'center'); }
     if (s.msg && s.msgT > 0) { R(10, H - 34, W - 20, 26, 'rgba(16,21,31,.9)'); T(s.msg, W / 2, H - 21, '#fff', 6, 'center'); }
     DRAWFX(s);
