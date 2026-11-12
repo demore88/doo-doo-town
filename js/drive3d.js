@@ -544,7 +544,7 @@ function drive3d(choice, opts) {
       if (RIVAL && live) {
         const gap = (rz - (pos + PZ)) / SEG;
         let want = TOP * (gap > 120 ? 0.62 : gap > 40 ? 0.76 : gap > 3 ? 0.84 : gap < -30 ? 1.0 : 0.9);
-        if (DRIFT) { const rc = Math.abs(segAt(rz).curve); want = TOP * (gap > 60 ? 0.9 : gap > 3 ? 0.98 : gap < -40 ? 1.12 : 1.04) * (1 - Math.max(0, rc - 7) * 0.03); const ins = segAt(rz).curve > 1.5 ? LANE[2] : segAt(rz).curve < -1.5 ? LANE[0] : LANE[1]; rivalLane = ins; }   /* they know the road: inside line, and they lift for the tight ones */   // when they're ahead they run a bit under your top speed, so holding the pedal down reels them in slowly
+        if (DRIFT) { const rc = Math.abs(segAt(rz).curve); want = TOP * (gap > 60 ? 0.88 : gap > 3 ? 0.96 : gap < -40 ? 1.1 : 1.01) * (1 - Math.max(0, rc - 7) * 0.035); const ins = segAt(rz).curve > 1.5 ? LANE[2] : segAt(rz).curve < -1.5 ? LANE[0] : LANE[1]; rivalLane = ins; }   /* they know the road: inside line, and they lift for the tight ones */   // when they're ahead they run a bit under your top speed, so holding the pedal down reels them in slowly
         rivalT = (rivalT || 0) - dt; rivalSlip = Math.max(0, (rivalSlip || 0) - dt);
         const blocking = cars.filter(o => !o.parked && Math.abs(o.off - rivalLane) < 0.3 && o.z > rz && o.z - rz < 3.2 * SEG && !o.onc);
         if (blocking.length) {
@@ -561,7 +561,8 @@ function drive3d(choice, opts) {
         rivalBump = Math.max(0, rivalBump - dt); if (rivalBump > 0) want *= 0.4;
         rv += (want - rv) * Math.min(1, dt * 0.8); rz += rv * dt;
         if (inv <= 0 && Math.abs(rz - (pos + PZ)) < SEG * 1.0 && Math.abs(px - roff) < 0.16 + 0.17) {   // trading paint
-          inv = 1.0; shake = 0.4; rivalBump = 1.2; speed *= 0.6; px += px < roff ? -0.25 : 0.25; sfx('horn_angry'); say('TRADING PAINT WITH THE CLOG KINGS!', 1.2); }
+          if (DRIFT) { inv = 1.0; sfx('horn_angry', { vol: 0.6 }); say('SQUEEZED PAST THE CLOG KINGS!', 1.0); }   /* drifting: no bump, no lost speed, just an angry horn */
+          else { inv = 1.0; shake = 0.4; rivalBump = 1.2; speed *= 0.6; px += px < roff ? -0.25 : 0.25; sfx('horn_angry'); say('TRADING PAINT WITH THE CLOG KINGS!', 1.2); } }
         if (!rivalWon && rz >= (N - 40) * SEG && pos < (N - 40) * SEG) { rivalWon = true; say('THE CLOG KINGS GOT THERE FIRST!', 2.5); sfx('horn_angry'); }
       }
       // critters wander onto the road when you get close

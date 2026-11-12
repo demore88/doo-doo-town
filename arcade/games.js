@@ -2157,14 +2157,14 @@ GAMES.push({
   update(s, dt, I) {
     s.t += dt; FX(s, dt); s.inv -= dt; s.cool -= dt;
     mover1D(s, I, dt, 170 * HERO(s).spd, 30, W - 30);
-    if ((I.A || I.Ap) && !s.shots.length && s.cool <= 0) { s.shots.push({ x: s.px, y: s.py - 16 }); s.cool = 0.35; SFX('splash', { vol: 0.25, rate: 1.6 }); }   // one blast in the pipe at a time, and a beat to reload
+    if ((I.A || I.Ap) && !s.shots.length && s.cool <= 0) { s.shots.push({ x: s.px, y: s.py - 16 }); s.cool = 0.35; SFX('bead_pop' + (1 + Math.floor(Math.random() * 5)), { vol: 0.22, rate: 0.9 }); }   // one blast in the pipe at a time, and a beat to reload
     for (const b of s.shots) b.y -= 240 * dt;
     // the march: the whole army steps together, tick... tick... and the fewer are left, the faster the steps come
     const left = s.foes.length; s.stepT -= dt;
     if (left && s.stepT <= 0) { s.stepT = (0.05 + 0.6 * left / s.N0) / [0.85, 1, 1.2][s.diff];
       let edge = s.foes.some(f => (s.dir > 0 && f.x > W - 30) || (s.dir < 0 && f.x < 30));
       if (edge) { s.dir *= -1; for (const f of s.foes) f.y += 10; } else for (const f of s.foes) f.x += s.dir * 6;
-      s.step++; s.march = s.step; SFX('click', { vol: 0.35, rate: [0.8, 0.9, 0.7, 0.75][s.step % 4] }); }
+      s.step++; s.march = s.step; if (s.step % 2 === 0) SFX('click', { vol: 0.12, rate: [0.8, 0.7][(s.step / 2) % 2] }); }
     // drips
     if (left && s.drips.length < 2 + s.diff && s.rnd() < dt * (0.4 + s.diff * 0.2 + 0.3 * (1 - left / s.N0))) {   // only the bottom clog in a column can drip
       const f = s.foes[Math.floor(s.rnd() * left)], low = s.foes.filter(o => Math.abs(o.x - f.x) < 6).sort((a, b) => b.y - a.y)[0];
@@ -2178,7 +2178,7 @@ GAMES.push({
       if (s.duck && Math.abs(b.x - s.duck.x) < 12 && Math.abs(b.y - 26) < 8) { b.y = -99; POP(s, s.duck.x, 30, '+DUCK!', '#f7c418'); PUFF(s, s.duck.x, 26, '#f7c418', 14, 80); s.score += 300; s.duck = null; SFX('squish'); }
       for (const f of s.foes) if (f.hp > 0 && Math.abs(b.x - f.x) < 14 && Math.abs(b.y - f.y) < 10) {
         b.y = -99; f.hp--; PUFF(s, f.x, f.y, this.col(f.k), 8, 60);
-        if (f.hp <= 0) { s.score += f.pts; SFX('squish', { vol: 0.5 }); if (s.rnd() < 0.25) POP(s, f.x, f.y, ['SPLOOSH', 'CLEAR', 'GONE'][Math.floor(s.rnd() * 3)]); } else SFX('clog', { vol: 0.4 });
+        if (f.hp <= 0) { s.score += f.pts; SFX('bead_pop' + (1 + Math.floor(Math.random() * 5)), { vol: 0.4 }); if (s.rnd() < 0.25) POP(s, f.x, f.y, ['SPLOOSH', 'CLEAR', 'GONE'][Math.floor(s.rnd() * 3)]); } else SFX('clog', { vol: 0.15 });
         break;
       }
     }
@@ -2187,7 +2187,7 @@ GAMES.push({
     for (const f of s.foes) if (f.y > 190) s.shield = s.shield.filter(c => Math.abs(c.x - f.x) > 14 || Math.abs(c.y - f.y) > 10);   // they plow through the shields
     s.foes = s.foes.filter(f => f.hp > 0); s.shots = s.shots.filter(b => b.y > 10);
     for (const d of s.drips) if (s.inv <= 0 && Math.abs(d.x - s.px) < 9 && Math.abs(d.y - s.py) < 10) {
-      d.y = 999; s.pants--; s.hits++; s.inv = 1.2; s.shake = 0.3; PUFF(s, s.px, s.py - 8, '#7a5a2e', 14, 70); POP(s, s.px, s.py - 24, 'DRIPPED ON', '#e9665a'); SFX('splash');
+      d.y = 999; s.pants--; s.hits++; s.inv = 1.2; s.shake = 0.3; PUFF(s, s.px, s.py - 8, '#7a5a2e', 14, 70); POP(s, s.px, s.py - 24, 'DRIPPED ON', '#e9665a'); SFX('squish', { vol: 0.4 });
       if (s.pants <= 0) return (s.end = { win: false, stars: 0, line: 'Out of pants. The backup wins this round.' });
     }
     s.drips = s.drips.filter(d => d.y < H);
@@ -2332,12 +2332,12 @@ GAMES.push({
     let mv = (I.R ? 1 : 0) - (I.L ? 1 : 0); if (I.ptr.down && I.ptr.y > 60) mv = I.ptr.x < s.px - 10 ? -1 : I.ptr.x > s.px + 10 ? 1 : 0;
     if (mv) s.face = mv;
     s.vx += (mv * 130 * H.spd - s.vx) * Math.min(1, dt * 12);
-    if ((I.Up || (I.ptr.clicked && I.ptr.y < s.py - 30)) && s.on) { s.vy = -335; s.on = false; SFX('bubble', { vol: 0.4, rate: 1.4 }); }
+    if ((I.Up || (I.ptr.clicked && I.ptr.y < s.py - 30)) && s.on) { s.vy = -335; s.on = false; SFX('bead_pop' + (1 + Math.floor(Math.random() * 5)), { vol: 0.3, rate: 1.2 }); }
     s.vy += 760 * dt; const py0 = s.py; s.px = clamp(s.px + s.vx * dt, 12, W - 12); s.py += s.vy * dt;
     s.on = false; if (s.vy >= 0) { const gy = this.ground(s, s.px, py0, s.py); if (gy != null) { s.py = gy; s.vy = 0; s.on = true; } }
     if (s.py > 226) { s.py = 226; s.vy = 0; s.on = true; }
     // blow a bubble
-    if ((I.Ap || (I.ptr.clicked && I.ptr.y >= s.py - 30 && Math.abs(I.ptr.x - s.px) < 40)) && s.cd <= 0) { s.cd = 0.8;   /* one bubble at a time: it takes a breath to blow the next */ s.bubs.push({ x: s.px + s.face * 10, y: s.py - 12, vx: s.face * 260, vy: 0, t: 0, foe: null }); SFX('bubble', { vol: 0.6 }); }
+    if ((I.Ap || (I.ptr.clicked && I.ptr.y >= s.py - 30 && Math.abs(I.ptr.x - s.px) < 40)) && s.cd <= 0) { s.cd = 0.8;   /* one bubble at a time: it takes a breath to blow the next */ s.bubs.push({ x: s.px + s.face * 10, y: s.py - 12, vx: s.face * 260, vy: 0, t: 0, foe: null }); SFX('bead_pop' + (1 + Math.floor(Math.random() * 5)), { vol: 0.45 }); }
     for (const b of s.bubs) {
       b.t += dt;
       if (!b.foe) { b.vx *= Math.pow(0.06, dt); if (Math.abs(b.vx) < 30) b.vy = -22; }
@@ -2348,7 +2348,7 @@ GAMES.push({
       if (b.foe && Math.abs(b.x - s.px) < 16 && Math.abs(b.y - (s.py - 10)) < 20) {
         b.dead = true; b.foe.st = 'gone'; s.pops++; s.combo++; s.comboT = 1.2;
         const pts = 100 * s.combo; POP(s, b.x, b.y - 10, s.combo > 1 ? `x${s.combo} COMBO!` : '+100', '#f7c418');
-        PUFF(s, b.x, b.y, b.foe.kind === 'bead' ? `hsl(${b.foe.hue * 360},80%,65%)` : b.foe.kind === 'wipe' ? '#f4f4f2' : '#c9a640', 16, 110); SFX('splash', { vol: 0.6 });
+        PUFF(s, b.x, b.y, b.foe.kind === 'bead' ? `hsl(${b.foe.hue * 360},80%,65%)` : b.foe.kind === 'wipe' ? '#f4f4f2' : '#c9a640', 16, 110); SFX('bead_chain', { vol: 0.5 });
         s.loot.push({ x: b.x, y: b.y, vy: -60, kind: s.beads ? 'bucket' : s.rnd() < .5 ? 'soap' : 'coffee' });
       }
       if (b.foe && b.t > 5.5) { b.dead = true; b.foe.st = 'walk'; b.foe.angry = true; b.foe.x = b.x; b.foe.y = b.y + 10; b.foe.vx = (s.rnd() < .5 ? -1 : 1) * 70; POP(s, b.x, b.y, 'IT BROKE OUT!', '#e9665a'); }
@@ -2376,7 +2376,7 @@ GAMES.push({
     // hazards: hot grease drips from the hood vents (a warning wobble first), and frying pans skid across a ledge
     if (!s.beads) { s.nextDrip -= dt; if (s.nextDrip <= 0) { s.nextDrip = (1.0 - s.diff * 0.18) * (0.6 + s.rnd()); s.drips.push({ x: s.vents[Math.floor(s.rnd() * s.vents.length)] + (s.rnd() - .5) * 20, y: 30, vy: 0, warn: 0.8 }); }
     for (const d of s.drips) { if (d.warn > 0) { d.warn -= dt; continue; } d.vy += 600 * dt; d.y += d.vy * dt;
-      if (s.inv <= 0 && Math.abs(d.x - s.px) < 7 && d.y > s.py - 24 && d.y < s.py) { d.y = 999; s.pants--; s.inv = 1.6; s.shake = 0.25; PUFF(s, s.px, s.py - 18, '#d9a23a', 10); POP(s, s.px, s.py - 30, 'HOT GREASE!', '#e9665a'); SFX('splash', { vol: 0.5 }); }
+      if (s.inv <= 0 && Math.abs(d.x - s.px) < 7 && d.y > s.py - 24 && d.y < s.py) { d.y = 999; s.pants--; s.inv = 1.6; s.shake = 0.25; PUFF(s, s.px, s.py - 18, '#d9a23a', 10); POP(s, s.px, s.py - 30, 'HOT GREASE!', '#e9665a'); SFX('bead_drop', { vol: 0.5 }); }
       const gy = s.plat.find(p => d.x > p.x && d.x < p.x + p.w && d.y >= p.y && d.y - d.vy * dt < p.y); if (gy && d.y < 900) { d.y = 999; PUFF(s, d.x, gy.y, '#d9a23a', 5, 40); } }
     } else { s.nextDrip -= dt; if (s.nextDrip <= 0) { s.nextDrip = (1.4 - s.diff * 0.25) * (0.6 + s.rnd()); s.drips.push({ x: 30 + s.rnd() * 420, y: 30, vy: 0, warn: 0.6, col: s.rnd() }); }   /* the kids are pouring more in from upstairs */
       for (const d of s.drips) { if (d.warn > 0) { d.warn -= dt; continue; } d.vy += 500 * dt; d.y += d.vy * dt;
@@ -2388,7 +2388,7 @@ GAMES.push({
       if (s.inv <= 0 && Math.abs(pn.x - s.px) < 11 && Math.abs(pn.y - s.py) < 6) { pn.x = 9999; s.pants--; s.inv = 1.6; s.shake = 0.35; s.vy = -220; s.on = false; POP(s, s.px, s.py - 30, 'CLANG!', '#e9665a'); SFX('clog', { vol: 0.6 }); } }
     } s.pans = s.pans.filter(pn => pn.x > -40 && pn.x < W + 40);
     if (!s.beads) for (const fr of s.fryers) { if (fr.on > 0) { fr.on -= dt; if (fr.on <= 0) fr.t = (5 - s.diff) * (0.8 + s.rnd() * 0.5); }
-      else if (fr.warn > 0) { fr.warn -= dt; if (fr.warn <= 0) { fr.on = 1.1; SFX('splash', { vol: 0.5 }); } }
+      else if (fr.warn > 0) { fr.warn -= dt; if (fr.warn <= 0) { fr.on = 1.1; SFX('bead_drop', { vol: 0.5 }); } }
       else { fr.t -= dt; if (fr.t <= 0) fr.warn = 1.0; }
       if (fr.on > 0 && s.inv <= 0 && Math.abs(s.px - fr.x) < 46 && s.py > 200) { s.pants--; s.inv = 1.6; s.shake = 0.3; s.vy = -260; s.on = false; s.vx = (s.px < fr.x ? -1 : 1) * 200; POP(s, s.px, s.py - 30, 'FRYER FLARE!', '#e9665a'); SFX('squish'); } }   /* the deep fryers spit hot oil along the floor */
     s.nextSpawn -= dt; if (s.nextSpawn <= 0 && s.spawned < 2 + s.diff) { s.nextSpawn = 14 - s.diff * 2; s.spawned++; s.foes.push({ x: 240, y: 226, vx: (s.rnd() < .5 ? -1 : 1) * 40, vy: -260, st: 'walk', t: 0, angry: true, kind: s.beads ? 'bead' : 'grease', hue: s.rnd() }); POP(s, 240, 200, s.beads ? 'ANOTHER ONE BUBBLED UP THE DRAIN!' : 'ANOTHER ONE CRAWLED OUT!', '#e9665a'); SFX('gurgle', { vol: 0.5 }); }   /* the floor drain keeps coughing them up */
@@ -2762,7 +2762,7 @@ GAMES.push({
   init(s) {
     const bg = !!MG('bg_mainstreet'); s.bg = bg; s.nl = bg ? 4 : 6; const NL = s.nl;
     s.ys = bg ? [70, 90, 110, 130, 150, 172, 206, 238] : [36, 58, 80, 102, 124, 146, 168, 190, 212, 234];
-    s.DUR = [80, 70, 62][s.diff]; s.row = bg ? NL + 1 : NL + 2; /* start on the near sidewalk, not in the lot by the fence */ s.px = 300; s.cool = 0; s.pantsMax = s.pants = [4, 3, 3][s.diff]; s.inv = 0; s.hits = 0; s.marks = []; s.bad = 0; s.beepT = 0; s.flash = 0; s.say = ''; s.sayT = 0;
+    s.DUR = [80, 70, 62][s.diff]; s.row = bg ? NL + 1 : NL + 2; s.startRow = s.row; /* start on the near sidewalk, not in the lot by the fence */ s.px = 300; s.cool = 0; s.pantsMax = s.pants = [4, 3, 3][s.diff]; s.inv = 0; s.hits = 0; s.marks = []; s.bad = 0; s.beepT = 0; s.flash = 0; s.say = ''; s.sayT = 0;
     // the pipe: shop cleanout → kinks once under the road → city main at the far curb
     const x0 = 300 + (s.rnd() - 0.5) * 60, xk = 120 + s.rnd() * 240, x1 = clamp(xk + (s.rnd() - 0.5) * 140, 40, 440), rk = (bg ? 2 : 3) + Math.floor(s.rnd() * 2);
     s.pipe = [[x0, NL + 2], [xk, rk], [bg ? 245 : x1, 0]];
@@ -2797,7 +2797,7 @@ GAMES.push({
     if (s.cool <= 0) {
       let moved = true;
       if (I.U || I.Up) s.row = Math.max(0, s.row - 1);
-      else if (I.D || I.Dp) s.row = Math.min(s.nl + 3, s.row + 1);
+      else if (I.D || I.Dp) s.row = Math.min(s.startRow ?? s.nl + 3, s.row + 1);   /* a barrier behind the near sidewalk: no backing off to the shop */
       else if (I.L || I.Lp) s.px = clamp(s.px - 12, 12, W - 12);
       else if (I.R || I.Rp) s.px = clamp(s.px + 12, 12, W - 12);
       else moved = false;
@@ -2877,6 +2877,8 @@ GAMES.push({
       else { R(x0, y - 6, c.w, 12, c.col); R(x0 + 7, y - 9, c.w - 14, 5, c.col); R(x0 + 9, y - 8, c.w - 18, 3, '#2b3a48'); }
       R(x0 + 4, y + 5, 6, 3, '#111'); R(x0 + c.w - 10, y + 5, 6, 3, '#111');
     }
+    { const by = Y(s.startRow ?? s.nl + 1) + 13;   /* orange-and-white construction barrier along the back of the near sidewalk */
+      for (let x = 0; x < W; x += 34) { R(x + 2, by - 6, 30, 10, '#e8e4d8'); for (let k = 0; k < 3; k++) R(x + 4 + k * 10, by - 6, 5, 10, '#e8742a'); R(x + 4, by + 4, 3, 5, '#5a5a5a'); R(x + 27, by + 4, 3, 5, '#5a5a5a'); } }
     // you, with the locator wand
     if (!(s.inv > 0 && Math.floor(s.t * 12) % 2)) { const fy = Y(s.row) + 9, k = 0.6, h = 40 * k;   // smaller than a car; the locator wand scales with him
       HERO_AT(s, s.px, fy, k, { face: 'U' }); R(s.px + 4, fy - h * 0.6, 1, h * 0.5, '#f39c12'); R(s.px + 3, fy - h * 0.66, 3, 2, '#f7c418'); }   // just the wand in his hand, nothing over his head
