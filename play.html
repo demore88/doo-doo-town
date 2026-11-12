@@ -17,12 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794468993"></script>
-<script src="js/calls.js?v=1794468993"></script>
-<script src="js/banter.js?v=1794468993"></script>
-<script src="js/placeholders.js?v=1794468993"></script>
-<script src="js/music.js?v=1794468993"></script>
-<script src="js/sfx.js?v=1794468993"></script>
+<script src="js/state.js?v=1794469046"></script>
+<script src="js/calls.js?v=1794469046"></script>
+<script src="js/banter.js?v=1794469046"></script>
+<script src="js/placeholders.js?v=1794469046"></script>
+<script src="js/music.js?v=1794469046"></script>
+<script src="js/sfx.js?v=1794469046"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -1091,7 +1091,7 @@ SCENES.hub = async () => {
       const t = s.today ? s.today.time : 1020;
       await card(['END OF THE DAY', `${DDT.clock(Math.max(t, 960))} · BACK IN BERLIN`], 1500);
       if (s.month >= 5 && !s.superRon) { await rodFindsRon(); continue; }   /* one night, Rod can't sleep */
-      if (s.month >= 3 && s.superRon !== 'playing' && (s.driftN || 0) < 3 && s.driftMonth !== s.month && Math.random() < 0.3) { await secretDrift(); continue; }   /* the Clog Kings text at midnight */
+      if (s.month >= 3 && s.superRon !== 'playing' && s.driftMonth !== s.month && (Math.random() < 0.3 || ((s.day || 0) >= DAYS_PER_MONTH - 1 && s.month - (s.driftMonth ?? 2) >= 2))) { await secretDrift(); continue; }   /* the Clog Kings text at midnight: now and then, and never more than two months apart */
       s = DDT.get(); s.day = (s.day || 0) + 1; s.today = null;
       s.step = s.day >= DAYS_PER_MONTH ? 'monthend' : 'daystart'; DDT.save(s); continue;
     }
