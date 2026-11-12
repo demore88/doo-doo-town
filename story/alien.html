@@ -531,7 +531,7 @@ SCENES.toilet = async () => {
   st.alienTilt = 0.15; SND.chirp(2); await wait(900); st.alienTilt = 0;
   await say('ROD', 'rod_stare', "Every abduction story on Earth... and it's a toilet.");
   st.point = [300, 204]; SND.chirp(1); await wait(500); SND.gurgle(); st.hoseT = 0.01; await wait(1100); st.hoseT = 0; st.point = null;
-  await say('ROD', 'rod_normal', "Yep. That's a clog. Where's your cleanout?");
+  await say('ROD', 'rod_normal', "Yep. That's a clog. Hand me my cable, I'm going in through the hose.");
   await fadeOut(600);
 };
 
