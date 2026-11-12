@@ -440,7 +440,7 @@ function drive3d(choice, opts) {
         if (want && dmeter > 0.7 && !screech) { screech = true; sfx('drift_burst', { vol: 0.55 }); }   /* almost a BOOST: the tires scream */
         if (!want) screech = null;
         if (want) { drift = Math.min(1, drift + dt * 3); if (into) dmeter = Math.min(1, dmeter + dt * 0.4); speed -= speed * 0.04 * dt; px += steer * dt * 0.9 * drift; if (Math.random() < dt * 40) smoke.push({ x: W / 2 + (Math.random() - 0.5) * 70, y: H - 34, r: 5, l: 0.9 }); }
-        else { if (drift > 0.2 && dmeter > 0.3) { dboost = 0.8 + dmeter * 1.6; say(dmeter > 0.8 ? 'MONSTER DRIFT! BOOST!' : 'BOOST!', 1.1); } dmeter = 0; drift = Math.max(0, drift - dt * 4); }
+        else { if (drift > 0.2 && dmeter > 0.3) { dboost = 0.8 + dmeter * 1.6; say(dmeter > 0.8 ? 'MONSTER DRIFT! BOOST!' : 'BOOST!', 1.1); if (!screech) sfx('drift_burst', { vol: 0.55 });   /* the boost: your backfire-and-screech clip, if it didn't already play on this slide */ } dmeter = 0; drift = Math.max(0, drift - dt * 4); }
         dboost = Math.max(0, dboost - dt); if (dboost > 0) speed = Math.min(BOOST * 1.2, speed + BOOST * 0.6 * dt);
         smoke.forEach(q => { q.l -= dt; q.r += dt * 34; q.y -= dt * 14; }); smoke = smoke.filter(q => q.l > 0);
         px -= seg.curve * ratio * ratio * dt * 0.55 * (1 - 0.75 * drift);
