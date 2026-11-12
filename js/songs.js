@@ -12,6 +12,7 @@ window.DDT_SONGS = window.DDT_SONGS || (() => {
     { file: 'nightmares.mp3', name: 'NIGHTMARES' },
     { file: 'under_the_trailer.mp3', name: 'UNDER THE TRAILER', lock: 'Beat THE RAT KING under the trailer' },
     { file: 'foot_on_the_gas.mp3', name: 'FOOT ON THE GAS', lock: 'Drive past 300 miles in the Driving Game' },
+    { file: 'too_sexy_for_this_truck.mp3', name: 'TOO SEXY FOR THIS TRUCK', lock: 'Win a DOWNHILL DRIFT race against the Clog Kings' },
   ];
   const load = () => { try { const o = JSON.parse(localStorage.getItem('ddt_songs') || '{}'); return { unl: o.unl || [], off: o.off || [] }; } catch (e) { return { unl: [], off: [] }; } };
   const save = o => { try { localStorage.setItem('ddt_songs', JSON.stringify(o)); } catch (e) {} };

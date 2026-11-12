@@ -241,7 +241,7 @@ function drive3d(choice, opts) {
   if (FALL) for (let n = 80; n < N - 80; n += 160) put(n, sign(['SCENIC', 'VIEW'], '#5a3e26'), -1.5, 1.2);
 
   // ---------- the rival: the CLOG KINGS van, racing you to the same job ----------
-  const RIVAL = !!opts.rival; let drift = 0, dmeter = 0, dboost = 0, smoke = [];
+  const RIVAL = !!opts.rival; let drift = 0, dmeter = 0, dboost = 0, smoke = [], screech = null;
   let rz = PZ + 45 * SEG, rv = 0, roff = LANE[1], rivalWon = false, rivalImg = null, rivalBump = 0;
   let rivalLane = LANE[1], rivalT = 0, rivalSlip = 0;
   function makeRival() {   // repaint our van in Clog Kings colors (blue->red, yellow->black) once the art has loaded
@@ -439,6 +439,9 @@ function drive3d(choice, opts) {
       px += steer * dt * 2.1 * (0.35 + 0.65 * ratio);
       if (DRIFT) {   /* hold DRIFT and steer into the hairpin: the van slides around it instead of fighting it. Let go after a long one: BOOST */
         const want = live && (key.X || touch.X) && ratio > 0.45 && steer !== 0, into = steer !== 0 && Math.sign(steer) === Math.sign(seg.curve) && Math.abs(seg.curve) > 1.5;
+        if (want && drift < 0.05) sfx('drift_burst', { vol: 0.8, rate: 0.95 + Math.random() * 0.1 });   /* the tires bite into the slide */
+        if (want && !screech && typeof DDTSfx !== 'undefined') screech = DDTSfx.loop('drift_screech', { vol: 0 });
+        if (screech && screech.vol) screech.vol(live ? drift * (0.5 + ratio * 0.5) : 0);
         if (want) { drift = Math.min(1, drift + dt * 3); if (into) dmeter = Math.min(1, dmeter + dt * 0.4); speed -= speed * 0.04 * dt; px += steer * dt * 0.9 * drift; if (Math.random() < dt * 40) smoke.push({ x: W / 2 + (Math.random() - 0.5) * 70, y: H - 34, r: 5, l: 0.9 }); }
         else { if (drift > 0.2 && dmeter > 0.3) { dboost = 0.8 + dmeter * 1.6; say(dmeter > 0.8 ? 'MONSTER DRIFT! BOOST!' : 'BOOST!', 1.1); sfx('ui_select', { vol: 0.4 }); } dmeter = 0; drift = Math.max(0, drift - dt * 4); }
         dboost = Math.max(0, dboost - dt); if (dboost > 0) speed = Math.min(BOOST * 1.2, speed + BOOST * 0.6 * dt);
@@ -606,7 +609,7 @@ function drive3d(choice, opts) {
         const mins = Math.round(opts.leave + play * MIN_PER_S + penalty);
         say('MADE IT!', 2); draw(false, true, 0);
         if (!opts.arcade) try { const sv = DDT.get(), T = sv.stats = sv.stats || {}; for (const k in STATS) T[k] = (T[k] || 0) + STATS[k]; T.drives = (T.drives || 0) + 1; T.miles = (T.miles || 0) + Math.round(TOTAL_MI); if (RIVAL) T[rivalWon ? 'racesLost' : 'racesWon'] = (T[rivalWon ? 'racesLost' : 'racesWon'] || 0) + 1; DDT.save(sv); } catch (e) {}
-        if (rainSnd) { rainSnd.stop(); rainSnd = null; } setTimeout(() => { rc.style.display = 'none'; res({ crashes, mins, rivalWon }); }, 700); return;
+        if (rainSnd) { rainSnd.stop(); rainSnd = null; } if (screech) { screech.stop(); screech = null; } setTimeout(() => { rc.style.display = 'none'; res({ crashes, mins, rivalWon }); }, 700); return;
       }
       requestAnimationFrame(frame);
     }

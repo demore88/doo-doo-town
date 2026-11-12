@@ -126,7 +126,7 @@ const CALLS = [
 ],
 // ---------------- APRIL ----------------
 [
-  { id: 'trailer-crawl', title: 'UNDER THE TRAILER', town: 'MILAN', addr: 'Rt 16', cust: { name: 'DUANE', seed: 113 }, ext: 'trailer', room: 'crawl', window: 110,
+  { id: 'trailer-crawl', once: true, title: 'UNDER THE TRAILER', town: 'MILAN', addr: 'Rt 16', cust: { name: 'DUANE', seed: 113 }, ext: 'trailer', room: 'crawl', window: 110,
     ring: "Something smells under the trailer. Real bad. Since about Christmas.",
     intro: [['ROD', "Pipe's probably separated under there."], ['MATT', "And who's skinny enough to crawl under there?"], ['ROD', '...']],
     tool: { q: 'Separated pipe under a trailer. Part?', opts: ['FERNCO COUPLING', 'DUCT TAPE', 'GUM'], right: 0, good: 'Fernco it back together.', bad: "That'll last until Tuesday." },
@@ -463,25 +463,42 @@ const FITTINGS = [
 // better gear = bigger jobs: every major piece of equipment you own adds to what a job pays (up to about +40%)
 function gearPts(s) { const v = (s && s.inv) || {}; return (v.heads ? 1 : 0) + (v.ppe ? 1 : 0) + (v.camera ? 2 : 0) + (v.jetter ? 2 : 0) + (v.waders || v.muckboots ? 0.5 : 0); }
 function gearPay(s) { return 1 + 0.06 * gearPts(s); }
+// what on the truck fits this job? parts get used and billed at 3x; gear just helps. Each one that fits: +1 rep (max +3).
+function jobText(j) { return [j.title, j.ring, j.room, JSON.stringify(j.intro || ''), JSON.stringify(j.culprit || ''), j.tool ? j.tool.q : ''].join(' ').toLowerCase(); }
+function partsFor(j) { const t = jobText(j), g = j.game, out = [];
+  if (j.room === 'kitchen' || /kitchen|washer|laundry|dishwasher/.test(t)) out.push('fernco2');
+  if (/\btub\b|shower|trailer/.test(t)) out.push('fernco15');
+  if (/vanity|bathroom sink|lav sink|pedestal/.test(t)) out.push('fernco125');
+  if (/\bsink\b/.test(t)) out.push('ptrap');
+  if (/toilet/.test(t) && ['claw', 'pull', 'flush', 'beads', 'pour'].includes(g)) out.push('waxring');
+  if (/cleanout/.test(t)) out.push('cleanout35');
+  return out.filter(id => id !== j.needs); }
+function gearFor(j) { const g = j.game, out = [];
+  if (['cable', 'detective', 'flush'].includes(g)) out.push('heads');
+  if (['camera', 'detective', 'septic', 'locate'].includes(g)) out.push('camera');
+  if (['jet', 'bubble', 'overflow', 'thaw'].includes(g)) out.push('jetter');
+  if (['splash', 'sprinkler', 'poop', 'gag', 'crawl', 'stairs'].includes(g) || ['crawl', 'yard'].includes(j.room)) out.push('waders', 'muckboots');
+  if (['gag', 'splash', 'sprinkler', 'poop'].includes(g)) out.push('ppe');
+  return out; }
 const SHOP = [
   // parts: used up on jobs that need them, billed to the customer at 3x
-  { id: 'fernco125', name: '1-1/4" FERNCO', price: 12, kind: 'part', desc: "Rubber coupling for small drains. BENEFIT on jobs that need it: billed back at 3x, +1 rep, and the job is a level easier.", icon: [0, 0] },
-  { id: 'fernco15', name: '1-1/2" FERNCO', price: 14, kind: 'part', desc: "Sink, tub and trailer lines. BENEFIT on jobs that need it: billed back at 3x, +1 rep, a level easier.", icon: [0, 1] },
-  { id: 'fernco2', name: '2" FERNCO', price: 16, kind: 'part', desc: "Washer and kitchen lines. BENEFIT on jobs that need it: billed back at 3x, +1 rep, a level easier.", icon: [0, 4] },
-  { id: 'cleanout35', name: '3-1/2" COPPER CLEANOUT', price: 45, kind: 'part', desc: "Main line cleanout plug. Rod's right, grab two. BENEFIT on jobs that need it: billed back at 3x, +1 rep, a level easier.", icon: [10, 3] },
-  { id: 'ptrap', name: 'P-TRAP KIT', price: 18, kind: 'part', desc: "Sink jobs: rings, dough, cheesecake. BENEFIT on jobs that need it: billed back at 3x, +1 rep, a level easier.", icon: [12, 0] },
-  { id: 'waxring', name: 'WAX RING', price: 9, kind: 'part', desc: "Every time you pull a toilet. BENEFIT on jobs that need it: billed back at 3x, +1 rep, a level easier." },
+  { id: 'fernco125', name: '1-1/4" FERNCO', price: 12, kind: 'part', desc: "Rubber coupling for small drains. BENEFIT on any job it fits (used automatically): billed back at 3x, +1 rep, and the job is a level easier.", icon: [0, 0] },
+  { id: 'fernco15', name: '1-1/2" FERNCO', price: 14, kind: 'part', desc: "Sink, tub and trailer lines. BENEFIT on any job it fits (used automatically): billed back at 3x, +1 rep, a level easier.", icon: [0, 1] },
+  { id: 'fernco2', name: '2" FERNCO', price: 16, kind: 'part', desc: "Washer and kitchen lines. BENEFIT on any job it fits (used automatically): billed back at 3x, +1 rep, a level easier.", icon: [0, 4] },
+  { id: 'cleanout35', name: '3-1/2" COPPER CLEANOUT', price: 45, kind: 'part', desc: "Main line cleanout plug. Rod's right, grab two. BENEFIT on any job it fits (used automatically): billed back at 3x, +1 rep, a level easier.", icon: [10, 3] },
+  { id: 'ptrap', name: 'P-TRAP KIT', price: 18, kind: 'part', desc: "Sink jobs: rings, dough, cheesecake. BENEFIT on any job it fits (used automatically): billed back at 3x, +1 rep, a level easier.", icon: [12, 0] },
+  { id: 'waxring', name: 'WAX RING', price: 9, kind: 'part', desc: "Every time you pull a toilet. BENEFIT on any job it fits (used automatically): billed back at 3x, +1 rep, a level easier." },
   // gear: buy once, keep
-  { id: 'heads', name: 'CUTTER HEAD SET', price: 220, kind: 'gear', desc: "BENEFIT: every snake/cable job is one level easier.", icon: [4, 5] },
-  { id: 'muckboots', name: 'MUCK BOOTS', price: 100, kind: 'gear', desc: "Knee high. BENEFIT: +1 pair of pants (one extra hit) in every messy game, and an easier wade." },
-  { id: 'waders', name: 'CHEST WADERS', price: 120, kind: 'gear', desc: "Chest high. BENEFIT: +1 pair of pants in every messy game, the easiest wade, half splash damage." },
-  { id: 'ppe', name: 'PPE KIT', price: 600, kind: 'gear', desc: "Suits, masks, respirators. BENEFIT: a spare pair of pants on every job (one more hit before you're done)." },
+  { id: 'heads', name: 'CUTTER HEAD SET', price: 220, kind: 'gear', desc: "BENEFIT: every snake/cable job is one level easier. Also +1 rep on every job it helps with.", icon: [4, 5] },
+  { id: 'muckboots', name: 'MUCK BOOTS', price: 100, kind: 'gear', desc: "Knee high. BENEFIT: +1 pair of pants (one extra hit) in every messy game, and an easier wade. Also +1 rep on every job it helps with." },
+  { id: 'waders', name: 'CHEST WADERS', price: 120, kind: 'gear', desc: "Chest high. BENEFIT: +1 pair of pants in every messy game, the easiest wade, half splash damage. Also +1 rep on every job it helps with." },
+  { id: 'ppe', name: 'PPE KIT', price: 600, kind: 'gear', desc: "Suits, masks, respirators. BENEFIT: a spare pair of pants on every job (one more hit before you're done). Also +1 rep on every job it helps with." },
   { id: 'espresso', name: "ROD'S ESPRESSO MAKER", price: 400, kind: 'gear', desc: "Rod insists. BENEFIT: +8 stamina every morning." },
-  { id: 'camera', name: 'SEWER CAMERA + LOCATOR', price: 16500, kind: 'gear', desc: "BENEFIT: unlocks the camera story jobs, and the septic search shows which way the pipe leaves the house." },
+  { id: 'camera', name: 'SEWER CAMERA + LOCATOR', price: 16500, kind: 'gear', desc: "BENEFIT: unlocks the camera story jobs, and the septic search shows which way the pipe leaves the house. Also +1 rep on every job it helps with." },
   { id: 'probes', name: 'PROBE RODS x5', price: 30, kind: 'part', desc: "Spare steel probe rods. BENEFIT on septic hunts: +5 probes. Used up on the job." },
   { id: 'deerins', name: 'DEER INSURANCE', price: 450, kind: 'gear', desc: "Full comprehensive from an agent in Gorham who has seen things. BENEFIT: hit all the deer you want. No lost time, no cracked glass." },
   { id: 'glass', name: 'NEW WINDSHIELD', price: 350, kind: 'service', desc: "Rod knows a guy in Gorham. BENEFIT: every crack from every crash, gone. Clear view again." },
-  { id: 'jetter', name: 'JETTER TRAILER', price: 14200, kind: 'gear', desc: "4,000 PSI. BENEFIT: unlocks the hotel, campground and lost-jetter story jobs." },
+  { id: 'jetter', name: 'JETTER TRAILER', price: 14200, kind: 'gear', desc: "4,000 PSI. BENEFIT: unlocks the hotel, campground and lost-jetter story jobs. Also +1 rep on every job it helps with." },
 ];
 // day one: you borrowed $80,000 (enough for the basics, not the camera or jetter). This is what it takes to open the doors.
 const STARTUP = [

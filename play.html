@@ -17,12 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794508192"></script>
-<script src="js/calls.js?v=1794508192"></script>
-<script src="js/banter.js?v=1794508192"></script>
-<script src="js/placeholders.js?v=1794508192"></script>
-<script src="js/music.js?v=1794508192"></script>
-<script src="js/sfx.js?v=1794508192"></script>
+<script src="js/state.js?v=1794509269"></script>
+<script src="js/calls.js?v=1794509269"></script>
+<script src="js/banter.js?v=1794509269"></script>
+<script src="js/placeholders.js?v=1794509269"></script>
+<script src="js/music.js?v=1794509269"></script>
+<script src="js/sfx.js?v=1794509269"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -774,7 +774,7 @@ const callById = id => ALL_CALLS.find(c => c.id === id);
 // breakfast before 11, lunch 11 to 3, once each a day, whenever you want (the side button on the voicemail board)
 const mealNow = s => { const t = (s.today && s.today.time) || 420; if (t < 660 && !s.ateB) return 'breakfast'; if (t >= 660 && t < 900 && !s.ateL) return 'lunch'; return null; };
 const isStory = c => !!(c.story || c.page || c.call);
-const storyLeft = s => (CALLS[s.month] || []).filter(c => isStory(c) && !s.done[c.id] && c.id !== 'alien' && !(c.gate === 'jetter' && !s.inv.jetter));   // jetter jobs stay hidden until you own one
+const storyLeft = s => s.endless ? [] : (CALLS[s.month] || []).filter(c => isStory(c) && !s.done[c.id] && c.id !== 'alien' && !(c.gate === 'jetter' && !s.inv.jetter));   // jetter jobs stay hidden until you own one
 const realLeft = s => (CALLS[s.month] || []).filter(c => !s.done[c.id] && c.id !== 'alien');
 // the day's voicemails: a random handful of regular calls from this time of year. You can't do them all,
 // so a mini-game you don't like may not show up, or you can just skip it. Story jobs are always on the board.
@@ -782,7 +782,7 @@ const BOARD_SIZE = 7;
 function rollBoard(s) {
   const m = s.month, pool = [];
   for (const [mm, w] of [[m, 4], [m - 1, 2], [m + 1, 1]]) for (const c of (CALLS[mm] || [])) {
-    if (isStory(c) || c.id === 'alien' || (c.gate && !s.inv[c.gate])) continue;
+    if (isStory(c) || c.id === 'alien' || (c.gate && !s.inv[c.gate]) || (c.once && s.done[c.id])) continue;   /* once: a one-off, like the trailer crawl */
     if (c.game === 'jetter' && !(s.inv.jetter && s.month >= 5)) continue;   // jetter work starts around June, and only once you own one
     pool.push({ id: c.id, game: c.game, w: w * (s.done[c.id] ? 0.6 : 1) * Math.pow((c.pay || 300) / 300, gearPts(s) * 0.35) });   /* more gear: the bigger jobs call more */
   }
@@ -947,7 +947,7 @@ SCENES.hub = async () => {
     if (!s.v3) { s.v3 = true; if (OLD_STEPS[s.step]) { s.step = OLD_STEPS[s.step]; if (s.step === 'board' && s.today) s.today.id = null; s.day = s.day || 0; s.jobsToday = s.jobsToday || 0; if (!s.today) s.today = { time: 480, from: s.lastTown || 'BERLIN' }; } DDT.save(s); }
     const c = s.today && s.today.id ? callById(s.today.id) : null;
 
-    if (s.month >= 12) { await yearEnd(); return; }
+    if (s.month >= 12) { if (await yearEnd() === 'again') continue; return; }
 
     if (s.step === 'startup') {
       if (!s.prefLead) { const who = await pickHero(); s = DDT.get(); s.prefLead = who; s.prefDrive = s.prefDrive ?? 1; DDT.save(s); }   // first thing in a new game
@@ -1098,7 +1098,7 @@ SCENES.hub = async () => {
 
     if (s.step === 'monthend') {
       const m = s.month, head = RON_HEADLINES[m % RON_HEADLINES.length];
-      const missed = storyLeft(s);
+      const missed = s.endless ? [] : storyLeft(s);
       if (missed.length) { view = () => backdrop(); missed.forEach(q => s.done[q.id] = true); DDT.save(s); await card(['STORY JOB MISSED', missed.map(q => q.title).join(' · ')], 1600, '#e9665a'); }
       view = () => { R(0, 0, W, H, '#0e1118'); hud(); magazineCover(MONTHS[m], head); };
       SND.ding(); await wait(1600);
@@ -1126,7 +1126,10 @@ SCENES.hub = async () => {
           if (r > 0) { const a = amounts[r - 1]; s = DDT.get(); s.money -= a; s.loan -= a; DDT.save(s); SND.good(); await card(['PAID DOWN', `LOAN NOW $${s.loan.toLocaleString()}`], 1500, '#7dffb0'); }
         }
       }
-      s = DDT.get(); s.month++; s.day = 0; s.slept = false; s.step = 'daystart'; DDT.save(s); continue;
+      s = DDT.get(); s.day = 0; s.slept = false;
+      if (s.month >= 11 && s.endless) { s.month = 0; s.year = (s.year || 2) + 1; s.step = 'daystart'; }   /* keep-working mode: another year of jobs */   /* December's done: the end of the game (or another year of jobs) */
+      else { s.month++; s.step = 'daystart'; }
+      DDT.save(s); continue;
     }
     s.step = 'daystart'; DDT.save(s);
   }
@@ -1193,6 +1196,16 @@ async function yearEnd() {
     await say('RON', 'ron_laugh', "It's always poop, Rob.");
     s = DDT.get(); s.metRon = true; DDT.save(s);
   }
+  if (!s.finished) {   // how'd the van turn out?
+    view = () => { R(0, 0, W, H, '#05070d'); };
+    await card(['DECEMBER 31', 'ONE YEAR OF MT. WASHINGTON SEWER & DRAIN'], 2200);
+    if ((s.loan || 0) <= 0) { SND.good(); await card(['THE VAN IS PAID OFF', `ALL OURS · $${(s.money || 0).toLocaleString()} IN THE BANK`], 2600, '#7dffb0');
+      await say('ROD', 'rod_happy', "It's ours, Matt. The whole van. Every dent."); await say('MATT', 'matt_happy', 'Can we put Ron on the side now?'); await say('ROD', 'rod_stare', 'No.'); }
+    else if ((s.money || 0) >= 0) { await card(['YEAR ONE IS DONE', `STILL OWE $${s.loan.toLocaleString()} ON THE VAN`], 2600, '#f7c418');
+      await say('ROD', 'rod_normal', "We still owe on the van. But we're still here."); await say('MATT', 'matt_normal', "Most businesses don't make it a year, Rod."); await say('ROD', 'rod_happy', "We're not most businesses. We're the poop guys."); }
+    else { SND.bad(); await card(['YEAR ONE IS DONE', `IN THE RED $${(-s.money).toLocaleString()} · OWE $${s.loan.toLocaleString()}`], 2600, '#e9665a');
+      await say('ROD', 'rod_panic', "We're broke, Matt."); await say('MATT', 'matt_tired', "But we're the best-known broke plumbers in Coös County."); }
+  }
   view = () => {
     R(0, 0, W, H, '#0e1118');
     T('THE YEAR IS DONE', 240, 50, '#f7c418', 12, 'center');
@@ -1209,6 +1222,12 @@ async function yearEnd() {
   await fadeIn(600); SND.ding();
   await cancellable(res => { st.waitTap = res; });
   await shareCard(DDT.get());
+  view = () => { R(0, 0, W, H, '#05070d'); };
+  SND.ding(); await card(['THE END', 'THANK YOU SO MUCH FOR PLAYING DOO DOO TOWN'], 3200, '#f7c418');
+  await card(['MADE FOR MT. WASHINGTON SEWER & DRAIN', 'EVERY STORY JOB REALLY HAPPENED · SOUND EFFECTS: ZAPSPLAT.COM'], 3000);
+  s = DDT.get(); s.finished = true; DDT.save(s);
+  const r = await pickList("IF YOU'RE REALLY ENJOYING IT", [{ label: 'KEEP WORKING', sub: 'Keep doing jobs and making money. No more story jobs.' }, { label: 'BACK TO THE TITLE SCREEN', sub: 'Your year is saved.' }], `$${(s.money || 0).toLocaleString()} · LOAN $${Math.max(0, s.loan || 0).toLocaleString()}`, 0);
+  if (r === 0) { s = DDT.get(); s.endless = true; s.month = 0; s.year = 2; s.day = 0; s.slept = false; s.step = 'daystart'; DDT.save(s); view = () => { R(0, 0, W, H, '#05070d'); }; await card(['YEAR 2', 'JUST THE JOBS · NO MORE STORIES'], 1800, '#7dffb0'); return 'again'; }
   DDT.nav('index.html');
 }
 
@@ -1249,7 +1268,7 @@ async function shareCard(s) {
   const btn = (label, bg) => `<button style="font:inherit;font-size:12px;padding:12px 16px;border:3px solid #f7c418;background:${bg};color:${bg === '#f7c418' ? '#10151f' : '#f7c418'};cursor:pointer">${label}</button>`;
   box.innerHTML = `<div style="color:#f7c418;font-size:12px;text-align:center">YOUR YEAR · POST IT, TAG A FRIEND</div>
     <img src="${url}" alt="Doo Doo Town year-end card" style="max-width:min(86vw,62vh);max-height:62vh;image-rendering:pixelated;border:3px solid #f7c418">
-    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">${btn('SHARE', '#f7c418')}${btn('SAVE IMAGE', '#10151f')}${btn('MAIN MENU', '#10151f')}</div>`;
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">${btn('SHARE', '#f7c418')}${btn('SAVE IMAGE', '#10151f')}${btn('NEXT ▶', '#10151f')}</div>`;
   document.body.appendChild(box);
   const [bShare, bSave, bMenu] = box.querySelectorAll('button');
   const save = () => { const a = document.createElement('a'); a.href = url; a.download = 'doo-doo-town-my-year.png'; document.body.appendChild(a); a.click(); a.remove(); };

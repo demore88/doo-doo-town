@@ -191,12 +191,12 @@
 
 <audio id="music" src="assets/doo_doo_town.mp3" loop preload="auto"></audio>
 <audio id="call" src="assets/call_fluffernutter.mp3" preload="auto"></audio>
-<script src="js/state.js?v=1794508192"></script>
-<script src="js/sfx.js?v=1794508192"></script>
-<script src="js/sqcalls.js?v=1794508192"></script>
-<script src="js/songs.js?v=1794508192"></script>
-<script src="js/drive3d.js?v=1794508192"></script>
-<script src="js/music.js?v=1794508192"></script>
+<script src="js/state.js?v=1794509269"></script>
+<script src="js/sfx.js?v=1794509269"></script>
+<script src="js/sqcalls.js?v=1794509269"></script>
+<script src="js/songs.js?v=1794509269"></script>
+<script src="js/drive3d.js?v=1794509269"></script>
+<script src="js/music.js?v=1794509269"></script>
 <script>
 const W = 480, H = 270, LOOP_W = 6688;           // strip loop width at 270px tall
 const cv = document.getElementById('c'), g = cv.getContext('2d');
@@ -799,6 +799,7 @@ async function embedDrive() {
   DDTSfx.play('engine_start', { vol: 0.7 }); window.DRV = DDTSfx.loop('van_drive_loop');
   const END = DDT.param('endless') === '1', ARC = DDT.param('arcade') === '1' || END;   // the Clog Kings race or the Driving Game, played from a menu: no money, rep or record changes
   const DRIFTQ = DDT.param('drift') === '1';
+  let driftSong = null; if (DRIFTQ) { try { if (HOSTRADIO) HOSTRADIO.pause(); music.pause(); } catch (e) {} if (soundOn) { driftSong = new Audio('assets/music/too_sexy_for_this_truck.mp3'); driftSong.volume = 0.45; driftSong.loop = true; driftSong.play().catch(() => {}); } }   /* the race song
   const r = await drive3d(c, { drift: DRIFTQ, jam: DDT.param('jam') === '1', driver: ARC ? DEF : (DDT.param('driver') || undefined), endless: END, arcade: ARC, leave: LEAVE, due: DUE, from: typeof from !== 'undefined' ? from : 'BERLIN', to: typeof to !== 'undefined' ? to : 'RANDOLPH', route: typeof route !== 'undefined' ? route : 'Route 2', clock, rival: DDT.param('rival') === '1' });
   DRV.stop(); DDTMusic.handoff();   /* hand the radio to the next screen (in the app it just keeps playing) */
   if (END) { try { const R = JSON.parse(localStorage.getItem('ddt_drive_rec') || '{}'), x = r.rec || {}, T = R.tot = R.tot || {}, add = (k, v) => T[k] = (T[k] || 0) + (v || 0);   /* the lifetime Driving Game record, plus your best run */
@@ -809,8 +810,9 @@ async function embedDrive() {
     $('#card').innerHTML = `${sc > bs ? '<span style="color:#7dffb0">NEW HIGH SCORE!</span><br>' : mi > best ? '<span style="color:#7dffb0">NEW LONGEST DRIVE!</span><br>' : ''}${mi.toFixed(1)} MILES · ${sc.toLocaleString()} PTS<br><span style="color:#9fb3d9">BEST ${Math.max(mi, best).toFixed(1)} MI · ${Math.max(sc, bs).toLocaleString()} PTS</span>`;
     $('#card').style.opacity = 1; await new Promise(res => setTimeout(res, 900)); await new Promise(res => { const f = () => { removeEventListener('pointerdown', f, true); res(); }; addEventListener('pointerdown', f, true); setTimeout(f, 6000); });
     DDT.nav(DDT.back('index.html')); return; }
-  if (DRIFTQ) { const won = !r.rivalWon; try { localStorage.setItem('ddt_mg', JSON.stringify({ id: 'drift', win: won, stars: won ? (r.crashes ? 2 : 3) : 0, at: Date.now() })); } catch (e) {}   /* the midnight race: no job, no clock */
-    $('#card').innerHTML = won ? `<span style="color:#7dffb0">FIRST TO THE BOTTOM!</span><br>THE CLOG KINGS ARE BEHIND YOU` : `<span style="color:#e9665a">THE CLOG KINGS GOT DOWN FIRST</span><br>TAP TO GO BACK`;
+  if (DRIFTQ) { const won = !r.rivalWon; if (driftSong) { const a = driftSong, f = setInterval(() => { a.volume = Math.max(0, a.volume - 0.05); if (a.volume <= 0) { a.pause(); clearInterval(f); } }, 80); }
+    let songNew = false; if (won && window.DDT_SONGS) songNew = DDT_SONGS.unlock('too_sexy_for_this_truck.mp3'); try { localStorage.setItem('ddt_mg', JSON.stringify({ id: 'drift', win: won, stars: won ? (r.crashes ? 2 : 3) : 0, at: Date.now() })); } catch (e) {}   /* the midnight race: no job, no clock */
+    $('#card').innerHTML = won ? `<span style="color:#7dffb0">FIRST TO THE BOTTOM!</span><br>THE CLOG KINGS ARE BEHIND YOU${songNew ? '<br><span style="color:#f7c418">UNLOCKED: TOO SEXY FOR THIS TRUCK · in your MUSIC playlist</span>' : ''}` : `<span style="color:#e9665a">THE CLOG KINGS GOT DOWN FIRST</span><br>TAP TO GO BACK`;
     $('#card').style.opacity = 1; await new Promise(res => setTimeout(res, 900)); await new Promise(res => { const f = () => { removeEventListener('pointerdown', f, true); res(); }; addEventListener('pointerdown', f, true); setTimeout(f, 6000); });
     DDT.nav(DDT.back(ARC ? 'arcade/index.html' : 'play.html')); return; }
   if (ARC) { const won = !r.rivalWon; try { const k = 'ddt_race_' + (won ? 'wins' : 'losses'); localStorage.setItem(k, (+localStorage.getItem(k) || 0) + 1); } catch (e) {}

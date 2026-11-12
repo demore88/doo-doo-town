@@ -17,12 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794508192"></script>
-<script src="../js/calls.js?v=1794508192"></script>
-<script src="../js/banter.js?v=1794508192"></script>
-<script src="../js/placeholders.js?v=1794508192"></script>
-<script src="../js/music.js?v=1794508192"></script>
-<script src="../js/sfx.js?v=1794508192"></script>
+<script src="../js/state.js?v=1794509269"></script>
+<script src="../js/calls.js?v=1794509269"></script>
+<script src="../js/banter.js?v=1794509269"></script>
+<script src="../js/placeholders.js?v=1794509269"></script>
+<script src="../js/music.js?v=1794509269"></script>
+<script src="../js/sfx.js?v=1794509269"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -343,7 +343,7 @@ const JOB = Object.assign({}, CALLS.flat().find(c => c.id === DDT.param('id')) |
 if (JOB.solo) window.rod = function () {};   /* solo job: Matt went out alone */
 const BOSS = JOB.solo ? 'MATT' : 'ROD', BP = m => JOB.solo ? 'matt_' + ({ annoyed: 'tired', happy: 'happy', normal: 'normal' }[m] || 'normal') : 'rod_' + m;
 // Same call, different day, different job: the overworked games swap with a related one that still fits the story (picked once per visit).
-{ const ALT = { cable: ['cable', 'detective', 'flush', 'camera'], pull: ['pull', 'claw'], claw: ['claw', 'pull'], septic: ['septic', 'septic', 'poop'], bubble: ['bubble', 'overflow'] };
+{ const ALT = { cable: ['cable', 'detective', 'flush', 'camera', 'stairs'], pull: ['pull', 'claw'], claw: ['claw', 'pull', 'beads'], septic: ['septic', 'septic', 'poop'], bubble: ['bubble', 'overflow'], overflow: ['overflow', 'splash'], flush: ['flush', 'splash'], detective: ['detective', 'cable'], camera: ['camera', 'detective'] };   /* camera only swaps in if you own one */
   const key = 'alt_' + JOB.id + '_' + (DDT.get().day || 0) + '_' + (DDT.get().month || 0); let pick = null; try { pick = sessionStorage.getItem(key); } catch (e) {}
   if (!pick && !JOB.story && ALT[JOB.game]) { let opts = ALT[JOB.game].filter(gm => gm !== 'camera' || (DDT.get().inv || {}).camera); const rec = DDT.get().recent || []; const fresh = opts.filter(gm => !rec.includes(gm)); if (fresh.length) opts = fresh;
     pick = opts[Math.floor(Math.random() * opts.length)]; try { sessionStorage.setItem(key, pick); } catch (e) {} }
@@ -455,6 +455,14 @@ SCENES.tool = async () => {
     else { await say(BOSS, BP('annoyed'), `We need a ${part.name}. We don't have one. Back to Fernko's.`); DDT.apply({ time: 45, rep: -1, money: -part.price }); await card(['+45 MIN · -1 REP', `BOUGHT A ${part.name}`], 1400, '#e9665a'); }
     saveJS();
   }
+  { // anything else on the truck that fits this job: parts get used and billed at 3x, gear just helps. +1 rep each (max +3)
+    const s = DDT.get(), inv = s.inv || {}, P = partsFor(JOB).filter(id => (inv[id] || 0) > 0).slice(0, 2), Gr = gearFor(JOB).filter(id => (inv[id] || 0) > 0).filter((id, i, a) => !(id === 'muckboots' && a.includes('waders')));
+    if (P.length || Gr.length) {
+      P.forEach(id => DDT.apply({ item: { [id]: -1 } }));
+      const bill = P.reduce((a, id) => a + SHOP.find(x => x.id === id).price * 3, 0); JS.partBill = (JS.partBill || 0) + bill; JS.gearRep = Math.min(3, P.length + Gr.length);
+      const names = [...P, ...Gr].map(id => SHOP.find(x => x.id === id).name).join(' · ');
+      await card(['ON THE TRUCK', `${names}${bill ? ` · +$${bill}` : ''} · +${JS.gearRep} REP`], 1700, '#7dffb0'); saveJS(); }
+  }
 };
 
 SCENES.work = async () => {
@@ -503,7 +511,7 @@ SCENES.payday = async () => {
   const parts = JS.partBill || 0;
   const gearBonus = gearPay(SAVE);   /* the more equipment you run, the bigger the jobs you can take on */
   const pay = broke ? 0 : Math.round((JOB.pay * 1.15 * (REPEAT ? 0.8 : 1) * (0.7 + 0.1 * stars) + (JS.toolRight ? 25 : 0)) * repBonus * gearBonus) + parts;   // jobs pay 15% more than the base rates
-  const rep = JS.carl ? 0 : broke ? -3 : 1 + (stars === 3 ? 1 : 0) + (JS.toolRight ? 1 : 0) + (JOB.story && !REPEAT ? 2 : 0) + (JS.partBonus ? 1 : 0) - (JS.retries || 0);
+  const rep = JS.carl ? 0 : broke ? -3 : 1 + (stars === 3 ? 1 : 0) + (JS.toolRight ? 1 : 0) + (JOB.story && !REPEAT ? 2 : 0) + (JS.partBonus ? 1 : 0) + (JS.gearRep || 0) - (JS.retries || 0);
   const hp = broke ? -10 : JS.carl ? -10 : win ? -5 : -10, sta = JS.carl ? -40 : -20;   /* nobody believes you, and it took everything out of you */   // a job takes it out of you; only food and rest bring it back
   if (!JS.paid) {
     DDT.apply({ money: pay, rep, health: hp, stamina: sta, time: 75, note: `${JOB.title}: ${JOB.tip}` }); JS.paid = true; saveJS();
