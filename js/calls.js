@@ -80,11 +80,12 @@ const CALLS = [
     intro: [['CUST', 'The tiny ones. They grow.'], ['ROD', 'They swell up to a hundred times their size.'], ['MATT', 'So a hundred times our problem.'], ['ROD', "Run the hose to the jetter."], ['CUST', "...We're on a well. The beads drank it dry. That's my last bucket."], ['MATT', 'One bucket.'], ['ROD', 'Dump it in the tank. Make it count.']],
     tool: { q: 'Toilet line packed with swollen water beads. Gear?', opts: ['JETTER + BUCKETS', 'DRAIN CLEANER', 'CABLE MACHINE'], right: 0, good: 'Flush them out and catch them.', bad: "They'll just squish around it." },
     game: 'beads', lead: 'matt', culprit: [['MATT', 'Two five-gallon buckets. Of beads.'], ['ROD', 'Out of ONE bucket of water.'], ['MATT', 'Physics is weird.'], ['CUST', "Can the kids have them back?"], ['ROD', 'No.']], tip: 'Water beads + drains = a very expensive day.', pay: 480 },
-  { id: 'stairs-of-death', title: 'STAIRS OF DEATH', story: true, town: 'BARTLETT', addr: 'Cobb Farm Rd', cust: { name: 'GLORIA', seed: 77 }, ext: 'camp', room: 'basement', window: 110,
-    ring: "The cleanout is in the basement. The stairs are... steep. Do you have insurance?",
-    intro: [['MATT', "Those aren't stairs. That's a ladder with ambition."], ['ROD', "And the jetter weighs two hundred pounds."]],
-    tool: { q: 'Get the jetter down the stairs of death. Plan?', opts: ['CARRY IT DOWN TOGETHER', 'ROD CARRIES IT ALONE', 'THROW IT'], right: 0, good: 'Slow. Together.', bad: 'Rod\'s knees just filed a complaint.' },
-    game: 'stairs', lead: 'matt', culprit: [['ROD', 'We made it. Nobody died.'], ['CUST', "Now you have to bring it back up."], ['MATT', '...']], tip: "Easy access to your cleanout saves time (and plumbers' lives).", pay: 600 },
+  { id: 'stairs-of-death', title: 'STAIRS OF DEATH', story: true, town: 'BARTLETT', addr: 'Cobb Farm Rd', cust: { name: 'GLORIA', seed: 77 }, ext: 'house', room: 'basement', window: 110,
+    ring: "Main line's backed up. Oh, the house is built down the side of the hill. You'll see.",
+    intro: [['CARD', 'THE DRIVEWAY', 'The house starts at the road... and goes DOWN.'], ['MATT', "One flight. Two flights. Three flights."], ['ROD', "And one more inside to get to the main part of the house."], ['MATT', 'Four flights of stairs.', 'matt_stare'], ['ROD', "And the auger machine doesn't walk itself."], ['MATT', "Down AND back up?"], ['ROD', 'Down and back up.', 'rod_tired']],
+    tool: { q: "Roots in the main line, four flights down. What do you haul down there?", opts: ['THE AUGER MACHINE, BOTH OF US CARRY IT', 'ROD CARRIES IT ALONE', 'THROW IT DOWN THE STAIRS'], right: 0, good: 'Slow. Together. One step at a time.', bad: "Rod's knees just filed a complaint." },
+    game: 'stairs', lead: 'matt', culprit: [['ROD', 'Roots. That was it. Just roots.'], ['MATT', 'Twenty minutes of work.'], ['ROD', 'Forty minutes of stairs.'], ['CUST', "Thanks, guys! Watch the steps on the way out."], ['MATT', '...We know.', 'matt_tired']],
+    tip: "Know where your cleanout is. If it's four flights down, maybe put one in at the top.", pay: 600 },
 ],
 // ---------------- MARCH ----------------
 [
