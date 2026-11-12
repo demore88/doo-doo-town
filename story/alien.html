@@ -22,7 +22,7 @@
 <script src="../js/sfx.js?v=1794525535"></script>
 <script>
 DDT.root = '../';
-DDTMusic.play('spooky');
+DDTMusic.stop();   /* no music in this one: just the rain, the ship, and the chirps */
 // =====================================================================
 // STORY JOB: OUT OF THIS WORLD — Rod gets abducted to fix a space toilet.
 // Scenes can be opened directly for testing: alien.html?scene=window|beam|lang|toilet|cable|reveal|dropoff
@@ -431,7 +431,7 @@ function picIcon(id, x, y) {   // 28x28 picture tiles
   if (id === 'me') { if (!spr('port', 0, cx, cy, 28, { mid: true })) { g.save(); g.translate(cx, cy + 22); alien(0, 0, { s: 0.6, blink: false }); g.restore(); } }
   if (id === 'toilet') { if (!spr('toilet', 0, cx, cy + 13, 27)) { E(cx, cy + 2, 9, 4, '#e8ecf2'); R(cx - 4, cy + 2, 8, 9, '#c9ced6'); } }
   if (id === 'broken' && spr('toilet', 5, cx, cy, 26, { mid: true })) {} else if (id === 'broken') { g.strokeStyle = '#e9665a'; g.lineWidth = 2; g.beginPath(); g.moveTo(x + 6, y + 4); g.lineTo(x + 16, y + 14); g.lineTo(x + 10, y + 16); g.lineTo(x + 22, y + 25); g.stroke(); R(x + 18, y + 6, 3, 3, '#f7c418'); }
-  if (id === 'fix') { R(cx - 2, cy - 4, 4, 16, '#aaa'); R(cx - 6, cy - 10, 12, 6, '#aaa'); R(cx - 2, cy - 10, 4, 3, '#1d2638'); }
+  if (id === 'fix') { if (TOOLBOX.complete && TOOLBOX.naturalWidth) { g.save(); g.imageSmoothingEnabled = true; const w = 24, h = w * TOOLBOX.height / TOOLBOX.width; g.drawImage(TOOLBOX, cx - w / 2, cy - h / 2 + 2, w, h); g.restore(); } else { R(cx - 2, cy - 4, 4, 16, '#aaa'); R(cx - 6, cy - 10, 12, 6, '#aaa'); R(cx - 2, cy - 10, 4, 3, '#1d2638'); } }   /* FIX = Rod's toolbox, the thing the alien points at */
   if (id === 'home') { E(cx, cy, 11, 11, '#2c6cd6'); E(cx - 3, cy - 3, 5, 4, '#4caf50'); E(cx + 4, cy + 4, 4, 3, '#4caf50'); }
 }
 function shipLangRoom() {
