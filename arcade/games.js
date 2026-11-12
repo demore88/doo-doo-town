@@ -401,18 +401,44 @@ GAMES.push({
     s.C = 22; s.Rw = 12; s.Z = 18; s.ox = 42; s.oy = 16; s.HH = 18;   // a BIG snowy yard, house strip above
     s.cam = !!s.camera;
     s.probes = s.left = [26, 22, 19][s.diff] + (Number(DDT.param('probes')) || 0);   // spare probe rods from Fernko's
-    const wide = s.rnd() < 0.5, tw = wide ? 3 : 2, th = wide ? 2 : 3, L = 3 + Math.floor(s.rnd() * 2), arm = 3;   // the field: 2*arm+1 wide, L deep
-    s.tc = arm - 1 + Math.floor(s.rnd() * (s.C - tw - 2 * arm + 2)); s.tr = Math.floor(s.rnd() * Math.max(1, s.Rw - th - 2 - L - 1));
-    s.tank = new Set(); for (let c = s.tc; c < s.tc + tw; c++) for (let r = s.tr; r < s.tr + th; r++) s.tank.add(`${c},${r}`);
-    s.pipeC = s.tc + Math.floor(tw / 2);
-    const dr = Math.min(s.Rw - 1 - L, s.tr + th + 1 + Math.floor(s.rnd() * 2)), dc = clamp(s.pipeC, arm, s.C - 1 - arm);
-    s.pipe = new Set(); for (let r = s.tr + th; r < dr; r++) s.pipe.add(`${s.pipeC},${r}`);   // the one solid line out of the tank
-    if (dc !== s.pipeC) for (let c = Math.min(dc, s.pipeC); c <= Math.max(dc, s.pipeC); c++) s.pipe.add(`${c},${dr - 1}`);
-    s.dbox = `${dc},${dr}`; s.dpos = { c: dc, r: dr }; s.L = L; s.arm = arm;
-    s.leach = new Set();   // two squares side by side: the outside box, plus the center line straight down from the D-box
-    for (let c = dc - arm; c <= dc + arm; c++) { s.leach.add(`${c},${dr}`); s.leach.add(`${c},${dr + L}`); }
-    for (let r = dr; r <= dr + L; r++) { s.leach.add(`${dc - arm},${r}`); s.leach.add(`${dc + arm},${r}`); s.leach.add(`${dc},${r}`); }
-    s.leach.delete(s.dbox);
+    // a random system every time: house -> 0-4 squares of pipe -> TANK -> 1-4 squares of pipe (any direction, elbows, diagonals) -> D-BOX -> leach field
+    const key = (c, r) => `${c},${r}`, inG = (c, r) => c >= 0 && r >= 0 && c < s.C && r < s.Rw;
+    for (let tries = 0; tries < 400; tries++) {
+      const wide = s.rnd() < 0.5, tw = wide ? 3 : 2, th = wide ? 2 : 3, gap = Math.floor(s.rnd() * 5);   // 0 = the tank is right up against the house
+      const hc = 2 + Math.floor(s.rnd() * (s.C - 4)), tc = clamp(hc - Math.floor(s.rnd() * tw), 0, s.C - tw), tr = gap;
+      if (tr + th > s.Rw - 2) continue;
+      const tank = new Set(); for (let c = tc; c < tc + tw; c++) for (let r = tr; r < tr + th; r++) tank.add(key(c, r));
+      const hpipe = []; for (let r = 0; r < tr; r++) hpipe.push([hc, r]);   // house to tank, straight out the foundation
+      // out of the tank: bottom, left or right side
+      const sides = [['B', tc + Math.floor(s.rnd() * tw), tr + th, 0, 1], ['L', tc - 1, tr + Math.floor(s.rnd() * th), -1, 0], ['R', tc + tw, tr + Math.floor(s.rnd() * th), 1, 0]];
+      const [side, sc0, sr0, odx, ody] = sides[Math.floor(s.rnd() * 3)];
+      if (!inG(sc0, sr0)) continue;
+      const n = 1 + Math.floor(s.rnd() * 4), path = [[sc0, sr0]], used = new Set([...tank, ...hpipe.map(q => key(...q)), key(sc0, sr0)]);
+      let ok = true;
+      for (let i = 1; i <= n; i++) {   // n pipe squares, then the D-box. Each step: keep going, bend, or cut diagonal
+        const [pc, pr] = path[path.length - 1], opts = [];
+        for (const [dx, dy] of [[odx, ody], [odx, ody], [odx || 1, ody || 1], [odx || -1, ody || -1], [ody, odx], [-ody, -odx]]) { const nc = pc + dx, nr = pr + dy; if (inG(nc, nr) && !used.has(key(nc, nr)) && nr >= 0) opts.push([nc, nr]); }
+        if (!opts.length) { ok = false; break; }
+        const nx = opts[Math.floor(s.rnd() * opts.length)]; path.push(nx); used.add(key(...nx));
+      }
+      if (!ok) continue;
+      const [dc, dr] = path.pop();   // the last square is the D-box
+      // the field: a box of gravel trenches fanning out from the D-box, pointing away from the tank, and it has to fit
+      const L = 3 + Math.floor(s.rnd() * 2), arm = 2 + Math.floor(s.rnd() * 2), dirs = [];
+      const lastD = path.length ? [dc - path[path.length - 1][0], dr - path[path.length - 1][1]] : [odx, ody];
+      if (lastD[1] > 0 || side === 'B') dirs.push('D'); if (lastD[0] < 0) dirs.push('L'); if (lastD[0] > 0) dirs.push('R'); if (!dirs.length) dirs.push('D', 'L', 'R');
+      const dir = dirs[Math.floor(s.rnd() * dirs.length)];
+      let cells = [], rect;
+      if (dir === 'D') { rect = [dc - arm, dr, dc + arm, dr + L]; for (let c = dc - arm; c <= dc + arm; c++) { cells.push([c, dr], [c, dr + L]); } for (let r = dr; r <= dr + L; r++) cells.push([dc - arm, r], [dc + arm, r], [dc, r]); }
+      else { const sg = dir === 'R' ? 1 : -1; rect = [Math.min(dc, dc + sg * L), dr - arm, Math.max(dc, dc + sg * L), dr + arm]; for (let r = dr - arm; r <= dr + arm; r++) { cells.push([dc, r], [dc + sg * L, r]); } for (let k = 0; k <= L; k++) cells.push([dc + sg * k, dr - arm], [dc + sg * k, dr + arm], [dc + sg * k, dr]); }
+      if (rect[0] < 0 || rect[1] < 0 || rect[2] >= s.C || rect[3] >= s.Rw) continue;
+      if (cells.some(([c, r]) => tank.has(key(c, r)) || path.some(q => q[0] === c && q[1] === r) || hpipe.some(q => q[0] === c && q[1] === r))) continue;
+      s.tank = tank; s.tc = tc; s.tr = tr; s.pipeC = hc; s.hpipe = hpipe; s.plist = path; s.tankOut = [sc0 - odx * 0.5, sr0 - ody * 0.5];
+      s.pipe = new Set([...hpipe, ...path].map(q => key(...q)));
+      s.dbox = key(dc, dr); s.dpos = { c: dc, r: dr }; s.L = L; s.arm = arm; s.fdir = dir; s.frect = rect;
+      s.leach = new Set(cells.map(q => key(...q))); s.leach.delete(s.dbox);
+      break;
+    }
     s.probed = {}; s.found = { tank: false, dbox: false }; s.cur = { c: 11, r: 6 }; s.msg = s.cam ? 'Camera says the pipe heads out here. Find the TANK.' : 'Find the TANK. No clues. Just you and a probe rod.';
   },
   update(s, dt, I) {
@@ -459,16 +485,18 @@ GAMES.push({
       R(x0 - 1, y0 - 1, w + 2, h + 2, '#55595e'); R(x0 + 1, y0 + 1, w - 2, h - 2, '#8a8f94'); for (let i = 1; i < 4; i++) R(x0 + 2, y0 + i * h / 4, w - 4, 1, '#7a7f84');   // the concrete tank
       if (!SPC('septiclid', x0 + w / 2, y0 + h / 2, (Math.min(w, h)) / 55)) T('LID', x0 + w / 2, y0 + h / 2, '#fff', 5, 'center'); }
     if (show) {   // the whole system, drawn in once you've found it
-      g.strokeStyle = '#3a3f46'; g.lineWidth = 4; g.beginPath(); const pc = [...s.pipe].map(k => k.split(',').map(Number));
-      const tb = Math.max(...[...s.tank].map(k => +k.split(',')[1])); g.moveTo(cx(s.pipeC), gy + (tb + 1) * s.Z); for (const [c, r] of pc) g.lineTo(cx(c), cy(r)); g.lineTo(cx(s.dpos.c), cy(s.dpos.r)); g.stroke();
-      const a = s.arm, d = s.dpos; g.strokeStyle = 'rgba(70,60,40,.85)'; g.lineWidth = 5; g.setLineDash([4, 3]);
-      g.strokeRect(cx(d.c - a), cy(d.r), a * 2 * s.Z, s.L * s.Z); g.beginPath(); g.moveTo(cx(d.c), cy(d.r)); g.lineTo(cx(d.c), cy(d.r + s.L)); g.stroke(); g.setLineDash([]);
+      g.strokeStyle = '#3a3f46'; g.lineWidth = 4; g.beginPath(); g.moveTo(cx(s.pipeC), gy); g.lineTo(cx(s.pipeC), gy + s.tr * s.Z); g.stroke();   /* house to tank */
+      g.beginPath(); g.moveTo(cx(s.tankOut[0]), cy(s.tankOut[1])); for (const [c, r] of s.plist) g.lineTo(cx(c), cy(r)); g.lineTo(cx(s.dpos.c), cy(s.dpos.r)); g.stroke();   /* tank to D-box, every bend */
+      const a = s.arm, d = s.dpos, F = s.frect; g.strokeStyle = 'rgba(70,60,40,.85)'; g.lineWidth = 5; g.setLineDash([4, 3]);
+      g.strokeRect(cx(F[0]), cy(F[1]), (F[2] - F[0]) * s.Z, (F[3] - F[1]) * s.Z); g.beginPath(); g.moveTo(cx(d.c), cy(d.r));
+      if (s.fdir === 'D') g.lineTo(cx(d.c), cy(d.r + s.L)); else g.lineTo(cx(d.c + (s.fdir === 'R' ? s.L : -s.L)), cy(d.r)); g.stroke(); g.setLineDash([]);
       R(cx(d.c) - 6, cy(d.r) - 6, 12, 12, '#6f747a'); R(cx(d.c) - 4, cy(d.r) - 4, 8, 8, '#9aa0a6'); T('D', cx(d.c), cy(d.r) + 1, '#222', 5, 'center');
-      T('LEACH FIELD', cx(d.c), cy(d.r + s.L) + s.Z * 0.9, '#2a3346', 5, 'center'); }
+      T('LEACH FIELD', (cx(F[0]) + cx(F[2])) / 2, Math.min(gy + s.Rw * s.Z - 4, cy(F[3]) + s.Z * 0.9), '#2a3346', 5, 'center'); }
     for (const k in s.probed) {
       const [c, r] = k.split(',').map(Number), p = s.probed[k], x = s.ox + c * s.Z, y = gy + r * s.Z;
       if (p === 'T') continue;
-      if (p === 'P') { const has = (dc, dr) => s.pipe.has(`${c + dc},${r + dr}`) || (dc === 0 && dr === -1 && s.tank.has(`${c},${r - 1}`)) || `${c + dc},${r + dr}` === s.dbox, m = s.Z / 2;   /* the pipe runs the way it really goes */
+      if (p === 'P') { const has = (dc, dr) => s.pipe.has(`${c + dc},${r + dr}`) || s.tank.has(`${c + dc},${r + dr}`) || (dr === -1 && r === 0 && c === s.pipeC) || `${c + dc},${r + dr}` === s.dbox, m = s.Z / 2;   /* the pipe runs the way it really goes */
+        g.strokeStyle = '#3a3f46'; g.lineWidth = 6; for (const [ex, ey] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) if (has(ex, ey) && !has(ex, 0) && !has(0, ey)) { g.beginPath(); g.moveTo(x + m, y + m); g.lineTo(x + m + ex * m, y + m + ey * m); g.stroke(); }   /* diagonal runs */
         R(x + m - 3, y + m - 3, 6, 6, '#3a3f46'); if (has(0, -1)) R(x + m - 3, y, 6, m, '#3a3f46'); if (has(0, 1)) R(x + m - 3, y + m, 6, m, '#3a3f46'); if (has(-1, 0)) R(x, y + m - 3, m, 6, '#3a3f46'); if (has(1, 0)) R(x + m, y + m - 3, m, 6, '#3a3f46'); continue; }
       if (p === 'D') { R(x + 3, y + 3, s.Z - 6, s.Z - 6, '#6f747a'); T('D', x + s.Z / 2, y + s.Z / 2 + 1, '#fff', 5, 'center'); continue; }
       if (p === 'L') { R(x + 1, y + 1, s.Z - 2, s.Z - 2, '#9a8a6a'); T('GRV', x + s.Z / 2, y + s.Z / 2, '#fff', 5, 'center'); }
