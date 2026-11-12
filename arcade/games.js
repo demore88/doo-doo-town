@@ -1493,7 +1493,7 @@ GAMES.push({
   mood(s, list) { const S = s.shop; if (!S) return; S.face = list[Math.floor(s.rnd() * list.length)]; S.flip = s.rnd() < 0.35 ? [5, 1, 7, 3][Math.floor(s.rnd() * 4)] : null; S.t = 0; },   /* ...and sometimes he flips mid-sentence */
   HOBO_T2: "YOU! You came back! ...Different Carl? There's only one Carl. I get around. Crackers?",
   HOBO_T3: "Shhh. He's right through there. The KING. You're gonna want everything Carl's got. Everything. For the little crackers.",
-  openShop(s, cl) { cl = cl || s.carls[0]; s.hobo = cl; s.shop = { q: [], sel: 0, tier: cl.tier, say: this.HOBO_HI[Math.floor(s.rnd() * this.HOBO_HI.length)], t: 0, buyT: 0 }; s.metHobo = true; TRL.carl(s); this.mood(s, [0, 6, 4]);
+  openShop(s, cl) { cl = cl || s.carls[0]; if (!cl.found) { cl.found = true; SFX('ut_carl_find'); }   /* found Creepy Carl: the creepy sting, once per Carl */ s.hobo = cl; s.shop = { q: [], sel: 0, tier: cl.tier, say: this.HOBO_HI[Math.floor(s.rnd() * this.HOBO_HI.length)], t: 0, buyT: 0 }; s.metHobo = true; TRL.carl(s); this.mood(s, [0, 6, 4]);
     if (!cl.met) { cl.met = true; s.shop.say = cl.tier === 1 ? this.HOBO_FIRST : cl.tier === 2 ? this.HOBO_T2 : this.HOBO_T3; s.shop.q = this.CARL_STORY[cl.tier].slice(); } },
   CARL_STORY: {
     1: ["I came down here to fix a P-trap. 2009. Nice lady. Doris. ...Or Dot.", "Somebody put the skirting back on while I was under here. With SCREWS. Four of 'em.", "Been living off the little crackers ever since. Somebody keeps baiting the rat traps with 'em. Bless 'em."],
@@ -1563,6 +1563,7 @@ GAMES.push({
   bagBox(i) { return [178, 30 + i * 22, 140, 18]; },
   // THE POSSUM KINGDOM: you brought the Princess home. Her family has expectations.
   wedding(s) { const me = HERO(s).name;
+    for (let k = 0; k < 3; k++) setTimeout(() => SFX('ut_mystery'), k * 3400);   /* the wedding begins: the mystery sting, three times */
     s.wed = { i: 0, t: 0, sel: 0, lines: [
       ['', 'THE POSSUM KINGDOM'],
       ['POSSUM KING', 'You. Human. You have returned our daughter.'],
