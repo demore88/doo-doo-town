@@ -17,12 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794463282"></script>
-<script src="../js/calls.js?v=1794463282"></script>
-<script src="../js/banter.js?v=1794463282"></script>
-<script src="../js/placeholders.js?v=1794463282"></script>
-<script src="../js/music.js?v=1794463282"></script>
-<script src="../js/sfx.js?v=1794463282"></script>
+<script src="../js/state.js?v=1794463397"></script>
+<script src="../js/calls.js?v=1794463397"></script>
+<script src="../js/banter.js?v=1794463397"></script>
+<script src="../js/placeholders.js?v=1794463397"></script>
+<script src="../js/music.js?v=1794463397"></script>
+<script src="../js/sfx.js?v=1794463397"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -485,6 +485,9 @@ SCENES.after = async () => {
     await say('CUST', 'cust', "So I'm paying you to leave my house broken?");
     await say(lead === 'rod' ? 'ROD' : 'MATT', lead === 'rod' ? 'rod_normal' : 'matt_tired', "No charge. We'll make it right. I'm sorry.");
     return;
+  }
+  if (JOB.game === 'camera' && Math.random() < 0.15) {   /* a rare moment on any camera job: the camera line */
+    await lines([['CARD', 'MEANWHILE', 'Rod is leaning way in, feeding the camera line, eyes on the screen.'], ['CARD', '', 'Matt looks straight at him.'], ['CARD', '', 'Matt slowly reaches toward his face.'], ['CARD', '', 'Rod notices. They lock eyes.'], ['CARD', '', 'Matt gently pulls the camera line out of Rod\'s mouth.'], ['ROD', '...', 'rod_stare'], ['MATT', '...', 'matt_stare'], ['CARD', '10 SECONDS OF SILENCE', ''], ['ROD', '...', 'rod_stare']]);
   }
   await lines(JOB.culprit);
   if (JOB.extra === 'tightShirt') await tightShirt();

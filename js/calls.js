@@ -201,7 +201,7 @@ const CALLS = [
     ring: "Fourth of July weekend. Every bathroom on the campground just stopped.",
     intro: [['CUST', "Three hundred campers. One bathhouse."], ['MATT', 'And one very bad line.']],
     tool: { q: 'Bathhouse main line, holiday weekend. Gear?', opts: ['JETTER', 'PLUNGERS FOR EVERYONE', 'CLOSE THE CAMPGROUND'], right: 0, good: 'Clear it fast.', bad: 'Three hundred angry campers.' },
-    game: 'flush', lead: 'rod', culprit: [['ROD', 'Somebody flushed a whole beach towel.'], ['MATT', 'Who brings a beach towel to a toilet?']], tip: 'Campground or home: toilets take toilet paper. That\'s the list.', pay: 1100 },
+    game: 'flush', lead: 'rod', culprit: [['ROD', 'Tampons. Lots of tampons.', 'rod_gross'], ['MATT', 'How many is lots?'], ['ROD', 'About thirty.'], ['CUST', '...THIRTY?'], ['CARD', 'MEANWHILE', 'A group of teenage girls by the pavilion are laughing way too hard.'], ['MATT', 'It was a prank.', 'matt_stare'], ['ROD', 'Happy Fourth of July.', 'rod_tired']], tip: 'Campground or home: toilets take toilet paper. That\'s the list. Tampons go in the trash.', pay: 1100 },
 ],
 // ---------------- JULY ----------------
 [
