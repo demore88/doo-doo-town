@@ -1443,7 +1443,7 @@ GAMES.push({
   update(s, dt, I) {
     s.t += dt; FX(s, dt); s.flash = Math.max(0, s.flash - dt); s.shake = Math.max(0, (s.shake || 0) - dt); s.swing = Math.max(0, (s.swing || 0) - dt); s.guard = Math.max(0, (s.guard || 0) - dt); if (s.lvlUp && (s.lvlUp.t += dt) > 3.2) s.lvlUp = null;
     if (s.fixT) { s.fixT += dt;
-      if (s.fixT > 4.0) { s.epiT += dt; const L = s.epi[Math.min(s.epiI, s.epi.length - 1)]; if ((s.epiT > 0.4 && (I.Ap || I.ptr.clicked)) || s.epiT > TRL.hold(L[1])) { s.epiI++; s.epiT = 0; if (s.epiI === 2) SFX('ui_select');
+      if (s.fixT > 4.0) { s.epiT += dt; const L = s.epi[Math.min(s.epiI, s.epi.length - 1)]; if ((s.epiT > 0.4 && (I.Ap || I.ptr.clicked)) || s.epiT > TRL.hold(L[1])) { s.epiI++; s.epiT = 0; SFX(s.epi[Math.min(s.epiI, s.epi.length - 1)][0] === HERO(s).name ? 'ui_tap' : 'ui_select', { vol: 0.5 });
         if (s.epiI >= s.epi.length) { s.epiI = s.epi.length - 1; const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.days === 0, f >= 0.3), line: `Pipe fixed. Everybody believes THAT part.${s.days ? ` (${s.days} day${s.days > 1 ? 's' : ''} under the trailer.)` : ''}`, extraTime: 0 }); } } }
       return; }
     if (s.wed) { TRL.music.wtick = performance.now(); TRL.wedM(true); TRL.amb(false); } else { TRL.wedM(false); if (!s.battle) { TRL.music.atick = performance.now(); TRL.amb(true); } else TRL.amb(false); }   /* the wedding gets its own music */
@@ -1488,11 +1488,11 @@ GAMES.push({
       const brag = s.married ? 'I got married down there. To a possum. Then I left on a quest.' : !met.length ? 'Just a drip. Easy one.' : big === 'THE RAT KING' ? 'There was a RAT KING down there. With a CROWN.' : big === 'BROWN RECLUSE' ? 'I fought a brown recluse. Hand to hand.' : big === 'RACCOON' ? 'A raccoon jumped me. We went three rounds.' : met.length > 2 ? `I fought ${met.length} things down there.` : `I had to fight a ${big.toLowerCase()} down there.`;
       const nope = s.married ? ['...Congratulations?', 'Does she know where you live?', 'Are you paying child support to a possum?', 'You were under there for an hour.'] : !met.length ? ["That's what I like to hear.", 'Good. Now get in the van.'] : ['Sure you did, bud.', 'Uh huh. Get in the van.', "You were under there twenty minutes. Fixing a Fernco.", 'Was it the same raccoon as last time?', "Sure. And I'm the Rat King.", "You smell like you did, I'll give you that.", "Nobody's gonna believe that.", "Don't tell the customer that."];
       { const me = HERO(s).name, them = me === 'ROD' ? 'MATT' : 'ROD', d = s.days, story = s.married ? 'There were rats. A guy named Carl. I married a possum princess and fought the RAT KING.' : met.includes('THE RAT KING') ? 'There were rats. A guy named Carl. And a RAT KING. With a CROWN.' : brag;   /* you crawl out... and the van is gone */
-        s.epi = [[me, 'Done. ...Hello?'], [me, `Where'd ${them === 'ROD' ? 'Rod' : 'Matt'} go? Where's the VAN?`], ['', '* ring ring *'], [me, `${them === 'ROD' ? 'ROD' : 'MATT'}. Hey. What the hell? You LEFT me?`],
+        s.epi = [[me, 'Done. Pipe fixed.'], [me, "Where'd you go?? Where's the VAN?"], [me, 'Hey. What the hell? You LEFT me?'],
           [them, d >= 2 ? `Where the HELL have you been?! It's been ${d} DAYS!` : d === 1 ? 'Where the HELL have you been?! You were gone ALL NIGHT!' : "Where the hell have you been? I've been at Dunkin' for three hours!"],
           [me, 'Under the trailer. ' + story], ...(s.carls.every(c => c.met) ? [[them, "...Is that whose blue Econoline is out front? It's been there fifteen years."]] : []),
           [them, 'Right....'], [them, 'You good now, though?'], [them, 'I think we should go get you a drug test.'], [them, "You sure something didn't poke you down there?"],
-          [me, s.married ? "...Something might've married me." : '...Carl said his hands were warm.']]; s.epiI = 0; s.epiT = 0; } return; }
+          [me, s.married ? "...Something might've married me." : '...Carl said his hands were warm.'], ...(me === 'ROD' ? [[them, 'NEXT THING YOU WILL be telling me about is ALIENS...']] : [])]; s.epiI = 0; s.epiT = 0; } return; }
     if (s.gd[s.pr][s.pc] === 1 && !s.kingDone) { this.ambush(s, TRL.FOES.find(f => f.king)); return; }   /* he guards the drip */
     this.carlHint(s);
     const chance = [0.09, 0.105, 0.12][s.diff] * (fresh ? 1 : 0.7);   /* fewer fights, and backtracking through places you've cleared is calmer */
@@ -1884,11 +1884,12 @@ GAMES.push({
     if (s.fixT >= 3.4) {   // crawled back out into daylight
       const k = Math.min(1, (s.fixT - 3.4) / 0.6), sky = g.createLinearGradient(0, VY, 0, VY + VH); sky.addColorStop(0, '#8fc4ef'); sky.addColorStop(1, '#d8ecf8'); g.globalAlpha = k; g.fillStyle = sky; g.fillRect(VX, VY, VW, VH);
       if (!BGI('bg_lawn')) { R(VX, VY + VH * 0.62, VW, VH * 0.38, '#5f9a3e'); } g.globalAlpha = 1;
-      if (k >= 1 && s.fixT > 4.0) { const [who, line] = s.epi[Math.min(s.epiI, s.epi.length - 1)], me = HERO(s).name, onPhone = s.epiI >= 3, L2 = WRAP(line, 0, null, VW - 52, '#fff', 6, 10), bh = 26 + L2.length * 10;
-        { const hx = VX + VW / 2, hy = VY + VH - 4; g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(hx, hy, 26, 6, 0, 0, 7); g.fill(); SPR(s.hero || (me === 'ROD' ? 'rod' : 'matt'), onPhone ? 0 : 7, hx, hy, false, 2.4); if (onPhone) { R(hx + 9, hy - 78, 7, 13, '#222'); R(hx + 10, hy - 77, 5, 9, '#7fd0ff'); } }   /* you, alone in the yard, on the phone */
-        if (!who) { T(line, VX + VW / 2, VY + 40, '#f7c418', 10, 'center'); }
-        else { R(VX + 12, VY + 8, VW - 24, bh, 'rgba(10,8,6,.88)'); T((who !== me && onPhone ? '📞 ' : '') + who + ':', VX + 22, VY + 18, who === me ? '#e8c86a' : '#9fd1ff', 7); WRAP(line.slice(0, Math.floor(s.epiT * 50)), VX + 22, VY + 30, VW - 52, '#fff', 6, 10); }
-        if (s.epiT > 0.4 && Math.floor(t * 3) % 2) T('▼', VX + VW - 20, VY + bh, '#e8c86a', 6, 'right'); } }
+      if (k >= 1 && s.fixT > 4.0) { const me = HERO(s).name, them = me === 'ROD' ? 'MATT' : 'ROD', pw = 190, ph = VH - 16, px = VX + (VW - pw) / 2, py = VY + 8, n = Math.min(s.epiI, s.epi.length - 1);   /* a text chain on your phone */
+        R(px - 4, py - 4, pw + 8, ph + 8, '#111'); R(px, py, pw, ph, '#f2f2f6'); R(px, py, pw, 22, '#e2e2ea'); C(px + 14, py + 11, 7, them === 'ROD' ? '#2c6cd6' : '#d08a30'); T(them[0], px + 14, py + 11, '#fff', 6, 'center'); T(them === 'ROD' ? 'Rod' : 'Matt', px + 26, py + 11, '#111', 6);
+        g.save(); g.beginPath(); g.rect(px, py + 23, pw, ph - 23); g.clip(); let y = py + ph - 6;
+        for (let i = n; i >= 0 && y > py + 23; i--) { const [who, line] = s.epi[i], mine = who === me, txt = i === n ? line.slice(0, Math.floor(s.epiT * 60)) : line, L2 = WRAP(line, 0, null, pw * 0.66, '#111', 5, 8), bw = Math.max(...L2.map(l => (g.font = '5px "Press Start 2P", monospace', g.measureText(l).width))) + 12, bh = L2.length * 8 + 8, bx = mine ? px + pw - 6 - bw : px + 6;
+          y -= bh; g.fillStyle = mine ? '#2f7cf6' : '#dcdce4'; g.beginPath(); g.roundRect(bx, y, bw, bh, 6); g.fill(); WRAP(txt, bx + 6, y + 7, pw * 0.66, mine ? '#fff' : '#111', 5, 8); y -= 5; }
+        g.restore(); if (s.epiT > 0.4 && Math.floor(t * 3) % 2) T('▼', px + pw - 8, py + ph - 3, '#2f7cf6', 5, 'right'); } }
     g.restore();
     // side panel: title, map + compass up top; commands in a fight, stink otherwise
     const PX = 338, PW = 134, wedCh = s.wed && s.wed.lines[s.wed.i][2], fight = b && !s.bag;
