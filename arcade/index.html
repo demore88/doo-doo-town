@@ -113,10 +113,10 @@
   <div class="scr" id="result"><div class="box" id="resbox"></div></div>
 </div></div>
 <audio id="music" src="../assets/doo_doo_town.mp3" loop preload="auto"></audio>
-<script src="../js/state.js?v=1794470446"></script>
-<script src="../js/songs.js?v=1794470446"></script>
-<script src="../js/sfx.js?v=1794470446"></script>
-<script src="games.js?v=1794470446"></script>
+<script src="../js/state.js?v=1794470738"></script>
+<script src="../js/songs.js?v=1794470738"></script>
+<script src="../js/sfx.js?v=1794470738"></script>
+<script src="games.js?v=1794470738"></script>
 <script>
 const cv = document.getElementById('c'); g = cv.getContext('2d'); const SCALE = 3; g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
 const $ = s => document.querySelector(s);
@@ -204,12 +204,12 @@ function buildGrid() {
   { // the Clog Kings race: the van drive, head to head, about two minutes of open road
     let w = 0; try { w = +localStorage.getItem('ddt_race_wins') || 0; } catch (e) {}
     const b = document.createElement('button'); b.className = 'card';
-    b.innerHTML = `<b>${GAMES.length + 1}. CLOG KINGS RACE</b><i>Beat them to the job · two minutes, open road</i><div class="st">${w ? w + ' WIN' + (w > 1 ? 'S' : '') : 'NO WINS YET'}</div>`;
+    b.innerHTML = `<img class="thumb" src="../assets/thumbs/race.jpg" alt="" onerror="this.remove()"><b>${GAMES.length + 1}. CLOG KINGS RACE</b><i>Beat them to the job · two minutes, open road</i><div class="st">${w ? w + ' WIN' + (w > 1 ? 'S' : '') : 'NO WINS YET'}</div>`;
     b.onclick = () => DDT.nav(DDT.root + 'index.html?drive=1&rival=1&arcade=1&from=BERLIN&to=CONWAY&route=' + encodeURIComponent('Route 16') + '&leave=480&due=600&mode=2&ret=' + encodeURIComponent('arcade/index.html'));
     $('#grid').appendChild(b); }
   { // the midnight downhill drift: the same road engine, the Auto Road, all hairpins
     const b = document.createElement('button'); b.className = 'card';
-    b.innerHTML = `<b>${GAMES.length + 2}. DOWNHILL DRIFT</b><i>Midnight · the Auto Road · don't tell anybody</i><div class="st">HOLD DRIFT THROUGH THE HAIRPINS</div>`;
+    b.innerHTML = `<img class="thumb" src="../assets/thumbs/drift.jpg" alt="" onerror="this.remove()"><b>${GAMES.length + 2}. DOWNHILL DRIFT</b><i>Midnight · the Auto Road · don't tell anybody</i><div class="st">7.6 MILES OF HAIRPINS</div>`;
     b.onclick = () => DDT.nav(DDT.root + 'index.html?drive=1&rival=1&arcade=1&drift=1&from=BERLIN&to=BOTTOM&route=' + encodeURIComponent('Auto Road') + '&leave=0&due=999&mode=2&ret=' + encodeURIComponent('arcade/index.html'));
     $('#grid').appendChild(b); }
 }

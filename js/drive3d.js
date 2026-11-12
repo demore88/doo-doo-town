@@ -279,6 +279,7 @@ function drive3d(choice, opts) {
   if (typeof DDT !== 'undefined' && DDT.DEV) { window.__kidsmom = () => startKidsMomCall(); window.__yukon = () => { const n = addCar(pos + PZ + 12 * SEG, false); for (let i = 0; i < 300 && !n.yukon; i++) Object.assign(n, addCar(pos + PZ + 12 * SEG, false)); cars.push(n); }; }
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__jump = mi => { pos = mi * SEG_PER_MI * SEG; };   /* dev: jump down the road */
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__px = () => px;
+  if (typeof DDT !== 'undefined' && DDT.DEV) window.__rz = v => { rz = pos + PZ + v * SEG; };
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__drift = () => ({ px, c: segAt(pos + PZ + 6 * SEG).curve, c0: segAt(pos + PZ).curve, gap: (rz - (pos + PZ)) / SEG, left: N - 40 - (pos + PZ) / SEG, won: rivalWon, crashes, done, sp: speed / TOP });   /* dev: where the van is across the road */
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__critter = (kind, ahead) => critters.push({ seg: Math.floor((pos + PZ) / SEG) + (ahead || 30), kind, off: ahead < 4 ? px : px + 1.2, dir: ahead < 4 ? 1 : 0, hit: false, snap: 0, flash: 0 });   /* dev: drop an animal ahead */   // dev: lets the test harness check for overlaps
   const respawn = (c, base) => {   // reappear
@@ -314,7 +315,7 @@ function drive3d(choice, opts) {
   addEventListener('keydown', kd); addEventListener('keyup', ku);
   const pts = new Map();
   function zone(e) { const b = rc.getBoundingClientRect(), x = (e.clientX - b.left) / b.width, y = (e.clientY - b.top) / b.height;
-    if (DRIFT) { if (y > 0.8 && x < 0.21) return 'XL'; if (y > 0.8 && x > 0.79) return 'XR'; if (y > 0.8 && x > 0.4 && x < 0.6) return 'D'; return x < 0.5 ? 'L' : 'R'; }   /* DRIFT LEFT / DRIFT RIGHT in the corners steer AND drift; BRAKE alone in the middle; anywhere else just steers */ if (y > 0.74 && (x < 0.22 || x > 0.78)) return 'D'; return x < 0.5 ? 'L' : 'R'; }   // brake in both bottom corners, steer with either side
+    if (DRIFT) { if (y > 0.8 && x < 0.21) return 'XL'; if (y > 0.8 && x > 0.79) return 'XR'; return x < 0.5 ? 'L' : 'R'; }   /* DRIFT LEFT / DRIFT RIGHT in the corners steer AND drift; anywhere else just steers */ if (y > 0.74 && (x < 0.22 || x > 0.78)) return 'D'; return x < 0.5 ? 'L' : 'R'; }   // brake in both bottom corners, steer with either side
   // phone: one thumb steers. Both thumbs down (left AND right) = gas. No thumbs = cruise.
   function retouch() { touch.L = touch.R = touch.U = touch.D = touch.X = 0; for (const z of pts.values()) { if (z === 'XL') { touch.X = 1; touch.L = 1; } else if (z === 'XR') { touch.X = 1; touch.R = 1; } else touch[z] = 1; } if (TILT) { touch.U = (touch.L || touch.R) && !touch.D ? 1 : 0; touch.L = touch.R = 0; return; } if (touch.L && touch.R && !touch.D) touch.U = 1; }
   const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -846,11 +847,10 @@ function drive3d(choice, opts) {
         r.textAlign = 'left'; }
       // phone buttons (also show what the keys do)
       if (true) {   // brake in both corners, gas = both thumbs (keyboard: ▲)
-        if (DRIFT) { const dh = key.X || touch.X, dl = dh && (key.L || touch.L), dr = dh && (key.R || touch.R);   /* ◀ DRIFT and DRIFT ▶ in the corners, BRAKE on its own in the middle */
+        if (DRIFT) { const dh = key.X || touch.X, dl = dh && (key.L || touch.L), dr = dh && (key.R || touch.R);   /* ◀ DRIFT and DRIFT ▶ in the corners */
           r.textAlign = 'center';
           r.fillStyle = dl ? 'rgba(247,196,24,.75)' : 'rgba(16,21,31,.55)'; r.fillRect(4, H - 46, 96, 40); r.fillStyle = '#fff'; r.fillText('◀ DRIFT', 52, H - 26);
           r.fillStyle = dr ? 'rgba(247,196,24,.75)' : 'rgba(16,21,31,.55)'; r.fillRect(W - 100, H - 46, 96, 40); r.fillStyle = '#fff'; r.fillText('DRIFT ▶', W - 52, H - 26);
-          r.fillStyle = brake ? 'rgba(233,102,90,.75)' : 'rgba(16,21,31,.5)'; r.fillRect(W / 2 - 40, H - 34, 80, 28); r.fillStyle = '#fff'; r.fillText(brake ? 'BRAKE!' : 'BRAKE', W / 2, H - 18);
           for (const bx of [4, W - 100]) { r.fillStyle = '#222'; r.fillRect(bx, H - 50, 96, 4); r.fillStyle = dmeter > 0.8 ? '#ff7a2a' : '#f7c418'; r.fillRect(bx, H - 50, 96 * dmeter, 4); } r.textAlign = 'left'; }
         else { r.fillStyle = brake ? 'rgba(233,102,90,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40); r.fillRect(W - 96, H - 46, 92, 40);
         r.fillStyle = '#fff'; r.textAlign = 'center'; r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', 50, H - 26); r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', W - 50, H - 26); }
