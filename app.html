@@ -14,6 +14,7 @@
 </style>
 </head>
 <body>
+<script src="js/songs.js"></script>
 <script>
 // ---------- the van radio, owned by this outer page so it plays straight through every screen change ----------
 window.DDT_RADIO = (() => {
@@ -25,11 +26,15 @@ window.DDT_RADIO = (() => {
   const tell = () => { try { st.onTrack && st.onTrack(TR[st.idx][1]); } catch (e) {} };
   function load(i) { st.idx = ((i % TR.length) + TR.length) % TR.length; a.src = 'assets/music/' + TR[st.idx][0]; tell(); }
   const go = () => { a.muted = st.muted; if (st.on && !st.muted) a.play().catch(() => {}); };
-  a.addEventListener('ended', () => { const pool = TR.map((_, i) => i).filter(i => i !== st.idx && (i !== 5 || st.idx === 5)); load(pool[Math.floor(Math.random() * pool.length)]); go(); });
+  const fileOf = i => TR[i] ? TR[i][0] : '';
+  function playFile(f) { let i = TR.findIndex(x => x[0] === f); if (i < 0) { const S = DDT_SONGS.ALL.find(x => x.file === f); if (!S) return; TR.push([S.file, S.name]); i = TR.length - 1; } st.idx = i; a.src = 'assets/music/' + f; tell(); }
+  a.addEventListener('ended', () => {   /* next song: from the player's playlist (MUSIC on the title screen) */
+    const rot = DDT_SONGS.rotation().map(x => x.file).filter(f => f !== fileOf(st.idx) && (f !== 'nightmares.mp3' || fileOf(st.idx) === 'nightmares.mp3')), pool = rot.length ? rot : DDT_SONGS.rotation().map(x => x.file);
+    playFile(pool[Math.floor(Math.random() * pool.length)]); go(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) a.pause(); else go(); });
   return {
     audio: a, st,
-    on(start) { clearInterval(fadeT); a.volume = 0.5; st.on = true; if (st.idx < 0) load(start); go(); },   // picks up exactly where it paused
+    on(start) { clearInterval(fadeT); a.volume = 0.5; st.on = true; if (st.idx < 0) { load(start); if (!DDT_SONGS.inRotation(fileOf(st.idx))) { const R = DDT_SONGS.rotation(); playFile(R[0].file); } } go(); },   // picks up exactly where it paused
     fade(ms = 700) { clearInterval(fadeT); if (!st.on) return; st.on = false; const v0 = a.volume, t0 = performance.now();
       fadeT = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / ms); a.volume = v0 * (1 - k); if (k >= 1) { clearInterval(fadeT); a.pause(); a.volume = 0.5; } }, 30); },
     pause() { clearInterval(fadeT); st.on = false; a.pause(); a.volume = 0.5; },

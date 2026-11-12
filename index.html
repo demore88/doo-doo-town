@@ -142,6 +142,7 @@
       <button class="btn" data-a="continue" id="contbtn" style="display:none">CONTINUE</button>
       <button class="btn" data-a="new">NEW GAME</button>
       <button class="btn" data-a="arcade">MINI-GAMES</button>
+      <button class="btn" data-a="music">MUSIC</button>
       <button class="btn" data-a="how">HOW TO PLAY</button>
       <button class="btn" data-a="credits">CREDITS</button>
       <button class="btn dev" data-a="scenes">CUTSCENES (DEV)</button>
@@ -193,6 +194,7 @@
 <script src="js/state.js?v=1794441941"></script>
 <script src="js/sfx.js?v=1794441941"></script>
 <script src="js/sqcalls.js?v=1794441941"></script>
+<script src="js/songs.js"></script>
 <script src="js/drive3d.js?v=1794441941"></script>
 <script src="js/music.js?v=1794441941"></script>
 <script>
@@ -321,6 +323,14 @@ document.querySelectorAll('#menu .btn').forEach(b => b.onclick = () => {
     $('#sc-drive').onclick = () => { hidePanel(); devDrive(); };
     return;
   }
+  if (a === 'music') { const prev = { a: null }, stopPrev = () => { if (prev.a) { prev.a.pause(); prev.a = null; } };   /* the playlist: what the van radio plays. Songs unlock as you play */
+    const draw = () => { const L = DDT_SONGS.ALL; showPanel(`<h3>MUSIC PLAYLIST</h3><div style="font-size:.8em;color:#9fd1ff;margin-bottom:.6em">Checked songs play on the van radio. Tap ▶ to listen.</div>` + L.map((S, i) => { const u = DDT_SONGS.isUnlocked(S.file), on = DDT_SONGS.inRotation(S.file);
+      return u ? `<div style="display:flex;align-items:center;gap:.6em;margin:.35em 0"><button class="btn" data-pl="${i}" style="min-width:2.6em;padding:.35em">${prev.f === S.file && prev.a ? '■' : '▶'}</button><button class="btn" data-tg="${i}" style="flex:1;text-align:left;padding:.35em .6em;${on ? '' : 'opacity:.5'}">${on ? '☑' : '☐'} ${S.name}<br><span style="font-size:.7em;color:${S.lock ? '#7bd65b' : '#9a8f78'}">${S.lock ? 'UNLOCKED: ' + S.lock : 'On the van radio from day one'}</span></button></div>`
+        : `<div style="display:flex;align-items:center;gap:.6em;margin:.35em 0;opacity:.6"><span style="min-width:2.6em;text-align:center">🔒</span><span style="flex:1">??? <span style="font-size:.75em;color:#c9a46a">· ${S.lock}</span></span></div>`; }).join(''));
+      panel.querySelectorAll('[data-tg]').forEach(b => b.onclick = () => { DDT_SONGS.toggle(L[+b.dataset.tg].file); draw(); });
+      panel.querySelectorAll('[data-pl]').forEach(b => b.onclick = () => { const S = L[+b.dataset.pl]; if (prev.a && prev.f === S.file) { stopPrev(); if (soundOn) music.play().catch(() => {}); } else { stopPrev(); music.pause(); prev.f = S.file; prev.a = new Audio('assets/music/' + S.file); prev.a.volume = 0.6; prev.a.play().catch(() => {}); prev.a.onended = () => { prev.a = null; draw(); }; } draw(); });
+      $('#back').onclick = () => { stopPrev(); hidePanel(); if (soundOn) music.play().catch(() => {}); }; };
+    draw(); return; }
   if (a === 'credits') showPanel(`<h3>CREDITS</h3>
     Starring <span style="color:#f7c418">ROD</span> and <span style="color:#f7c418">MATT</span><br>
     Created by Matthew Demore<br>Music: "Doo Doo Town" by Matthew Demore<br>

@@ -1382,7 +1382,10 @@ TRL.imgTex = (n, w) => {   /* turn a sprite into a 32x32 billboard texture, sitt
   const h = Math.round(w * im.height / im.width); k.drawImage(im, Math.round((N - w) / 2), N - h, w, h);
   const d = new Uint32Array(k.getImageData(0, 0, N, N).data.buffer).slice(); for (let i = 0; i < d.length; i++) if ((d[i] >>> 24) < 128) d[i] = 0; else d[i] = d[i] | 0xff000000; return d; };
 TRL.music = { h: null, tick: 0, amb: null, atick: 0 };
-TRL.bgm = on => { const M = TRL.music; if (on && !M.h && typeof DDTSfx !== 'undefined') M.h = DDTSfx.loop('ut_battle'); if (!on && M.h) { M.h.stop(); M.h = null; } };
+TRL.bgm = (on, king) => { const M = TRL.music;   /* the Rat King fights to his own song: UNDER THE TRAILER */
+  if (on && king && !M.h) { const a = new Audio('../assets/music/under_the_trailer.mp3'); a.loop = true; a.volume = 0.55; let mute = false; try { mute = localStorage.getItem('ddt_sfx_mute') === '1' || localStorage.getItem('ddt_mute') === '1'; } catch (e) {} a.muted = mute; a.play().catch(() => {}); M.h = { stop() { a.pause(); a.src = ''; } }; }
+  else if (on && !M.h && typeof DDTSfx !== 'undefined') M.h = DDTSfx.loop('ut_battle');
+  if (!on && M.h) { M.h.stop(); M.h = null; } };
 TRL.amb = on => { const M = TRL.music; if (on && !M.amb && typeof DDTSfx !== 'undefined') M.amb = [DDTSfx.loop('ut_amb_a'), DDTSfx.loop('ut_amb_b')]; if (!on && M.amb) { M.amb.forEach(h => h.stop()); M.amb = null; } };   /* the two crawlspace tracks, layered */
 TRL.CARL = [['carl_laugh', [0, 6.57, 13.86], 3.6], ['carl_sigh', [0, 3.21, 6.89, 10.26, 13.09, 16.33], 1.9], ['carl_cough', [0], 3.3], ['carl_scream', [0], 1.9]];   /* Carl's noises: one random slice at a time */
 TRL.carl = (s, chance) => { const n = performance.now(); if (n - (TRL.carlT || 0) < 6000 || Math.random() > (chance == null ? 1 : chance)) return; TRL.carlT = n;
@@ -1510,7 +1513,7 @@ GAMES.push({
     if (F.king) s.kingSeen = true;
     const kingTalk = F.king ? ["Welcome... to my KINGDOM, plumber.", "For three hundred generations of rats, my family has ruled this drip.", s.married ? "And you ABANDONED my cousin, the Possum Princess. She cried for DAYS." : "Carl told me you were coming. Carl tells me EVERYTHING.", "You came to fix the pipe? The pipe is MINE. The drip is MINE.", "Too bad you won't make it out alive."] : null;   /* the boss speech: about 10 seconds, tap to hurry it */
     const hp = Math.round((F.hp[0] + Math.floor(s.rnd() * (F.hp[1] - F.hp[0] + 1))) * (F.king ? [1.1, 1.3, 1.55][s.diff] : 1.5 + this.zone(s) * 0.6));   /* deeper ones are tougher */
-    s.battle = { F, hp, max: hp, sel: 4, q: [], stun: 0, open: 0.6, blink: 0, dmgT: 0, pose: 2, poseT: 0.8, out: 0, talk: kingTalk && { i: 0, t: 0, L: kingTalk } }; s.since = 0; s.fights++; s.flash = 0.6; (s.met = s.met || []).push(F.name); TRL.bgm(true); TRL.cry(F, true);
+    s.battle = { F, hp, max: hp, sel: 4, q: [], stun: 0, open: 0.6, blink: 0, dmgT: 0, pose: 2, poseT: 0.8, out: 0, talk: kingTalk && { i: 0, t: 0, L: kingTalk } }; s.since = 0; s.fights++; s.flash = 0.6; (s.met = s.met || []).push(F.name); TRL.bgm(true, F.king); TRL.cry(F, true);
     this.say(s, F.princess ? 'THE POSSUM PRINCESS blocks your way. She expects tribute.' : F.gary ? 'It is GARY. Gary is a raccoon in a tiny vest. Gary has done this before.' : F.king ? 'THE RAT KING rises from the muck, cape and all!' : F.name === 'BIG BUFF RAT' ? 'A BIG BUFF RAT flexes at you. It has been working out.' : F.venom ? 'A BROWN RECLUSE drops down from a joist!' : F.thief ? 'A RACCOON was already down here. It is not happy.' : F.possum ? 'A POSSUM hisses at you from behind a pier!' : `A ${F.name} jumps out of the dark!`);
     if (!s.tipped && !F.princess) { s.tipped = true; this.say(s, 'TIP: WHACK hits it. FLASHLIGHT blinds it for 2 turns. CRACKER lets you sneak away.'); this.say(s, 'TIP: BAG has your band-aids. RUN might work... might not.'); }   /* explained once, in the first fight */
   },
@@ -1717,7 +1720,7 @@ GAMES.push({
         this.say(s, 'THE POSSUM PRINCESS stops. She has never lost before.', () => { b.pose = 4; b.poseT = 1.2; });
         this.say(s, 'She is... impressed. She bats her eyes at you.');
         this.say(s, 'She takes your hand. She would like to go HOME now. (A crown on your map marks her kingdom.)', () => { this.gainXP(s, Math.round(b.F.pts * 1.35)); s.score += b.F.pts; s.won++; s.escort = true; b.out = 0.01; });
-        b.after = () => this.endFight(s); return; } this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { const loot = b.F.king ? 4 : b.F.gary ? 3 : s.rnd() < [0.7, 0.63, 0.56][s.diff] ? 1 : 0;   /* most critters aren't carrying crackers */ s.crk += loot + (b.stolen || 0); if (b.stolen) (s.log = s.log || []).push(`You get your ${b.stolen} stolen cracker${b.stolen > 1 ? 's' : ''} back, too.`); this.gainXP(s, Math.round(b.F.pts * 1.35)); if (b.F.king) s.kingDone = true; if (loot) (s.log = s.log || []).push(`It dropped ${loot} peanut butter cracker${loot > 1 ? 's' : ''}. Where was it keeping those.`); s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
+        b.after = () => this.endFight(s); return; } this.say(s, b.F.venom ? `You squash the BROWN RECLUSE. +${b.F.pts} PTS` : b.F.possum ? `The POSSUM waddles off, offended. +${b.F.pts} PTS` : `The ${b.F.name} runs off! +${b.F.pts} PTS`, () => { const loot = b.F.king ? 4 : b.F.gary ? 3 : s.rnd() < [0.7, 0.63, 0.56][s.diff] ? 1 : 0;   /* most critters aren't carrying crackers */ s.crk += loot + (b.stolen || 0); if (b.stolen) (s.log = s.log || []).push(`You get your ${b.stolen} stolen cracker${b.stolen > 1 ? 's' : ''} back, too.`); this.gainXP(s, Math.round(b.F.pts * 1.35)); if (b.F.king) { s.kingDone = true; try { if (window.DDT_SONGS && DDT_SONGS.unlock('under_the_trailer.mp3')) s.songU = { t: 0 }; } catch (e) {} }   /* beat him: his song unlocks */ if (loot) (s.log = s.log || []).push(`It dropped ${loot} peanut butter cracker${loot > 1 ? 's' : ''}. Where was it keeping those.`); s.score += b.F.pts; s.won++; b.pose = b.F.venom ? 7 : 3; b.poseT = 9; b.out = b.F.venom ? 0 : 0.01; TRL.cry(b.F); }); b.after = () => this.endFight(s); };
     b.wonFn = won; b.foeTurnFn = foeTurn;
     if (o.id === 'item') { s.bag = { sel: 0, battle: true }; return; }
     if (o.id === 'whack' && b.guards > 0) {   /* the guards are in the way: you have to get through them first */
@@ -1866,6 +1869,8 @@ GAMES.push({
       R(VX + 10, VY + 8, VW - 20, bh, 'rgba(12,4,4,.92)'); R(VX + 10, VY + 8, VW - 20, 2, '#c0392b'); R(VX + 10, VY + 6 + bh, VW - 20, 2, '#c0392b');
       T('THE RAT KING:', VX + 20, VY + 18, '#e9665a', 7); WRAP(line.slice(0, Math.floor(K.t * 45)), VX + 20, VY + 32, VW - 48, last ? '#ff8a7a' : '#fff', 8, 13);
       if (K.t > 0.4 && Math.floor(s.t * 3) % 2) T('▼', VX + VW - 20, VY + bh, '#e9665a', 6, 'right'); }
+    if (s.songU && (s.songU.t += 1 / 60) < 5) { const k = Math.min(1, s.songU.t * 3, (5 - s.songU.t) * 2); g.save(); g.globalAlpha = k; R(VX + 30, VY + VH - 62, VW - 60, 40, 'rgba(10,8,6,.92)'); R(VX + 30, VY + VH - 62, VW - 60, 2, '#f7c418'); R(VX + 30, VY + VH - 24, VW - 60, 2, '#f7c418');
+      T('♪ UNDER THE TRAILER HAS UNLOCKED', VX + VW / 2, VY + VH - 49, '#f7c418', 7, 'center'); T('in your MUSIC playlist', VX + VW / 2, VY + VH - 35, '#fff', 6, 'center'); g.restore(); }
     if (s.lvlUp) { const L = s.lvlUp, a = Math.min(1, L.t * 4, (3.2 - L.t) * 2), sc = 1 + Math.max(0, 0.25 - L.t) * 2;   /* LEVEL UP! pops up over the view */
       g.save(); g.globalAlpha = a; R(VX + 50, VY + 40, VW - 100, 70, 'rgba(10,8,6,.9)'); R(VX + 50, VY + 40, VW - 100, 2, '#f7c418'); R(VX + 50, VY + 108, VW - 100, 2, '#f7c418');
       for (let i = 0; i < 10; i++) { const an = i / 10 * 6.28 + L.t * 2, rr = 70 + L.t * 30; T('✦', VX + VW / 2 + Math.cos(an) * rr, VY + 75 + Math.sin(an) * rr * 0.45, '#f7c418', 6, 'center'); }
@@ -1957,7 +1962,7 @@ GAMES.push({
 });
 /* SAVE + RESUME for Under the Trailer: it's a long crawl, so your spot is kept if the phone locks or the page reloads */
 (() => {
-  const G = GAMES.find(q => q.id === 'crawl'), SKIP = new Set(['cv', 'cx', 'img', 'buf', 'zb', 'battle', 'talk', 'shop', 'bag', 'wake', 'wed', 'rnd', 'props', 'carlScr', 'end', 'ask', 'saveT', 'lvlUp', 'big', 'bagQ', 'epi', 'fixT', 'fx', 'pops', 'parts']);
+  const G = GAMES.find(q => q.id === 'crawl'), SKIP = new Set(['cv', 'cx', 'img', 'buf', 'zb', 'battle', 'talk', 'shop', 'bag', 'wake', 'wed', 'rnd', 'props', 'carlScr', 'end', 'ask', 'saveT', 'lvlUp', 'big', 'bagQ', 'epi', 'fixT', 'songU', 'fx', 'pops', 'parts']);
   const KEY = s => 'ddt_crawl_' + (new URLSearchParams(location.search).get('job') || 'arcade') + '_' + s.diff;
   const save = s => { try { const o = {}; for (const k in s) { if (SKIP.has(k) || typeof s[k] === 'function') continue; o[k] = s[k] instanceof Set ? { __set: [...s[k]] } : s[k]; } localStorage.setItem(KEY(s), JSON.stringify(o)); } catch (e) {} };
   const load = s => { try { const o = JSON.parse(localStorage.getItem(KEY(s)) || 'null'); return o && o.map ? o : null; } catch (e) { return null; } };

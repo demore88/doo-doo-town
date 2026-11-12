@@ -775,7 +775,10 @@ function drive3d(choice, opts) {
       if (crashes && !opts.endless && !RACE) { r.fillStyle = '#e9665a'; r.textAlign = 'right'; r.fillText('CRASHES ' + crashes, W - 6, 52); r.textAlign = 'left'; }
       if (opts.endless) { const mi = pos / SEG / SEG_PER_MI, box = (x, w, txt, col, al) => { r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(x, 26, w, 18); r.fillStyle = col; r.textAlign = al || 'center'; r.fillText(txt, al === 'left' ? x + 6 : x + w / 2, 35); r.textAlign = 'left'; };   /* same panels as the MPH */
         { const x = 6, w = 132; r.fillStyle = 'rgba(16,21,31,.7)'; r.fillRect(x, 26, w, 18); const f = 1 - crashes / 20; r.fillStyle = '#2c3326'; r.fillRect(x + 6, 31, w - 52, 8); r.fillStyle = crashes > 14 ? '#e9665a' : crashes > 8 ? '#f7c418' : '#7bd65b'; r.fillRect(x + 6, 31, (w - 52) * f, 8); r.fillStyle = '#fff'; r.textAlign = 'right'; r.fillText(`${20 - crashes}`, x + w - 6, 35); r.textAlign = 'left'; }   /* van health, top left */
-        box(150, 84, `${mi.toFixed(1)} MI`, '#7bd65b'); box(242, 150, `${(score + Math.floor(distPts)).toLocaleString()} PTS`, '#f7c418'); }
+        box(150, 84, `${mi.toFixed(1)} MI`, '#7bd65b'); box(242, 150, `${(score + Math.floor(distPts)).toLocaleString()} PTS`, '#f7c418'); 
+        if (mi >= 300 && !window.__gasU && window.DDT_SONGS) { window.__gasU = DDT_SONGS.unlock('foot_on_the_gas.mp3') ? performance.now() : 1; }   /* 300 miles: FOOT ON THE GAS unlocks */
+        if (window.__gasU > 1 && performance.now() - window.__gasU < 4500) { const k = Math.min(1, (performance.now() - window.__gasU) / 300); r.globalAlpha = k; r.fillStyle = 'rgba(16,21,31,.92)'; r.fillRect(90, 60, 300, 40); r.fillStyle = '#f7c418'; r.fillRect(90, 60, 300, 2); r.fillRect(90, 98, 300, 2);
+          r.textAlign = 'center'; r.fillStyle = '#f7c418'; r.fillText('♪ SONG UNLOCKED: FOOT ON THE GAS', 240, 74); r.fillStyle = '#fff'; r.fillText('Added to your MUSIC playlist', 240, 88); r.textAlign = 'left'; r.globalAlpha = 1; } }
 
       if (sqCall) {   /* a cell phone slides in on the right: rings, shows who it is, then plays the call by itself */
         const c = sqCall.c, slide = Math.min(1, (1.6 - Math.max(0, sqCall.ring)) * 4 + (sqCall.ring <= 0 ? 1 : 0)), end = sqCall.t > c.lines.length * 2.8 ? Math.min(1, (sqCall.t - c.lines.length * 2.8) * 3) : 0;
