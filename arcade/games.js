@@ -1393,7 +1393,7 @@ setInterval(() => { const M = TRL.music, n = performance.now(); if (M.h && n - M
 
 GAMES.push({
   id: 'crawl', noReady: true, name: 'UNDER THE TRAILER', tag: 'A long crawl · rats, possums, a King · Crawlspace Carl',
-  how: ['Somewhere under this huge trailer the sewer pipe came apart. Crawl through the dark and find it. Follow the STINK. This is a LONG job.', 'Near the hatch it is just rats. Deeper in: possums, buff rats, raccoons, brown recluses... and THE RAT KING guards the drip.', 'Grab peanut butter crackers off the rat traps and from critters you beat. Crawlspace Carl LOVES them. He lives down here in three places: listen for him, then trade for gear, beans and his special tonic.', 'In a fight: WHACK hits it. FLASHLIGHT blinds it so it loses its next 2 attacks (uses a battery). CRACKER: toss one and sneak away. RUN: might work. BAG: use an item.', 'Win fights to level up. Hurt? Open the BAG to use items or REST: it heals you but adds 30 minutes to the job. Want more fights? BANG ON PIPE in the bag.', 'Carl sells a napkin map to his next hiding spot. Tap your map to see it big and scribble notes on it.'],
+  how: ['Somewhere under this huge trailer the sewer pipe came apart. Crawl through the dark and find it. Follow the STINK. This is a LONG job.', 'Near the hatch it is just rats. Deeper in: possums, buff rats, raccoons, brown recluses... and THE RAT KING guards the drip.', 'Grab peanut butter crackers off the rat traps and from critters you beat. Crawlspace Carl LOVES them. He lives down here in three places: listen for him, then trade for gear, beans and his special tonic.', 'In a fight: WHACK hits it. FLASHLIGHT blinds it so it loses its next 2 attacks (uses a battery). CRACKER: toss one and sneak away. RUN: might work. BAG: use an item.', 'Win fights to level up. Hurt? Open the BAG to use items or REST: you sleep a whole day down there. Want more fights? BANG ON PIPE in the bag.', 'Carl sells a napkin map to his next hiding spot. Tap your map to see it big and scribble notes on it.'],
   dpad: 'omni',
   ctl: '▲ ▼ CRAWL · ◀ ▶ TURN · SPACE = PICK · SHIFT = BAG',
   act: 'PICK', act2: 'BAG', phone: 'd-pad to crawl and turn (or tap the view), PICK in fights, BAG for items and resting.',
@@ -1432,23 +1432,26 @@ GAMES.push({
     s.seen = new Set([101]); s.steps = 0; s.since = 0;
     const H = HERO(s), rod = H.name === 'ROD';
     s.hpMax = s.hp = rod ? 36 : 28; s.dmg = rod ? [3, 6] : [4, 7]; s.runOdds = rod ? 0.5 : 0.7;
-    s.lives = 3; s.lvl = 1; s.xp = 0; s.atkB = -1; s.def = 0; s.swing = 0; s.gear = []; s.items = { aid: 1, beans: 0, tonic: 0, poison: 0 }; s.restMin = 0; s.bag = null; s.kingDone = false;
+    s.lives = 3; s.lvl = 1; s.xp = 0; s.atkB = -1; s.def = 0; s.swing = 0; s.gear = []; s.items = { aid: 1, beans: 0, tonic: 0, poison: 0 }; s.restMin = 0; s.days = 0; s.bag = null; s.kingDone = false;
     s.lights = 3; s.crk = 2; s.score = 0; s.fights = 0; s.won = 0; s.hits = 0; s.battle = null; s.flash = 0; s.fixT = 0;
     s.cv = document.createElement('canvas'); s.cv.width = TRL.RW; s.cv.height = TRL.RH; s.cx = s.cv.getContext('2d'); s.img = s.cx.createImageData(TRL.RW, TRL.RH); s.buf = new Uint32Array(s.img.data.buffer); s.zb = new Float32Array(TRL.RW);
   },
   open(s, c, r) { return s.map[r] && s.map[r][c] === '.'; },
   update(s, dt, I) {
     s.t += dt; FX(s, dt); s.flash = Math.max(0, s.flash - dt); s.shake = Math.max(0, (s.shake || 0) - dt); s.swing = Math.max(0, (s.swing || 0) - dt); s.guard = Math.max(0, (s.guard || 0) - dt); if (s.lvlUp && (s.lvlUp.t += dt) > 3.2) s.lvlUp = null;
-    if (s.fixT) { s.fixT += dt * (s.fixT > 3.4 && (I.Ap || I.ptr.clicked) ? 6 : 1); if (s.fixT > 9.4) { const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.t < 50 + s.gmax * 2, f >= 0.3), line: s.epi[1] + (s.restMin ? ` (Rested ${s.restMin} min.)` : ''), extraTime: s.restMin }); } return; }
+    if (s.fixT) { s.fixT += dt;
+      if (s.fixT > 4.0) { s.epiT += dt; const L = s.epi[Math.min(s.epiI, s.epi.length - 1)]; if ((s.epiT > 0.4 && (I.Ap || I.ptr.clicked)) || s.epiT > TRL.hold(L[1])) { s.epiI++; s.epiT = 0; if (s.epiI === 2) SFX('ui_select');
+        if (s.epiI >= s.epi.length) { s.epiI = s.epi.length - 1; const f = s.hp / s.hpMax; return (s.end = { win: true, stars: stars3(f >= 0.6 && s.days === 0, f >= 0.3), line: `Pipe fixed. Everybody believes THAT part.${s.days ? ` (${s.days} day${s.days > 1 ? 's' : ''} under the trailer.)` : ''}`, extraTime: 0 }); } } }
+      return; }
     if (s.wed) { TRL.music.wtick = performance.now(); TRL.wedM(true); TRL.amb(false); } else { TRL.wedM(false); if (!s.battle) { TRL.music.atick = performance.now(); TRL.amb(true); } else TRL.amb(false); }   /* the wedding gets its own music */
-    if (s.talk) { const K = s.talk; K.t += dt; if ((K.t > 0.4 && (I.Ap || I.ptr.clicked)) || K.t > TRL.hold(K.lines[Math.min(K.i, K.lines.length - 1)][1])) { K.i++; K.t = 0; if (K.i >= K.lines.length) { const me = HERO(s).name, them = me === 'ROD' ? 'Matt' : 'Rod'; s.talk.i = K.lines.length - 1; s.end = { win: true, stars: 1, carl: true, extraTime: s.restMin, line: `${them} fixed it. ${me === 'ROD' ? 'Rod' : 'Matt'} is still talking about Carl.` }; } } return; }
+    if (s.talk) { const K = s.talk; K.t += dt; if ((K.t > 0.4 && (I.Ap || I.ptr.clicked)) || K.t > TRL.hold(K.lines[Math.min(K.i, K.lines.length - 1)][1])) { K.i++; K.t = 0; if (K.i >= K.lines.length) { const me = HERO(s).name, them = me === 'ROD' ? 'Matt' : 'Rod'; s.talk.i = K.lines.length - 1; s.end = { win: true, stars: 1, carl: true, extraTime: 0, line: `${them} fixed it. ${me === 'ROD' ? 'Rod' : 'Matt'} is still talking about Carl.` }; } } return; }
     if (s.wake) return this.wakeStep(s, dt, I);
     if (s.wed) return this.wedStep(s, dt, I);
     if (s.bag) return this.bagging(s, dt, I);
     if (s.shop) return this.shopping(s, dt, I);
     if (s.battle) return this.fight(s, dt, I);
     if (s.big) return this.bigStep(s, dt, I);
-    if (!s.restTip && s.hp > 0 && s.hp < 15) { s.restTip = true; s.bagPulse = true; (s.log = s.log || []).push('Seems like you need to rest. Tap your BAG and REST for 30 minutes.'); SFX('ui_tap'); }   /* told once, the first time you get low */
+    if (!s.restTip && s.hp > 0 && s.hp < 15) { s.restTip = true; s.bagPulse = true; (s.log = s.log || []).push('Seems like you need to rest. Tap your BAG and REST for a day.'); SFX('ui_tap'); }   /* told once, the first time you get low */
     if (I.ptr.clicked && I.ptr.x > 338 && I.ptr.x < 472 && I.ptr.y > 10 && I.ptr.y < 92) { s.big = { stroke: null }; I.ptr.clicked = false; SFX('ui_tap'); return; }   /* tap the little map: the big one */
     { const [x, y, w, h] = this.bagBtn(), tap = I.ptr.clicked && I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h; if (I.Bp || tap) { s.bagQ = true; I.ptr.clicked = false; }   /* asked for the bag while crawling: it opens the moment you stop */
       if (s.bagQ && !(s.mv > 0)) { s.bagQ = false; s.bagPulse = false; s.bag = { sel: 0, battle: false }; SFX('ui_tap'); return; } }
@@ -1481,7 +1484,12 @@ GAMES.push({
       const met = s.met || [], big = ['THE RAT KING', 'BROWN RECLUSE', 'RACCOON', 'BIG BUFF RAT', 'POSSUM', 'SEWER RAT'].find(n => met.includes(n));   /* ...and then nobody believes you */
       const brag = s.married ? 'I got married down there. To a possum. Then I left on a quest.' : !met.length ? 'Just a drip. Easy one.' : big === 'THE RAT KING' ? 'There was a RAT KING down there. With a CROWN.' : big === 'BROWN RECLUSE' ? 'I fought a brown recluse. Hand to hand.' : big === 'RACCOON' ? 'A raccoon jumped me. We went three rounds.' : met.length > 2 ? `I fought ${met.length} things down there.` : `I had to fight a ${big.toLowerCase()} down there.`;
       const nope = s.married ? ['...Congratulations?', 'Does she know where you live?', 'Are you paying child support to a possum?', 'You were under there for an hour.'] : !met.length ? ["That's what I like to hear.", 'Good. Now get in the van.'] : ['Sure you did, bud.', 'Uh huh. Get in the van.', "You were under there twenty minutes. Fixing a Fernco.", 'Was it the same raccoon as last time?', "Sure. And I'm the Rat King.", "You smell like you did, I'll give you that.", "Nobody's gonna believe that.", "Don't tell the customer that."];
-      s.epi = [brag, nope[Math.floor(s.rnd() * nope.length)]]; if (s.carls.every(c => c.met)) s.epi[1] = "...Hey. Whose blue Econoline is that? It's been out front for fifteen years."; return; }
+      { const me = HERO(s).name, them = me === 'ROD' ? 'MATT' : 'ROD', d = s.days, story = s.married ? 'There were rats. A guy named Carl. I married a possum princess and fought the RAT KING.' : met.includes('THE RAT KING') ? 'There were rats. A guy named Carl. And a RAT KING. With a CROWN.' : brag;   /* you crawl out... and the van is gone */
+        s.epi = [[me, 'Done. ...Hello?'], [me, `Where'd ${them === 'ROD' ? 'Rod' : 'Matt'} go? Where's the VAN?`], ['', '* ring ring *'], [me, `${them === 'ROD' ? 'ROD' : 'MATT'}. Hey. What the hell? You LEFT me?`],
+          [them, d >= 2 ? `Where the HELL have you been?! It's been ${d} DAYS!` : d === 1 ? 'Where the HELL have you been?! You were gone ALL NIGHT!' : "Where the hell have you been? I've been at Dunkin' for three hours!"],
+          [me, 'Under the trailer. ' + story], ...(s.carls.every(c => c.met) ? [[them, "...Is that whose blue Econoline is out front? It's been there fifteen years."]] : []),
+          [them, 'Right....'], [them, 'You good now, though?'], [them, 'I think we should go get you a drug test.'], [them, "You sure something didn't poke you down there?"],
+          [me, s.married ? "...Something might've married me." : '...Carl said his hands were warm.']]; s.epiI = 0; s.epiT = 0; } return; }
     if (s.gd[s.pr][s.pc] === 1 && !s.kingDone) { this.ambush(s, TRL.FOES.find(f => f.king)); return; }   /* he guards the drip */
     this.carlHint(s);
     const chance = [0.09, 0.105, 0.12][s.diff] * (fresh ? 1 : 0.7);   /* fewer fights, and backtracking through places you've cleared is calmer */
@@ -1595,7 +1603,7 @@ GAMES.push({
   bagList(s) { const I2 = s.items, inB = s.bag && s.bag.battle; const L = [
       { id: 'aid', label: `BAND-AIDS x${I2.aid}`, off: !I2.aid }, { id: 'beans', label: `COLD BEANS x${I2.beans}`, off: !I2.beans }, { id: 'tonic', label: `CARL'S TONIC x${I2.tonic}`, off: !I2.tonic } ];
     if (inB) L.push({ id: 'poison', label: `RAT POISON x${I2.poison}`, off: !I2.poison });
-    else L.push({ id: 'rest', label: 'REST (+30 MIN)', off: s.hp >= s.hpMax }, { id: 'bang', label: 'BANG ON PIPE +5 MIN', off: s.gd[s.pr][s.pc] <= 2 });   /* call a critter over: fight on purpose */
+    else L.push({ id: 'rest', label: 'REST A DAY', off: s.hp >= s.hpMax }, { id: 'bang', label: 'BANG ON PIPE', off: s.gd[s.pr][s.pc] <= 2 });   /* call a critter over: fight on purpose */
     L.push({ id: 'close', label: 'CLOSE' }); return L; },
   bagging(s, dt, I) {
     const B = s.bag, L = this.bagList(s);
@@ -1614,8 +1622,8 @@ GAMES.push({
     if (it.id === 'tonic') { s.items.tonic--; msg = `Carl's Tonic. +${heal(999)} HP. Your eyes water. You feel AMAZING.`; s.venom = 0; }
     if (it.id === 'poison') { s.items.poison--; const b = s.battle; msg = `You fling the rat poison. 25 damage!`; b.hp -= 25; b.blink = 0.4; b.dmgT = 0.7; b.dmg = 25; b.pose = 6; b.poseT = 0.6; }
     if (it.id === 'bang') { s.restMin += 5; s.bag = null; (s.log = s.log || []).push((L => L[Math.floor(s.rnd() * L.length)])(['You bang on the pipe. CLANG CLANG CLANG. Something heard that.', 'You whack a joist. The dark goes quiet... then it scurries.', 'You yell "HERE RATTY RATTY." You regret it immediately.'])); this.ambush(s); return; }
-    if (it.id === 'rest') { s.restMin += 30; if (s.rnd() < 0.3) { msg = `You lie down in the dirt... something is chewing your boot.`; s.bag = null; (s.log = s.log || []).push(msg); this.ambush(s); return; }
-      msg = `You lie down in the muck and rest. +${heal(Math.round(s.hpMax * 0.6))} HP. (+30 min on the job)`; }
+    if (it.id === 'rest') { s.days++; if (s.rnd() < 0.3) { msg = `You lie down in the dirt... something is chewing your boot.`; s.bag = null; (s.log = s.log || []).push(msg); this.ambush(s); return; }
+      msg = `You curl up in the muck and sleep. A whole day goes by. +${heal(Math.round(s.hpMax * 0.6))} HP. (Day ${s.days + 1} under the trailer.)`; }
     s.bag = null; (s.log = s.log || []).push(msg);
     if (B.battle) { const b = s.battle; this.say(s, msg); b.after = () => { if (b.hp <= 0) b.wonFn(); else b.foeTurnFn(); }; } },
   bagBox(i) { return [178, 30 + i * 22, 140, 18]; },
@@ -1651,7 +1659,7 @@ GAMES.push({
       (s.log = s.log || []).push('THE DOWRY: 8 crackers, 2 Carl\'s Tonics, and a tiny POSSUM CROWN (DEF +2).'); SFX('ui_select'); } },
   respawn(s) {   // knocked out: you come to back at the last Carl you visited (or the hatch), patched up
     s.lives--; const back = [...s.carls].reverse().find(c => c.met), spot = back ? [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [back.c + dx, back.r + dy]).find(([c, r]) => s.map[r][c] === '.') : [1, 1];
-    s.pc = spot[0]; s.pr = spot[1]; s.vx = s.pc + 0.5; s.vy = s.pr + 0.5; s.mv = 0; s.hp = s.hpMax; s.venom = 0; s.since = 0; s.flash = 1; s.restMin += 20; SFX('ut_wake', { vol: 0.5 });
+    s.pc = spot[0]; s.pr = spot[1]; s.vx = s.pc + 0.5; s.vy = s.pr + 0.5; s.mv = 0; s.hp = s.hpMax; s.venom = 0; s.since = 0; s.flash = 1; s.days++; SFX('ut_wake', { vol: 0.5 });
     if (back) { const d = [[1, 0], [0, 1], [-1, 0], [0, -1]].findIndex(([dx, dy]) => s.pc + dx === back.c && s.pr + dy === back.r); s.dir = d; s.va = s.ta = d * Math.PI / 2; }
     const left = `(${s.lives} ${s.lives === 1 ? 'life' : 'lives'} left)`;
     if (!back) { (s.log = s.log || []).push(`You wake up by the hatch. Everything hurts. ${left}`); return; }
@@ -1871,10 +1879,11 @@ GAMES.push({
     if (s.fixT >= 3.4) {   // crawled back out into daylight
       const k = Math.min(1, (s.fixT - 3.4) / 0.6), sky = g.createLinearGradient(0, VY, 0, VY + VH); sky.addColorStop(0, '#8fc4ef'); sky.addColorStop(1, '#d8ecf8'); g.globalAlpha = k; g.fillStyle = sky; g.fillRect(VX, VY, VW, VH);
       if (!BGI('bg_lawn')) { R(VX, VY + VH * 0.62, VW, VH * 0.38, '#5f9a3e'); } g.globalAlpha = 1;
-      if (k >= 1) { const me = HERO(s).name, them = me === 'ROD' ? 'MATT' : 'ROD', two = s.fixT > 6.2, A = WRAP(s.epi[0], 0, null, VW - 52, '#fff', 6, 10), B2 = two ? WRAP(s.epi[1], 0, null, VW - 52, '#fff', 6, 10) : [], bh = 30 + A.length * 10 + (two ? 14 + B2.length * 10 : 0);
-        R(VX + 12, VY + VH - 10 - bh, VW - 24, bh, 'rgba(10,8,6,.88)'); let y = VY + VH - bh;
-        T(me + ':', VX + 22, y + 2, '#e8c86a', 7); WRAP(s.epi[0], VX + 22, y + 14, VW - 52, '#fff', 6, 10); y += 14 + A.length * 10;
-        if (two) { T(them + ':', VX + 22, y + 6, '#e8c86a', 7); WRAP(s.epi[1], VX + 22, y + 18, VW - 52, '#fff', 6, 10); } } }
+      if (k >= 1 && s.fixT > 4.0) { const [who, line] = s.epi[Math.min(s.epiI, s.epi.length - 1)], me = HERO(s).name, onPhone = s.epiI >= 3, L2 = WRAP(line, 0, null, VW - 52, '#fff', 6, 10), bh = 26 + L2.length * 10;
+        { const hx = VX + VW / 2, hy = VY + VH - 4; g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(hx, hy, 26, 6, 0, 0, 7); g.fill(); SPR(s.hero || (me === 'ROD' ? 'rod' : 'matt'), onPhone ? 0 : 7, hx, hy, false, 2.4); if (onPhone) { R(hx + 9, hy - 78, 7, 13, '#222'); R(hx + 10, hy - 77, 5, 9, '#7fd0ff'); } }   /* you, alone in the yard, on the phone */
+        if (!who) { T(line, VX + VW / 2, VY + 40, '#f7c418', 10, 'center'); }
+        else { R(VX + 12, VY + 8, VW - 24, bh, 'rgba(10,8,6,.88)'); T((who !== me && onPhone ? '📞 ' : '') + who + ':', VX + 22, VY + 18, who === me ? '#e8c86a' : '#9fd1ff', 7); WRAP(line.slice(0, Math.floor(s.epiT * 50)), VX + 22, VY + 30, VW - 52, '#fff', 6, 10); }
+        if (s.epiT > 0.4 && Math.floor(t * 3) % 2) T('▼', VX + VW - 20, VY + bh, '#e8c86a', 6, 'right'); } }
     g.restore();
     // side panel: title, map + compass up top; commands in a fight, stink otherwise
     const PX = 338, PW = 134, wedCh = s.wed && s.wed.lines[s.wed.i][2], fight = b && !s.bag;
@@ -1948,7 +1957,7 @@ GAMES.push({
 });
 /* SAVE + RESUME for Under the Trailer: it's a long crawl, so your spot is kept if the phone locks or the page reloads */
 (() => {
-  const G = GAMES.find(q => q.id === 'crawl'), SKIP = new Set(['cv', 'cx', 'img', 'buf', 'zb', 'battle', 'talk', 'shop', 'bag', 'wake', 'wed', 'rnd', 'props', 'carlScr', 'end', 'ask', 'saveT', 'lvlUp', 'big', 'bagQ', 'fx', 'pops', 'parts']);
+  const G = GAMES.find(q => q.id === 'crawl'), SKIP = new Set(['cv', 'cx', 'img', 'buf', 'zb', 'battle', 'talk', 'shop', 'bag', 'wake', 'wed', 'rnd', 'props', 'carlScr', 'end', 'ask', 'saveT', 'lvlUp', 'big', 'bagQ', 'epi', 'fixT', 'fx', 'pops', 'parts']);
   const KEY = s => 'ddt_crawl_' + (new URLSearchParams(location.search).get('job') || 'arcade') + '_' + s.diff;
   const save = s => { try { const o = {}; for (const k in s) { if (SKIP.has(k) || typeof s[k] === 'function') continue; o[k] = s[k] instanceof Set ? { __set: [...s[k]] } : s[k]; } localStorage.setItem(KEY(s), JSON.stringify(o)); } catch (e) {} };
   const load = s => { try { const o = JSON.parse(localStorage.getItem(KEY(s)) || 'null'); return o && o.map ? o : null; } catch (e) { return null; } };
