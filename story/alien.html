@@ -370,12 +370,14 @@ SCENES.window = async () => {
   window.RAIN = DDTSfx.loop('rain_loop', { vol: 0.6 }); amb('tv_static');   /* the TV left on, quietly hissing */
   await card(['SEPTEMBER 10, 2022', '2:29 AM', "ROD'S HOUSE"], 2000);
   await wait(800);
+  DDTSfx.play('radio_search', { vol: 0.7 });   /* the electronics start acting up before anything shows up at the window */
+  await wait(1600);
   await tween(st, 'alienY', 70, 2600);
-  await wait(400); SND.chirp(2);
+  await wait(400); DDTSfx.play('radio_burst1', { vol: 0.6 }); SND.chirp(2);
   st.zz = false; await tween(st, 'lie', 0, 600);   /* sits up, looking at the window */
   await say('ROD', 'rod_confused', '...Huh?');
   await wait(400);
-  st.wave = true; SND.chirp(4);
+  st.wave = true; DDTSfx.play('radio_burst2', { vol: 0.6 }); SND.chirp(4);
   await wait(1400);
   await say('ROD', 'rod_shocked', '...Me?');
   SND.chirp(2); await wait(900);
@@ -399,7 +401,7 @@ SCENES.beam = async () => {
     if (!spr('ufo', Math.floor(t * 6) % 3, sx, sy, 58, { mid: true })) { E(sx, sy, 56, 13, '#7c8698'); E(sx, sy - 9, 24, 13, '#a6d8ff'); }
   };
   amb('alien_ship');
-  await fadeIn(700);
+  await fadeIn(700); DDTSfx.play('radio_burst3', { vol: 0.6 });
   await card(['2:31 AM'], 900);
   await tween(st, 'shipY', 70, 2000);
   await tween(st, 'rodA', 1, 300);
