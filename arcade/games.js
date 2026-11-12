@@ -206,7 +206,7 @@ GAMES.push({
   ctl: '◀ ▶ CHANGE LANE (OR TAP THE SIDES)',
   act: null,
   init(s) {
-    s.DIST = [460, 540, 620][s.diff]; s.z = 0; s.v = 0; s.x = 0; s.tx = null; s.objs = []; s.next = 16; s.safe = 0; s.lane = 0; s.rowN = 0; s.rainMode = 0;
+    s.DIST = [560, 660, 760][s.diff]; s.z = 0; s.v = 0; s.x = 0; s.tx = null; s.objs = []; s.next = 16; s.safe = 0; s.lane = 0; s.rowN = 0; s.rainMode = 0;
     s.pantsMax = s.pants = [4, 3, 3][s.diff]; s.inv = 0; s.hits = 0; s.say = ''; s.sayT = 0; s.drops = []; s.outro = null; s.goo = 0;
     for (let i = 0; i < 70; i++) s.drops.push({ x: s.rnd() * W, y: s.rnd() * H, v: 260 + s.rnd() * 160 });
   },
@@ -226,10 +226,10 @@ GAMES.push({
     s.t += dt; s.inv = Math.max(0, s.inv - dt); s.shake = Math.max(0, (s.shake || 0) - dt); s.sayT = Math.max(0, s.sayT - dt);
     for (const d of s.drops) { d.y += d.v * dt; d.x -= d.v * 0.12 * dt; if (d.y > H) { d.y = -10; d.x = s.rnd() * (W + 40); } }
     if (s.outro) { s.outro.t += dt; if (s.outro.t > 4.2 || (s.outro.t > 1.2 && (I.ptr.clicked || I.Ap))) s.end = s.outro.end; return; }   /* at the van: you turn around */
-    const ramp = Math.min(1, s.z / s.DIST); s.v = (11 + 6 * ramp) * s.k; s.z += s.v * dt;
+    const ramp = Math.min(1, s.z / s.DIST); s.v = (16 + 9 * ramp) * s.k; s.z += s.v * dt;   /* faster: less time to decide */
     if (I.Lp || (I.ptr.clicked && I.ptr.x / W < 0.5)) s.lane = Math.max(-1, s.lane - 1);   /* three lanes, one hop at a time: no standing in between */
     if (I.Rp || (I.ptr.clicked && I.ptr.x / W >= 0.5)) s.lane = Math.min(1, s.lane + 1);
-    s.x += Math.sign(s.lane - s.x) * Math.min(Math.abs(s.lane - s.x), 4.5 * dt);   /* one hop, plank to plank */
+    s.x += Math.sign(s.lane - s.x) * Math.min(Math.abs(s.lane - s.x), 5.6 * dt);   /* one hop, plank to plank */
     while (s.z + 70 > s.next && s.next < s.DIST - 14) { this.row(s, s.next, ramp); s.next += (6.6 - 1.4 * ramp) * (0.9 + s.rnd() * 0.25); }
     for (const o of s.objs) {
       const rel = o.wz - s.z, prev = o.rel == null ? rel : o.rel; o.rel = rel;
@@ -356,10 +356,10 @@ GAMES.push({
     // junk coming at you, far to near
     const vis = s.junk.filter(q => !q.gone && q.d > s.d && (q.d - s.d) * SC < 26).sort((a, b) => b.d - a.d);
     for (const q of vis) { const f = (q.d - s.d) * SC, X = q.off / w * 0.6, Y = q.kind === 'root' ? -0.55 : q.kind === 'toy' ? 0.62 : 0.15;
-      let [x, y, r] = TUNNEL.proj(f, X, Y, ox, oy); x += sway * Math.min(1, f / 8); const lit = Math.max(0.3, 1 / (1 + (f / 13) ** 2)), sc = r * 0.38 / 30;
-      g.globalAlpha = 1; g.filter = `brightness(${Math.round(lit * 110)}%)`;
+      let [x, y, r] = TUNNEL.proj(f, X, Y, ox, oy); x += sway * Math.min(1, f / 8); const lit = Math.max(0.3, 1 / (1 + (f / 13) ** 2)), sc = r * 0.76 / 30; r *= 2;   /* 2x: big enough to see coming */
+      g.globalAlpha = 1; g.filter = `brightness(${Math.round(lit * 110)}%)`; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';   /* smooth, not blocky, at 2x */
       if (!SPC(q.kind === 'wipe' ? 'wipes' : q.kind === 'root' ? 'roots' : 'toycar', x, y, sc)) { if (q.kind === 'wipe') R(x - r * 0.3, y - r * 0.2, r * 0.6, r * 0.4, '#f4f4f2'); else if (q.kind === 'root') for (let i2 = 0; i2 < 5; i2++) R(x - r * 0.3 + i2 * r * 0.15, y - r * 0.3, r * 0.05, r * 0.5, '#8a6a3e'); else R(x - r * 0.25, y - r * 0.15, r * 0.5, r * 0.3, '#c0392b'); }
-      g.filter = 'none'; }
+      g.filter = 'none'; g.imageSmoothingEnabled = false; }
     TUNNEL.vignette(0.55);
     // the flex shaft: comes from behind you, runs away down the pipe to the chain knocker spinning a couple of feet ahead
     const fH = 3.6, hubX = ox, hubY = oy - 0.1, P = (f, X, Y) => { const q = TUNNEL.proj(f, X, Y, ox, oy); q[0] += sway * Math.min(1, Math.max(0, f) / 8); return q; };
