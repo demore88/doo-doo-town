@@ -292,7 +292,7 @@ const CALLS = [
     ring: "A new plumber says I need a whole new system. Thirty-five thousand. Can you look first?",
     intro: [['ROD', 'Free second opinion. Always.'], ['MATT', "Let's see what thirty-five thousand looks like."]],
     tool: { q: 'Is the system really shot? How do we know?', opts: ['CAMERA THE WHOLE LINE', 'TRUST THE OTHER GUY', 'DIG IT ALL UP'], right: 0, good: 'Look before anyone spends a dime.', bad: "That's how people get taken." },
-    game: 'camera', lead: 'rod', culprit: [['ROD', 'One blockage. Cleared. System is fine.'], ['CUST', 'So... not thirty-five thousand?'], ['MATT', 'About thirty-four thousand six hundred less.']], tip: 'Big quote? Get a second opinion. Ours is free.', pay: 400 },
+    game: 'camera', lead: 'rod', culprit: [['ROD', 'One blockage. Flex shaft. Under thirty minutes.'], ['ROD', 'System is fine.'], ['CUST', 'So... not thirty-five thousand?'], ['MATT', 'About thirty-four thousand six hundred less.'], ['CARD', 'ONE YEAR LATER', 'Not a single problem since.']], tip: 'Big quote? Get a second opinion. Ours is free.', pay: 400 },
   { id: 'alien', title: 'OUT OF THIS WORLD', story: true, page: 'story/alien.html', town: 'BERLIN', addr: "Rod's house", window: 999, pay: 0, game: 'cable' },
 ],
 // ---------------- OCTOBER ----------------
