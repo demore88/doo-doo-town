@@ -285,11 +285,11 @@ GAMES.push({
     // you
     { const p = this.P(s, 0, s.x), who = s.hero || 'matt', O = s.outro;
       g.fillStyle = 'rgba(30,40,20,.4)'; g.beginPath(); g.ellipse(p.x, p.y, 22, 6, 0, 0, 7); g.fill();
-      if (O) { const fr = O.t < 0.5 ? 7 : O.t < 0.8 ? 6 : 0; SPR(who, fr, p.x, p.y, false, 2.4);   /* turns around... */
-        if (O.t >= 0.8) { const sc2 = 2.4, top = p.y - 40 * sc2, n = 9 + Math.min(10, s.goo * 3);   /* ...covered */
-          for (let i = 0; i < n; i++) { const fx = Math.sin(i * 12.9898) * 0.5, fy = 0.12 + ((i * 0.618) % 1) * 0.8, x = p.x + fx * 22 * sc2 * 0.5, y = top + fy * 38 * sc2;   /* splattered head to boots, dripping */
-            if (!SPC('glob_' + (i % 4), x, y, 0.32 + (i % 3) * 0.08)) C(x, y, 4, '#6e4420'); if (i % 3 === 0) R(x, y + 3, 1.5, 3 + ((t * 6 + i * 2) % 7), '#5a3618'); }
-          SPC('poop', p.x + 2, top + 2, 0.55);   /* and one right on top of his head */
+      if (O) { const covered = !!IMG[who + '_more'], fr = O.t < 0.5 ? 7 : O.t < 0.8 ? 6 : covered ? 16 : 0; SPR(who, fr, p.x, p.y, false, 2.4);   /* turns around... in his sludge-covered pose */
+        if (O.t >= 0.8) { const sc2 = 2.4, top = p.y - 40 * sc2;
+          if (!covered) for (let i = 0; i < 12; i++) { const fx = Math.sin(i * 12.9898) * 0.5, fy = 0.12 + ((i * 0.618) % 1) * 0.8, x = p.x + fx * 22 * sc2 * 0.5, y = top + fy * 38 * sc2; if (!SPC('glob_' + (i % 4), x, y, 0.32 + (i % 3) * 0.08)) C(x, y, 4, '#6e4420'); }
+          for (let i = 0; i < 3 + s.goo; i++) R(p.x + Math.sin(i * 7.3) * 18, p.y - 10 - ((t * 40 + i * 13) % 28), 1.5, 4, '#5a3618');   /* still dripping */
+          SPC('poop', p.x + 2, top + 12, 0.5);   /* and one right on top of his head */
           for (let i = 0; i < 4; i++) { const an = t * (4 + i) + i * 1.6; R(p.x + Math.cos(an) * 24, top + 8 + Math.sin(an * 1.3) * 10, 2, 2, '#111'); }   /* flies */
           R(0, H - 46, W, 30, 'rgba(16,21,31,.85)'); T(s.hits ? 'Made it. ...Mostly.' : 'Made it! ...Wait. The RAIN.', 240, H - 37, '#f7c418', 8, 'center'); T(`${HERO(s).name === 'ROD' ? 'MATT' : 'ROD'}: "You're riding in the back."`, 240, H - 24, '#e8dcc0', 6, 'center'); } }
       else if (!(s.inv > 0 && Math.floor(t * 12) % 2)) { const f = Math.abs(s.lane - s.x), hop = f > 0.02 ? Math.sin(Math.min(1, f) * Math.PI) * 26 : 0;   /* hopping plank to plank */
