@@ -259,11 +259,12 @@ const CALLS = [
     intro: [['MATT', 'Twenty people. One tank.'], ['ROD', 'Pump first. Then talk about a bigger tank.']],
     tool: { q: 'Overloaded tank. Plan?', opts: ['FIND IT + PUMP', 'ADD ENZYMES', 'SEND EVERYONE HOME'], right: 0, good: 'Pump it.', bad: "Enzymes don't empty a tank." },
     game: 'septic', lead: 'rod', culprit: [['ROD', "Pumped. You need a bigger tank, Ned."], ['CUST', "Next year."]], tip: 'Septic additives are not a pump-out.', pay: 360 },
-  { id: 'fishy-story', title: 'THE BIG STINK', story: true, gate: 'ppe', town: 'OSSIPEE', addr: 'Route 25', cust: { name: 'PHIL', seed: 257 }, ext: 'business', room: 'basement', window: 120,
-    ring: "Fish market. Floor drains backing up. In August.",
-    intro: [['MATT', "Fish market. August. Backed up."], ['ROD', 'Full PPE. And breathe through your mouth.'], ['MATT', 'Then I TASTE it.']],
-    tool: { q: 'Fish guts in a commercial drain. Gear?', opts: ['PPE + JETTER', 'BLEACH', 'NOSE PLUGS ONLY'], right: 0, good: 'Suit up and blast it.', bad: 'The smell wins.' },
-    game: 'gag', lead: 'rod', culprit: [['ROD', 'Scales, guts, and a whole flounder.'], ['MATT', 'I have no sense of smell anymore. It is a gift.']], tip: 'Commercial drains need regular jetting.', pay: 900 },
+  { id: 'fishy-story', title: 'THE BIG STINK', story: true, town: 'OSSIPEE', addr: 'Route 25', cust: { name: 'HOST', seed: 257 }, ext: 'house', room: 'basement', window: 120,
+    ring: "Hi, I own an Airbnb. The guests say nothing downstairs drains. The line might be... frozen?",
+    intro: [['CARD', 'THE AIRBNB', 'Downstairs. Finished basement. Frozen line.'], ['ROD', "Cleanout's back here. Let me crack it."], ['CARD', 'THE CAP COMES OFF', 'Something comes out. A smell.'], ['MATT', "Oh no. Oh NO. That's fishy. That's PISSY.", 'matt_shocked'], ['MATT', "That's super smelly fishy piss.", 'matt_tired'], ['ROD', "Yep. Breathe through your mouth."], ['MATT', 'Then I TASTE it!']],
+    tool: { q: "Matt's gag reflex is going. He's about to lose it. What do you grab?", opts: ['EVERY AIR FRESHENER IN THE HOUSE', 'TOUGH IT OUT', 'OPEN A WINDOW'], right: 0, good: 'Spray it. Spray all of it.', bad: "It's winter and that smell is stronger than the wind." },
+    game: 'gag', lead: 'matt', culprit: [['CARD', 'PSSSSSSSSSHHHHHH', 'Matt empties every can of air freshener in the Airbnb.'], ['MATT', "I almost threw up. That NEVER happens.", 'matt_tired'], ['ROD', "It smells like Hawaiian Breeze and fish piss in here now."], ['MATT', 'Better than just fish piss.'], ['ROD', "Line's thawed and draining."], ['MATT', "I'm dying. I am actually dying.", 'matt_tired']],
+    tip: "Rental downstairs gets cold? Keep the heat on. Frozen lines back up, and you don't want to smell what's waiting behind them.", pay: 900 },
 ],
 // ---------------- SEPTEMBER ----------------
 [
