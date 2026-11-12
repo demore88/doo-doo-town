@@ -139,11 +139,12 @@ const CALLS = [
     intro: [['MATT', 'How long since anybody picked up the yard?'], ['CUST', 'Define "picked up".']],
     tool: { q: 'Dog minefield between you and the lid. Plan?', opts: ['WATCH YOUR STEP', 'RUN FOR IT', 'SEND ROD'], right: 0, good: 'Slow and careful.', bad: 'Squish.' },
     game: 'poop', lead: 'matt', culprit: [['MATT', 'Made it to the lid.'], ['ROD', 'Check your boots before you get in my van.']], tip: 'Keep a clear path to your septic lid.', pay: 260 },
-  { id: 'bacteria', title: 'UNDISCLOSED', story: true, gate: 'ppe', town: 'CONWAY', addr: 'Washington St', cust: { name: 'GAIL', seed: 137 }, ext: 'house', room: 'bathroom', window: 120,
-    ring: "The tub is backing up. Oh, unrelated, someone here was just in the hospital.",
-    intro: [['ROD', 'In the hospital for what?'], ['CUST', "...I'd rather not say."], ['MATT', 'Full PPE. All of it.']],
-    tool: { q: 'Unknown bacteria in the backup. Gear?', opts: ['FULL PPE + CABLE', 'GLOVES ARE ENOUGH', 'BARE HANDS, BABY'], right: 0, good: 'Suit up.', bad: 'Do you want to see the hospital too?' },
-    game: 'cable', lead: 'rod', culprit: [['ROD', "Done. Bleach everything we touched."], ['MATT', 'Including me.']], tip: 'Tell your plumber if there is illness in the house. It protects them.', pay: 650 },
+  { id: 'bacteria', title: 'UNDISCLOSED', story: true, gate: 'ppe', town: 'CONWAY', addr: 'Washington St', cust: { name: 'GAIL', seed: 137 }, ext: 'house', room: 'yard', window: 120,
+    ring: "The sewer's backing up into the garage. It's coming out under the door and down the driveway.",
+    intro: [['CARD', 'THE DRIVEWAY', "It's frozen. Brown. Shiny."], ['MATT', "That's a shit ice rink.", 'matt_stare'], ['ROD', "Roots in the main. It packed soft behind them and backed up into the garage."], ['MATT', "Anything we should know before we start?"], ['CUST', 'Nope! Nothing.']],
+    tool: { q: 'Roots and a soft clog in the main line. Gear?', opts: ['THE BIG DRAIN AUGER WITH A ROOT CUTTER', 'PLUNGER', 'SALT THE DRIVEWAY'], right: 0, good: 'Run it down. Rod, watch the splash.', bad: "The rink's not the problem. The pipe is." },
+    game: 'cable', lead: 'rod', culprit: [['CARD', 'SPLASH. SPLASH. SPLASH.', 'Rod gets hit a few times running the big auger down.'], ['ROD', "Roots are cut. She's flowing."], ['CARD', 'A CAR PULLS IN', 'A home health nurse gets out and stares at them.'], ['NURSE', "Why aren't you two wearing PPE?"], ['MATT', '...Why WOULD we be?', 'matt_shocked'], ['NURSE', 'The homeowner has C. diff.'], ['ROD', '...', 'rod_stare'], ['ROD', "Nobody told us. We asked.", 'rod_annoyed'], ['ROD', "That's the last time we come to this house. You don't hide that from the guys working in your sewer.", 'rod_annoyed'], ['MATT', 'Bleach. All of it. Me included.']],
+    tip: "Tell your plumber if anyone in the house is sick. They're working in it. It's their health too.", pay: 650 },
 ],
 // ---------------- MAY ----------------
 [
