@@ -17,12 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794469046"></script>
-<script src="js/calls.js?v=1794469046"></script>
-<script src="js/banter.js?v=1794469046"></script>
-<script src="js/placeholders.js?v=1794469046"></script>
-<script src="js/music.js?v=1794469046"></script>
-<script src="js/sfx.js?v=1794469046"></script>
+<script src="js/state.js?v=1794469803"></script>
+<script src="js/calls.js?v=1794469803"></script>
+<script src="js/banter.js?v=1794469803"></script>
+<script src="js/placeholders.js?v=1794469803"></script>
+<script src="js/music.js?v=1794469803"></script>
+<script src="js/sfx.js?v=1794469803"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -1322,7 +1322,7 @@ async function secretDrift() {
   await say(ME, p(who === 'rod' ? 'smug' : 'happy'), `The van keys are right there. ${OTHER === 'ROD' ? 'Rod' : 'Matt'} never has to know.`);
   s = DDT.get(); s.drift = 'night'; s.driftWho = who; s.driftN = (s.driftN || 0) + 1; s.driftMonth = s.month; DDT.save(s);
   try { localStorage.removeItem('ddt_mg'); } catch (e) {}
-  await go(`arcade/index.html?play=drift&diff=1&lead=${who}&job=${encodeURIComponent('MIDNIGHT · THE AUTO ROAD')}&${RET}`);
+  await go(`index.html?drive=1&rival=1&drift=1&driver=${who}&from=BERLIN&to=BOTTOM&route=${encodeURIComponent('Auto Road')}&leave=0&due=999&mode=2&${RET}`);
 }
 // =====================================================================
 // main loop

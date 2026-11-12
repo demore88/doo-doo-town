@@ -90,14 +90,26 @@ function drive3d(choice, opts) {
     LEGS_HERE = []; let at = 'BERLIN', last = null, mi = 0;
     while (mi < 480) { const opt = LEGS.filter(L => (L.a === at || L.b === at) && L !== last), L = opt[Math.floor(Math.random() * opt.length)] || LEGS[0], rev = L.a !== at;
       LEGS_HERE.push({ ...L, rev }); mi += L.mi; at = rev ? L.a : L.b; last = L; } }
+  if (opts.drift) LEGS_HERE = [{ rt: 'AUTO RD', name: 'MT WASHINGTON AUTO ROAD', mi: 7, curve: 0, hill: 0, heave: 0, busy: 0, scene: ['notch'] }];
   if (!LEGS_HERE || !LEGS_HERE.length) LEGS_HERE = [{ rt: (opts.route || 'Route 16').toUpperCase().replace('ROUTE', 'RT'), name: '', mi: 12, curve: 3.5, hill: 700, heave: 0.2, busy: 1, scene: [] }];
   const TOTAL_MI = LEGS_HERE.reduce((a, L) => a + L.mi, 0);
-  const RACE = !!opts.rival;   // racing the Clog Kings: a long open-road run, about two minutes flat out
+  const RACE = !!opts.rival, DRIFT = !!opts.drift;   // DRIFT: the midnight downhill race on the Auto Road, all hairpins   // racing the Clog Kings: a long open-road run, about two minutes flat out
   const SEG_PER_MI = RACE ? (125 * TOP * 0.88 / SEG) / TOTAL_MI : opts.endless ? 40 : Math.max(48, Math.min(110, 1450 / TOTAL_MI));            // short hops still feel like a drive; long hauls don't drag forever
   const legAt = [];   // which leg each segment belongs to
   add(40, 0, 0); for (let i = 0; i < 40; i++) legAt.push(0);
+  if (DRIFT) {   /* long, sharp hairpins, back and forth, all the way down the mountain */
+    let dir = Math.random() < 0.5 ? 1 : -1; const P = [];
+    for (let k = 0; k < 20; k++) { const kind = k % 4 === 3 ? 'ess' : k % 3 === 1 ? 'sweeper' : 'hairpin'; P.push(kind); }
+    for (const kind of P) {
+      add(Math.round(rnd(14, 30)), 0, -rnd(200, 500));   /* a short straight to set up */
+      if (kind === 'hairpin') add(Math.round(rnd(140, 180)), dir * rnd(10, 12.5), -rnd(600, 1200));
+      else if (kind === 'sweeper') add(Math.round(rnd(160, 200)), dir * rnd(6.5, 8), -rnd(800, 1500));
+      else { add(Math.round(rnd(60, 75)), dir * 8, -rnd(300, 600)); dir = -dir; add(Math.round(rnd(60, 75)), dir * 8, -rnd(300, 600)); }
+      dir = -dir; }
+    while (legAt.length < segs.length) legAt.push(0);
+  }
   LEGS_HERE.forEach((L, li) => {
-    const n = Math.round(L.mi * SEG_PER_MI), start = segs.length;
+    const n = DRIFT ? 0 : Math.round(L.mi * SEG_PER_MI), start = segs.length;
     while (segs.length - start < n) {
       const u = (segs.length - start) / n, left = n - (segs.length - start), r = Math.random();
       const up = L.climb ? (u < (L.rev ? 0.4 : 0.6) ? (L.rev ? -1 : 1) : (L.rev ? 1 : -1)) : 0;   // a notch: up one side, down the other
@@ -228,7 +240,7 @@ function drive3d(choice, opts) {
   if (FALL) for (let n = 80; n < N - 80; n += 160) put(n, sign(['SCENIC', 'VIEW'], '#5a3e26'), -1.5, 1.2);
 
   // ---------- the rival: the CLOG KINGS van, racing you to the same job ----------
-  const RIVAL = !!opts.rival;
+  const RIVAL = !!opts.rival; let drift = 0, dmeter = 0, dboost = 0, smoke = [];
   let rz = PZ + 45 * SEG, rv = 0, roff = LANE[1], rivalWon = false, rivalImg = null, rivalBump = 0;
   let rivalLane = LANE[1], rivalT = 0, rivalSlip = 0;
   function makeRival() {   // repaint our van in Clog Kings colors (blue->red, yellow->black) once the art has loaded
@@ -255,7 +267,8 @@ function drive3d(choice, opts) {
   // traffic lives in a window around the van: anything that falls behind gets sent back up the road (so it never runs dry)
   const BUSY_MAX = Math.max(...LEGS_HERE.map(L => L.busy || 1));
   if (opts.jam) { MODE.cars = Math.round(MODE.cars * 1.8); MODE.onc = 0.5; }   /* the memorial night: everybody is on the road */
-  if (RACE) { MODE.cars = Math.max(2, Math.round(MODE.cars * 0.45)); MODE.crit = Math.max(1, Math.round(MODE.crit * 0.5)); }   // less traffic in the way of the race
+  if (DRIFT) { MODE.cars = 0; MODE.crit = 0; MODE.onc = 0; }
+  if (RACE && !DRIFT) { MODE.cars = Math.max(2, Math.round(MODE.cars * 0.45)); MODE.crit = Math.max(1, Math.round(MODE.crit * 0.5)); }   // less traffic in the way of the race
   for (let i = 0; i < (opts.endless ? 4 : Math.round(MODE.cars * Math.min(1, Math.max(0.6, BUSY_MAX)))); i++) { let c, tries = 0; do { c = addCar(rnd(14, DRAW) * SEG, Math.random() < MODE.onc); tries++; } while (tries < 10 && cars.some(o => o.lane === c.lane && Math.abs(o.z - c.z) < 4 * SEG)); cars.push(c); }
   const curbPlace = (c, z) => { const right = Math.random() < 0.6; c.z = z; c.side = right ? 1 : -1; c.off = c.tgt = right ? rtAt(z) + 0.05 : ltAt(z) - 0.05; c.img = right ? CAR_B[Math.floor(Math.random() * CAR_B.length)] : CAR_F[Math.floor(Math.random() * CAR_F.length)]; c.hw = (c.img.width || 44) * c.sc / 320; };
   if (opts.jam) for (let z = 10 * SEG; z < (N - 60) * SEG && z < DRAW * SEG; z += rnd(3, 7) * SEG) { const c = { lane: 99, speed: 0, onc: false, sc: 1.3, truck: false, blink: 0, wo: 0, curb: true }; curbPlace(c, z); cars.push(c); }   /* parked on both sides of the road, all the way there */
@@ -264,7 +277,8 @@ function drive3d(choice, opts) {
   if (typeof DDT !== 'undefined' && DDT.DEV) { window.__kidsmom = () => startKidsMomCall(); window.__yukon = () => { let n; for (let i = 0; i < 400; i++) { n = addCar(pos + PZ + 12 * SEG, false); if (n.yukon) break; } cars.push(n); }; }
   if (typeof DDT !== 'undefined' && DDT.DEV) { window.__kidsmom = () => startKidsMomCall(); window.__yukon = () => { const n = addCar(pos + PZ + 12 * SEG, false); for (let i = 0; i < 300 && !n.yukon; i++) Object.assign(n, addCar(pos + PZ + 12 * SEG, false)); cars.push(n); }; }
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__jump = mi => { pos = mi * SEG_PER_MI * SEG; };   /* dev: jump down the road */
-  if (typeof DDT !== 'undefined' && DDT.DEV) window.__px = () => px;   /* dev: where the van is across the road */
+  if (typeof DDT !== 'undefined' && DDT.DEV) window.__px = () => px;
+  if (typeof DDT !== 'undefined' && DDT.DEV) window.__drift = () => ({ px, c: segAt(pos + PZ + 6 * SEG).curve, c0: segAt(pos + PZ).curve, gap: (rz - (pos + PZ)) / SEG, left: N - 40 - (pos + PZ) / SEG, won: rivalWon, crashes, done, sp: speed / TOP });   /* dev: where the van is across the road */
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__critter = (kind, ahead) => critters.push({ seg: Math.floor((pos + PZ) / SEG) + (ahead || 30), kind, off: ahead < 4 ? px : px + 1.2, dir: ahead < 4 ? 1 : 0, hit: false, snap: 0, flash: 0 });   /* dev: drop an animal ahead */   // dev: lets the test harness check for overlaps
   const respawn = (c, base) => {   // reappear
     if (c.curb && !(c.spin > 0)) { const far = Math.max(base + DRAW * 0.6 * SEG, ...cars.filter(o => o.curb && !o.parked).map(o => o.z)); const z = far + rnd(3, 7) * SEG; if (z > (N - 60) * SEG) { c.z = -1e12; c.parked = true; c.retry = 0; return; } curbPlace(c, z); return; }   /* curb cars leapfrog ahead; everything else: far up the road (out at the horizon), in a lane with room, and never in the last stretch before town */
@@ -293,15 +307,15 @@ function drive3d(choice, opts) {
   // ---------- state + input ----------
   let artOK = false, wasLive = false, offT = 0, pos = 0, speed = 0, px = LANE[2], t = 0, play = 0, crashes = 0, penalty = 0, inv = 0, shake = 0, msg = '', msgT = 0, done = false, last = null, bounce = 0, skyX = 0;
   const key = { L: 0, R: 0, U: 0, D: 0 }, touch = { L: 0, R: 0, U: 0, D: 0 };
-  const KM = { arrowleft: 'L', a: 'L', arrowright: 'R', d: 'R', arrowup: 'U', w: 'U', arrowdown: 'D', s: 'D', ' ': 'D' };
+  const KM = { arrowleft: 'L', a: 'L', arrowright: 'R', d: 'R', arrowup: 'U', w: 'U', arrowdown: 'D', s: 'D', ' ': DRIFT ? 'X' : 'D', shift: 'X', x: 'X' };
   const kd = e => { if (e.key === ']') key.skip = 1; const k = KM[e.key.toLowerCase()]; if (k) { e.preventDefault(); key[k] = 1; } };
   const ku = e => { const k = KM[e.key.toLowerCase()]; if (k) key[k] = 0; };
   addEventListener('keydown', kd); addEventListener('keyup', ku);
   const pts = new Map();
   function zone(e) { const b = rc.getBoundingClientRect(), x = (e.clientX - b.left) / b.width, y = (e.clientY - b.top) / b.height;
-    if (y > 0.74 && (x < 0.22 || x > 0.78)) return 'D'; return x < 0.5 ? 'L' : 'R'; }   // brake in both bottom corners, steer with either side
+    if (DRIFT && y > 0.74 && x < 0.22) return 'X'; if (y > 0.74 && (x < 0.22 || x > 0.78)) return 'D'; return x < 0.5 ? 'L' : 'R'; }   // brake in both bottom corners, steer with either side
   // phone: one thumb steers. Both thumbs down (left AND right) = gas. No thumbs = cruise.
-  function retouch() { touch.L = touch.R = touch.U = touch.D = 0; for (const z of pts.values()) touch[z] = 1; if (TILT) { touch.U = (touch.L || touch.R) && !touch.D ? 1 : 0; touch.L = touch.R = 0; return; } if (touch.L && touch.R && !touch.D) touch.U = 1; }
+  function retouch() { touch.L = touch.R = touch.U = touch.D = touch.X = 0; for (const z of pts.values()) touch[z] = 1; if (TILT) { touch.U = (touch.L || touch.R) && !touch.D ? 1 : 0; touch.L = touch.R = 0; return; } if (touch.L && touch.R && !touch.D) touch.U = 1; }
   const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   /* TILT STEER (menu toggle): turn the phone like a steering wheel. Hold anywhere = gas, bottom corners = brake.
      Works out which way is "down" on the screen from the phone's orientation, so it doesn't matter how far back you hold it. */
@@ -421,10 +435,17 @@ function drive3d(choice, opts) {
       let steer = live ? (Rr ? 1 : 0) - (L ? 1 : 0) : 0;
       if (TILT && live && !key.L && !key.R) steer = tiltSteer();
       px += steer * dt * 2.1 * (0.35 + 0.65 * ratio);
-      px -= seg.curve * ratio * ratio * dt * 0.42;
+      if (DRIFT) {   /* hold DRIFT and steer into the hairpin: the van slides around it instead of fighting it. Let go after a long one: BOOST */
+        const want = live && (key.X || touch.X) && ratio > 0.45 && steer !== 0, into = steer !== 0 && Math.sign(steer) === Math.sign(seg.curve) && Math.abs(seg.curve) > 1.5;
+        if (want) { drift = Math.min(1, drift + dt * 3); if (into) dmeter = Math.min(1, dmeter + dt * 0.4); speed -= speed * 0.04 * dt; px += steer * dt * 0.9 * drift; if (Math.random() < dt * 40) smoke.push({ x: W / 2 + (Math.random() - 0.5) * 70, y: H - 34, r: 5, l: 0.9 }); }
+        else { if (drift > 0.2 && dmeter > 0.3) { dboost = 0.8 + dmeter * 1.6; say(dmeter > 0.8 ? 'MONSTER DRIFT! BOOST!' : 'BOOST!', 1.1); sfx('ui_select', { vol: 0.4 }); } dmeter = 0; drift = Math.max(0, drift - dt * 4); }
+        dboost = Math.max(0, dboost - dt); if (dboost > 0) speed = Math.min(BOOST * 1.2, speed + BOOST * 0.6 * dt);
+        smoke.forEach(q => { q.l -= dt; q.r += dt * 34; q.y -= dt * 14; }); smoke = smoke.filter(q => q.l > 0);
+        px -= seg.curve * ratio * ratio * dt * 0.55 * (1 - 0.75 * drift);
+      } else px -= seg.curve * ratio * ratio * dt * 0.42;
       // off the road: grass (or a snowbank) slows you down hard
       const RT = seg.rt || 1, LT = seg.lt || -1, offR = px < LT || px > RT, outBy = px < LT ? LT - px : px - RT;
-      if ((SNOW || opts.endless || RACE) && outBy > -0.04) { px = px < LT + 0.1 ? LT + 0.16 : RT - 0.16; speed *= Math.pow(0.35, dt);   /* no hiding on the shoulder: the bank kicks you back into the lane */ shake = Math.max(shake, 0.15); if (!draw.bankT || t - draw.bankT > 2) { draw.bankT = t; say('SNOWBANK!', 0.8); } }   /* the plow berm won't let you off the road */
+      if ((SNOW || opts.endless || RACE) && outBy > -0.04) { px = px < LT + 0.1 ? LT + 0.16 : RT - 0.16; speed *= Math.pow(DRIFT ? 0.06 : 0.35, dt);   /* no hiding on the shoulder: the bank kicks you back into the lane */ shake = Math.max(shake, 0.15); if (!draw.bankT || t - draw.bankT > 2) { draw.bankT = t; say('SNOWBANK!', 0.8); } }   /* the plow berm won't let you off the road */
       if (offR) { const deep = SNOW && outBy > 0.1, floor = (deep ? 0.07 : SNOW ? 0.15 : 0.22) * MAX; if (live) { penalty += dt * (deep ? 0.9 : 0.4); offT = (offT || 0) + dt; } /* stuck in it: minutes tick away */ if (speed > floor) speed = floor + (speed - floor) * Math.pow(0.1, dt); /* grass/snow drags you to a crawl, never backwards */ shake = Math.max(shake, 0.08); if (SNOW && Math.abs(px) > 1.15) { px = Math.sign(px) * 1.15; if (msgT <= 0) say('SNOWBANK!', 0.8); } }
       px = Math.max(LT - 0.6, Math.min(RT + 0.6, px));
       if (live) { pos += speed * dt; play += dt; if (opts.endless && px > LT + 0.08 && px < RT - 0.08) distPts += speed * dt / (SEG * SEG_PER_MI) * 100 * Math.pow(Math.min(1, speed / TOP), 1.5); }   /* points only while you're in a lane */   /* 100 a mile flat out; crawling earns a lot less */
@@ -518,7 +539,8 @@ function drive3d(choice, opts) {
       // the rival: weaves through traffic to get around slow cars, gets boxed in and slowed down, and can be beaten
       if (RIVAL && live) {
         const gap = (rz - (pos + PZ)) / SEG;
-        let want = TOP * (gap > 120 ? 0.62 : gap > 40 ? 0.76 : gap > 3 ? 0.84 : gap < -30 ? 1.0 : 0.9);   // when they're ahead they run a bit under your top speed, so holding the pedal down reels them in slowly
+        let want = TOP * (gap > 120 ? 0.62 : gap > 40 ? 0.76 : gap > 3 ? 0.84 : gap < -30 ? 1.0 : 0.9);
+        if (DRIFT) { const rc = Math.abs(segAt(rz).curve); want = TOP * (gap > 60 ? 0.9 : gap > 3 ? 0.98 : gap < -40 ? 1.12 : 1.04) * (1 - Math.max(0, rc - 7) * 0.03); const ins = segAt(rz).curve > 1.5 ? LANE[2] : segAt(rz).curve < -1.5 ? LANE[0] : LANE[1]; rivalLane = ins; }   /* they know the road: inside line, and they lift for the tight ones */   // when they're ahead they run a bit under your top speed, so holding the pedal down reels them in slowly
         rivalT = (rivalT || 0) - dt; rivalSlip = Math.max(0, (rivalSlip || 0) - dt);
         const blocking = cars.filter(o => !o.parked && Math.abs(o.off - rivalLane) < 0.3 && o.z > rz && o.z - rz < 3.2 * SEG && !o.onc);
         if (blocking.length) {
@@ -679,11 +701,18 @@ function drive3d(choice, opts) {
       for (const cr of critters) if (cr.react > 0 && cr.react < 2.6) { const mf = mooseFrame(Math.min(5, Math.floor(cr.react / 0.42))); if (!mf) continue;
         const dh = 170, dw = mf.width * dh / mf.height, cx = W / 2 + steer * 6 + Math.max(-60, Math.min(60, (cr.off - px) * 90)), by = H - 30;
         r.save(); if (cr.react < 0.25) r.translate((Math.random() - 0.5) * 3, 0); if (cr.dir > 0) { r.translate(cx, 0); r.scale(-1, 1); r.drawImage(mf, -dw / 2, by - dh, dw, dh); } else r.drawImage(mf, cx - dw / 2, by - dh, dw, dh); r.restore(); }
+      if (DRIFT) {   /* midnight: everything goes dark blue, our headlights light up the road ahead */
+        r.save(); r.globalCompositeOperation = 'multiply'; r.fillStyle = '#26305a'; r.fillRect(0, 0, W, H); r.restore();
+        const hl = r.createRadialGradient(W / 2, H - 40, 8, W / 2, H - 90, 210); hl.addColorStop(0, 'rgba(255,236,190,.34)'); hl.addColorStop(0.6, 'rgba(255,236,190,.1)'); hl.addColorStop(1, 'rgba(255,236,190,0)');
+        r.save(); r.globalCompositeOperation = 'screen'; r.fillStyle = hl; r.fillRect(0, HORIZON, W, H - HORIZON); r.restore();
+        r.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < 40; i++) r.fillRect((i * 97 + 13) % W, (i * 31) % (HORIZON - 30), 1, 1);
+        for (const q of smoke) { r.globalAlpha = Math.max(0, q.l) * 0.45; r.fillStyle = '#c9ccd6'; r.beginPath(); r.arc(q.x, q.y, q.r, 0, 7); r.fill(); } r.globalAlpha = 1; }
       // our van
       if (!(inv > 0 && Math.floor(t * 10) % 2)) {
         const vx = W / 2 - 36 + steer * 6, vy = H - 58 - bounce * 6 + (Math.abs(px) > 1 ? (Math.random() - .5) * 3 : 0);
         if (VANS.complete && VANS.naturalWidth) { const fi = (brake ? 3 : 0) + (steer > 0.3 ? 2 : steer < -0.3 ? 1 : 0);   /* right turn shows the van's right side */
-          r.drawImage(VANS, fi * VANS.width / 6, 0, VANS.width / 6, VANS.height, Math.round(vx + 36 - VCW / 2), Math.round(vy + 52 - VCH), VCW, VCH); }
+          if (DRIFT && drift > 0.05) { r.save(); r.translate(vx + 36, vy + 52); r.rotate(drift * Math.sign(steer || 0) * 0.17); r.drawImage(VANS, fi * VANS.width / 6, 0, VANS.width / 6, VANS.height, -VCW / 2, -VCH, VCW, VCH); r.restore(); }
+          else r.drawImage(VANS, fi * VANS.width / 6, 0, VANS.width / 6, VANS.height, Math.round(vx + 36 - VCW / 2), Math.round(vy + 52 - VCH), VCW, VCH); }
         else if (vanFail) { r.save(); r.translate(vx + 36, vy + 52); r.rotate(steer * 0.04); r.scale(1.35, 1.35); r.drawImage(brake ? VANBRAKE : VAN, -36, -52); r.restore(); }
         if (gas && speed > CRUISE * 0.9) { r.fillStyle = 'rgba(200,200,205,.6)'; for (let i = 0; i < 3; i++) r.fillRect(vx + 20 + Math.random() * 4, vy + 50 + i * 3, 3, 2); }
       }
@@ -760,7 +789,7 @@ function drive3d(choice, opts) {
       r.fillStyle = 'rgba(16,21,31,.92)'; r.fillRect(0, 0, W, 20);
       r.font = '8px "Press Start 2P", monospace'; r.textBaseline = 'middle'; r.textAlign = 'left';
       if (opts.endless) { const mi = pos / SEG / SEG_PER_MI, lanes = ourLanes(pos + PZ) + oncLanes(pos + PZ); r.fillStyle = '#f7c418'; r.fillText('THE DRIVING GAME', 6, 10); r.textAlign = 'right'; r.fillStyle = lanes > 3 ? '#e9665a' : '#fff'; r.fillText(`${lanes} LANES`, 474, 10); r.textAlign = 'left'; }   /* no clock, no destination: just the road */
-      else if (RACE) { r.fillStyle = '#e9665a'; r.fillText('RACE THE CLOG KINGS', 6, 10); r.fillStyle = '#fff'; r.textAlign = 'right'; r.fillText(to.slice(0, 9), 474, 10); r.textAlign = 'left'; }
+      else if (RACE) { r.fillStyle = '#e9665a'; r.fillText(DRIFT ? 'DOWNHILL DRIFT' : 'RACE THE CLOG KINGS', 6, 10); r.fillStyle = '#fff'; r.textAlign = 'right'; r.fillText(to.slice(0, 9), 474, 10); r.textAlign = 'left'; }
       else {
       r.fillStyle = late ? '#e9665a' : '#fff'; r.fillText(opts.clock(mins), 6, 10);
       r.fillStyle = '#f7c418'; r.fillText('DUE ' + opts.clock(opts.due).replace(/ ?[AP]M/, ''), 82, 10);
@@ -805,8 +834,11 @@ function drive3d(choice, opts) {
         r.textAlign = 'left'; }
       // phone buttons (also show what the keys do)
       if (true) {   // brake in both corners, gas = both thumbs (keyboard: ▲)
-        r.fillStyle = brake ? 'rgba(233,102,90,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40); r.fillRect(W - 96, H - 46, 92, 40);
-        r.fillStyle = '#fff'; r.textAlign = 'center'; r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', 50, H - 26); r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', W - 50, H - 26);
+        if (DRIFT) { const dh = key.X || touch.X; r.fillStyle = dh ? 'rgba(247,196,24,.65)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40); r.fillStyle = brake ? 'rgba(233,102,90,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(W - 96, H - 46, 92, 40);
+          r.fillStyle = '#fff'; r.textAlign = 'center'; r.fillText(dh ? 'DRIFT!' : 'DRIFT', 50, H - 26); r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', W - 50, H - 26);
+          r.fillStyle = '#222'; r.fillRect(4, H - 56, 92, 6); r.fillStyle = dmeter > 0.8 ? '#ff7a2a' : '#f7c418'; r.fillRect(5, H - 55, 90 * dmeter, 4); }
+        else { r.fillStyle = brake ? 'rgba(233,102,90,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40); r.fillRect(W - 96, H - 46, 92, 40);
+        r.fillStyle = '#fff'; r.textAlign = 'center'; r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', 50, H - 26); r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', W - 50, H - 26); }
         if (gas) { r.fillStyle = '#7bd65b'; r.textAlign = 'right'; r.fillText('GAS!', W - 10, crashes ? 66 : 52); } r.textAlign = 'left';
       } else {
         r.fillStyle = gas ? 'rgba(123,214,91,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40);
@@ -821,7 +853,7 @@ function drive3d(choice, opts) {
       } else if (t < 2.0) {
         r.fillStyle = 'rgba(16,21,31,.9)'; r.fillRect(110, 70, 260, 90);
         r.fillStyle = '#f7c418'; r.textAlign = 'center'; r.fillText((opts.route || 'ROUTE 2').toUpperCase(), 240, 86);
-        r.fillStyle = '#fff'; r.fillText(TILT ? 'TILT TO STEER · HOLD = GAS' : TOUCH ? 'ONE THUMB STEERS · BOTH = GAS' : '◀ ▶ STEER   ▲ GAS   ▼ BRAKE', 240, 106);
+        r.fillStyle = '#fff'; r.fillText(DRIFT ? (TOUCH ? 'STEER WITH EITHER SIDE · HOLD DRIFT INTO THE HAIRPINS' : '◀ ▶ STEER   SPACE: HOLD TO DRIFT   ▼ BRAKE') : TILT ? 'TILT TO STEER · HOLD = GAS' : TOUCH ? 'ONE THUMB STEERS · BOTH = GAS' : '◀ ▶ STEER   ▲ GAS   ▼ BRAKE', 240, 106);
         if (RIVAL) { r.fillStyle = '#e9665a'; r.fillText('RACE THE CLOG KINGS!', 240, 96); }
         r.fillStyle = '#9fb3d9'; r.fillText(`${DRIVER === 'matt' ? 'MATT' : 'ROD'} DRIVES · TOP ${opts.endless || RACE ? 50 : DRIVER === 'matt' ? 60 : 40} MPH`, 240, 124); r.fillText('WATCH FOR BLINKERS + MOOSE', 240, 138);
         r.fillStyle = '#f7c418'; r.font = '12px "Press Start 2P", monospace'; r.fillText(t < 1.2 ? 'READY' : 'GO!', 240, 154); r.textAlign = 'left';
