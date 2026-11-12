@@ -113,15 +113,15 @@
   <div class="scr" id="result"><div class="box" id="resbox"></div></div>
 </div></div>
 <audio id="music" src="../assets/doo_doo_town.mp3" loop preload="auto"></audio>
-<script src="../js/state.js?v=1794278080"></script>
-<script src="../js/sfx.js?v=1794278080"></script>
-<script src="games.js?v=1794278080"></script>
+<script src="../js/state.js?v=1794441941"></script>
+<script src="../js/sfx.js?v=1794441941"></script>
+<script src="games.js?v=1794441941"></script>
 <script>
 const cv = document.getElementById('c'); g = cv.getContext('2d'); const SCALE = 3; g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
 const $ = s => document.querySelector(s);
 const DIFF_K = [0.85, 1, 1.2], DIFF_N = ['EASY', 'NORMAL', 'HARD'];
 let diff = 1, cur = null, s = null, phase = 'menu', readyT = 0, last = 0, soundOn = false;
-let hero = DDT.param('lead') === 'matt' ? 'matt' : DDT.param('lead') === 'rod' ? 'rod' : ((DDT.get() || {}).arcadeHero || 'matt');
+let hero = DDT.param('lead') === 'matt' ? 'matt' : DDT.param('lead') === 'rod' ? 'rod' : ((() => { try { return localStorage.getItem('ddt_hero'); } catch (e) { return null; } })() || (DDT.get() || {}).arcadeHero || 'matt');   /* the main menu's PLAYER pick */
 DDT.root = '../';
 // EMBED MODE: arcade/index.html?play=<id>&diff=<0-2>&ret=<url> plays one game as part of a job, then hands back.
 const EMBED = DDT.param('play');
@@ -208,7 +208,7 @@ function buildGrid() {
     $('#grid').appendChild(b); }
 }
 function heroPills() { document.querySelectorAll('#heroes .pill').forEach(q => q.classList.toggle('on', q.dataset.h === hero)); }
-document.querySelectorAll('#heroes .pill').forEach(p => p.onclick = () => { hero = p.dataset.h; heroPills(); try { const sv = DDT.get(); sv.arcadeHero = hero; DDT.save(sv); } catch (e) {} });
+document.querySelectorAll('#heroes .pill').forEach(p => p.onclick = () => { hero = p.dataset.h; heroPills(); try { localStorage.setItem('ddt_hero', hero); } catch (e) {} try { const sv = DDT.get(); sv.arcadeHero = hero; DDT.save(sv); } catch (e) {} });
 heroPills();
 document.querySelectorAll('#diffs .pill').forEach(p => p.onclick = () => { diff = +p.dataset.d; document.querySelectorAll('#diffs .pill').forEach(q => q.classList.toggle('on', q === p)); buildGrid(); });
 function screen(id) { document.querySelectorAll('.scr').forEach(x => x.classList.toggle('on', x.id === id)); }

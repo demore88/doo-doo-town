@@ -26,6 +26,9 @@
   #press{margin-top:3%;font-size:clamp(8px,1.8cqw,18px);color:#fff;background:#10151fd9;padding:.6em 1em;text-shadow:2px 2px 0 #000;animation:blink 1s steps(2) infinite;pointer-events:auto;cursor:pointer}
   @keyframes blink{50%{opacity:0}}
   #press{position:absolute;top:2%;left:1.5%;margin:0;font-size:clamp(6px,1cqw,11px);white-space:nowrap;display:none;border:2px solid #fff}
+  #pick{position:absolute;top:2.2%;right:1.5%;display:flex;align-items:center;gap:.5em;pointer-events:auto;background:#10151fd9;padding:.35em .5em;border:2px solid #f7c418;font-size:clamp(6px,0.9cqw,10px);text-shadow:2px 2px 0 #000}
+  #pick button{width:clamp(30px,4.6cqw,50px);aspect-ratio:1;padding:0;border-radius:50%;border:3px solid #444c5c;background:#1d2433 center/cover no-repeat;cursor:pointer;opacity:.45;filter:grayscale(.7);transition:opacity .15s}
+  #pick button.on{border-color:#f7c418;opacity:1;filter:none;box-shadow:0 0 0 2px #10151f,0 0 10px #f7c418}
   #drivecol{position:absolute;right:3%;top:40%;width:clamp(120px,22cqw,250px);display:flex;flex-direction:column;gap:.5em;pointer-events:auto} #drivestats{font-size:clamp(6px,1cqw,11px);padding:.5em}
   #drivebtn{width:100%;padding:.4em;display:flex;flex-direction:column;align-items:center;gap:.35em;pointer-events:auto}
   #drivebtn img{width:100%;image-rendering:pixelated;border:2px solid #10151f;display:block} #drivebtn b{font-size:1.15em;color:#f7c418} #drivebtn span{font-size:.6em;color:#7dffb0;text-align:center;line-height:1.5}
@@ -143,6 +146,7 @@
       <button class="btn" data-a="credits">CREDITS</button>
       <button class="btn dev" data-a="scenes">CUTSCENES (DEV)</button>
     </div>
+    <div id="pick">PLAYER<button data-h="matt" title="Play as Matt" style="background-image:url(assets/matt_normal.png)"></button><button data-h="rod" title="Play as Rod" style="background-image:url(assets/rod_normal.png)"></button></div>
     <div id="drivecol"><button id="drivebtn" class="btn"><img src="assets/drive_thumb.png" alt=""><b>DRIVE</b><span id="bestdrive"></span></button><button id="drivestats" class="btn">DRIVE RECORD</button><button id="tiltbtn" class="btn" style="font-size:clamp(6px,1cqw,11px);padding:.5em">TILT STEER: OFF</button></div>
   </div>
   <button id="sound" title="Music on/off">♪</button>
@@ -186,11 +190,11 @@
 
 <audio id="music" src="assets/doo_doo_town.mp3" loop preload="auto"></audio>
 <audio id="call" src="assets/call_fluffernutter.mp3" preload="auto"></audio>
-<script src="js/state.js?v=1794426609"></script>
-<script src="js/sfx.js?v=1794426609"></script>
-<script src="js/sqcalls.js?v=1794426609"></script>
-<script src="js/drive3d.js?v=1794426609"></script>
-<script src="js/music.js?v=1794426609"></script>
+<script src="js/state.js?v=1794441941"></script>
+<script src="js/sfx.js?v=1794441941"></script>
+<script src="js/sqcalls.js?v=1794441941"></script>
+<script src="js/drive3d.js?v=1794441941"></script>
+<script src="js/music.js?v=1794441941"></script>
 <script>
 const W = 480, H = 270, LOOP_W = 6688;           // strip loop width at 270px tall
 const cv = document.getElementById('c'), g = cv.getContext('2d');
@@ -757,6 +761,10 @@ document.getElementById('drivestats').onclick = () => { let R = {}; try { R = JS
   tb.onclick = async () => { const on = !get();
     if (on && typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) { try { if (await DeviceOrientationEvent.requestPermission() !== 'granted') return; } catch (e) { return; } }   /* iPhones ask first */
     try { localStorage.setItem('ddt_tilt', on ? '1' : '0'); } catch (e) {} show(); }; }
+{ const P = document.getElementById('pick'), get = () => { try { return localStorage.getItem('ddt_hero') === 'rod' ? 'rod' : 'matt'; } catch (e) { return 'matt'; } };   /* the default player: mini-games and the Driving Game (story jobs still pick who goes) */
+  const show = () => P.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.h === get()));
+  P.querySelectorAll('button').forEach(b => b.onclick = e => { e.stopPropagation(); try { localStorage.setItem('ddt_hero', b.dataset.h); const sv = DDT.get(); if (sv) { sv.arcadeHero = b.dataset.h; DDT.save(sv); } } catch (_) {} show(); try { DDTSfx.play('ui_tap'); } catch (_) {} });
+  show(); }
 document.getElementById('drivebtn').onclick = () => DDT.nav('index.html?drive=1&endless=1&from=BERLIN&to=CONWAY&route=' + encodeURIComponent('Route 16') + '&leave=420&due=1200&mode=1&ret=index.html');
 
 // ---------- campaign embeds ----------
@@ -772,14 +780,15 @@ async function embedDrive() {
   $('#phone').style.display = 'none'; $('#opts').innerHTML = ''; $('#road').style.display = 'none';
   $('#next').style.display = 'none'; $('#skip').style.display = 'none'; $('#mattport').style.display = 'none';
   $('#card').innerHTML = `${clock(LEAVE)} · LEAVING ${from}<br>DUE IN ${to} BY ${clock(DUE)}`;
-  const drv = ((DDT.get() || {}).today || {}).lead === 'matt' ? 'MATT' : 'ROD';   // whoever's driving asks
+  const DEF = (() => { try { return localStorage.getItem('ddt_hero') === 'rod' ? 'rod' : 'matt'; } catch (e) { return 'matt'; } })(), FREE = DDT.param('endless') === '1' || DDT.param('arcade') === '1';
+  const drv = (FREE ? DEF : ((DDT.get() || {}).today || {}).lead) === 'matt' ? 'MATT' : 'ROD';   // whoever's driving asks (the menu's PLAYER in the Driving Game)
   const pre = DDT.param('mode');   // already picked in the van (DRIVE menu): skip the question
   const c = pre !== null && pre !== '' ? Math.max(0, Math.min(2, +pre)) : await speak(drv, `assets/${drv.toLowerCase()}_normal.png`, `${route} to ${to[0] + to.slice(1).toLowerCase()}. How do you want to drive it?`,
     ['TAKE IT SLOW AND STEADY', 'DRIVE LIKE NORMAL', 'FOOT ON THE GAS']);
   if (soundOn) DDTMusic.radioOn('van');   // the van radio keeps playing the same song it was on
   DDTSfx.play('engine_start', { vol: 0.7 }); window.DRV = DDTSfx.loop('van_drive_loop');
   const END = DDT.param('endless') === '1', ARC = DDT.param('arcade') === '1' || END;   // the Clog Kings race or the Driving Game, played from a menu: no money, rep or record changes
-  const r = await drive3d(c, { endless: END, arcade: ARC, leave: LEAVE, due: DUE, from: typeof from !== 'undefined' ? from : 'BERLIN', to: typeof to !== 'undefined' ? to : 'RANDOLPH', route: typeof route !== 'undefined' ? route : 'Route 2', clock, rival: DDT.param('rival') === '1' });
+  const r = await drive3d(c, { driver: ARC ? DEF : undefined, endless: END, arcade: ARC, leave: LEAVE, due: DUE, from: typeof from !== 'undefined' ? from : 'BERLIN', to: typeof to !== 'undefined' ? to : 'RANDOLPH', route: typeof route !== 'undefined' ? route : 'Route 2', clock, rival: DDT.param('rival') === '1' });
   DRV.stop(); DDTMusic.handoff();   /* hand the radio to the next screen (in the app it just keeps playing) */
   if (END) { try { const R = JSON.parse(localStorage.getItem('ddt_drive_rec') || '{}'), x = r.rec || {}, T = R.tot = R.tot || {}, add = (k, v) => T[k] = (T[k] || 0) + (v || 0);   /* the lifetime Driving Game record, plus your best run */
       add('runs', 1); add('miles', r.miles); add('points', r.score); for (const k in x) if (k !== 'bestCombo') add(k, x[k]); T.bestCombo = Math.max(T.bestCombo || 0, x.bestCombo || 0);
