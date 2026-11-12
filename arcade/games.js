@@ -951,7 +951,7 @@ GAMES.push({
       for (const [r, a, b] of cells) s.grid[r][c] = { t: (a + 2) % 4 === b ? 'S' : 'C', rot: Math.floor(s.rnd() * 4), wet: 0 };
       row = tgt;
     }
-    s.wait = ([16, 13, 11][s.diff] + 25) * HERO(s).steady;   /* +25s to plan the route before the water comes */
+    s.wait = ([16, 13, 11][s.diff] + 35) * HERO(s).steady;   /* +35s to plan the route before the water comes */
     s.flow = null; s.SPEED = [1.6, 1.4, 1.2][s.diff] * HERO(s).steady;   /* seconds per pipe: slow enough to keep fixing ahead of the water */
   },
   sides(p) { if (p.t === 'X') return [0, 1, 2, 3]; if (p.t === 'S') return p.rot % 2 ? [0, 2] : [1, 3]; return [p.rot % 4, (p.rot + 1) % 4]; },
