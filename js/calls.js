@@ -50,10 +50,12 @@ const CALLS = [
     needs: 'waxring', roomArt: 'bg_bathroom4', game: 'pull', lead: 'matt', culprit: [['MATT', 'Found your gurgle. One red Hot Wheel.'], ['MATT', "And it's haulin' a lil dookie in the trunk."], ['CUST', "...My son is SO grounded."]], tip: 'Toilet lid locks are cheap. Toy cars are not plumbing.', pay: 225 },
   // story job
   { id: 'the-pot', title: 'THE POT', story: true, town: 'MILAN', addr: 'Bridge St', cust: { name: 'HAL', seed: 47 }, ext: 'house', room: 'yard', window: 90,
-    ring: "Toilet won't go down. Line to the tank's froze solid. It's... full.",
-    intro: [['ROD', "Line's frozen between the house and the tank."], ['MATT', "Sir, scoop it out of the toilet. I'll watch the tank."], ['CUST', "With what?"], ['MATT', 'Anything. A pot.']],
-    tool: { q: 'He walks out with a pot and heads for the side of the house...', opts: ["\"SIR, THE TANK'S OPEN. DUMP IT IN.\"", 'LET HIM. SPRING IS FUTURE HIM\'S PROBLEM.'], right: 0, good: 'He winds up... from six feet...', bad: "He's got a kid. That melts in April." },
-    game: 'dodge', lead: 'matt', culprit: [['MATT', 'SPLASH. Boots. Pants. Everything.'], ['CUST', '...I am so sorry.'], ['MATT', "It's fine. I'm fine. Everything's fine."]], tip: 'Frozen line? Call before you improvise.', pay: 400 },
+    ring: "Toilet won't go down. It's ten degrees out. And it's... full.",
+    intro: [['CARD', 'TEN DEGREES', 'The line from the toilet to the septic is frozen solid.'], ['ROD', "I'll grind through the ice from inside. Matt, dig out the tank and watch for water."], ['MATT', 'Tank lid off. Nothing yet.'], ['MATT', "Let me go plunge the toilet a little, see if I can push some water through."],
+      ['CARD', 'THE BATHROOM', 'Matt opens the door on SHIT MOUNTAIN.'], ['MATT', "Sir. That's at least seven inches over the rim.", 'matt_shocked'], ['CUST', "Yeah, it wasn't going down, so I just... kept going."], ['MATT', "Before we can touch that toilet, you gotta scoop it out."], ['CUST', 'With what?'], ['MATT', 'Anything.'], ['CARD', '', 'He comes back with a cooking pot.']],
+    tool: { q: "He walks out the back door with a pot full of soupy wet shit, heading for the side of the house. There's a ten-year-old kid who lives here...", opts: ['"WAIT! DON\'T DUMP IT THERE. BRING IT TO THE TANK, I HAVE IT OPEN!"', 'LET HIM DUMP IT BY THE HOUSE'], right: 0, good: 'He stops. He turns. He heaves it toward the tank... where Matt is standing.', bad: "The kid plays out here. When the snow melts that's a surprise for April." },
+    game: 'dodge', lead: 'matt', culprit: [['CARD', 'SPLOOSH', 'Shitty piss water. Boots. Pants. Everything.'], ['MATT', '...', 'matt_stare'], ['MATT', '...', 'matt_stare'], ['CARD', '', 'To his credit, some of it did go in the tank.'], ['CUST', "Oh. Oh no. I'm so sorry. I am SO sorry."], ['MATT', "Rod. Add three hundred dollars.", 'matt_tired'], ['ROD', 'For what?'], ['MATT', 'For tossing a pot of piss and shit on me.']],
+    tip: 'Frozen line? Stop flushing. And if your plumber says bring it to the tank... walk it there.', pay: 700 },
 ],
 // ---------------- FEBRUARY ----------------
 [
