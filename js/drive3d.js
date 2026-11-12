@@ -244,15 +244,13 @@ function drive3d(choice, opts) {
   const RIVAL = !!opts.rival; let drift = 0, dmeter = 0, dboost = 0, smoke = [], screech = null;
   let rz = PZ + 45 * SEG, rv = 0, roff = LANE[1], rivalWon = false, rivalImg = null, rivalBump = 0;
   let rivalLane = LANE[1], rivalT = 0, rivalSlip = 0;
-  function makeRival() {   // repaint our van in Clog Kings colors (blue->red, yellow->black) once the art has loaded
-    if (rivalImg || !(VANS.complete && VANS.naturalWidth)) return;
-    const c = document.createElement('canvas'); c.width = VCW; c.height = VCH; const k = c.getContext('2d'); k.imageSmoothingEnabled = true; k.drawImage(VANS, 0, 0, VANS.width / 6, VANS.height, 0, 0, VCW, VCH);
-    const d = k.getImageData(0, 0, VCW, VCH), p = d.data;
-    for (let i = 0; i < p.length; i += 4) { const r0 = p[i], g0 = p[i + 1], b0 = p[i + 2];
-      if (b0 > r0 + 30 && b0 > g0) { p[i] = Math.min(255, b0 + 20); p[i + 1] = g0 * 0.3; p[i + 2] = r0 * 0.3; }            // blue wrap -> red
-      else if (r0 > 150 && g0 > 130 && b0 < 110) { p[i] = 40; p[i + 1] = 40; p[i + 2] = 44; } }                                // yellow -> black
-    k.putImageData(d, 0, 0); rivalImg = c;
+  const CKS = new Image(); CKS.src = (window.DDT && DDT.root || '') + 'assets/ck_back.png'; let ckF = null, rivalBrake = false;   /* the Clog Kings' own van: 6 frames, straight / left / right, then the same braking */
+  function makeRival() {
+    if (ckF || !(CKS.complete && CKS.naturalWidth)) return;
+    ckF = [0, 1, 2, 3, 4, 5].map(i => { const c = document.createElement('canvas'); c.width = VCW; c.height = VCH; const k = c.getContext('2d'); k.imageSmoothingEnabled = true; k.imageSmoothingQuality = 'high'; k.drawImage(CKS, i * CKS.width / 6, 0, CKS.width / 6, CKS.height, 0, 0, VCW, VCH); return c; });
   }
+  const rivalFrame = () => { if (!ckF) return null; const c = segAt(rz).curve; return ckF[(c < -1.5 ? 1 : c > 1.5 ? 2 : 0) + (rivalBrake || rivalBump > 0 ? 3 : 0)]; };
+
 
   // ---------- traffic + critters ----------
   const cars = [];   // { z, off, speed, img, onc }
@@ -559,7 +557,7 @@ function drive3d(choice, opts) {
         if (rivalSlip > 0) want *= 0.6;
         roff += (rivalLane - roff) * Math.min(1, dt * 2.6);   // the swerve itself
         rivalBump = Math.max(0, rivalBump - dt); if (rivalBump > 0) want *= 0.4;
-        rv += (want - rv) * Math.min(1, dt * 0.8); rz += rv * dt;
+        rivalBrake = want < rv - TOP * 0.04; rv += (want - rv) * Math.min(1, dt * 0.8); rz += rv * dt;
         if (inv <= 0 && Math.abs(rz - (pos + PZ)) < SEG * 1.0 && Math.abs(px - roff) < 0.16 + 0.17) {   // trading paint
           if (DRIFT) { inv = 1.0; sfx('horn_angry', { vol: 0.6 }); say('SQUEEZED PAST THE CLOG KINGS!', 1.0); }   /* drifting: no bump, no lost speed, just an angry horn */
           else { inv = 1.0; shake = 0.4; rivalBump = 1.2; speed *= 0.6; px += px < roff ? -0.25 : 0.25; sfx('horn_angry'); say('TRADING PAINT WITH THE CLOG KINGS!', 1.2); } }
@@ -687,7 +685,7 @@ function drive3d(choice, opts) {
         for (const sp of sg.sprites) S(sp.img, sp.scale * 2.6, p.sx, p.sy, sp.off > 0 ? sp.off + (sg.rt || 1) - 1 : sp.off + (sg.lt || -1) + 1, p.sw, sg.clip, 0, 1);   /* unrounded, so trees and signs slide smoothly instead of twitching a pixel at a time */
         if (KITS.length && KIT_IMG.complete && KIT_IMG.naturalWidth) for (const k of KITS) if (!k.got && segAt(k.z) === sg) S(KIT_IMG, 0.09, p.sx, p.sy, k.off, p.sw, sg.clip, 0, 1);   /* a toolbox lying in the lane */
         if (RIVAL && rz > pos && segAt(rz) === sg) { makeRival(); const q = sg.s2, f = Math.max(0, Math.min(1, ((((rz % LEN) + LEN) % LEN) - sg.p1.z) / SEG));   /* glides like the other cars instead of hopping strip to strip */
-          if (rivalImg && q && q.sw > 0) S(rivalImg, 0.62, p.sx + (q.sx - p.sx) * f, p.sy + (q.sy - p.sy) * f, roff, p.sw + (q.sw - p.sw) * f, sg.clip, 0, 1); }
+          rivalImg = rivalFrame(); if (rivalImg && q && q.sw > 0) S(rivalImg, 0.62, p.sx + (q.sx - p.sx) * f, p.sy + (q.sy - p.sy) * f, roff, p.sw + (q.sw - p.sw) * f, sg.clip, 0, 1); }
         for (const c of cars) if (!c.parked && segAt(c.z) === sg) { const q = sg.s2, f = Math.max(0, Math.min(1, ((((c.z % LEN) + LEN) % LEN) - sg.p1.z) / SEG));   /* glide between the segment's two edges instead of hopping strip to strip */
           const b = q && q.sw > 0 ? S(c.img, c.sc, p.sx + (q.sx - p.sx) * f, p.sy + (q.sy - p.sy) * f, c.off, p.sw + (q.sw - p.sw) * f, sg.clip, c.rot, 1) : null;
           if (b && c.blink > 0 && Math.floor(t * 4) % 2) { const bw = Math.max(2, b.w * 0.16), bh = Math.max(2, b.w * 0.1), bx = c.next < c.lane ? b.X - bw * 0.3 : b.X + b.w - bw * 0.7;
