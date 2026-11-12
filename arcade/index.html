@@ -113,10 +113,10 @@
   <div class="scr" id="result"><div class="box" id="resbox"></div></div>
 </div></div>
 <audio id="music" src="../assets/doo_doo_town.mp3" loop preload="auto"></audio>
-<script src="../js/state.js?v=1794467493"></script>
-<script src="../js/songs.js?v=1794467493"></script>
-<script src="../js/sfx.js?v=1794467493"></script>
-<script src="games.js?v=1794467493"></script>
+<script src="../js/state.js?v=1794468847"></script>
+<script src="../js/songs.js?v=1794468847"></script>
+<script src="../js/sfx.js?v=1794468847"></script>
+<script src="games.js?v=1794468847"></script>
 <script>
 const cv = document.getElementById('c'); g = cv.getContext('2d'); const SCALE = 3; g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
 const $ = s => document.querySelector(s);
@@ -234,7 +234,7 @@ function fitIntro() {   // shrink the text until the whole how-to fits on one sc
 }
 addEventListener('resize', () => { if (phase === 'intro') fitIntro(); });
 function toMenu() { phase = 'menu'; screen('menu'); $('#quit').style.display = 'none'; showPad(); buildGrid(); }
-function quit() { if (SOLO) return DDT.nav(DDT.back('index.html')); openIntro(cur); }
+function quit() { const Gq = GAMES[cur]; if (Gq && Gq.leave) Gq.leave(s); if (SOLO) return DDT.nav(DDT.back('index.html')); openIntro(cur); }
 $('#quit').onclick = quit;
 const NO_K = new Set(['kitty', 'beads', 'septic', 'pour', 'stairs', 'crawl', 'detective', 'flush', 'poop', 'superron', 'steamer']);   // games with no speed knob of their own: their clock runs a little faster instead
 function start() {
@@ -250,7 +250,7 @@ function start() {
   phase = G.noReady ? 'play' : 'ready'; readyT = 1.6; screen(''); $('#quit').style.display = ''; showPad();   /* noReady: slow, story-ish games just start, no GET READY / GO! */
 }
 function finish() {
-  const G = GAMES[cur], e = s.end; phase = 'result'; showPad(); store.set('seen_' + G.id, 1);
+  const G = GAMES[cur], e = s.end; if (G.leave) G.leave(s); phase = 'result'; showPad(); store.set('seen_' + G.id, 1);
   const key = G.id + '_' + diff, prev = store.get(key) || 0, newBest = e.win && e.stars > prev; if (newBest) store.set(key, e.stars);
   const streak = e.win ? (store.get('streak') || 0) + 1 : 0; store.set('streak', streak);
   if (e.win) { store.set('fails_' + G.id, 0); if (e.stars === 3) store.set('aced_' + G.id, (store.get('aced_' + G.id) || 0) + 1); } else { store.set('fails_' + G.id, (store.get('fails_' + G.id) || 0) + 1); store.set('aced_' + G.id, Math.max(0, (store.get('aced_' + G.id) || 0) - 1)); }   // wins in a row, across games
