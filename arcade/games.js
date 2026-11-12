@@ -1475,7 +1475,7 @@ GAMES.push({
   arrive(s) {
     const fresh = !s.seen.has(s.pr * 100 + s.pc); s.seen.add(s.pr * 100 + s.pc); s.steps++; s.since++;
     { const gl = (s.gloves || []).find(q => !q.got && q.c === s.pc && q.r === s.pr); if (gl) { gl.got = true; (s.log = s.log || []).push(['A muddy work glove. ...Carl\'s? It\'s warm.', 'Somebody\'s glove. Blue. Crunchy.', 'A glove. You do not put it on.'][Math.floor(s.rnd() * 3)]); } }
-    { const k = (s.traps || []).findIndex(q => !q.got && q.c === s.pc && q.r === s.pr); if (k >= 0) { s.traps[k].got = true; s.crk++; s.shake = 0.15; SFX('click'); SFX('ut_get', { vol: 0.6 }); (s.log = s.log || []).push(['You slide a peanut butter cracker off a rat trap... SNAP! Missed your fingers.', 'A rat trap with a little cracker on it. Mine now.', 'Peanut butter cracker off a trap. Slightly chewed.'][Math.floor(s.rnd() * 3)]); } }
+    { const k = (s.traps || []).findIndex(q => !q.got && q.c === s.pc && q.r === s.pr); if (k >= 0) { s.traps[k].got = true; s.crk++; s.shake = 0.15; SFX('ut_trap_snap'); SFX('ut_get', { vol: 0.6 }); (s.log = s.log || []).push(['You slide a peanut butter cracker off a rat trap... SNAP! Missed your fingers.', 'A rat trap with a little cracker on it. Mine now.', 'Peanut butter cracker off a trap. Slightly chewed.'][Math.floor(s.rnd() * 3)]); } }
     if (s.venom > 0) { s.venom--; if (s.hp > 1) { s.hp--; (s.log = s.log || []).push('The spider bite itches. -1 HP'); } }
     if (s.pc === s.goal.c && s.pr === s.goal.r) { s.fixT = 0.01; s.score += 500; TRL.amb(false); SFX('ut_win', { vol: 0.6 });
       const met = s.met || [], big = ['THE RAT KING', 'BROWN RECLUSE', 'RACCOON', 'BIG BUFF RAT', 'POSSUM', 'SEWER RAT'].find(n => met.includes(n));   /* ...and then nobody believes you */
