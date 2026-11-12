@@ -1595,7 +1595,8 @@ GAMES.push({
     L.push({ id: 'close', label: 'CLOSE' }); return L; },
   bagging(s, dt, I) {
     const B = s.bag, L = this.bagList(s);
-    if (I.Bp && !B.battle) { s.bag = null; return; }
+    { const [x, y, w, h] = this.bagBtn(), tap = I.ptr.clicked && I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h;   /* tap the backpack again (or B) to close it */
+      if (tap || (I.Bp && !B.battle)) { s.bag = null; if (B.battle) s.battle.sel = 4; SFX('ui_tap'); I.ptr.clicked = false; return; } }
     if (I.Up || I.Lp) B.sel = (B.sel + L.length - 1) % L.length; if (I.Dp || I.Rp) B.sel = (B.sel + 1) % L.length;
     let pick = I.Ap ? B.sel : null;
     if (I.ptr.clicked) for (let i = 0; i < L.length; i++) { const [x, y, w, h] = this.bagBox(i); if (I.ptr.x > x && I.ptr.x < x + w && I.ptr.y > y && I.ptr.y < y + h) { B.sel = i; pick = i; } }
