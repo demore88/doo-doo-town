@@ -756,7 +756,8 @@ GAMES.push({
     if (s.hold) s.lungs = Math.max(0, s.lungs - 16 / H.grip * dt);
     else if (fresh) s.lungs = Math.min(100, s.lungs + 55 * dt);
     else if (!inCloud) s.lungs = Math.min(100, s.lungs + 12 * dt);
-    if (inCloud && !s.hold) {   // breathing the cloud
+    s.grace = Math.max(0, (s.grace || 0) - dt); if (!inCloud && s.grace > 0) s.grace = Math.min(s.grace, 0.3);   /* after a gag you get a moment to walk out before it builds again */
+    if (inCloud && !s.hold && !(s.grace > 0)) {   // breathing the cloud
       s.gag += 34 * (0.55 + S) * s.k / H.grip * dt;
       if (s.wasHold && s.lungs <= 0.5) { s.gag += 30; s.gasp = 0.8; POP(s, s.px, 150, '*GASP*', '#e9665a'); }
     }
@@ -764,13 +765,13 @@ GAMES.push({
     s.wasHold = s.hold;
     if (!inCloud) s.gag = Math.max(0, s.gag - 30 * dt);
     s.gasp = Math.max(0, s.gasp - dt);
-    if (s.gag >= 100) { s.strikes++; s.gag = 40; s.stun = 1.8; s.px = Math.max(40, s.px - 40); SFX('squish'); }
+    if (s.gag >= 100) { s.strikes++; s.gag = 0; s.stun = 1.1; s.grace = 4; SFX('squish'); }   /* one gag, then walk out of it */
     if (s.turns >= s.NEED) s.end = { win: true, stars: stars3(s.strikes === 0, s.strikes <= 1), line: s.strikes ? `Cap's off. You gagged ${s.strikes}x.` : 'Cap off without a single gag. Iron stomach.' };
     else if (s.strikes >= 3) s.end = { win: false, stars: 0, line: 'You gagged out. Rod finishes it.' };
     else if (s.t >= s.TIME) s.end = { win: false, stars: 0, line: 'Too slow. The cap is still on.' };
   },
   draw(s) {
-    const room = BGI('bg_laundry'), FY = room ? 232 : 214, CX = room ? 390 : 386, CY = room ? 157 : 163;
+    const room = BGI('bg_laundry'), FY = room ? 252 : 214, CX = room ? 390 : 386, CY = room ? 157 : 163;
     if (room) { T('FRESH AIR', 34, 58, '#7bd65b', 6, 'center'); }
     else { R(0, 0, W, H, '#3d3a35'); R(0, 214, W, 56, '#6f6a62');
     R(14, 110, 40, 104, '#2b2016'); R(18, 114, 32, 100, '#cfe8f5');                  // open door
