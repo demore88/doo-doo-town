@@ -1055,10 +1055,12 @@ GAMES.push({
   how: ['Hold SPACE to build jetter pressure; let go to drop it.', 'Pressure in the GREEN band cuts the clog. Stay in the RED and it PACKS tighter.', 'Aim the nozzle with ▲ ▼ at the soft spot (it moves). Dead-on cuts 3x faster.', 'The clog keeps swelling, so keep pulsing. Clear it in time.'],
   ctl: 'HOLD SPACE = PRESSURE  ·  ▲ ▼ = AIM',
   act: 'JET', dpad: 'ud',
+  leave(s) { if (s && s.jl) { s.jl.stop(); s.jl = null; } },
   init(s) { s.TIME = 38; s.p = 0; s.prog = 0; s.red = 0; s.packs = 0; s.beads = s.rnd() < 0.5; s.LO = 30; s.HI = 75 + 8 * (HERO(s).grip - 1) * 4; s.aim = 0.5; s.spot = 0.5; s.sv = 0.25; },
   update(s, dt, I) {
     s.t += dt;
     s.p = clamp(s.p + ((I.A || I.ptr.down) ? 55 : -60) * dt, 0, 100);
+    if (!s.jl && typeof DDTSfx !== 'undefined') s.jl = DDTSfx.loop('jetter_loop', { vol: 0 }); if (s.jl && s.jl.vol) s.jl.vol(Math.min(1, s.p / 70));   /* the spray gets louder with the pressure */
     s.aim = clamp(s.aim + ((I.D ? 1 : 0) - (I.U ? 1 : 0)) * 1.1 * HERO(s).spd * dt, 0, 1);
     s.spot += s.sv * s.k * dt; if (s.spot < 0.1 || s.spot > 0.9) { s.sv *= -1; s.spot = clamp(s.spot, 0.1, 0.9); } if (s.rnd() < dt * 0.4) s.sv *= -1;
     const onSpot = Math.max(0.35, 1.2 - Math.abs(s.aim - s.spot) * 4);   // dead-on = up to 3x faster than a wild shot
@@ -1199,9 +1201,10 @@ GAMES.push({
       const m = Math.hypot(ax, ay) || 1; d.vx = lerp(d.vx, ax / m * sp, Math.min(1, dt * 6)); d.vy = lerp(d.vy, ay / m * sp, Math.min(1, dt * 6));
       d.x = clamp(d.x + d.vx * dt, 14, W - 14); d.y = clamp(d.y + d.vy * dt, 30, H - 12);
       const atDoor = d.y > P.y + 4 && d.y < P.y + P.h - 4;
-      if (atDoor && d.x > P.x + 4) d.in = true;
+      if (atDoor && d.x > P.x + 4) { d.in = true; SFX('bark' + (1 + Math.floor(Math.random() * 5)), { vol: 0.6 }); }   /* in the van, and happy about it */
       else if (!atDoor && d.x > P.x - 2) d.x = P.x - 2;
     }
+    s.barkT = (s.barkT ?? 1.5) - dt; if (s.barkT <= 0) { s.barkT = 1.6 + Math.random() * 2.4; if (s.dogs.some(d => !d.in)) SFX('bark' + (1 + Math.floor(Math.random() * 5)), { vol: 0.35 + Math.random() * 0.2, rate: 0.9 + Math.random() * 0.25 }); }   /* loose dogs yapping */
     const n = s.dogs.filter(d => d.in).length; s.n = n;
     if (n === 5) s.end = { win: true, stars: stars3(s.t < s.TIME * 0.5, s.t < s.TIME * 0.8), line: `All 5 dogs in by ${s.t.toFixed(0)} seconds.` };
     else if (s.t >= s.TIME) s.end = n >= 4 ? { win: true, stars: 1, line: 'Four of five. The fifth one is in the sewer hole.' } : { win: false, stars: 0, line: `Only ${n} rounded up. The farmer is not impressed.` };
@@ -2112,8 +2115,9 @@ GAMES.push({
     if (s.mode === 'test') {
       if (s.res[pick] || s.tests <= 0) return;
       const f = s.fix.find(f => f.id === pick); s.res[pick] = this.result(s, f); s.tests--; s.used++; s.anim = { id: pick, t: 0 };
+      SFX(pick === 't2' ? 'run_toilet' : pick === 'tub' ? 'run_tub' : 'run_sink', { vol: 0.7 });   /* run the fixture: flush, shower, or faucet */
       { const o = this.spill(s, f); if (o && o !== f) { s.over[o.id] = 1; s.note[pick] = 'CAME UP AT ' + o.name; s.anim.over = o.id; SFX('gurgle', { vol: 0.5 }); } }   /* ran one fixture, water came up somewhere else */
-      SFX(s.res[pick] === 'back' ? 'gurgle' : s.res[pick] === 'slow' ? 'drips_loop' : 'drain', { vol: 0.5 });
+      setTimeout(() => SFX(s.res[pick] === 'back' ? 'gurgle' : s.res[pick] === 'slow' ? 'drips_loop' : 'drain', { vol: 0.45 }), 1400);   /* then what the water did */
       if (s.tests <= 0) { s.mode = 'guess'; s.sel = 0; }
       return;
     }
@@ -2655,7 +2659,7 @@ GAMES.push({
     s.texts.forEach(o => { o.t -= dt; o.y -= 24 * dt; }); s.texts = s.texts.filter(o => o.t > 0);
     // ---------- THE FATBERG: the boss, guarding the golden toilet ----------
     const AR0 = (L.len - 41) * SR_TILE, AR1 = (L.len - 11) * SR_TILE;   /* the arena: a full screen wide */
-    if (!s.boss && !s.bossDone && p.x > AR0 + 40) { s.boss = { x: AR1 - 30, vx: -40, hp: 3, inv: 0, t: 0, spit: 2, hop: 0, vy: 0, y: SR_GROUND * SR_TILE, roar: 1.2 }; s.globs = []; ; s.quip('boss', "That's a FATBERG. Every wipe anybody ever flushed. Stomp it, Ron."); }
+    if (!s.boss && !s.bossDone && p.x > AR0 + 40) { s.boss = { x: AR1 - 30, vx: -40, hp: 3, inv: 0, t: 0, spit: 2, hop: 0, vy: 0, y: SR_GROUND * SR_TILE, roar: 1.2 }; s.globs = []; SFX('boss_growl', { vol: 0.8 }); ; s.quip('boss', "That's a FATBERG. Every wipe anybody ever flushed. Stomp it, Ron."); }
     if (s.boss) { const B = s.boss; B.t += dt; B.inv = Math.max(0, B.inv - dt);
       p.x = clamp(p.x, AR0 + 8, AR1 - 6);   // no leaving mid-fight, and no jumping past him
       if (B.hp > 0) {
@@ -2966,7 +2970,7 @@ GAMES.push({
     // heat builds where you steam and bleeds off when you stop. Rod's steadier hands spread it out.
     if (steaming) {
       s.heat += dt * (0.42 + s.diff * 0.06) / H0.grip;
-      if (front && front.x - s.hx < 16) { const m = dt / front.max; front.hp -= m; s.bucket += m * 0.55 * (1 + s.diff * 0.1); if (s.rnd() < dt * 8) s.drips.push({ x: s.hx, v: 0 }); if (front.hp <= 0) { s.melted++; POP(s, 240, 110, 'CRACK!', '#9fe0ff'); ; } }
+      if (front && front.x - s.hx < 16) { const m = dt / front.max; front.hp -= m; s.bucket += m * 0.55 * (1 + s.diff * 0.1); if (s.rnd() < dt * 8) s.drips.push({ x: s.hx, v: 0 }); if (front.hp <= 0) { s.melted++; POP(s, 240, 110, 'CRACK!', '#9fe0ff'); SFX('ice_crack' + (1 + Math.floor(Math.random() * 3))); ; } }
       if (s.rnd() < dt * 20) s.puffs.push({ x: s.hx + 6, y: 150, l: 0.6 });
     } else if (!away) s.heat = Math.max(0, s.heat - dt * 0.38);
     if (s.heat >= 1 && s.inv <= 0) { s.pants--; s.soft++; s.inv = 1; s.heat = 0.55; s.shake = 0.3; POP(s, 240, 120, "PIPE'S GOING SOFT!", '#e9665a'); }
