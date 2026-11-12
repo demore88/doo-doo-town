@@ -1698,7 +1698,7 @@ GAMES.push({
       const gn = b.guards > 0 ? b.guards : 0;   /* each guard gets a nip in */
       const d = Math.max(1, Math.round((b.F.atk[0] + s.rnd() * (b.F.atk[1] - b.F.atk[0])) * (s.k || 1) * (b.ph2 ? 1.15 : 1) * (1 + (b.F.king ? 0 : this.zone(s) * 0.25))) - s.def) + gn;   /* your gear soaks some of it */
       this.say(s, b.F.king ? (gn ? `The King AND his guards get you! -${d} HP` : b.ph2 ? `THE FURIOUS RAT KING mauls you! -${d} HP` : `THE RAT KING rakes you with royal claws! -${d} HP`) : b.F.venom ? `The BROWN RECLUSE bites! -${d} HP. That's gonna itch.` : b.F.thief ? `The RACCOON claws you! -${d} HP` : `The ${b.F.name} bites! -${d} HP`,
-        () => { s.hp -= d; s.hits++; s.shake = 0.35; s.guard = 0.6; b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); if (b.F.venom) s.venom = 6; });
+        () => { s.hp -= d; s.hits++; s.shake = 0.35; s.guard = 0.6; SFX('ut_umph', { rate: 0.92 + Math.random() * 0.16 }); b.pose = 5; b.poseT = 0.6; TRL.cry(b.F); if (b.F.venom) s.venom = 6; });
       b.after = () => { if (s.hp <= 0) { s.hp = 0; TRL.bgm(false); s.battle = null; if (s.lives > 0) this.respawn(s); else this.defeated(s); } };
     };
     const won = () => {
