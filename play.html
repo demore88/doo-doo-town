@@ -17,12 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794468847"></script>
-<script src="js/calls.js?v=1794468847"></script>
-<script src="js/banter.js?v=1794468847"></script>
-<script src="js/placeholders.js?v=1794468847"></script>
-<script src="js/music.js?v=1794468847"></script>
-<script src="js/sfx.js?v=1794468847"></script>
+<script src="js/state.js?v=1794468993"></script>
+<script src="js/calls.js?v=1794468993"></script>
+<script src="js/banter.js?v=1794468993"></script>
+<script src="js/placeholders.js?v=1794468993"></script>
+<script src="js/music.js?v=1794468993"></script>
+<script src="js/sfx.js?v=1794468993"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -1084,7 +1084,7 @@ SCENES.hub = async () => {
     if (s.step === 'night') {
       s = DDT.get(); if (s.drift === 'night') { let mg = null; try { mg = JSON.parse(localStorage.getItem('ddt_mg')); } catch (e) {} const won = !!(mg && mg.id === 'drift' && mg.win);
         view = () => { R(0, 0, W, H, '#05070d'); hud(); };
-        if (won) { SND.good(); DDT.apply({ rep: 3 }); await card(['FIRST TO THE BOTTOM', '+3 REP · THE CLOG KINGS STAY OUT OF CONWAY'], 2000, '#7dffb0'); } else { SND.bad(); DDT.apply({ rep: -2 }); await card(['THE CLOG KINGS WON', '-2 REP · THEY GET THE CONWAY CALLS THIS WEEK'], 2000, '#e9665a'); }
+        if (won) { SND.good(); DDT.apply({ rep: 3, money: 3000 }); await card(['FIRST TO THE BOTTOM', '+$3,000 · +3 REP · THE CLOG KINGS STAY OUT OF CONWAY'], 2200, '#7dffb0'); } else { SND.bad(); DDT.apply({ rep: -2 }); await card(['THE CLOG KINGS WON', '-2 REP · THEY GET THE CONWAY CALLS THIS WEEK'], 2000, '#e9665a'); }
         s = DDT.get(); s.drift = 'morning'; s.driftScrape = !mg || (mg.stars || 0) < 3; s.day = (s.day || 0) + 1; s.today = null; s.step = s.day >= DAYS_PER_MONTH ? 'monthend' : 'daystart'; DDT.save(s); continue; }
       if (s.superRon === 'night') { s.superRon = 'playing'; s.day = (s.day || 0) + 1; s.today = null; s.step = s.day >= DAYS_PER_MONTH ? 'monthend' : 'daystart'; DDT.save(s); continue; }   /* back from his night of Super Ron */
       view = () => backdrop();
