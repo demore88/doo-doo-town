@@ -17,12 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794466093"></script>
-<script src="js/calls.js?v=1794466093"></script>
-<script src="js/banter.js?v=1794466093"></script>
-<script src="js/placeholders.js?v=1794466093"></script>
-<script src="js/music.js?v=1794466093"></script>
-<script src="js/sfx.js?v=1794466093"></script>
+<script src="js/state.js?v=1794466933"></script>
+<script src="js/calls.js?v=1794466933"></script>
+<script src="js/banter.js?v=1794466933"></script>
+<script src="js/placeholders.js?v=1794466933"></script>
+<script src="js/music.js?v=1794466933"></script>
+<script src="js/sfx.js?v=1794466933"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -1060,17 +1060,11 @@ SCENES.hub = async () => {
 
     if (s.step === 'chat') {   // the day's one conversation: story beats first, otherwise a bit of Ron talk
       view = () => backdrop();
-      if (s.month >= 5 && !s.superRon) {
-        await say('MATT', 'matt_shocked', 'Rod. ROD. Look what just came out on the app store.');
-        await say('ROD', 'rod_shocked', '...SUPER RON?');
-        await say('MATT', 'matt_happy', "He has a GAME now, Rod. Four point eight stars.");
-        await say('ROD', 'rod_annoyed', 'Give me that phone.');
-        s = DDT.get(); s.superRon = 'playing'; DDT.save(s);
-        await go(`arcade/index.html?play=superron&diff=1&job=${encodeURIComponent("MATT'S PHONE")}&${RET}`);
-      }
       if (s.superRon === 'playing') {
+        await say('MATT', 'matt_normal', 'You look tired.');
+        await say('ROD', 'rod_tired', "Ron has a GAME, Matt. I was up till two.");
         await say('ROD', 'rod_confused', "This isn't how drains work. What IS this?");
-        await say('MATT', 'matt_normal', 'He jumps over the pipes, Rod.');
+        await say('MATT', 'matt_happy', "I know. I've beaten it twice. He jumps over the pipes, Rod.");
         await say('ROD', 'rod_angry', "You don't jump OVER the pipes. You clean them. That's the whole job.");
         await say('MATT', 'matt_happy', "Ron's got a sequel coming out.");
         s = DDT.get(); s.superRon = 'done'; s.chatDone = true; DDT.save(s);
@@ -1081,9 +1075,11 @@ SCENES.hub = async () => {
     }
 
     if (s.step === 'night') {
+      s = DDT.get(); if (s.superRon === 'night') { s.superRon = 'playing'; s.day = (s.day || 0) + 1; s.today = null; s.step = s.day >= DAYS_PER_MONTH ? 'monthend' : 'daystart'; DDT.save(s); continue; }   /* back from his night of Super Ron */
       view = () => backdrop();
       const t = s.today ? s.today.time : 1020;
       await card(['END OF THE DAY', `${DDT.clock(Math.max(t, 960))} · BACK IN BERLIN`], 1500);
+      if (s.month >= 5 && !s.superRon) { await rodFindsRon(); continue; }   /* one night, Rod can't sleep */
       s = DDT.get(); s.day = (s.day || 0) + 1; s.today = null;
       s.step = s.day >= DAYS_PER_MONTH ? 'monthend' : 'daystart'; DDT.save(s); continue;
     }
@@ -1257,6 +1253,49 @@ async function shareCard(s) {
   box.remove();
 }
 
+
+// ---------- one night: Rod can't sleep, looks for a game, and finds Super Ron ----------
+const RON_APPS = [['PIPE PUZZLE DELUXE', '3.1 STARS', '#3a7bd5', 'P'], ['DRAIN TYCOON', '2.7 STARS · ADS', '#c0632b', 'D'], ['TOILET SIMULATOR 2', '1.9 STARS', '#7a8a99', 'T'], ['PLUNGER PRO', '2.2 STARS', '#b8322e', 'P'], ['SEPTIC SAGA', '3.0 STARS', '#4f7d3a', 'S'], ['WRENCH WARS', '2.5 STARS · ADS', '#6a4fa0', 'W'], ['SUPER RON', '4.8 STARS · #1 GAME', '#f7c418', 'ron']];
+async function rodFindsRon() {
+  const ph = { q: '', scroll: 0, res: 0, hl: 0, glow: 0 };
+  view = () => {
+    const t = performance.now() / 1000;
+    R(0, 0, W, H, '#05070d');
+    const gl = g.createRadialGradient(240, 100, 10, 240, 100, 220); gl.addColorStop(0, `rgba(80,120,200,${0.22 + 0.04 * Math.sin(t * 3)})`); gl.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gl; g.fillRect(0, 0, W, H);
+
+    // the phone
+    const X = 150, Y = 18, PW = 180, PH = 176;
+    R(X - 3, Y - 3, PW + 6, PH + 6, '#2a2f3a'); R(X, Y, PW, PH, '#0d0f14'); R(X + 6, Y + 14, PW - 12, PH - 26, '#f2f4f8'); R(X + PW / 2 - 12, Y + 5, 24, 4, '#2a2f3a');
+    const sx = X + 6, sy = Y + 14, sw = PW - 12, sh = PH - 26;
+    T('APP STORE', sx + sw / 2, sy + 10, '#1b2433', 6, 'center', false);
+    R(sx + 6, sy + 16, sw - 12, 14, '#dde3ec'); T((ph.q || 'Search') + (ph.q && Math.floor(t * 2) % 2 ? '_' : ''), sx + 10, sy + 26, ph.q ? '#1b2433' : '#8a94a6', 5, 'left', false);
+    g.save(); g.beginPath(); g.rect(sx, sy + 34, sw, sh - 34); g.clip();
+    RON_APPS.slice(0, ph.res).forEach(([nm, st2, col, ic], i) => {
+      const y = sy + 38 + i * 30 - ph.scroll, ron = ic === 'ron';
+      if (ron) { R(sx + 2, y - 2, sw - 4, 28, `rgba(247,196,24,${0.25 + 0.2 * Math.sin(t * 6) * ph.hl})`); }
+      R(sx + 6, y, 24, 24, col);
+      if (ron) { const ri = artImg('ron_smug'); if (ri) { g.imageSmoothingEnabled = false; g.drawImage(ri, sx + 7, y + 1, 22, 22); } } else T(ic, sx + 18, y + 16, '#fff', 8, 'center', false);
+      T(nm, sx + 34, y + 10, '#1b2433', 5, 'left', false); T(st2, sx + 34, y + 20, ron ? '#b8860b' : '#5d6878', 4, 'left', false);
+    });
+    g.restore();
+  };
+  await card(['THAT NIGHT', "ROD CAN'T SLEEP"], 1600);
+  await say('ROD', 'rod_phone', "Can't sleep. Matt's always on his phone playing something. How hard can it be?");
+  for (const ch of 'PLUMBER GAME') { ph.q += ch; DDTSfx.play('click', { vol: 0.25 }); await wait(110); }
+  await wait(300); ph.res = 6; DDTSfx.play('ui_tap');
+  await say('ROD', 'rod_stare', 'Pipe Puzzle Deluxe. Three stars. ...No.');
+  await say('ROD', 'rod_annoyed', "Drain Tycoon. Ads. Toilet Simulator TWO? Who played the first one?");
+  await tween(ph, 'scroll', 60, 900);
+  ph.res = 7; ph.hl = 1; DDTSfx.play('ui_select');
+  await tween(ph, 'scroll', 112, 700);
+  await wait(500);
+  await say('ROD', 'rod_shocked', '...SUPER RON?');
+  await say('ROD', 'rod_stare', 'Four point eight stars. Number one in games.');
+  await say('ROD', 'rod_angry', 'RON HAS A GAME?!');
+  await say('ROD', 'rod_annoyed', 'Fine. Download. I need to see this.');
+  let s = DDT.get(); s.superRon = 'night'; DDT.save(s);
+  await go(`arcade/index.html?play=superron&diff=1&job=${encodeURIComponent("ROD'S PHONE · 11:48 PM")}&${RET}`);
+}
 // =====================================================================
 // main loop
 // =====================================================================
