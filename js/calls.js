@@ -20,7 +20,7 @@ const TOWNS = {
 };
 
 // physical games go better with Matt leading; skill games go better with Rod leading
-const PHYS = ['bubble', 'dodge', 'sprinkler', 'haul', 'stairs', 'crawl', 'dogs', 'pull', 'overflow', 'pour', 'locate'];
+const PHYS = ['bubble', 'dodge', 'sprinkler', 'stairs', 'crawl', 'dogs', 'pull', 'overflow', 'pour', 'locate'];
 const SKILL = ['steamer', 'cable', 'camera', 'septic', 'detective', 'jetter', 'gag', 'claw', 'flush', 'poop'];
 
 const CALLS = [

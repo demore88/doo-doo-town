@@ -17,12 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794467323"></script>
-<script src="js/calls.js?v=1794467323"></script>
-<script src="js/banter.js?v=1794467323"></script>
-<script src="js/placeholders.js?v=1794467323"></script>
-<script src="js/music.js?v=1794467323"></script>
-<script src="js/sfx.js?v=1794467323"></script>
+<script src="js/state.js?v=1794467493"></script>
+<script src="js/calls.js?v=1794467493"></script>
+<script src="js/banter.js?v=1794467493"></script>
+<script src="js/placeholders.js?v=1794467493"></script>
+<script src="js/music.js?v=1794467493"></script>
+<script src="js/sfx.js?v=1794467493"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -767,7 +767,7 @@ async function pickHero() {
 // A workday: breakfast → pick calls off the voicemail board → 4 calls → lunch (the day's one chat) → 1 more call → bed.
 // Two workdays a month. Calls you never get to go to the Clog Kings at the end of the month.
 const DAYS_PER_MONTH = 2, CALLS_PER_DAY = 5, LUNCH_AFTER = 4;
-const GAME_NAME = {"dodge":"SPLASH DODGE","sprinkler":"CLEANOUT BLOWOUT","cable":"SNAKE THE LINE","septic":"FIND THE SEPTIC","overflow":"OVERFLOW CONTROL","camera":"SEWER CAMERA","gag":"FISHY PISSY","pull":"TROPHY PULL","claw":"CLAW GRAB","pour":"PIPE DREAM","jetter":"JETTER PULSE","haul":"BUCKET HAUL","stairs":"STAIRS OF DEATH","dogs":"DOG ROUNDUP","crawl":"UNDER THE TRAILER","detective":"LINE DETECTIVE","flush":"PIPE INVADERS","poop":"POOP SWEEPER","bubble":"GREASE BOBBLE","locate":"SONDE CROSSING","steamer":"THAW IT OUT"};
+const GAME_NAME = {"dodge":"SPLASH DODGE","sprinkler":"CLEANOUT BLOWOUT","cable":"SNAKE THE LINE","septic":"FIND THE SEPTIC","overflow":"OVERFLOW CONTROL","camera":"SEWER CAMERA","gag":"FISHY PISSY","pull":"TROPHY PULL","claw":"CLAW GRAB","pour":"PIPE DREAM","jetter":"JETTER PULSE","stairs":"STAIRS OF DEATH","dogs":"DOG ROUNDUP","crawl":"UNDER THE TRAILER","detective":"LINE DETECTIVE","flush":"PIPE INVADERS","poop":"POOP SWEEPER","bubble":"GREASE BOBBLE","locate":"SONDE CROSSING","steamer":"THAW IT OUT"};
 const DRV = ['SLOW AND STEADY', 'NORMAL', 'FOOT ON THE GAS'];
 const ALL_CALLS = CALLS.flat();
 const callById = id => ALL_CALLS.find(c => c.id === id);
