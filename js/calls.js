@@ -168,11 +168,12 @@ const CALLS = [
     intro: [['ROD', "There's a second pipe going into this tank."], ['MATT', 'Bermico. The old cardboard pipe.'], ['ROD', "Collapsed."]],
     tool: { q: 'Mystery second line. How do we find it?', opts: ['CAMERA + LOCATOR', 'DIG EVERYTHING', 'GUESS'], right: 0, good: 'See it, then dig once.', bad: "That's a lot of lawn." },
     game: 'detective', lead: 'rod', culprit: [['ROD', 'Bermico. Basically wet cardboard.'], ['CUST', 'From the fifties?'], ['MATT', 'From the fifties.']], tip: 'Old Bermico pipe collapses. Camera it before it surprises you.', pay: 550 },
-  { id: 'grease-detective', title: 'GREASE DETECTIVE', story: true, gate: 'camera', town: 'BARTLETT', addr: 'Route 302', cust: { name: 'TINA', seed: 167 }, ext: 'house', room: 'basement', window: 130,
-    ring: "The washer backs up into the kitchen. Or the kitchen backs up into the washer. One of them.",
-    intro: [['ROD', "Two lines. One goes somewhere nobody knows."], ['MATT', 'A hidden cesspool.'], ['CUST', 'A what?']],
-    tool: { q: 'Where does the washer actually drain?', opts: ['CAMERA + LOCATOR', 'FOLLOW YOUR NOSE', 'ASK THE WASHER'], right: 0, good: "Let's find it.", bad: 'Your nose already quit.' },
-    game: 'detective', lead: 'rod', culprit: [['ROD', 'An old cesspool. Full of grease. Under the deck.'], ['CUST', "We built a DECK on that?"]], tip: 'Know where every drain goes. Especially before you build a deck.', pay: 800 },
+  { id: 'grease-detective', title: 'THE TAR PAPER PIPE', story: true, gate: 'camera', town: 'BARTLETT', addr: 'Route 302', cust: { name: 'TINA', seed: 167 }, ext: 'house', room: 'yard', window: 130,
+    ring: "The washer and the kitchen sink keep backing up. We just put in a brand new septic tank!",
+    intro: [['MATT', 'Pipe leaves the house... heads straight for the new septic tank.'], ['MATT', "So why's it backing up?", 'matt_stare'], ['ROD', 'Camera it.'], ['MATT', "Camera goes out... and the pipe stops making sense."], ['MATT', "It's not even PVC. It's soft. It's... paper?"], ['ROD', 'Orangeburg. Bermico. Tar paper pipe from the seventies.', 'rod_tired'], ['ROD', 'Supposed to last twenty years. That was fifty years ago.']],
+    tool: { q: "Nothing on the camera lines up with the new tank. What now?", opts: ['GRAB A SHOVEL AND DIG IT UP', 'SNAKE IT HARDER', 'TELL HER IT GOES TO THE TANK'], right: 0, good: "Sometimes you just gotta dig.", bad: "It's not a clog. The pipe itself is the problem." },
+    game: 'detective', lead: 'matt', culprit: [['CARD', 'AN HOUR LATER', 'Rod is standing in a hole.'], ['ROD', "Found it. It runs right UNDERNEATH the pipe to the new tank.", 'rod_gross'], ['MATT', 'Going where?'], ['ROD', 'An old cesspool. The washer and the kitchen were never hooked to the new tank at all.'], ['CUST', "So the new septic tank..."], ['MATT', "Is lovely. Your sink just doesn't know it exists."], ['ROD', "Gotta replace this pipe and tie it into the new tank."]],
+    tip: "Old black tar paper pipe (Orangeburg) only lasts about 20 years. If you have it, it's living on borrowed time.", pay: 800 },
 ],
 // ---------------- JUNE ----------------
 [
