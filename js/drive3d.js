@@ -250,12 +250,15 @@ function drive3d(choice, opts) {
     const nOur = ourLanes(z), lane = onc ? (oncLanes(z) > 1 && Math.random() < 0.5 ? 5 : 0) : nOur <= 2 ? (Math.random() < 0.65 ? 2 : 1) : 1 + Math.floor(Math.random() * nOur);
     // our-way traffic is slower than us (you catch up and pass); log trucks crawl
     return { z, lane, off: LANE[lane], tgt: LANE[lane], speed: onc ? -(opts.endless ? rnd(38, 55) : rnd(25, 45)) * MPH : (truck ? rnd(18, 24) : rnd(22, 34)) * MPH * (DRIVER === 'rod' && !opts.endless ? 0.8 : 1),
-      img, onc, hw: (img.width || (truck ? 50 : 44)) * sc / 320, sc, truck, blink: 0, wo: 0, ...(!truck && Math.random() < 0.02 ? (Math.random() < 0.5 ? { drunk: 1, ph: Math.random() * 6.28 } : { texting: 1, wv: (Math.random() < 0.5 ? -1 : 1) * 0.12 }) : {}) };   /* 2%: drunk or texting, weaving all over */
+      img, onc, hw: (img.width || (truck ? 50 : 44)) * sc / 320, sc, truck, blink: 0, wo: 0, ...(opts.jam && !onc ? { speed: rnd(9, 17) * MPH } : {}), ...(!truck && Math.random() < 0.02 ? (Math.random() < 0.5 ? { drunk: 1, ph: Math.random() * 6.28 } : { texting: 1, wv: (Math.random() < 0.5 ? -1 : 1) * 0.12 }) : {}) };   /* 2%: drunk or texting, weaving all over */
   }
   // traffic lives in a window around the van: anything that falls behind gets sent back up the road (so it never runs dry)
   const BUSY_MAX = Math.max(...LEGS_HERE.map(L => L.busy || 1));
+  if (opts.jam) { MODE.cars = Math.round(MODE.cars * 1.8); MODE.onc = 0.5; }   /* the memorial night: everybody is on the road */
   if (RACE) { MODE.cars = Math.max(2, Math.round(MODE.cars * 0.45)); MODE.crit = Math.max(1, Math.round(MODE.crit * 0.5)); }   // less traffic in the way of the race
   for (let i = 0; i < (opts.endless ? 4 : Math.round(MODE.cars * Math.min(1, Math.max(0.6, BUSY_MAX)))); i++) { let c, tries = 0; do { c = addCar(rnd(14, DRAW) * SEG, Math.random() < MODE.onc); tries++; } while (tries < 10 && cars.some(o => o.lane === c.lane && Math.abs(o.z - c.z) < 4 * SEG)); cars.push(c); }
+  const curbPlace = (c, z) => { const right = Math.random() < 0.6; c.z = z; c.side = right ? 1 : -1; c.off = c.tgt = right ? rtAt(z) + 0.05 : ltAt(z) - 0.05; c.img = right ? CAR_B[Math.floor(Math.random() * CAR_B.length)] : CAR_F[Math.floor(Math.random() * CAR_F.length)]; c.hw = (c.img.width || 44) * c.sc / 320; };
+  if (opts.jam) for (let z = 10 * SEG; z < (N - 60) * SEG && z < DRAW * SEG; z += rnd(3, 7) * SEG) { const c = { lane: 99, speed: 0, onc: false, sc: 1.3, truck: false, blink: 0, wo: 0, curb: true }; curbPlace(c, z); cars.push(c); }   /* parked on both sides of the road, all the way there */
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__cars = cars;
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__sqcall = w => startSqCall(w || 'baby');
   if (typeof DDT !== 'undefined' && DDT.DEV) { window.__kidsmom = () => startKidsMomCall(); window.__yukon = () => { let n; for (let i = 0; i < 400; i++) { n = addCar(pos + PZ + 12 * SEG, false); if (n.yukon) break; } cars.push(n); }; }
@@ -263,7 +266,8 @@ function drive3d(choice, opts) {
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__jump = mi => { pos = mi * SEG_PER_MI * SEG; };   /* dev: jump down the road */
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__px = () => px;   /* dev: where the van is across the road */
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__critter = (kind, ahead) => critters.push({ seg: Math.floor((pos + PZ) / SEG) + (ahead || 30), kind, off: ahead < 4 ? px : px + 1.2, dir: ahead < 4 ? 1 : 0, hit: false, snap: 0, flash: 0 });   /* dev: drop an animal ahead */   // dev: lets the test harness check for overlaps
-  const respawn = (c, base) => {   // reappear far up the road (out at the horizon), in a lane with room, and never in the last stretch before town
+  const respawn = (c, base) => {   // reappear
+    if (c.curb && !(c.spin > 0)) { const far = Math.max(base + DRAW * 0.6 * SEG, ...cars.filter(o => o.curb && !o.parked).map(o => o.z)); const z = far + rnd(3, 7) * SEG; if (z > (N - 60) * SEG) { c.z = -1e12; c.parked = true; c.retry = 0; return; } curbPlace(c, z); return; }   /* curb cars leapfrog ahead; everything else: far up the road (out at the horizon), in a lane with room, and never in the last stretch before town */
     if (opts.endless) { c.z = -1e12; c.parked = true; c.retry = 0; return; }   /* the Driving Game refills each side from its own budget instead */
     const z = base + rnd(DRAW * 0.85, DRAW) * SEG;
     if (z > (N - 60) * SEG) { c.z = -1e12; c.parked = true; return; }
@@ -434,6 +438,7 @@ function drive3d(choice, opts) {
         const ahead = c.z - (pos + PZ);
         // slow cars in our lane brake for critters + peepers in fall
         let v = c.speed;
+        if (c.curb) { c.prevAhead = ahead; }
         if (!c.onc && FALL && !c.peep && ahead > 400 && ahead < 9000 && Math.random() < dt * 0.04) { c.peep = 1.6; if (Math.abs(ahead) < 6000) say('LEAF PEEPER! BRAKES!'); }
         if (c.peep > 0) { c.peep -= dt; v *= 0.15; }
         if (!c.onc) for (const o of cars) if (o !== c && !o.onc && !o.parked && Math.abs(o.off - c.off) < 0.3 && o.z > c.z && o.z - c.z < 2.5 * SEG) v = Math.min(v, o.speed * (o.peep > 0 ? 0.15 : 1));

@@ -17,12 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794465068"></script>
-<script src="js/calls.js?v=1794465068"></script>
-<script src="js/banter.js?v=1794465068"></script>
-<script src="js/placeholders.js?v=1794465068"></script>
-<script src="js/music.js?v=1794465068"></script>
-<script src="js/sfx.js?v=1794465068"></script>
+<script src="js/state.js?v=1794465499"></script>
+<script src="js/calls.js?v=1794465499"></script>
+<script src="js/banter.js?v=1794465499"></script>
+<script src="js/placeholders.js?v=1794465499"></script>
+<script src="js/music.js?v=1794465499"></script>
+<script src="js/sfx.js?v=1794465499"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -1002,7 +1002,7 @@ SCENES.hub = async () => {
       if (r.eat) { s = DDT.get(); if (r.eat === 'breakfast') s.ateB = true; else s.ateL = true; s.step = r.eat === 'breakfast' ? 'breakfast' : 'lunchstop'; DDT.save(s); continue; }
       s = DDT.get();
       const pick = r.c, from = s.today.from || s.lastTown || 'BERLIN';
-      s.today = { ...s.today, id: pick.id, lead: s.prefLead || 'rod', drive: s.prefDrive ?? 1, from, called: s.today.time };
+      s.today = { ...s.today, id: pick.id, lead: pick.solo ? 'matt' : (s.prefLead || 'rod'), drive: s.prefDrive ?? 1, from, called: s.today.time };
       DDT.save(s);
       if (pick.call === 'fluffer') { setStep('drive'); await go(`index.html?call=fluffer&${RET}`); }
       setStep('drive'); continue;
@@ -1012,14 +1012,14 @@ SCENES.hub = async () => {
       if ((s.month === 9 && !s.sawBigfoot) || (!s.sawBigfoot && s.month > 2 && Math.random() < 0.03)) { s.sawBigfoot = true; DDT.save(s); await bigfoot(); s = DDT.get(); }
       DDT.apply({ money: -15 });   // gas
       const leave = Math.max(30, s.today.time - 420 + 10), due = (s.today.time - 420) + Math.max(45, c.window);   // due counts from when you called them back
-      const rival = !c.story && !c.page && s.month >= 1 && Math.random() < 0.18;
+      const rival = !c.story && !c.page && !c.jam && s.month >= 1 && Math.random() < 0.18;
       setStep('job');
       if (s.today.from === c.town) {
         s = DDT.get(); s.today.time += 10; s.today.late = Math.max(0, s.today.time - 420 - due); DDT.save(s);
         await card([DDT.clock(s.today.time), `ACROSS TOWN · ${c.town}`], 1200); continue;
       }
       if (rival) await say('ROD', 'rod_angry', "UGH, the Clog Kings! They're trying to beat us to the job.");
-      await go(`index.html?drive=1&from=${encodeURIComponent(s.today.from)}&to=${encodeURIComponent(c.town)}&route=${encodeURIComponent(TOWNS[c.town] || 'Route 16')}&leave=${leave}&due=${due}&mode=${s.today.drive ?? ''}&rival=${rival ? 1 : 0}&${RET}`);
+      await go(`index.html?drive=1&from=${encodeURIComponent(s.today.from)}&to=${encodeURIComponent(c.town)}&route=${encodeURIComponent(TOWNS[c.town] || 'Route 16')}&leave=${leave}&due=${due}&mode=${s.today.drive ?? ''}&rival=${rival ? 1 : 0}${c.solo ? '&driver=matt' : ''}${c.jam ? '&jam=1' : ''}&${RET}`);
     }
 
     if (s.step === 'job') {

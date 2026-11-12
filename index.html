@@ -191,12 +191,12 @@
 
 <audio id="music" src="assets/doo_doo_town.mp3" loop preload="auto"></audio>
 <audio id="call" src="assets/call_fluffernutter.mp3" preload="auto"></audio>
-<script src="js/state.js?v=1794465068"></script>
-<script src="js/sfx.js?v=1794465068"></script>
-<script src="js/sqcalls.js?v=1794465068"></script>
-<script src="js/songs.js?v=1794465068"></script>
-<script src="js/drive3d.js?v=1794465068"></script>
-<script src="js/music.js?v=1794465068"></script>
+<script src="js/state.js?v=1794465499"></script>
+<script src="js/sfx.js?v=1794465499"></script>
+<script src="js/sqcalls.js?v=1794465499"></script>
+<script src="js/songs.js?v=1794465499"></script>
+<script src="js/drive3d.js?v=1794465499"></script>
+<script src="js/music.js?v=1794465499"></script>
 <script>
 const W = 480, H = 270, LOOP_W = 6688;           // strip loop width at 270px tall
 const cv = document.getElementById('c'), g = cv.getContext('2d');
@@ -798,7 +798,7 @@ async function embedDrive() {
   if (soundOn) DDTMusic.radioOn('van');   // the van radio keeps playing the same song it was on
   DDTSfx.play('engine_start', { vol: 0.7 }); window.DRV = DDTSfx.loop('van_drive_loop');
   const END = DDT.param('endless') === '1', ARC = DDT.param('arcade') === '1' || END;   // the Clog Kings race or the Driving Game, played from a menu: no money, rep or record changes
-  const r = await drive3d(c, { driver: ARC ? DEF : undefined, endless: END, arcade: ARC, leave: LEAVE, due: DUE, from: typeof from !== 'undefined' ? from : 'BERLIN', to: typeof to !== 'undefined' ? to : 'RANDOLPH', route: typeof route !== 'undefined' ? route : 'Route 2', clock, rival: DDT.param('rival') === '1' });
+  const r = await drive3d(c, { jam: DDT.param('jam') === '1', driver: ARC ? DEF : (DDT.param('driver') || undefined), endless: END, arcade: ARC, leave: LEAVE, due: DUE, from: typeof from !== 'undefined' ? from : 'BERLIN', to: typeof to !== 'undefined' ? to : 'RANDOLPH', route: typeof route !== 'undefined' ? route : 'Route 2', clock, rival: DDT.param('rival') === '1' });
   DRV.stop(); DDTMusic.handoff();   /* hand the radio to the next screen (in the app it just keeps playing) */
   if (END) { try { const R = JSON.parse(localStorage.getItem('ddt_drive_rec') || '{}'), x = r.rec || {}, T = R.tot = R.tot || {}, add = (k, v) => T[k] = (T[k] || 0) + (v || 0);   /* the lifetime Driving Game record, plus your best run */
       add('runs', 1); add('miles', r.miles); add('points', r.score); for (const k in x) if (k !== 'bestCombo') add(k, x[k]); T.bestCombo = Math.max(T.bestCombo || 0, x.bestCombo || 0);

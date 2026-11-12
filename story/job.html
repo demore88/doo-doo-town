@@ -17,12 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794465068"></script>
-<script src="../js/calls.js?v=1794465068"></script>
-<script src="../js/banter.js?v=1794465068"></script>
-<script src="../js/placeholders.js?v=1794465068"></script>
-<script src="../js/music.js?v=1794465068"></script>
-<script src="../js/sfx.js?v=1794465068"></script>
+<script src="../js/state.js?v=1794465499"></script>
+<script src="../js/calls.js?v=1794465499"></script>
+<script src="../js/banter.js?v=1794465499"></script>
+<script src="../js/placeholders.js?v=1794465499"></script>
+<script src="../js/music.js?v=1794465499"></script>
+<script src="../js/sfx.js?v=1794465499"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -340,6 +340,8 @@ function matt(x, y, f = 0, s = 2, a = 1) {
 function van(x, y) { if (IMG.van) { const N = Math.max(1, Math.round(IMG.van.width / (IMG.van.height * 2.35))), fw = IMG.van.width / N, f = Math.floor(Math.abs(x) / 6) % N, vh = 144 * IMG.van.height / fw; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(IMG.van, f * fw, 0, fw, IMG.van.height, Math.round(x), Math.round(y - vh), 144, vh); g.imageSmoothingEnabled = false; } }   // wheels turn as the van moves
 const SAVE = DDT.get(), MONTH = SAVE.month || 0;
 const JOB = Object.assign({}, CALLS.flat().find(c => c.id === DDT.param('id')) || CALLS[0][1]);
+if (JOB.solo) window.rod = function () {};   /* solo job: Matt went out alone */
+const BOSS = JOB.solo ? 'MATT' : 'ROD', BP = m => JOB.solo ? 'matt_' + ({ annoyed: 'tired', happy: 'happy', normal: 'normal' }[m] || 'normal') : 'rod_' + m;
 // Same call, different day, different job: the overworked games swap with a related one that still fits the story (picked once per visit).
 { const ALT = { cable: ['cable', 'detective', 'flush', 'camera'], pull: ['pull', 'claw'], claw: ['claw', 'pull'], septic: ['septic', 'septic', 'poop'], bubble: ['bubble', 'overflow'] };
   const key = 'alt_' + JOB.id + '_' + (DDT.get().day || 0) + '_' + (DDT.get().month || 0); let pick = null; try { pick = sessionStorage.getItem(key); } catch (e) {}
@@ -351,7 +353,7 @@ const FEET = JOB.room === 'yard' ? 206 : roomHasArt(JOB.room) ? 226 : 176;   // 
 // Indoors the crew and the customer stand close to us, big enough to match the room's fixtures, and the crew walks in from the left.
 const INS = JOB.room === 'yard' ? 2.2 : 3.1, INY = JOB.room === 'yard' ? 232 : 264;
 function cast(mood, rodTight) { const o = st.inX || 0;
-  if (rodTight) { g.imageSmoothingEnabled = true; const w = 24 * INS * 0.94, h = 40 * INS * 0.94; g.drawImage(rodTight, 0, 0, rodTight.width / 9, rodTight.height, 118 + o - w / 2, INY - h, w, h); g.imageSmoothingEnabled = false; } else rod(118 + o, INY, 0, INS);
+  if (rodTight && !JOB.solo) { g.imageSmoothingEnabled = true; const w = 24 * INS * 0.94, h = 40 * INS * 0.94; g.drawImage(rodTight, 0, 0, rodTight.width / 9, rodTight.height, 118 + o - w / 2, INY - h, w, h); g.imageSmoothingEnabled = false; } else rod(118 + o, INY, 0, INS);
   matt(205 + o, INY, 0, INS); customer(352, INY, JOB.cust.seed, INS * 0.82, mood); }
 const walkIn = async () => { st.inX = -250; await tween(st, 'inX', 0, 1100); };
 const JS = (() => { try { return JSON.parse(localStorage.getItem('ddt_job')) || {}; } catch (e) { return {}; } })();
@@ -408,6 +410,7 @@ const hubRet = () => DDT.param('ret') || 'play.html';
 const SCENES = {};
 SCENES.arrive = async () => {
   Object.assign(st, { vanX: -170, crew: false, rx: 54, mx: 80, mBehind: true, rBehind: false, cust: false, upset: true });
+  if (JOB.solo) Object.assign(st, { mx: 54, mBehind: false });   /* alone: Matt gets out of the driver's seat */
   view = () => {
     exterior(JOB.ext, JOB.cust.seed, MONTH);
     if (st.crew && st.mBehind) matt(st.mx, 228, 6, 1.6);
@@ -423,7 +426,7 @@ SCENES.arrive = async () => {
   st.crew = true; await wait(250); await Promise.all([tween(st, 'mx', 180, 800, k => k), tween(st, 'rx', 54, 700, k => k)]); st.mBehind = false; st.rBehind = false; DDTSfx.play('van_door_close'); (DDTMusic.fadeOut ? DDTMusic.fadeOut(700) : DDTMusic.stop()); await wait(150);
   st.cust = true;
   if (REPEAT) { await sayL('CUST', pick2(["You're back! It's doing it again.", "Remember me? Same thing.", "I swear I didn't do anything this time."])); st.upset = false; return; }
-  if (Math.random() < 0.15) {   // this one gets it right. It won't matter.
+  if (JOB.solo) {} else if (Math.random() < 0.15) {   // this one gets it right. It won't matter.
     await sayL('ROD', "Hi, I'm Rod.");
     await sayL('CUST', pick2(['Rod? Got it. Rod.', 'Rod. Got it. Come on in, Rod.', "Rod! Got it. I'm good with names."]));
     JS.gotName = true; saveJS();
@@ -440,16 +443,16 @@ SCENES.tool = async () => {
   view = () => { interior(JOB.room, JOB.cust.seed, MONTH, roomArtFor(JOB)); cast('normal'); };
   st.inX = -250; await fadeIn(300); await walkIn();
   const T0 = JOB.tool;
-  const c = await say('ROD', 'rod_normal', T0.q, T0.opts);
+  const c = await say(BOSS, BP('normal'), T0.q, T0.opts);
   JS.toolRight = c === T0.right; saveJS();
-  if (JS.toolRight) { SND.good(); await sayL('ROD', T0.good); }
-  else { SND.bad(); await sayL('MATT', (T0.badBy && T0.badBy[c]) || T0.bad, 'matt_tired'); await say('ROD', 'rod_annoyed', `Fine. ${T0.opts[T0.right][0] + T0.opts[T0.right].slice(1).toLowerCase()}. Should've started there.`); DDT.apply({ time: 20 }); }
+  if (JS.toolRight) { SND.good(); await sayL(BOSS, T0.good); }
+  else { SND.bad(); await sayL('MATT', (T0.badBy && T0.badBy[c]) || T0.bad, 'matt_tired'); await say(BOSS, BP('annoyed'), JOB.solo ? `${T0.opts[T0.right][0] + T0.opts[T0.right].slice(1).toLowerCase()}. Should've started there.` : `Fine. ${T0.opts[T0.right][0] + T0.opts[T0.right].slice(1).toLowerCase()}. Should've started there.`); DDT.apply({ time: 20 }); }
   // parts check
   if (JOB.needs) {
     const s = DDT.get(), part = SHOP.find(p => p.id === JOB.needs);
     JS.partBill = part.price * 3;   // parts go on the bill with a markup
-    if ((s.inv[JOB.needs] || 0) > 0) { DDT.apply({ item: { [JOB.needs]: -1 } }); JS.partBonus = true; await say('ROD', 'rod_happy', `Good thing I grabbed a ${part.name}. This'll go quick.`); await card(['RIGHT PART ON THE VAN', 'JOB IS EASIER · +1 REP'], 1300, '#7dffb0'); }
-    else { await say('ROD', 'rod_annoyed', `We need a ${part.name}. We don't have one. Back to Fernko's.`); DDT.apply({ time: 45, rep: -1, money: -part.price }); await card(['+45 MIN · -1 REP', `BOUGHT A ${part.name}`], 1400, '#e9665a'); }
+    if ((s.inv[JOB.needs] || 0) > 0) { DDT.apply({ item: { [JOB.needs]: -1 } }); JS.partBonus = true; await say(BOSS, BP('happy'), `Good thing I grabbed a ${part.name}. This'll go quick.`); await card(['RIGHT PART ON THE VAN', 'JOB IS EASIER · +1 REP'], 1300, '#7dffb0'); }
+    else { await say(BOSS, BP('annoyed'), `We need a ${part.name}. We don't have one. Back to Fernko's.`); DDT.apply({ time: 45, rep: -1, money: -part.price }); await card(['+45 MIN · -1 REP', `BOUGHT A ${part.name}`], 1400, '#e9665a'); }
     saveJS();
   }
 };
@@ -486,7 +489,7 @@ SCENES.after = async () => {
     await say(lead === 'rod' ? 'ROD' : 'MATT', lead === 'rod' ? 'rod_normal' : 'matt_tired', "No charge. We'll make it right. I'm sorry.");
     return;
   }
-  if (JOB.game === 'camera' && Math.random() < 0.15) {   /* a rare moment on any camera job: the camera line */
+  if (JOB.game === 'camera' && !JOB.solo && Math.random() < 0.15) {   /* a rare moment on any camera job: the camera line */
     await lines([['CARD', 'MEANWHILE', 'Rod is leaning way in, feeding the camera line, eyes on the screen.'], ['CARD', '', 'Matt looks straight at him.'], ['CARD', '', 'Matt slowly reaches toward his face.'], ['CARD', '', 'Rod notices. They lock eyes.'], ['CARD', '', 'Matt gently pulls the camera line out of Rod\'s mouth.'], ['ROD', '...', 'rod_stare'], ['MATT', '...', 'matt_stare'], ['CARD', '10 SECONDS OF SILENCE', ''], ['ROD', '...', 'rod_stare']]);
   }
   await lines(JOB.culprit);
