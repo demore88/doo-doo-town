@@ -2224,125 +2224,6 @@ GAMES.push({
 });
 
 // =====================================================================
-// 24. DOWNHILL DRIFT — midnight on the Auto Road. One of them snuck the van out to race the Clog Kings down the mountain.
-//     Don't tell the other one. Hold DRIFT through the hairpins, let go on the straight for a boost, stay off the guardrail.
-const DRF = { SEG: 200, ROADW: 2000, CAMH: 1000, DEPTH: 0.84, DRAW: 110, MAX: 6200, van: null, rival: null, loop: null };
-DRF.img = () => { if (!DRF.van) { DRF.van = new Image(); DRF.van.src = '../assets/van_back.png'; } const V = DRF.van;
-  if (!DRF.rival && V.complete && V.naturalWidth) { const fw = V.width / 6, c = document.createElement('canvas'); c.width = V.width; c.height = V.height; const k = c.getContext('2d'); k.drawImage(V, 0, 0);
-    const d = k.getImageData(0, 0, c.width, c.height), q = d.data;   /* the Clog Kings: our van, in red and black */
-    for (let i = 0; i < q.length; i += 4) { const r0 = q[i], g0 = q[i + 1], b0 = q[i + 2]; if (b0 > r0 + 30 && b0 > g0) { q[i] = Math.min(255, b0 + 20); q[i + 1] = g0 * 0.3; q[i + 2] = r0 * 0.3; } else if (r0 > 150 && g0 > 130 && b0 < 110) { q[i] = 40; q[i + 1] = 40; q[i + 2] = 44; } }
-    k.putImageData(d, 0, 0); DRF.rival = c; DRF.fw = fw; }
-  return V.complete && V.naturalWidth ? V : null; };
-DRF.sound = on => { if (on && !DRF.loop && typeof DDTSfx !== 'undefined') DRF.loop = DDTSfx.loop('van_drive_loop'); if (!on && DRF.loop) { DRF.loop.stop(); DRF.loop = null; } };
-GAMES.push({
-  id: 'drift', name: 'DOWNHILL DRIFT', tag: 'Midnight · the Auto Road · the Clog Kings · don\'t tell anybody',
-  how: ['Midnight. The Clog Kings want a race down the mountain. Winner gets the Conway calls.', 'The van speeds up on its own. Steer with ◀ ▶. Straights and easy bends: just steer.', 'HAIRPINS: hold DRIFT and steer INTO the turn. The van slides around it without slowing down.', 'Let go of DRIFT after a long slide for a BOOST. Hit the guardrail and you lose speed (and some paint).', 'Beat the red van to the bottom. And do NOT tell the other guy.'],
-  ctl: '◀ ▶ STEER  ·  A / SPACE: HOLD TO DRIFT  ·  B: BRAKE',
-  act: 'DRIFT', act2: 'BRAKE', dpad: 'lr', noReady: false,
-  init(s) {
-    const segs = [], add = (n, c, dy) => { for (let i = 0; i < n; i++) { const prev = segs.length ? segs[segs.length - 1].y : 0; segs.push({ curve: c, y: prev + dy }); } };
-    const ease = (n, c, dy) => { add(Math.round(n * 0.25), c * 0.5, dy); add(Math.round(n * 0.5), c, dy); add(Math.round(n * 0.25), c * 0.5, dy); };
-    add(30, 0, -6);   // the start line
-    const R2 = s.rnd, legs = [[60, 0], [70, 2], [40, 0], [60, -5.5], [30, 0], [60, 5.5], [50, 0], [80, -3], [40, 2.5], [60, 0], [55, 6], [25, 0], [55, -6], [60, 0], [70, 3], [60, -3], [40, 0], [50, 5.8], [20, 0], [50, -5.8], [30, 0], [60, 2], [80, 0]];
-    for (const [n, c] of legs) ease(n, c * (0.9 + R2() * 0.2), -8 - R2() * 10);   /* always downhill */
-    add(60, 0, -4);
-    s.segs = segs; s.N = segs.length; s.LEN = s.N * DRF.SEG; s.FIN = (s.N - 40) * DRF.SEG;
-    s.pos = 0; s.v = 0; s.px = -0.35; s.drift = 0; s.meter = 0; s.boost = 0; s.rails = 0; s.inv = 0; s.smoke = []; s.sparks = [];
-    s.rz = 9 * DRF.SEG; s.rv = 0; s.rpx = 0.35; s.bump = 0; s.lead = false; s.passed = 0; s.msg = 'GO! Catch the red van.'; s.msgT = 2.5; s.done = 0; s.intro = 2.2;
-    s.hero2 = s.hero === 'rod' ? 'MATT' : 'ROD'; DRF.img();
-  },
-  leave() { DRF.sound(false); },
-  update(s, dt, I) {
-    s.t += dt; const S = DRF.SEG, MAX = DRF.MAX * (s.hero === 'rod' ? 0.94 : 1);
-    if (s.intro > 0) { s.intro -= dt; return; }
-    if (s.done) { s.done += dt; s.v *= Math.pow(0.4, dt); s.pos += s.v * dt; if (s.done > 2.4) { DRF.sound(false); const win = s.won; s.end = win ? { win: true, stars: stars3(s.rails === 0, s.rails <= 2), line: s.rails ? `Beat the Clog Kings. Hit the rail ${s.rails}x. (Don't mention the paint.)` : `Beat the Clog Kings clean. ${s.hero2} will never know.` } : { win: false, stars: 0, line: 'The Clog Kings got to the bottom first. And now you have to explain the tires.' }; } return; }
-    DRF.sound(true);
-    const seg = s.segs[Math.floor(s.pos / S) % s.N], c = seg.curve, k = s.v / MAX;
-    let steer = (I.R ? 1 : 0) - (I.L ? 1 : 0); if (I.ptr.down && !steer) steer = I.ptr.x < W * 0.4 ? -1 : I.ptr.x > W * 0.6 ? 1 : 0;
-    const wantDrift = !!(I.A || I.U), brake = !!(I.B || I.D);
-    // speed: the van rolls downhill on its own
-    let top = MAX * (1 + (s.boost > 0 ? 0.18 : 0)); if (brake) s.v -= 5200 * dt; else s.v += (s.v < top ? 1500 : -2000) * dt;
-    s.boost = Math.max(0, s.boost - dt); s.inv = Math.max(0, s.inv - dt);
-    // drifting: only takes when you're actually turning at speed
-    const into = steer !== 0 && Math.sign(steer) === Math.sign(c) && Math.abs(c) > 1;
-    if (wantDrift && k > 0.45 && (steer !== 0)) { s.drift = Math.min(1, s.drift + dt * 3); if (into) s.meter = Math.min(1, s.meter + dt * 0.45); s.v -= 260 * dt; }
-    else { if (s.drift > 0 && !wantDrift && s.meter > 0.35) { s.boost = 0.6 + s.meter * 1.4; s.msg = s.meter > 0.8 ? 'MONSTER DRIFT! BOOST!' : 'BOOST!'; s.msgT = 1.1; SFX('ui_select', { vol: 0.4 }); } if (!wantDrift) { s.meter = 0; } s.drift = Math.max(0, s.drift - dt * 4); }
-    s.v = clamp(s.v, 0, MAX * 1.2);
-    const cf = c * k * k * 0.5 * (1 - 0.62 * s.drift);   // the corner pushes you out; a drift cancels most of it
-    s.px += (steer * (1.9 + s.drift * 0.5) * Math.max(0.3, k) - cf) * dt;
-    if (s.drift > 0.3 && Math.random() < dt * 30) s.smoke.push({ x: W / 2 + (Math.random() - 0.5) * 60, y: H - 30, r: 4, l: 0.8 });
-    if (Math.abs(s.px) > 0.92) { s.px = Math.sign(s.px) * 0.92; if (s.inv <= 0) { s.rails++; s.inv = 0.8; s.v *= 0.55; s.shake = 0.35; s.meter = 0; s.drift = 0; SFX('car_crash', { vol: 0.35 }); s.msg = 'GUARDRAIL!'; s.msgT = 1; for (let i = 0; i < 14; i++) s.sparks.push({ x: W / 2 + Math.sign(s.px) * 40, y: H - 40, vx: (Math.random() - 0.5) * 160 - Math.sign(s.px) * 80, vy: -Math.random() * 120, l: 0.5 }); } }
-    s.pos += s.v * dt;
-    // the Clog Kings: they know the road, and they back off on the hairpins
-    const rs = s.segs[Math.floor(s.rz / S) % s.N], rc = Math.abs(rs.curve), gap = s.rz - s.pos;
-    let rt = MAX * [0.9, 0.95, 0.995][s.diff] * (1 - Math.max(0, rc - 2.5) * 0.06) * (gap > 2500 ? 0.94 : gap < -2500 ? 1.07 : 1);
-    if (s.bump > 0) { s.bump -= dt; rt *= 0.7; }
-    s.rv += clamp(rt - s.rv, -3000 * dt, 1400 * dt); s.rz += s.rv * dt;
-    s.rpx += ((rs.curve > 1 ? 0.45 : rs.curve < -1 ? -0.45 : (s.rpx > 0 ? 0.3 : -0.3)) - s.rpx) * Math.min(1, dt * 1.4);   /* they take the inside of every corner */
-    if (Math.abs(gap) < S * 0.9 && Math.abs(s.rpx - s.px) < 0.42 && s.inv <= 0) { s.inv = 0.6; s.shake = 0.3; SFX('horn_angry', { vol: 0.5 }); if (gap > 0) { s.v *= 0.75; s.msg = 'TRADING PAINT!'; } else { s.bump = 0.8; s.msg = 'BUMPED THEM!'; } s.msgT = 1; s.px += s.px < s.rpx ? -0.15 : 0.15; }
-    const lead = s.pos > s.rz; if (lead && !s.lead) { s.passed++; s.msg = s.passed === 1 ? 'YOU PASSED THE CLOG KINGS!' : 'BACK IN FRONT!'; s.msgT = 1.4; SFX('horn', { vol: 0.4 }); } else if (!lead && s.lead) { s.msg = 'THEY GOT BY YOU!'; s.msgT = 1.2; } s.lead = lead;
-    if (s.pos >= s.FIN || s.rz >= s.FIN) { s.won = s.pos >= s.FIN && s.pos >= s.rz; s.done = 0.01; s.msg = s.won ? 'FIRST TO THE BOTTOM!' : 'THE CLOG KINGS WIN.'; s.msgT = 3; SFX(s.won ? 'ui_select' : 'horn_angry'); }
-    s.msgT -= dt; s.smoke.forEach(p => { p.l -= dt; p.r += dt * 30; p.y -= dt * 10; }); s.smoke = s.smoke.filter(p => p.l > 0);
-    s.sparks.forEach(p => { p.l -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 400 * dt; }); s.sparks = s.sparks.filter(p => p.l > 0);
-    s.steer = steer;
-  },
-  draw(s) {
-    const S = DRF.SEG, RW = DRF.ROADW, t = s.t;
-    // night sky, the mountain, the moon
-    const sky = g.createLinearGradient(0, 0, 0, H * 0.6); sky.addColorStop(0, '#03040a'); sky.addColorStop(1, '#141a33'); g.fillStyle = sky; g.fillRect(0, 0, W, H);
-    for (let i = 0; i < 60; i++) R((i * 97 + 13) % W, (i * 41) % 110, 1, 1, i % 7 ? '#8a93b8' : '#fff');
-    C(400, 40, 12, '#e8e6d0'); C(404, 37, 11, '#141a33');
-    const base = Math.floor(s.pos / S), pct = (s.pos % S) / S, seg0 = s.segs[base % s.N];
-    const sway = s.segs.slice(base, base + 1).reduce((a, q) => a + q.curve, 0);
-    g.fillStyle = '#0a0d18'; g.beginPath(); g.moveTo(0, 120); for (let x = 0; x <= W; x += 20) g.lineTo(x, 100 - 40 * Math.abs(Math.sin((x + s.pos * 0.002) / 70)) - 20 * Math.sin(x / 33)); g.lineTo(W, 140); g.lineTo(0, 140); g.fill();
-    // the road
-    const camY = DRF.CAMH + seg0.y + (s.segs[(base + 1) % s.N].y - seg0.y) * pct;
-    let x = 0, dx = -seg0.curve * pct, maxY = H; const proj = [];
-    for (let n = 0; n < DRF.DRAW; n++) {
-      const i = base + n, sg = s.segs[i % s.N], z1 = i * S - s.pos, z2 = z1 + S, y1 = sg.y, y2 = s.segs[(i + 1) % s.N].y;
-      const p = (z, wx, wy) => { const sc = DRF.DEPTH / Math.max(1, z / 1000); return { x: W / 2 + sc * (wx - s.px * RW) * W / 2 / 1000, y: H / 2 - sc * (wy - camY) * H / 2 / 1000, w: sc * RW * W / 2 / 1000, sc }; };
-      const a = p(z1, x, y1); x += dx; dx += sg.curve; const b = p(z2, x, y2);
-      proj.push({ sg, a, b, i, clip: maxY });
-      if (z1 <= 50 || b.y >= maxY || b.y >= a.y) continue;
-      const fog = Math.min(1, n / DRF.DRAW), light = Math.max(0, 1 - n / 22) * 0.6, dark = (1 - fog * 0.85) * 0.5 + light;
-      const col = (r, g2, b2) => `rgb(${Math.round(r * dark)},${Math.round(g2 * dark)},${Math.round(b2 * dark)})`, alt = Math.floor(i / 3) % 2;
-      const quad = (x1, w1, x2, w2, c2) => { g.fillStyle = c2; g.beginPath(); g.moveTo(x1 - w1, a.y); g.lineTo(x1 + w1, a.y); g.lineTo(x2 + w2, b.y); g.lineTo(x2 - w2, b.y); g.fill(); };
-      g.fillStyle = col(alt ? 26 : 22, alt ? 52 : 46, alt ? 30 : 26); g.fillRect(0, b.y, W, a.y - b.y + 1);
-      quad(a.x, a.w * 1.12, b.x, b.w * 1.12, alt ? col(200, 200, 200) : col(170, 40, 40));   /* rumble strips */
-      quad(a.x, a.w, b.x, b.w, col(alt ? 92 : 86, alt ? 92 : 86, alt ? 98 : 92));
-      if (alt) quad(a.x, a.w * 0.025, b.x, b.w * 0.025, col(230, 200, 60));
-      maxY = b.y;
-    }
-    // guardrail posts and reflectors, trees, and the Clog Kings, far to near
-    for (let n = proj.length - 1; n > 0; n--) { const P = proj[n]; if (P.b.y >= P.a.y || P.i * S - s.pos < 60) continue;
-      const a = P.a, fogA = 1 - n / DRF.DRAW;
-      if (P.i % 4 === 0) for (const side of [-1, 1]) { const px2 = a.x + side * a.w * 1.18, ph = a.w * 0.09, pw = Math.max(1, a.w * 0.02); if (a.y - ph > P.clip) continue;
-        g.globalAlpha = fogA; R(px2 - pw / 2, a.y - ph, pw, ph, '#b8b8b0'); R(px2 - pw, a.y - ph, pw * 2, Math.max(1, ph * 0.18), n < 30 ? '#ff5a2a' : '#a0402a'); g.globalAlpha = 1; }
-      if (P.i % 7 === 3) for (const side of [-1, 1]) { const tx = a.x + side * a.w * (1.8 + (P.i % 3) * 0.3), th = a.w * 0.9; g.globalAlpha = fogA * 0.95; g.fillStyle = '#05080a'; g.beginPath(); g.moveTo(tx, a.y - th); g.lineTo(tx - th * 0.22, a.y); g.lineTo(tx + th * 0.22, a.y); g.fill(); g.globalAlpha = 1; }
-      const rseg = Math.floor(s.rz / S); if (rseg === P.i && DRF.rival) { const sc = a.w / 1000 * 0.36, w2 = DRF.fw * sc, h2 = DRF.van.height * sc, fr = s.segs[rseg % s.N].curve > 1 ? 2 : s.segs[rseg % s.N].curve < -1 ? 1 : 0;
-        const rx = a.x + s.rpx * a.w; g.globalAlpha = Math.min(1, fogA * 1.6); g.drawImage(DRF.rival, fr * DRF.fw, 0, DRF.fw, DRF.van.height, rx - w2 / 2, a.y - h2, w2, h2);
-        R(rx - w2 * 0.38, a.y - h2 * 0.42, w2 * 0.12, h2 * 0.06, '#ff2020'); R(rx + w2 * 0.26, a.y - h2 * 0.42, w2 * 0.12, h2 * 0.06, '#ff2020'); g.globalAlpha = 1; } }
-    // headlights
-    const hl = g.createRadialGradient(W / 2, H - 20, 10, W / 2, H - 60, 200); hl.addColorStop(0, 'rgba(255,240,200,0.18)'); hl.addColorStop(1, 'rgba(255,240,200,0)'); g.fillStyle = hl; g.fillRect(0, 0, W, H);
-    // smoke, sparks, our van
-    for (const p of s.smoke) { g.globalAlpha = Math.max(0, p.l) * 0.5; C(p.x, p.y, p.r, '#c8c8d0'); } g.globalAlpha = 1;
-    const V = DRF.img(), ang = s.drift * Math.sign(s.steer || 0) * 0.16;
-    if (V && !(s.inv > 0 && Math.floor(t * 12) % 2)) { const fr = (s.steer > 0 ? 2 : s.steer < 0 ? 1 : 0) + ((s.v < 2000 && s.done) ? 3 : 0), vw = 118, vh = vw * V.height / DRF.fw;
-      g.save(); g.translate(W / 2, H - 8); g.rotate(ang); g.drawImage(V, fr * DRF.fw, 0, DRF.fw, V.height, -vw / 2, -vh, vw, vh); g.restore(); }
-    for (const p of s.sparks) R(p.x, p.y, 2, 2, '#ffd34a');
-    // HUD
-    HUD(s, 'DOWNHILL DRIFT', null);
-    const mph = Math.round(s.v / DRF.MAX * 58); T(`${mph} MPH`, W - 6, 8, s.boost > 0 ? '#7dffb0' : '#fff', 8, 'right');
-    T(s.lead ? '1ST' : '2ND', W / 2, 30, s.lead ? '#7dffb0' : '#e9665a', 14, 'center');
-    const gs = Math.abs(s.rz - s.pos) / Math.max(800, s.v); T(`${s.lead ? 'AHEAD' : 'BEHIND'} ${gs.toFixed(1)}s`, W / 2, 46, '#cfd8ea', 6, 'center');
-    R(10, H - 20, 82, 8, '#222'); R(11, H - 19, 80 * s.meter, 6, s.meter > 0.8 ? '#ff7a2a' : '#f7c418'); T('DRIFT', 10, H - 26, '#fff', 5);
-    const prog = Math.min(1, s.pos / s.FIN), rprog = Math.min(1, s.rz / s.FIN); R(W - 14, 24, 4, 120, '#333'); R(W - 16, 24 + prog * 116, 8, 4, '#2c6fd6'); R(W - 16, 24 + rprog * 116, 8, 4, '#d43a2a'); T('BOTTOM', W - 12, 152, '#9fb3d9', 4, 'center');
-    if (s.intro > 0) { R(0, 90, W, 50, 'rgba(0,0,0,.75)'); T('MIDNIGHT · THE AUTO ROAD', W / 2, 108, '#f7c418', 9, 'center'); T(`${s.hero2} THINKS YOU'RE ASLEEP.`, W / 2, 126, '#fff', 6, 'center'); }
-    else if (s.msgT > 0) T(s.msg, W / 2, 70, '#f7c418', 9, 'center');
-  },
-});
-
-// =====================================================================
 // 18. POOP SWEEPER — minesweeper-lite. Cross the yard to the septic lid without stepping in it.
 GAMES.push({
   id: 'poop', name: 'POOP SWEEPER', tag: 'The yard where three dogs live',
@@ -3109,3 +2990,123 @@ GAMES.push({
 });
 
 if (typeof module !== 'undefined') module.exports = { GAMES, HEROES, srSolid: typeof srSolid !== 'undefined' ? srSolid : null, setCtx: c => { g = c; } };
+
+// =====================================================================
+// 24. DOWNHILL DRIFT — midnight on the Auto Road. One of them snuck the van out to race the Clog Kings down the mountain.
+//     Don't tell the other one. Hold DRIFT through the hairpins, let go on the straight for a boost, stay off the guardrail.
+const DRF = { SEG: 200, ROADW: 2000, CAMH: 1000, DEPTH: 0.84, DRAW: 110, MAX: 6200, van: null, rival: null, loop: null };
+DRF.img = () => { if (!DRF.van) { DRF.van = new Image(); DRF.van.src = '../assets/van_back.png'; } const V = DRF.van;
+  if (!DRF.rival && V.complete && V.naturalWidth) { const fw = V.width / 6, c = document.createElement('canvas'); c.width = V.width; c.height = V.height; const k = c.getContext('2d'); k.drawImage(V, 0, 0);
+    const d = k.getImageData(0, 0, c.width, c.height), q = d.data;   /* the Clog Kings: our van, in red and black */
+    for (let i = 0; i < q.length; i += 4) { const r0 = q[i], g0 = q[i + 1], b0 = q[i + 2]; if (b0 > r0 + 30 && b0 > g0) { q[i] = Math.min(255, b0 + 20); q[i + 1] = g0 * 0.3; q[i + 2] = r0 * 0.3; } else if (r0 > 150 && g0 > 130 && b0 < 110) { q[i] = 40; q[i + 1] = 40; q[i + 2] = 44; } }
+    k.putImageData(d, 0, 0); DRF.rival = c; DRF.fw = fw; }
+  return V.complete && V.naturalWidth ? V : null; };
+DRF.sound = on => { if (on && !DRF.loop && typeof DDTSfx !== 'undefined') DRF.loop = DDTSfx.loop('van_drive_loop'); if (!on && DRF.loop) { DRF.loop.stop(); DRF.loop = null; } };
+GAMES.push({
+  id: 'drift', name: 'DOWNHILL DRIFT', tag: 'Midnight · the Auto Road · the Clog Kings · don\'t tell anybody',
+  how: ['Midnight. The Clog Kings want a race down the mountain. Winner gets the Conway calls.', 'The van speeds up on its own. Steer with ◀ ▶. Straights and easy bends: just steer.', 'HAIRPINS: hold DRIFT and steer INTO the turn. The van slides around it without slowing down.', 'Let go of DRIFT after a long slide for a BOOST. Hit the guardrail and you lose speed (and some paint).', 'Beat the red van to the bottom. And do NOT tell the other guy.'],
+  ctl: '◀ ▶ STEER  ·  A / SPACE: HOLD TO DRIFT  ·  B: BRAKE',
+  act: 'DRIFT', act2: 'BRAKE', dpad: 'lr', noReady: false,
+  init(s) {
+    const segs = [], add = (n, c, dy) => { for (let i = 0; i < n; i++) { const prev = segs.length ? segs[segs.length - 1].y : 0; segs.push({ curve: c, y: prev + dy }); } };
+    const ease = (n, c, dy) => { add(Math.round(n * 0.25), c * 0.5, dy); add(Math.round(n * 0.5), c, dy); add(Math.round(n * 0.25), c * 0.5, dy); };
+    add(30, 0, -6);   // the start line
+    const R2 = s.rnd, legs = [[60, 0], [70, 2], [40, 0], [60, -5.5], [30, 0], [60, 5.5], [50, 0], [80, -3], [40, 2.5], [60, 0], [55, 6], [25, 0], [55, -6], [60, 0], [70, 3], [60, -3], [40, 0], [50, 5.8], [20, 0], [50, -5.8], [30, 0], [60, 2], [80, 0]];
+    for (const [n, c] of legs) ease(n, c * (0.9 + R2() * 0.2), -8 - R2() * 10);   /* always downhill */
+    add(60, 0, -4);
+    s.segs = segs; s.N = segs.length; s.LEN = s.N * DRF.SEG; s.FIN = (s.N - 40) * DRF.SEG;
+    s.pos = 0; s.v = 0; s.px = -0.35; s.drift = 0; s.meter = 0; s.boost = 0; s.rails = 0; s.inv = 0; s.smoke = []; s.sparks = [];
+    s.rz = 9 * DRF.SEG; s.rv = 0; s.rpx = 0.35; s.bump = 0; s.lead = false; s.passed = 0; s.msg = 'GO! Catch the red van.'; s.msgT = 2.5; s.done = 0; s.intro = 2.2;
+    s.hero2 = s.hero === 'rod' ? 'MATT' : 'ROD'; DRF.img();
+  },
+  leave() { DRF.sound(false); },
+  update(s, dt, I) {
+    s.t += dt; const S = DRF.SEG, MAX = DRF.MAX * (s.hero === 'rod' ? 0.94 : 1);
+    if (s.intro > 0) { s.intro -= dt; return; }
+    if (s.done) { s.done += dt; s.v *= Math.pow(0.4, dt); s.pos += s.v * dt; if (s.done > 2.4) { DRF.sound(false); const win = s.won; s.end = win ? { win: true, stars: stars3(s.rails === 0, s.rails <= 2), line: s.rails ? `Beat the Clog Kings. Hit the rail ${s.rails}x. (Don't mention the paint.)` : `Beat the Clog Kings clean. ${s.hero2} will never know.` } : { win: false, stars: 0, line: 'The Clog Kings got to the bottom first. And now you have to explain the tires.' }; } return; }
+    DRF.sound(true);
+    const seg = s.segs[Math.floor(s.pos / S) % s.N], c = seg.curve, k = s.v / MAX;
+    let steer = (I.R ? 1 : 0) - (I.L ? 1 : 0); if (I.ptr.down && !steer) steer = I.ptr.x < W * 0.4 ? -1 : I.ptr.x > W * 0.6 ? 1 : 0;
+    const wantDrift = !!(I.A || I.U), brake = !!(I.B || I.D);
+    // speed: the van rolls downhill on its own
+    let top = MAX * (1 + (s.boost > 0 ? 0.18 : 0)); if (brake) s.v -= 5200 * dt; else s.v += (s.v < top ? 1500 : -2000) * dt;
+    s.boost = Math.max(0, s.boost - dt); s.inv = Math.max(0, s.inv - dt);
+    // drifting: only takes when you're actually turning at speed
+    const into = steer !== 0 && Math.sign(steer) === Math.sign(c) && Math.abs(c) > 1;
+    if (wantDrift && k > 0.45 && (steer !== 0)) { s.drift = Math.min(1, s.drift + dt * 3); if (into) s.meter = Math.min(1, s.meter + dt * 0.45); s.v -= 260 * dt; }
+    else { if (s.drift > 0 && !wantDrift && s.meter > 0.35) { s.boost = 0.6 + s.meter * 1.4; s.msg = s.meter > 0.8 ? 'MONSTER DRIFT! BOOST!' : 'BOOST!'; s.msgT = 1.1; SFX('ui_select', { vol: 0.4 }); } if (!wantDrift) { s.meter = 0; } s.drift = Math.max(0, s.drift - dt * 4); }
+    s.v = clamp(s.v, 0, MAX * 1.2);
+    const cf = c * k * k * 0.5 * (1 - 0.62 * s.drift);   // the corner pushes you out; a drift cancels most of it
+    s.px += (steer * (1.9 + s.drift * 0.5) * Math.max(0.3, k) - cf) * dt;
+    if (s.drift > 0.3 && Math.random() < dt * 30) s.smoke.push({ x: W / 2 + (Math.random() - 0.5) * 60, y: H - 30, r: 4, l: 0.8 });
+    if (Math.abs(s.px) > 0.92) { s.px = Math.sign(s.px) * 0.92; if (s.inv <= 0) { s.rails++; s.inv = 0.8; s.v *= 0.55; s.shake = 0.35; s.meter = 0; s.drift = 0; SFX('car_crash', { vol: 0.35 }); s.msg = 'GUARDRAIL!'; s.msgT = 1; for (let i = 0; i < 14; i++) s.sparks.push({ x: W / 2 + Math.sign(s.px) * 40, y: H - 40, vx: (Math.random() - 0.5) * 160 - Math.sign(s.px) * 80, vy: -Math.random() * 120, l: 0.5 }); } }
+    s.pos += s.v * dt;
+    // the Clog Kings: they know the road, and they back off on the hairpins
+    const rs = s.segs[Math.floor(s.rz / S) % s.N], rc = Math.abs(rs.curve), gap = s.rz - s.pos;
+    let rt = MAX * [0.9, 0.95, 0.995][s.diff] * (1 - Math.max(0, rc - 2.5) * 0.06) * (gap > 2500 ? 0.94 : gap < -2500 ? 1.07 : 1);
+    if (s.bump > 0) { s.bump -= dt; rt *= 0.7; }
+    s.rv += clamp(rt - s.rv, -3000 * dt, 1400 * dt); s.rz += s.rv * dt;
+    s.rpx += ((rs.curve > 1 ? 0.45 : rs.curve < -1 ? -0.45 : (s.rpx > 0 ? 0.3 : -0.3)) - s.rpx) * Math.min(1, dt * 1.4);   /* they take the inside of every corner */
+    if (Math.abs(gap) < S * 0.9 && Math.abs(s.rpx - s.px) < 0.42 && s.inv <= 0) { s.inv = 0.6; s.shake = 0.3; SFX('horn_angry', { vol: 0.5 }); if (gap > 0) { s.v *= 0.75; s.msg = 'TRADING PAINT!'; } else { s.bump = 0.8; s.msg = 'BUMPED THEM!'; } s.msgT = 1; s.px += s.px < s.rpx ? -0.15 : 0.15; }
+    const lead = s.pos > s.rz; if (lead && !s.lead) { s.passed++; s.msg = s.passed === 1 ? 'YOU PASSED THE CLOG KINGS!' : 'BACK IN FRONT!'; s.msgT = 1.4; SFX('horn', { vol: 0.4 }); } else if (!lead && s.lead) { s.msg = 'THEY GOT BY YOU!'; s.msgT = 1.2; } s.lead = lead;
+    if (s.pos >= s.FIN || s.rz >= s.FIN) { s.won = s.pos >= s.FIN && s.pos >= s.rz; s.done = 0.01; s.msg = s.won ? 'FIRST TO THE BOTTOM!' : 'THE CLOG KINGS WIN.'; s.msgT = 3; SFX(s.won ? 'ui_select' : 'horn_angry'); }
+    s.msgT -= dt; s.smoke.forEach(p => { p.l -= dt; p.r += dt * 30; p.y -= dt * 10; }); s.smoke = s.smoke.filter(p => p.l > 0);
+    s.sparks.forEach(p => { p.l -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 400 * dt; }); s.sparks = s.sparks.filter(p => p.l > 0);
+    s.steer = steer;
+  },
+  draw(s) {
+    const S = DRF.SEG, RW = DRF.ROADW, t = s.t;
+    // night sky, the mountain, the moon
+    const sky = g.createLinearGradient(0, 0, 0, H * 0.6); sky.addColorStop(0, '#03040a'); sky.addColorStop(1, '#141a33'); g.fillStyle = sky; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 60; i++) R((i * 97 + 13) % W, (i * 41) % 110, 1, 1, i % 7 ? '#8a93b8' : '#fff');
+    C(400, 40, 12, '#e8e6d0'); C(404, 37, 11, '#141a33');
+    const base = Math.floor(s.pos / S), pct = (s.pos % S) / S, seg0 = s.segs[base % s.N];
+    const sway = s.segs.slice(base, base + 1).reduce((a, q) => a + q.curve, 0);
+    g.fillStyle = '#0a0d18'; g.beginPath(); g.moveTo(0, 120); for (let x = 0; x <= W; x += 20) g.lineTo(x, 100 - 40 * Math.abs(Math.sin((x + s.pos * 0.002) / 70)) - 20 * Math.sin(x / 33)); g.lineTo(W, 140); g.lineTo(0, 140); g.fill();
+    // the road
+    const camY = DRF.CAMH + seg0.y + (s.segs[(base + 1) % s.N].y - seg0.y) * pct;
+    let x = 0, dx = -seg0.curve * pct, maxY = H; const proj = [];
+    for (let n = 0; n < DRF.DRAW; n++) {
+      const i = base + n, sg = s.segs[i % s.N], z1 = i * S - s.pos, z2 = z1 + S, y1 = sg.y, y2 = s.segs[(i + 1) % s.N].y;
+      const p = (z, wx, wy) => { const sc = DRF.DEPTH / Math.max(1, z / 1000); return { x: W / 2 + sc * (wx - s.px * RW) * W / 2 / 1000, y: H / 2 - sc * (wy - camY) * H / 2 / 1000, w: sc * RW * W / 2 / 1000, sc }; };
+      const a = p(z1, x, y1); x += dx; dx += sg.curve; const b = p(z2, x, y2);
+      proj.push({ sg, a, b, i, clip: maxY });
+      if (z1 <= 50 || b.y >= maxY || b.y >= a.y) continue;
+      const fog = Math.min(1, n / DRF.DRAW), light = Math.max(0, 1 - n / 22) * 0.6, dark = (1 - fog * 0.85) * 0.5 + light;
+      const col = (r, g2, b2) => `rgb(${Math.round(r * dark)},${Math.round(g2 * dark)},${Math.round(b2 * dark)})`, alt = Math.floor(i / 3) % 2;
+      const quad = (x1, w1, x2, w2, c2) => { g.fillStyle = c2; g.beginPath(); g.moveTo(x1 - w1, a.y); g.lineTo(x1 + w1, a.y); g.lineTo(x2 + w2, b.y); g.lineTo(x2 - w2, b.y); g.fill(); };
+      g.fillStyle = col(alt ? 26 : 22, alt ? 52 : 46, alt ? 30 : 26); g.fillRect(0, b.y, W, a.y - b.y + 1);
+      quad(a.x, a.w * 1.12, b.x, b.w * 1.12, alt ? col(200, 200, 200) : col(170, 40, 40));   /* rumble strips */
+      quad(a.x, a.w, b.x, b.w, col(alt ? 92 : 86, alt ? 92 : 86, alt ? 98 : 92));
+      if (alt) quad(a.x, a.w * 0.025, b.x, b.w * 0.025, col(230, 200, 60));
+      maxY = b.y;
+    }
+    // guardrail posts and reflectors, trees, and the Clog Kings, far to near
+    for (let n = proj.length - 1; n > 0; n--) { const P = proj[n]; if (P.b.y >= P.a.y || P.i * S - s.pos < 60) continue;
+      const a = P.a, fogA = 1 - n / DRF.DRAW;
+      if (P.i % 4 === 0) for (const side of [-1, 1]) { const px2 = a.x + side * a.w * 1.18, ph = a.w * 0.09, pw = Math.max(1, a.w * 0.02); if (a.y - ph > P.clip) continue;
+        g.globalAlpha = fogA; R(px2 - pw / 2, a.y - ph, pw, ph, '#b8b8b0'); R(px2 - pw, a.y - ph, pw * 2, Math.max(1, ph * 0.18), n < 30 ? '#ff5a2a' : '#a0402a'); g.globalAlpha = 1; }
+      if (P.i % 7 === 3) for (const side of [-1, 1]) { const tx = a.x + side * a.w * (1.8 + (P.i % 3) * 0.3), th = a.w * 0.9; g.globalAlpha = fogA * 0.95; g.fillStyle = '#05080a'; g.beginPath(); g.moveTo(tx, a.y - th); g.lineTo(tx - th * 0.22, a.y); g.lineTo(tx + th * 0.22, a.y); g.fill(); g.globalAlpha = 1; }
+      const rseg = Math.floor(s.rz / S); if (rseg === P.i && DRF.rival) { const sc = a.w / 1000 * 0.36, w2 = DRF.fw * sc, h2 = DRF.van.height * sc, fr = s.segs[rseg % s.N].curve > 1 ? 2 : s.segs[rseg % s.N].curve < -1 ? 1 : 0;
+        const rx = a.x + s.rpx * a.w; g.globalAlpha = Math.min(1, fogA * 1.6); g.drawImage(DRF.rival, fr * DRF.fw, 0, DRF.fw, DRF.van.height, rx - w2 / 2, a.y - h2, w2, h2);
+        R(rx - w2 * 0.38, a.y - h2 * 0.42, w2 * 0.12, h2 * 0.06, '#ff2020'); R(rx + w2 * 0.26, a.y - h2 * 0.42, w2 * 0.12, h2 * 0.06, '#ff2020'); g.globalAlpha = 1; } }
+    // headlights
+    const hl = g.createRadialGradient(W / 2, H - 20, 10, W / 2, H - 60, 200); hl.addColorStop(0, 'rgba(255,240,200,0.18)'); hl.addColorStop(1, 'rgba(255,240,200,0)'); g.fillStyle = hl; g.fillRect(0, 0, W, H);
+    // smoke, sparks, our van
+    for (const p of s.smoke) { g.globalAlpha = Math.max(0, p.l) * 0.5; C(p.x, p.y, p.r, '#c8c8d0'); } g.globalAlpha = 1;
+    const V = DRF.img(), ang = s.drift * Math.sign(s.steer || 0) * 0.16;
+    if (V && !(s.inv > 0 && Math.floor(t * 12) % 2)) { const fr = (s.steer > 0 ? 2 : s.steer < 0 ? 1 : 0) + ((s.v < 2000 && s.done) ? 3 : 0), vw = 118, vh = vw * V.height / DRF.fw;
+      g.save(); g.translate(W / 2, H - 8); g.rotate(ang); g.drawImage(V, fr * DRF.fw, 0, DRF.fw, V.height, -vw / 2, -vh, vw, vh); g.restore(); }
+    for (const p of s.sparks) R(p.x, p.y, 2, 2, '#ffd34a');
+    // HUD
+    HUD(s, 'DOWNHILL DRIFT', null);
+    const mph = Math.round(s.v / DRF.MAX * 58); T(`${mph} MPH`, W - 6, 8, s.boost > 0 ? '#7dffb0' : '#fff', 8, 'right');
+    T(s.lead ? '1ST' : '2ND', W / 2, 30, s.lead ? '#7dffb0' : '#e9665a', 14, 'center');
+    const gs = Math.abs(s.rz - s.pos) / Math.max(800, s.v); T(`${s.lead ? 'AHEAD' : 'BEHIND'} ${gs.toFixed(1)}s`, W / 2, 46, '#cfd8ea', 6, 'center');
+    R(10, H - 20, 82, 8, '#222'); R(11, H - 19, 80 * s.meter, 6, s.meter > 0.8 ? '#ff7a2a' : '#f7c418'); T('DRIFT', 10, H - 26, '#fff', 5);
+    const prog = Math.min(1, s.pos / s.FIN), rprog = Math.min(1, s.rz / s.FIN); R(W - 14, 24, 4, 120, '#333'); R(W - 16, 24 + prog * 116, 8, 4, '#2c6fd6'); R(W - 16, 24 + rprog * 116, 8, 4, '#d43a2a'); T('BOTTOM', W - 12, 152, '#9fb3d9', 4, 'center');
+    if (s.intro > 0) { R(0, 90, W, 50, 'rgba(0,0,0,.75)'); T('MIDNIGHT · THE AUTO ROAD', W / 2, 108, '#f7c418', 9, 'center'); T(`${s.hero2} THINKS YOU'RE ASLEEP.`, W / 2, 126, '#fff', 6, 'center'); }
+    else if (s.msgT > 0) T(s.msg, W / 2, 70, '#f7c418', 9, 'center');
+  },
+});
+
