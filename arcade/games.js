@@ -1500,8 +1500,9 @@ GAMES.push({
     const z = this.zone(s), pool = TRL.FOES.filter(f => !f.king && f.z <= z && !(f.once && (s.met || []).includes(f.name)));
     let r = s.rnd() * pool.reduce((a, f) => a + f.w, 0), F = force || pool[0]; if (!force) for (const f of pool) { if ((r -= f.w) <= 0) { F = f; break; } }
     if (F.king) s.kingSeen = true;
+    const kingTalk = F.king ? ["Welcome... to my KINGDOM, plumber.", "For three hundred generations of rats, my family has ruled this drip.", s.married ? "And you ABANDONED my cousin, the Possum Princess. She cried for DAYS." : "Carl told me you were coming. Carl tells me EVERYTHING.", "You came to fix the pipe? The pipe is MINE. The drip is MINE.", "Too bad you won't make it out alive."] : null;   /* the boss speech: about 10 seconds, tap to hurry it */
     const hp = Math.round((F.hp[0] + Math.floor(s.rnd() * (F.hp[1] - F.hp[0] + 1))) * (F.king ? [1.1, 1.3, 1.55][s.diff] : 1.5 + this.zone(s) * 0.6));   /* deeper ones are tougher */
-    s.battle = { F, hp, max: hp, sel: 4, q: [], stun: 0, open: 0.6, blink: 0, dmgT: 0, pose: 2, poseT: 0.8, out: 0 }; s.since = 0; s.fights++; s.flash = 0.6; (s.met = s.met || []).push(F.name); TRL.bgm(true); TRL.cry(F, true);
+    s.battle = { F, hp, max: hp, sel: 4, q: [], stun: 0, open: 0.6, blink: 0, dmgT: 0, pose: 2, poseT: 0.8, out: 0, talk: kingTalk && { i: 0, t: 0, L: kingTalk } }; s.since = 0; s.fights++; s.flash = 0.6; (s.met = s.met || []).push(F.name); TRL.bgm(true); TRL.cry(F, true);
     this.say(s, F.princess ? 'THE POSSUM PRINCESS blocks your way. She expects tribute.' : F.gary ? 'It is GARY. Gary is a raccoon in a tiny vest. Gary has done this before.' : F.king ? 'THE RAT KING rises from the muck, cape and all!' : F.name === 'BIG BUFF RAT' ? 'A BIG BUFF RAT flexes at you. It has been working out.' : F.venom ? 'A BROWN RECLUSE drops down from a joist!' : F.thief ? 'A RACCOON was already down here. It is not happy.' : F.possum ? 'A POSSUM hisses at you from behind a pier!' : `A ${F.name} jumps out of the dark!`);
     if (!s.tipped && !F.princess) { s.tipped = true; this.say(s, 'TIP: WHACK hits it. FLASHLIGHT blinds it for 2 turns. CRACKER lets you sneak away.'); this.say(s, 'TIP: BAG has your band-aids. RUN might work... might not.'); }   /* explained once, in the first fight */
   },
@@ -1678,6 +1679,8 @@ GAMES.push({
     const b = s.battle, tap = I.Ap || I.ptr.clicked; TRL.music.tick = performance.now();
     b.poseT = Math.max(0, b.poseT - dt); if (b.poseT <= 0 && b.pose !== 7) b.pose = null; if (b.out) b.out += dt;
     if (b.open > 0) { b.open -= dt; return; }
+    if (b.talk) { const K = b.talk; K.t += dt; if (K.i === 0 && K.t < dt * 1.5) { TRL.cry(b.F, true); s.shake = 0.3; }
+      if ((K.t > 0.4 && tap) || K.t > (K.i === K.L.length - 1 ? 2.8 : 2.1)) { K.i++; K.t = 0; b.pose = K.i === K.L.length - 1 ? 4 : 2; b.poseT = 0.8; if (K.i === K.L.length - 1) { TRL.cry(b.F, true); s.shake = 0.4; } if (K.i >= K.L.length) b.talk = null; } return; }
     b.blink = Math.max(0, b.blink - dt); b.dmgT = Math.max(0, b.dmgT - dt);
     if (b.q.length) { const m = b.q[0]; if (!m.t && m.fx) m.fx(); m.t += dt; if ((m.t > 0.25 && tap) || m.t > 1.6) { (s.log = s.log || []).push(m.text.length > 52 ? m.text.slice(0, 51) + '…' : m.text); b.q.shift(); if (!b.q.length && b.after) { const a = b.after; b.after = null; a(); } } return; }
     const OPTS = this.opts(s);
@@ -1850,6 +1853,11 @@ GAMES.push({
       st.forEach(([k, v], i) => { T(k, VX + 12, VY + 30 + i * 14, '#9fb3d9', 6); T(String(v), VX + 150, VY + 30 + i * 14, '#fff', 6, 'right'); });
       const GN = { pipewrench: 'PIPE WRENCH', lid: 'TRASH CAN LID', crown: 'POSSUM CROWN', pads: 'KNEE PADS', hat: 'HARD HAT', waders: 'CHEST WADERS', wrench: 'BIGGER WRENCH', cutter: 'PIPE CUTTER' }; { const wt = 'WEARING: ' + (s.gear.length ? s.gear.map(q => GN[q]).join(', ') : 'NOTHING SPECIAL'), L2 = WRAP(wt, 0, null, VW - 24, '#c9a46a', 5, 8); WRAP(wt, VX + 12, VY + VH - 6 - L2.length * 8, VW - 24, '#c9a46a', 5, 8); }
       this.bagList(s).forEach((o, i) => { const [x, y, w, h] = this.bagBox(i), on = i === s.bag.sel; R(x, y, w, h, on ? '#5a4420' : '#241c13'); R(x, y, w, 1, '#8a6a30'); T(o.label, x + 6, y + h / 2 + 1, o.off ? '#5a5048' : on ? '#f7c418' : '#e8dcc0', 6); if (on) T('▶', x - 1, y + h / 2 + 1, '#f7c418', 6, 'right'); }); }
+    if (s.battle && s.battle.talk && s.battle.open <= 0) { const K = s.battle.talk, line = K.L[Math.min(K.i, K.L.length - 1)], L2 = WRAP(line, 0, null, VW - 48, '#fff', 8, 13), bh = 26 + L2.length * 13, last = K.i === K.L.length - 1;   /* THE RAT KING speaks */
+      g.fillStyle = `rgba(90,0,0,${0.18 + 0.1 * Math.sin(s.t * 4)})`; g.fillRect(VX, VY, VW, VH);
+      R(VX + 10, VY + 8, VW - 20, bh, 'rgba(12,4,4,.92)'); R(VX + 10, VY + 8, VW - 20, 2, '#c0392b'); R(VX + 10, VY + 6 + bh, VW - 20, 2, '#c0392b');
+      T('THE RAT KING:', VX + 20, VY + 18, '#e9665a', 7); WRAP(line.slice(0, Math.floor(K.t * 45)), VX + 20, VY + 32, VW - 48, last ? '#ff8a7a' : '#fff', 8, 13);
+      if (K.t > 0.4 && Math.floor(s.t * 3) % 2) T('▼', VX + VW - 20, VY + bh, '#e9665a', 6, 'right'); }
     if (s.lvlUp) { const L = s.lvlUp, a = Math.min(1, L.t * 4, (3.2 - L.t) * 2), sc = 1 + Math.max(0, 0.25 - L.t) * 2;   /* LEVEL UP! pops up over the view */
       g.save(); g.globalAlpha = a; R(VX + 50, VY + 40, VW - 100, 70, 'rgba(10,8,6,.9)'); R(VX + 50, VY + 40, VW - 100, 2, '#f7c418'); R(VX + 50, VY + 108, VW - 100, 2, '#f7c418');
       for (let i = 0; i < 10; i++) { const an = i / 10 * 6.28 + L.t * 2, rr = 70 + L.t * 30; T('✦', VX + VW / 2 + Math.cos(an) * rr, VY + 75 + Math.sin(an) * rr * 0.45, '#f7c418', 6, 'center'); }
