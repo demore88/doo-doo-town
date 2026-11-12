@@ -363,11 +363,7 @@ GAMES.push({
     TUNNEL.vignette(0.55);
     // the flex shaft: comes from behind you, runs away down the pipe to the chain knocker spinning a couple of feet ahead
     const fH = 3.6, hubX = ox, hubY = oy - 0.1, P = (f, X, Y) => { const q = TUNNEL.proj(f, X, Y, ox, oy); q[0] += sway * Math.min(1, Math.max(0, f) / 8); return q; };
-    { const pts = []; for (let f2 = 0.1; f2 <= fH; f2 += 0.1) { const u = (f2 - 0.1) / (fH - 0.1); pts.push(P(f2, hubX + Math.sin(f2 * 1.3 + s.t * 0.6) * 0.05 * (1 - u), hubY + 0.62 * (1 - u) * (1 - u))); }   /* from just under you, away down the pipe */
-      for (let i2 = 0; i2 < pts.length - 1; i2++) { const [x1, y1, r1] = pts[i2], [x2, y2] = pts[i2 + 1], bare = i2 > pts.length - 5, wdt = Math.max(2, r1 * 0.075);
-        g.strokeStyle = bare ? '#9aa0a8' : '#202226'; g.lineWidth = wdt; g.lineCap = 'round'; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
-        g.strokeStyle = bare ? ((i2 + Math.floor(s.spinT * 3)) % 2 ? '#d8dce2' : '#6a7078') : 'rgba(255,255,255,.12)'; g.lineWidth = Math.max(1, wdt * 0.3); g.beginPath(); g.moveTo(x1, y1 - wdt * 0.25); g.lineTo(x2, y2 - wdt * 0.25); g.stroke(); }   /* casing sheen; the bare spinning cable at the head */
-      g.lineCap = 'butt'; }
+    // the chain knocker is out ahead, so it's drawn first: the shaft running back toward you passes in front of it
     { const [hx, hy, hr] = P(fH, hubX, hubY), spin = s.spinT, spinning = (s.spinRate || 0) > 6 && !(s.snag > 0), n = 3, Lc = 0.86;
       if (spinning) { g.strokeStyle = 'rgba(200,205,212,.18)'; g.lineWidth = Math.max(2, hr * 0.12); g.beginPath(); g.ellipse(hx, hy, hr * Lc, hr * Lc, 0, 0, 7); g.stroke(); }   /* the blur ring the chains make */
       for (let c2 = 0; c2 < n; c2++) for (let ghost = spinning ? 2 : 0; ghost >= 0; ghost--) {
@@ -379,6 +375,11 @@ GAMES.push({
           if (l === 10 && spinning && !ghost) { R(lx - sz, ly - sz, sz * 2, sz * 2, '#f2f4f6'); if (Math.random() < 0.35) R(lx + (Math.random() - 0.5) * 10, ly + (Math.random() - 0.5) * 10, 2, 2, '#f7c418'); } }   /* carbide tip, sparks off the wall */
         g.globalAlpha = 1; }
       C(hx, hy, Math.max(3, hr * 0.075), s.snag > 0 ? '#e9665a' : '#7e848c'); C(hx - hr * 0.02, hy - hr * 0.02, Math.max(1, hr * 0.025), '#e8eaee'); }   /* the knocker hub */
+    { const pts = []; for (let f2 = 0.1; f2 <= fH; f2 += 0.1) { const u = (f2 - 0.1) / (fH - 0.1); pts.push(P(f2, hubX + Math.sin(f2 * 1.3 + s.t * 0.6) * 0.05 * (1 - u), hubY + 0.62 * (1 - u) * (1 - u))); }   /* from just under you, away down the pipe */
+      for (let i2 = 0; i2 < pts.length - 1; i2++) { const [x1, y1, r1] = pts[i2], [x2, y2] = pts[i2 + 1], bare = i2 > pts.length - 5, wdt = Math.max(2, r1 * 0.075);
+        g.strokeStyle = bare ? '#9aa0a8' : '#202226'; g.lineWidth = wdt; g.lineCap = 'round'; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+        g.strokeStyle = bare ? ((i2 + Math.floor(s.spinT * 3)) % 2 ? '#d8dce2' : '#6a7078') : 'rgba(255,255,255,.12)'; g.lineWidth = Math.max(1, wdt * 0.3); g.beginPath(); g.moveTo(x1, y1 - wdt * 0.25); g.lineTo(x2, y2 - wdt * 0.25); g.stroke(); }   /* casing sheen; the bare spinning cable at the head */
+      g.lineCap = 'butt'; }
     if (s.wall > 0.2) for (let i2 = 0; i2 < 6; i2++) R(240 + Math.sign(off) * (90 + Math.random() * 60), 150 + Math.random() * 60, 3, 2, i2 % 2 ? '#f7c418' : '#e9665a');   /* scraping the wall */
     DRAWFX(s);
     HUD(s, 'SNAKE THE LINE', s.TIME - s.t);
