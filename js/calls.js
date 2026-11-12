@@ -360,11 +360,12 @@ const CALLS = [
               ['ROD', "I'm aware, Matt.", 'rod_annoyed'],
               ['MATT', "Grease always smells so sour. It's worse than poop. I'd take poop.", 'matt_tired']],
     tip: "Grease goes in the trash, not the sink. And a finished basement needs an access panel for the cleanout.", pay: 650 },
-  { id: 'lost-jetter', title: 'THE LOST JETTER', story: true, gate: 'jetter', town: 'CONWAY', addr: 'Route 16', cust: { name: 'DISPATCH', seed: 341 }, ext: 'business', room: 'yard', window: 120,
-    ring: "PLACEHOLDER — the story of how we lost a jetter. Fill me in!",
-    intro: [['ROD', 'We are not talking about the jetter.'], ['MATT', 'We are absolutely talking about the jetter.']],
-    tool: { q: 'The jetter hose is gone. Where?', opts: ['FOLLOW THE HOSE', 'BLAME MATT', 'BUY A NEW ONE'], right: 0, good: 'Follow it.', bad: 'Expensive.' },
-    game: 'jetter', lead: 'rod', culprit: [['MATT', 'Found it.'], ['ROD', 'We never speak of this.']], tip: 'PLACEHOLDER tip.', pay: 600 },
+  { id: 'lost-jetter', title: 'THE LOST JETTER', story: true, gate: 'jetter', town: 'FRYEBURG', addr: 'off the main road', cust: { name: 'HOMEOWNER', seed: 341 }, ext: 'house', room: 'yard', window: 120,
+    ring: "There's a pipe coming out at the road below my house. It's running. And it smells... bad.",
+    intro: [['CARD', 'AT THE ROAD', 'A pipe comes out of the bank, running water down to the road.'], ['MATT', 'Rain drain, right? Why does it smell like sewage?', 'matt_suspicious'], ['ROD', "Only one way to find out. Jet it up toward the house."], ['MATT', 'Feeding hose... fifty feet... seventy-five...'], ['ROD', "Keep going."]],
+    tool: { q: 'The jetter head is way up the line toward the house. Now what?', opts: ['KEEP FEEDING IT', 'PULL IT BACK AND CAMERA IT FIRST', 'CALL IT A DAY'], right: 1, good: "Good call. ...Oh. It won't come back.", bad: "It's already gone. It went somewhere it shouldn't." },
+    game: 'jetter', lead: 'rod', culprit: [['ROD', "It won't come back. It's stuck.", 'rod_annoyed'], ['MATT', 'Stuck on what?'], ['ROD', "It went out a break in the pipe. It's off in the dirt somewhere.", 'rod_tired'], ['MATT', "That's an eight hundred dollar jetter head.", 'matt_shocked'], ['CARD', 'SNIP', 'They cut a hundred feet of hose and leave it in the ground.'], ['ROD', "This is a French drain. Rain water. But it smells like sewage because the line from the septic to the leach field must be broken."], ['MATT', "So shitty piss water is leaking into the ground, into the French drain, and out to the road.", 'matt_tired'], ['CARD', 'TO THIS DAY', 'The jetter head has never been recovered.'], ['ROD', 'We never speak of this.']],
+    tip: "If the drain at the bottom of your yard smells like sewage, your septic line is probably broken. Get it looked at.", pay: 600 },
 ],
 // ---------------- DECEMBER ----------------
 [
