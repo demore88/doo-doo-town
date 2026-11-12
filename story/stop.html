@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794465499"></script>
-<script src="../js/calls.js?v=1794465499"></script>
-<script src="../js/placeholders.js?v=1794465499"></script>
-<script src="../js/music.js?v=1794465499"></script>
-<script src="../js/sfx.js?v=1794465499"></script>
+<script src="../js/state.js?v=1794465663"></script>
+<script src="../js/calls.js?v=1794465663"></script>
+<script src="../js/placeholders.js?v=1794465663"></script>
+<script src="../js/music.js?v=1794465663"></script>
+<script src="../js/sfx.js?v=1794465663"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -448,7 +448,7 @@ function frame(now) {
     if (Math.floor(now / 500) % 2) T('TAP TO START', 240, 170, '#fff', 8, 'center');
     if (ptr.clicked || confirmHit()) { started = true; ac(); const q = new URLSearchParams(location.search).get('scene'); runFrom(Math.max(0, ORDER.indexOf(q))); }
   } else {
-    view();
+    view(); if (typeof JOB !== 'undefined' && JOB.night) { g.save(); g.globalCompositeOperation = 'multiply'; g.fillStyle = '#3d4a78'; g.fillRect(0, 0, W, H); g.restore(); }   /* night jobs: tint the whole scene dark */
     if (game) { const gm = game; gm.update(dt); gm.draw(); }   // update may finish the game and clear it
     else if (!dialogInput() && st.waitTap && (ptr.clicked || confirmHit())) { const f = st.waitTap; st.waitTap = null; f(); }
     drawDialog();
