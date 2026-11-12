@@ -1384,6 +1384,9 @@ TRL.imgTex = (n, w) => {   /* turn a sprite into a 32x32 billboard texture, sitt
 TRL.music = { h: null, tick: 0, amb: null, atick: 0 };
 TRL.bgm = on => { const M = TRL.music; if (on && !M.h && typeof DDTSfx !== 'undefined') M.h = DDTSfx.loop('ut_battle'); if (!on && M.h) { M.h.stop(); M.h = null; } };
 TRL.amb = on => { const M = TRL.music; if (on && !M.amb && typeof DDTSfx !== 'undefined') M.amb = [DDTSfx.loop('ut_amb_a'), DDTSfx.loop('ut_amb_b')]; if (!on && M.amb) { M.amb.forEach(h => h.stop()); M.amb = null; } };   /* the two crawlspace tracks, layered */
+TRL.CARL = [['carl_laugh', [0, 6.57, 13.86], 3.6], ['carl_sigh', [0, 3.21, 6.89, 10.26, 13.09, 16.33], 1.9], ['carl_cough', [0], 3.3], ['carl_scream', [0], 1.9]];   /* Carl's noises: one random slice at a time */
+TRL.carl = (s, chance) => { const n = performance.now(); if (n - (TRL.carlT || 0) < 6000 || Math.random() > (chance == null ? 1 : chance)) return; TRL.carlT = n;
+  const C2 = TRL.CARL[Math.random() < 0.12 ? 3 : Math.floor(Math.random() * 3)], off = C2[1][Math.floor(Math.random() * C2[1].length)]; SFX(C2[0], { offset: off, dur: C2[2] }); };
 TRL.hold = txt => 3.5 + String(txt || '').length * 0.07;   /* how long a line stays up before it moves on by itself: long lines get time to be read (tap skips) */
 TRL.wedM = on => { const M = TRL.music; if (on && !M.wed && typeof DDTSfx !== 'undefined') M.wed = DDTSfx.loop('ut_wedding'); if (!on && M.wed) { M.wed.stop(); M.wed = null; } };
 setInterval(() => { const M = TRL.music, n = performance.now(); if (M.h && n - M.tick > 400) TRL.bgm(false); if (M.amb && n - M.atick > 400) TRL.amb(false); if (M.wed && n - (M.wtick || 0) > 400) TRL.wedM(false); }, 300);   /* game paused, quit or over: the battle music stops */
@@ -1467,7 +1470,7 @@ GAMES.push({
     const carlHere = s.carls.find(q => q.c === nc && q.r === nr);
     if (carlHere && cmd === 'F') { this.openShop(s, carlHere); return; }   /* crawl up to Carl: he's sitting right there */
     if (!this.open(s, nc, nr) || carlHere || (s.kingdom && nc === s.kingdom.c && nr === s.kingdom.r)) { s.shake = 0.15; return; }   /* bumping a pier: just a shake, no sound */
-    s.pc = nc; s.pr = nr; s.mv = s.mvD = cmd === 'B' ? dur * 1.2 : dur; s.arrived = true;   /* crawling is silent: the ambience covers it */
+    s.pc = nc; s.pr = nr; s.mv = s.mvD = cmd === 'B' ? dur * 1.2 : dur; s.arrived = true; { const n = performance.now(); if (n - (TRL.crawlT || 0) > 9000 && Math.random() < 0.18) { TRL.crawlT = n; SFX('ut_crawl', { rate: 0.92 + Math.random() * 0.16 }); } }   /* the knee-shuffle, now and then */
   },
   arrive(s) {
     const fresh = !s.seen.has(s.pr * 100 + s.pc); s.seen.add(s.pr * 100 + s.pc); s.steps++; s.since++;
@@ -1547,7 +1550,7 @@ GAMES.push({
   mood(s, list) { const S = s.shop; if (!S) return; S.face = list[Math.floor(s.rnd() * list.length)]; S.flip = s.rnd() < 0.35 ? [5, 1, 7, 3][Math.floor(s.rnd() * 4)] : null; S.t = 0; },   /* ...and sometimes he flips mid-sentence */
   HOBO_T2: "YOU! You came back! ...Different Carl? There's only one Carl. I get around. Crackers?",
   HOBO_T3: "Shhh. He's right through there. The KING. You're gonna want everything Carl's got. Everything. For the little crackers.",
-  openShop(s, cl) { cl = cl || s.carls[0]; s.hobo = cl; s.shop = { q: [], sel: 0, tier: cl.tier, say: this.HOBO_HI[Math.floor(s.rnd() * this.HOBO_HI.length)], t: 0, buyT: 0 }; s.metHobo = true; this.mood(s, [0, 6, 4]);
+  openShop(s, cl) { cl = cl || s.carls[0]; s.hobo = cl; s.shop = { q: [], sel: 0, tier: cl.tier, say: this.HOBO_HI[Math.floor(s.rnd() * this.HOBO_HI.length)], t: 0, buyT: 0 }; s.metHobo = true; TRL.carl(s); this.mood(s, [0, 6, 4]);
     if (!cl.met) { cl.met = true; s.shop.say = cl.tier === 1 ? this.HOBO_FIRST : cl.tier === 2 ? this.HOBO_T2 : this.HOBO_T3; s.shop.q = this.CARL_STORY[cl.tier].slice(); } },
   CARL_STORY: {
     1: ["I came down here to fix a P-trap. 2009. Nice lady. Doris. ...Or Dot.", "Somebody put the skirting back on while I was under here. With SCREWS. Four of 'em.", "Been living off the little crackers ever since. Somebody keeps baiting the rat traps with 'em. Bless 'em."],
@@ -1565,7 +1568,7 @@ GAMES.push({
     if (it.id === 'bye') { (s.log = s.log || []).push('CARL: ' + this.HOBO_BYE[Math.floor(s.rnd() * this.HOBO_BYE.length)]); if (!s.iga) { s.iga = true; s.log.push('(Could have bought out his whole store with three bucks of crackers from IGA.)'); } s.shop = null; SFX('ui_select'); return; }
     if (it.off) { S.say = "You already have it. Do you not like it? ...You don't like it."; this.mood(s, [3]); S.flip = 5; SFX('click'); return; }
     if (s.crk < it.price) { S.say = this.HOBO_BROKE[Math.floor(s.rnd() * this.HOBO_BROKE.length)]; this.mood(s, [2, 5]); SFX('click'); return; }
-    s.crk -= it.price; it.go(); S.say = it.id === 'tonic' ? "Oh yes. You'll like this. It's full of gasoline and my LOVE. And remember... Carl's hands are always warm.  (" + it.line + ')' : this.HOBO_BUY[Math.floor(s.rnd() * this.HOBO_BUY.length)] + '  (' + it.line + ')'; this.mood(s, [1, 6]); S.buyT = 1.2; SFX('ut_buy', { vol: 0.7 });
+    s.crk -= it.price; it.go(); TRL.carl(s, 0.3); S.say = it.id === 'tonic' ? "Oh yes. You'll like this. It's full of gasoline and my LOVE. And remember... Carl's hands are always warm.  (" + it.line + ')' : this.HOBO_BUY[Math.floor(s.rnd() * this.HOBO_BUY.length)] + '  (' + it.line + ')'; this.mood(s, [1, 6]); S.buyT = 1.2; SFX('ut_buy', { vol: 0.7 });
   },
   // knocked out of the crawlspace: he tells the other guy everything. The other guy doesn't buy a word of it, goes down, and fixes it.
   defeated(s) {
@@ -1652,7 +1655,7 @@ GAMES.push({
     const left = `(${s.lives} ${s.lives === 1 ? 'life' : 'lives'} left)`;
     if (!back) { (s.log = s.log || []).push(`You wake up by the hatch. Everything hurts. ${left}`); return; }
     const me = HERO(s).name, pick = a => a[Math.floor(s.rnd() * a.length)], first = !s.rubbed; s.rubbed = (s.rubbed || 0) + 1;
-    s.wake = { i: 0, t: 0, lines: first ? [
+    TRL.carl(s); s.wake = { i: 0, t: 0, lines: first ? [
       ['CARL', 6, "Shhh. Shhhh. You're awake. Carl found you."],
       ['CARL', 0, "You were face down in the muck. So Carl dragged you back to Carl's special place."],
       ['CARL', 4, "By the ankles. Took a while. You're heavier than you look."],
