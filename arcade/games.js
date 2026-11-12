@@ -1120,7 +1120,8 @@ GAMES.push({
     let mv = (I.R ? 1 : 0) - (I.L ? 1 : 0);
     if (I.ptr.down && !I.ptr.clicked) { const v = I.ptr.x - s.x; mv = Math.abs(v) < 6 ? 0 : Math.sign(v); }
     if (mv) s.facing = mv;
-    s.x = clamp(s.x + mv * 55 * HERO(s).spd * dt, Math.min(F.a, F.b), Math.max(F.a, F.b));
+    const x0 = s.x; s.x = clamp(s.x + mv * 55 * HERO(s).spd * dt, Math.min(F.a, F.b), Math.max(F.a, F.b));
+    s.stepT = (s.stepT || 0) - dt; if (s.x !== x0 && s.jump <= 0 && s.stepT <= 0) { s.stepT = 0.34 / HERO(s).spd; SFX('stair' + (1 + Math.floor(Math.random() * 4)), { vol: 0.55 }); }   /* thump down each step */
     if ((I.Ap) && s.jump <= 0) { s.jump = s.JUMP; SFX('click', { vol: 0.3 }); }
     if (s.jump > 0) { s.jump -= dt; const p = 1 - Math.max(0, s.jump) / s.JUMP; s.jy = Math.sin(p * Math.PI) * 20; } else s.jy = 0;
     // end of the flight: step down to the next one
@@ -2857,7 +2858,7 @@ GAMES.push({
     if (so) {
       const d = Math.hypot(s.px - so.x, (s.ys[s.row] - s.ys[so.row]));
       s.sig = clamp(1 - d / 170, 0, 1);
-      s.beepT -= dt; if (s.beepT <= 0 && s.sig > 0.02) { s.beepT = lerp(0.9, 0.07, s.sig); if (typeof beep === 'function') beep(500 + s.sig * 900, 0.035, 'square', 0.02); }
+      s.beepT -= dt; if (s.beepT <= 0 && s.sig > 0.02) { s.beepT = lerp(0.9, 0.07, s.sig); SFX('locator_beep', { vol: 0.35 + 0.45 * s.sig, rate: 0.85 + 0.6 * s.sig }); }   /* the locator: faster and higher as you get close */
       if (I.Ap) {
         const R0 = 13 * Math.sqrt(H0.steady);
         if (d < R0) { s.marks.push({ x: so.x, row: so.row, n: s.cur + 1 }); s.flash = 0.4; POP(s, so.x, this.Y(s, so.row) - 16, `MARKED! ${[4, 6, 8][s.cur]} FT DEEP`, '#7dffb0'); SFX('ui_select');
@@ -2938,6 +2939,7 @@ GAMES.push({
   dpad: 'omni',
   ctl: '◀ ▶ HOSE · SPACE STEAM · ▼ DUMP BUCKET',
   phone: 'the pad moves the hose (▼ dumps the bucket), the big button steams.',
+  leave(s) { if (s && s.sl) { s.sl.stop(); s.sl = null; } },
   act: 'STEAM',
   init(s) {
     s.DUR = [68, 62, 56][s.diff]; s.mop = 0; s.hx = 92; s.heat = 0; s.bucket = 0; s.swap = 0; s.pantsMax = s.pants = [4, 3, 3][s.diff]; s.inv = 0; s.soft = 0; s.spill = 0;
@@ -2966,7 +2968,8 @@ GAMES.push({
     if (!away) {
       const dir = (I.R || I.U ? 1 : 0) - (I.L ? 1 : 0) + (I.ptr.down && !I.A ? (I.ptr.x > 330 ? 1 : I.ptr.x < 150 ? -1 : 0) : 0);   /* touch: right side feeds the hose in, left pulls it back, middle steams */
       s.hx = clamp(s.hx + dir * 70 * H0.spd * dt, 92, maxX); }
-    const steaming = wantSteam && !away; s.steaming = steaming; s.near = front && front.x - s.hx < 16;
+    const steaming = wantSteam && !away; s.steaming = steaming;
+    if (!s.sl && typeof DDTSfx !== 'undefined') s.sl = DDTSfx.loop('steam_loop', { vol: 0 }); if (s.sl && s.sl.vol) s.sl.vol(steaming ? 1 : 0);   /* the steamer hisses while it's on */ s.near = front && front.x - s.hx < 16;
     // heat builds where you steam and bleeds off when you stop. Rod's steadier hands spread it out.
     if (steaming) {
       s.heat += dt * (0.42 + s.diff * 0.06) / H0.grip;
