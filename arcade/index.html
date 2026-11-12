@@ -113,10 +113,10 @@
   <div class="scr" id="result"><div class="box" id="resbox"></div></div>
 </div></div>
 <audio id="music" src="../assets/doo_doo_town.mp3" loop preload="auto"></audio>
-<script src="../js/state.js?v=1794465820"></script>
-<script src="../js/songs.js?v=1794465820"></script>
-<script src="../js/sfx.js?v=1794465820"></script>
-<script src="games.js?v=1794465820"></script>
+<script src="../js/state.js?v=1794466093"></script>
+<script src="../js/songs.js?v=1794466093"></script>
+<script src="../js/sfx.js?v=1794466093"></script>
+<script src="games.js?v=1794466093"></script>
 <script>
 const cv = document.getElementById('c'); g = cv.getContext('2d'); const SCALE = 3; g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
 const $ = s => document.querySelector(s);
@@ -244,7 +244,8 @@ function start() {
     const aced = Math.min(4, store.get('aced_' + G.id) || 0), fails = Math.min(3, store.get('fails_' + G.id) || 0);
     s.adapt = Math.max(0.85, Math.min(1.2, 1 + aced * 0.05 - fails * 0.05)); }
   G.init(s);
-  if (NO_K.has(G.id)) s.spd = s.adapt; else s.k *= s.adapt;   /* after init, so games that set their own s.k still get it */ if (DDT.param('boots') === '1' && s.pantsMax) { s.pantsMax++; s.pants++; }   // boots or waders: one more pair of pants in the messy games
+  if (NO_K.has(G.id)) s.spd = s.adapt; else s.k *= s.adapt;   /* after init, so games that set their own s.k still get it */ if (DDT.param('boots') === '1' && s.pantsMax) { s.pantsMax++; s.pants++; }   // boots or waders
+  if (DDT.param('ppe') === '1' && s.pantsMax) { s.pantsMax++; s.pants++; }   // the PPE kit: a spare pair of pants: one more pair of pants in the messy games
   for (const k in held) { held[k] = 0; edge[k] = 0; } ptr.down = false; ptr.clicked = false;
   phase = G.noReady ? 'play' : 'ready'; readyT = 1.6; screen(''); $('#quit').style.display = ''; showPad();   /* noReady: slow, story-ish games just start, no GET READY / GO! */
 }

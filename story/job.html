@@ -17,12 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794465820"></script>
-<script src="../js/calls.js?v=1794465820"></script>
-<script src="../js/banter.js?v=1794465820"></script>
-<script src="../js/placeholders.js?v=1794465820"></script>
-<script src="../js/music.js?v=1794465820"></script>
-<script src="../js/sfx.js?v=1794465820"></script>
+<script src="../js/state.js?v=1794466093"></script>
+<script src="../js/calls.js?v=1794466093"></script>
+<script src="../js/banter.js?v=1794466093"></script>
+<script src="../js/placeholders.js?v=1794466093"></script>
+<script src="../js/music.js?v=1794466093"></script>
+<script src="../js/sfx.js?v=1794466093"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -463,7 +463,7 @@ SCENES.work = async () => {
   try { localStorage.removeItem('ddt_mg'); } catch (e) {}
   const back = `story/job.html?id=${JOB.id}&scene=after&ret=${encodeURIComponent(hubRet())}`;
   let probes = 0; if (JOB.game === 'septic' && SAVE.inv && SAVE.inv.probes > 0) { const sv = DDT.get(); sv.inv.probes--; DDT.save(sv); probes = 5; }   // a pack of spare probe rods rides along
-  DDT.nav(`../arcade/index.html?probes=${probes}&play=${JOB.game}&diff=${d}&job=${encodeURIComponent(JOB.title)}&lead=${(SAVE.today && SAVE.today.lead) || 'rod'}&room=${JOB.room || ''}&cam=${SAVE.inv && SAVE.inv.camera ? 1 : 0}&boots=${SAVE.inv && (SAVE.inv.waders || SAVE.inv.muckboots) ? 1 : 0}&item=${({ 'false-teeth': 'teeth', vape: 'vape', 'lost-camera-toy': 'ring', 'claw-keys': 'keys' })[JOB.id] || ''}&ret=${encodeURIComponent(back)}`);
+  DDT.nav(`../arcade/index.html?probes=${probes}&play=${JOB.game}&diff=${d}&job=${encodeURIComponent(JOB.title)}&lead=${(SAVE.today && SAVE.today.lead) || 'rod'}&room=${JOB.room || ''}&cam=${SAVE.inv && SAVE.inv.camera ? 1 : 0}&boots=${SAVE.inv && (SAVE.inv.waders || SAVE.inv.muckboots) ? 1 : 0}&ppe=${SAVE.inv && SAVE.inv.ppe ? 1 : 0}&item=${({ 'false-teeth': 'teeth', vape: 'vape', 'lost-camera-toy': 'ring', 'claw-keys': 'keys' })[JOB.id] || ''}&ret=${encodeURIComponent(back)}`);
   await cancellable(() => {});
 };
 
