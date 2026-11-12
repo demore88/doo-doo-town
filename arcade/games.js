@@ -2855,7 +2855,7 @@ GAMES.push({
       if (L.dir > 0 && c.x > W + 60) { const first = Math.min(...s.cars.filter(o => o.row === c.row).map(o => o.x)); Object.assign(c, this.car(s, c.row, Math.min(-60, first - 120 - s.rnd() * 140))); } }
     // getting clipped
     if (s.inv <= 0 && s.row >= 1 && s.row <= s.nl) for (const c of s.cars) if (c.row === s.row && Math.abs(c.x - s.px) < c.w / 2 + 3) {
-      s.pants--; s.hits++; s.inv = 1.4; s.shake = 0.35; s.row = s.nl + 1; SFX(c.kind === 'log' ? 'horn_angry' : 'horn'); PUFF(s, s.px, this.Y(s, s.nl + 1) - 10, '#fff', 10);
+      s.pants--; s.hits++; s.inv = 1.4; s.shake = 0.35; s.row = s.nl + 1; SFX(['horn', 'horn_long', 'horn_short1', 'horn_short2', 'horn_beep'][Math.floor(Math.random() * 5)]); PUFF(s, s.px, this.Y(s, s.nl + 1) - 10, '#fff', 10);
       s.say = ['WATCH IT!', 'HONK HONK', 'GET OUTTA THE ROAD!', 'NICE VEST, IDIOT'][Math.floor(s.rnd() * 4)]; s.sayT = 1.4; break; }
     // the locator
     const so = s.sondes[s.cur];

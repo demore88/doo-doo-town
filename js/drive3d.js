@@ -339,7 +339,8 @@ function drive3d(choice, opts) {
   addEventListener('pointerup', e => { if (pts.delete(e.pointerId)) retouch(); }); addEventListener('blur', () => { pts.clear(); retouch(); });
   const say = (m, s = 1.4) => { msg = (opts.endless || RACE) && m ? m.replace(/ ?\+\d+ MIN/, '') : m; msgT = s; };   /* no clock in the Driving Game, so no lost-minutes */
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__moose = () => { const c = { kind: 'moose', seg: Math.floor((pos + PZ) / SEG), off: px, dir: -1, hit: true, react: 0.001 }; critters.push(c); }; window.__crash = () => bursts.push({ t: 0, side: 0.3, big: false }); window.__turk = () => critters.push({ kind: 'turkeys', seg: 0, off: 0, dir: 1, hit: true, fly: 0.001, flyDir: 1 }); window.__deer = (d = 1) => critters.push({ kind: 'deer', seg: 0, off: 0, dir: d, hit: true, fly: 0.001, flyDir: d });   // dev: test the windshield deer
-  const sfx = (n, o) => { if (typeof DDTSfx !== 'undefined') DDTSfx.play(n, o); };   /* DDTSfx is a top-level const: it's never on window */
+  const sfx = (n, o) => { if (typeof DDTSfx !== 'undefined') DDTSfx.play(n, o); };
+  const HONKS = ['horn', 'horn_long', 'horn_short1', 'horn_short2', 'horn_beep'], honk = o => sfx(HONKS[Math.floor(Math.random() * HONKS.length)], o);   /* one honk, a long honk, or a little toot: never the whole honk-honk-honk */   /* DDTSfx is a top-level const: it's never on window */
   // ---------- the windshield: cracks that stick around (and grow with every hit), bugs, mud, and now and then some weather ----------
   let grip = 0, gripSide = 1, sqCall = null, racSnd = null;
   // the squirrel's family calls the van. Each caller has an avatar (assets/drive/sq_<who>.png; a squirrel stand-in until the art exists).
@@ -480,14 +481,14 @@ function drive3d(choice, opts) {
         if ((c.drunk || c.texting) && !c.warned && live && c.z - (pos + PZ) > 0 && c.z - (pos + PZ) < 45 * SEG) { c.warned = 1; say(c.drunk ? 'DRUNK DRIVER! GIVE HIM ROOM' : 'THAT GUY IS TEXTING!', 1.4); }
         const VAN_HW = 0.16;   // the van, measured the same way as the cars it can hit
         if (opts.endless && live && c.prevAhead > 0 && ahead <= 0 && !c.nm) { const gap = Math.abs(px - c.off) - (c.hw + VAN_HW); c.nm = 1;
-          if (gap > -0.02 && gap < 0.2 && inv <= 0) { combo = comboT > 0 ? combo + 1 : 1; comboT = 2.5; DS.near++; DS.bestCombo = Math.max(DS.bestCombo, combo); if (Math.random() < 0.05) sfx(c.onc ? 'horn_angry' : 'horn'); if (c.yukon) say(["ROD: SO CLOSE.", "ROD: NEXT TIME.", "ROD: SHE DIDN'T EVEN SIGNAL."][Math.floor(Math.random() * 3)], 1.6);   /* now and then, they lean on the horn */ const pts = 100 * combo * (c.onc ? 2 : 1); score += pts; say(`${c.onc ? 'WHOA! ' : ''}NEAR MISS +${pts}${combo > 1 ? ` (x${combo})` : ''}`, 1); } }   /* threading the needle pays */
+          if (gap > -0.02 && gap < 0.2 && inv <= 0) { combo = comboT > 0 ? combo + 1 : 1; comboT = 2.5; DS.near++; DS.bestCombo = Math.max(DS.bestCombo, combo); if (Math.random() < 0.05) honk(); if (c.yukon) say(["ROD: SO CLOSE.", "ROD: NEXT TIME.", "ROD: SHE DIDN'T EVEN SIGNAL."][Math.floor(Math.random() * 3)], 1.6);   /* now and then, they lean on the horn */ const pts = 100 * combo * (c.onc ? 2 : 1); score += pts; say(`${c.onc ? 'WHOA! ' : ''}NEAR MISS +${pts}${combo > 1 ? ` (x${combo})` : ''}`, 1); } }   /* threading the needle pays */
         c.prevAhead = ahead;
         if (live && inv <= 0 && ahead > -SEG * 0.6 && ahead < SEG * (c.truck ? 1.6 : 1.1) && Math.abs(px - c.off) < c.hw + VAN_HW - 0.03) {
           bursts.push({ t: 0, side: Math.max(-1, Math.min(1, (c.off - px) * 2.5)), big: c.onc || c.truck }); crashes++; inv = 1.4; shake = c.onc ? 0.6 : 0.35; hurtGlass(glassFor[c.onc ? 'onc' : c.truck ? 'truck' : 'car']);
           const p = c.onc ? 20 : c.truck ? 14 : 10; /* a crash costs real time: exchanging info, checking the bumper */ penalty += p; STATS[c.onc ? 'headons' : c.truck ? 'trucks' : 'cars']++; STATS.lost += p; speed = c.onc ? 0 : Math.min(speed, Math.abs(c.speed) * 0.6);
           if (!c.truck) { c.spin = 1.6; c.spinDir = px < c.off ? 1 : -1; c.speed *= 0.3; }   // the car you hit spins out (log trucks just shrug)
           px += c.onc ? (px < c.off ? -0.4 : 0.4) : (px < c.off ? -0.3 : 0.3);
-          sfx('car_crash'); sfx(c.onc ? 'horn_angry' : 'horn', { vol: 0.5 }); if (c.yukon) { say(['ROD: WORTH IT.', "ROD: THAT'S THE KID'S MOM'S YUKON.", 'ROD: PUT IT ON MY TAB.', 'ROD: I PAID FOR THAT BUMPER. TWICE.'][Math.floor(Math.random() * 4)], 2); } else say(c.onc ? `HEAD-ON! +${p} MIN` : c.truck ? `LOG TRUCK! +${p} MIN` : `BONK! +${p} MIN`);
+          sfx('car_crash'); honk({ vol: 0.5 }); if (c.yukon) { say(['ROD: WORTH IT.', "ROD: THAT'S THE KID'S MOM'S YUKON.", 'ROD: PUT IT ON MY TAB.', 'ROD: I PAID FOR THAT BUMPER. TWICE.'][Math.floor(Math.random() * 4)], 2); } else say(c.onc ? `HEAD-ON! +${p} MIN` : c.truck ? `LOG TRUCK! +${p} MIN` : `BONK! +${p} MIN`);
         }
       }
       if (opts.endless) {
@@ -513,7 +514,7 @@ function drive3d(choice, opts) {
         for (const c of cars) { if (c.parked || c.onc || c.spin > 0) continue; const behind = (pos + PZ) - c.z;
           if (behind > 0 && behind < SEG * 0.9 && Math.abs(px - c.off) < c.hw + 0.13 && c.speed > speed + 2 * MPH && inv <= 0) {   /* REAR-ENDED */
             crashes++; DS.rear++; inv = 1.4; shake = 0.45; hurtGlass(1); speed = Math.min(TOP, speed + 6 * MPH); c.z = pos + PZ - SEG * 1.4; { const nl = c.lane === 1 ? 2 : 1; c.blink = 0.4; c.next = nl; c.prev = c.lane; c.tailgater = false; }   /* they bump you, then swing out and go around */
-            bursts.push({ t: 0, side: 0, big: false }); sfx('car_crash'); sfx('horn_angry', { vol: 0.5 }); say('REAR-ENDED!', 1.2); } }
+            bursts.push({ t: 0, side: 0, big: false }); sfx('car_crash'); honk({ vol: 0.5 }); say('REAR-ENDED!', 1.2); } }
       }
       // ---- no car can ever be inside another car ----
       // anything sharing a lane with a car just ahead of it is held back a safe gap and matches its speed;
@@ -542,7 +543,7 @@ function drive3d(choice, opts) {
       if (RIVAL && live) {
         const gap = (rz - (pos + PZ)) / SEG;
         let want = TOP * (gap > 120 ? 0.62 : gap > 40 ? 0.76 : gap > 3 ? 0.84 : gap < -30 ? 1.0 : 0.9);
-        if (DRIFT) { const rc = Math.abs(segAt(rz).curve); want = TOP * (gap > 60 ? 0.88 : gap > 3 ? 0.96 : gap < -40 ? 1.1 : 1.01) * (1 - Math.max(0, rc - 7) * 0.035); const ins = segAt(rz).curve > 1.5 ? LANE[2] : segAt(rz).curve < -1.5 ? LANE[0] : LANE[1]; rivalLane = ins; }   /* they know the road: inside line, and they lift for the tight ones */   // when they're ahead they run a bit under your top speed, so holding the pedal down reels them in slowly
+        if (DRIFT) { const rc = Math.abs(segAt(rz).curve); want = TOP * [1, 1.02, 1.035][opts.ddiff || 0] * (gap > 60 ? 0.88 : gap > 3 ? 0.96 : gap < -40 ? 1.1 : 1.01) * (1 - Math.max(0, rc - 7) * 0.035); const ins = segAt(rz).curve > 1.5 ? LANE[2] : segAt(rz).curve < -1.5 ? LANE[0] : LANE[1]; rivalLane = ins; }   /* they know the road: inside line, and they lift for the tight ones */   // when they're ahead they run a bit under your top speed, so holding the pedal down reels them in slowly
         rivalT = (rivalT || 0) - dt; rivalSlip = Math.max(0, (rivalSlip || 0) - dt);
         const blocking = cars.filter(o => !o.parked && Math.abs(o.off - rivalLane) < 0.3 && o.z > rz && o.z - rz < 3.2 * SEG && !o.onc);
         if (blocking.length) {
@@ -559,9 +560,9 @@ function drive3d(choice, opts) {
         rivalBump = Math.max(0, rivalBump - dt); if (rivalBump > 0) want *= 0.4;
         rivalBrake = want < rv - TOP * 0.04; rv += (want - rv) * Math.min(1, dt * 0.8); rz += rv * dt;
         if (inv <= 0 && Math.abs(rz - (pos + PZ)) < SEG * 1.0 && Math.abs(px - roff) < 0.16 + 0.17) {   // trading paint
-          if (DRIFT) { inv = 1.0; sfx('horn_angry', { vol: 0.6 }); say('SQUEEZED PAST THE CLOG KINGS!', 1.0); }   /* drifting: no bump, no lost speed, just an angry horn */
-          else { inv = 1.0; shake = 0.4; rivalBump = 1.2; speed *= 0.6; px += px < roff ? -0.25 : 0.25; sfx('horn_angry'); say('TRADING PAINT WITH THE CLOG KINGS!', 1.2); } }
-        if (!rivalWon && rz >= (N - 40) * SEG && pos < (N - 40) * SEG) { rivalWon = true; say('THE CLOG KINGS GOT THERE FIRST!', 2.5); sfx('horn_angry'); }
+          if (DRIFT) { inv = 1.0; honk({ vol: 0.6 }); say('SQUEEZED PAST THE CLOG KINGS!', 1.0); }   /* drifting: no bump, no lost speed, just an angry horn */
+          else { inv = 1.0; shake = 0.4; rivalBump = 1.2; speed *= 0.6; px += px < roff ? -0.25 : 0.25; honk(); say('TRADING PAINT WITH THE CLOG KINGS!', 1.2); } }
+        if (!rivalWon && rz >= (N - 40) * SEG && pos < (N - 40) * SEG) { rivalWon = true; say('THE CLOG KINGS GOT THERE FIRST!', 2.5); honk(); }
       }
       // critters wander onto the road when you get close
       for (const cr of critters) {
