@@ -2862,7 +2862,7 @@ GAMES.push({
     if (so) {
       const d = Math.hypot(s.px - so.x, (s.ys[s.row] - s.ys[so.row]));
       s.sig = clamp(1 - d / 170, 0, 1);
-      s.beepT -= dt; if (s.beepT <= 0 && s.sig > 0.02) { s.beepT = lerp(0.9, 0.07, s.sig); SFX('locator_beep', { vol: 0.35 + 0.45 * s.sig, rate: 0.85 + 0.6 * s.sig }); }   /* the locator: faster and higher as you get close */
+      s.beepT -= dt; if (s.beepT <= 0 && s.sig > 0.02) { s.beepT = lerp(1.4, 0.22, s.sig); SFX('locator_beep', { vol: 0.18 + 0.22 * s.sig, rate: 0.85 + 0.6 * s.sig }); }   /* the locator: faster and higher as you get close */
       if (I.Ap) {
         const R0 = 13 * Math.sqrt(H0.steady);
         if (d < R0) { s.marks.push({ x: so.x, row: so.row, n: s.cur + 1 }); s.flash = 0.4; POP(s, so.x, this.Y(s, so.row) - 16, `MARKED! ${[4, 6, 8][s.cur]} FT DEEP`, '#7dffb0'); SFX('ui_select');
