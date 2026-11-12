@@ -313,7 +313,7 @@ function drive3d(choice, opts) {
   addEventListener('keydown', kd); addEventListener('keyup', ku);
   const pts = new Map();
   function zone(e) { const b = rc.getBoundingClientRect(), x = (e.clientX - b.left) / b.width, y = (e.clientY - b.top) / b.height;
-    if (DRIFT && y > 0.74 && x < 0.22) return 'X'; if (y > 0.74 && (x < 0.22 || x > 0.78)) return 'D'; return x < 0.5 ? 'L' : 'R'; }   // brake in both bottom corners, steer with either side
+    if (DRIFT) { if (y > 0.74 && (x < 0.22 || x > 0.78)) return 'X'; if (y > 0.6 && (x < 0.15 || x > 0.85)) return 'D'; } if (y > 0.74 && (x < 0.22 || x > 0.78)) return 'D'; return x < 0.5 ? 'L' : 'R'; }   // brake in both bottom corners, steer with either side
   // phone: one thumb steers. Both thumbs down (left AND right) = gas. No thumbs = cruise.
   function retouch() { touch.L = touch.R = touch.U = touch.D = touch.X = 0; for (const z of pts.values()) touch[z] = 1; if (TILT) { touch.U = (touch.L || touch.R) && !touch.D ? 1 : 0; touch.L = touch.R = 0; return; } if (touch.L && touch.R && !touch.D) touch.U = 1; }
   const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -382,7 +382,7 @@ function drive3d(choice, opts) {
   if (ZONE === 'bugs' && Math.random() < 0.4) { const n = 1 + Math.floor(Math.random() * 3); for (let i = 0; i < n; i++) events.push({ at: 0.1 + Math.random() * 0.75, kind: 'bug' }); }
   if ((ZONE === 'mud' || SEA.name === 'thaw') && Math.random() < 0.45) { const n = 1 + (Math.random() < 0.35 ? 1 : 0); for (let i = 0; i < n; i++) events.push({ at: 0.12 + Math.random() * 0.7, kind: 'mud' }); }
   const WXF = typeof DDT !== 'undefined' && DDT.DEV && DDT.param && DDT.param('wx');   // dev: ?wx=rain|fog|squall
-  const WX = WXF ? WXF : Math.random() < 0.16 ? (SNOW ? 'squall' : Math.random() < 0.6 ? 'rain' : 'fog') : null;   // weather: only once in a while
+  const WX = DRIFT ? null : WXF ? WXF : Math.random() < 0.16 ? (SNOW ? 'squall' : Math.random() < 0.6 ? 'rain' : 'fog') : null;   // weather: only once in a while
   const wxFrom = WXF ? 0 : 0.1 + Math.random() * 0.45, wxTo = Math.min(0.95, wxFrom + 0.25 + Math.random() * 0.3);
   const bugs = [], muds = [], drops = []; let rainSnd = null;
   function splatBug() { const x = 40 + Math.random() * 400, y = 30 + Math.random() * 170, R = rng(1 + Math.floor(Math.random() * 99999)), big = Math.random() < 0.3;
@@ -701,12 +701,23 @@ function drive3d(choice, opts) {
       for (const cr of critters) if (cr.react > 0 && cr.react < 2.6) { const mf = mooseFrame(Math.min(5, Math.floor(cr.react / 0.42))); if (!mf) continue;
         const dh = 170, dw = mf.width * dh / mf.height, cx = W / 2 + steer * 6 + Math.max(-60, Math.min(60, (cr.off - px) * 90)), by = H - 30;
         r.save(); if (cr.react < 0.25) r.translate((Math.random() - 0.5) * 3, 0); if (cr.dir > 0) { r.translate(cx, 0); r.scale(-1, 1); r.drawImage(mf, -dw / 2, by - dh, dw, dh); } else r.drawImage(mf, cx - dw / 2, by - dh, dw, dh); r.restore(); }
-      if (DRIFT) {   /* midnight: everything goes dark blue, our headlights light up the road ahead */
-        r.save(); r.globalCompositeOperation = 'multiply'; r.fillStyle = '#26305a'; r.fillRect(0, 0, W, H); r.restore();
-        const hl = r.createRadialGradient(W / 2, H - 40, 8, W / 2, H - 90, 210); hl.addColorStop(0, 'rgba(255,236,190,.34)'); hl.addColorStop(0.6, 'rgba(255,236,190,.1)'); hl.addColorStop(1, 'rgba(255,236,190,0)');
-        r.save(); r.globalCompositeOperation = 'screen'; r.fillStyle = hl; r.fillRect(0, HORIZON, W, H - HORIZON); r.restore();
-        r.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < 40; i++) r.fillRect((i * 97 + 13) % W, (i * 31) % (HORIZON - 30), 1, 1);
-        for (const q of smoke) { r.globalAlpha = Math.max(0, q.l) * 0.45; r.fillStyle = '#c9ccd6'; r.beginPath(); r.arc(q.x, q.y, q.r, 0, 7); r.fill(); } r.globalAlpha = 1; }
+      if (DRIFT) {   /* midnight: pitch dark, lit only by our high beams. Two beams, straight out of the headlights (they don't follow the curve: the road bends out of the light) */
+        if (!draw.nightC) { draw.nightC = document.createElement('canvas'); draw.nightC.width = W; draw.nightC.height = H; }
+        const nc = draw.nightC, k = nc.getContext('2d'); k.globalCompositeOperation = 'source-over'; k.clearRect(0, 0, W, H);
+        k.fillStyle = 'rgba(2,4,12,0.94)'; k.fillRect(0, 0, W, H);
+        k.globalCompositeOperation = 'destination-out';
+        const lean = steer * 10 + (drift ? Math.sign(steer || 0) * drift * 22 : 0), vy0 = H - 70;
+        k.filter = 'blur(9px)';   /* soft beam edges, like real light */
+        for (const side of [-1, 1]) {   /* each beam: from the headlight, widening out over the road and reaching all the way down it */
+          const sx = W / 2 + side * 24 + lean * 0.3, fx = W / 2 + side * 14 + lean * 2.4, fy = HORIZON + 4;
+          const gr = k.createLinearGradient(0, vy0 + 10, 0, fy); gr.addColorStop(0, 'rgba(0,0,0,.55)'); gr.addColorStop(0.25, 'rgba(0,0,0,.9)'); gr.addColorStop(0.7, 'rgba(0,0,0,.75)'); gr.addColorStop(0.93, 'rgba(0,0,0,.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+          k.fillStyle = gr; k.beginPath(); k.moveTo(sx - 14, vy0 + 10); k.lineTo(sx - 150 + side * 60, vy0 - 40); k.lineTo(fx - 22 + side * 8, fy); k.lineTo(fx + 22 + side * 8, fy); k.lineTo(sx + 150 + side * 60, vy0 - 40); k.lineTo(sx + 14, vy0 + 10); k.closePath(); k.fill(); }
+        k.filter = 'none';
+        const spill = k.createRadialGradient(W / 2, H, 10, W / 2, H, 130); spill.addColorStop(0, 'rgba(0,0,0,.55)'); spill.addColorStop(1, 'rgba(0,0,0,0)'); k.fillStyle = spill; k.fillRect(0, H - 140, W, 140);   /* a little light around the van */
+        r.drawImage(nc, 0, 0);
+        r.save(); r.globalCompositeOperation = 'soft-light'; r.fillStyle = 'rgba(255,226,170,.35)'; r.fillRect(0, HORIZON, W, H - HORIZON); r.restore();   /* warm halogen color */
+        r.fillStyle = 'rgba(220,226,255,.7)'; for (let i = 0; i < 46; i++) r.fillRect((i * 97 + 13) % W, (i * 31) % (HORIZON - 30), 1, 1);   /* stars */
+        for (const q of smoke) { r.globalAlpha = Math.max(0, q.l) * 0.32; r.fillStyle = '#9aa0ac'; r.beginPath(); r.arc(q.x, q.y, q.r, 0, 7); r.fill(); } r.globalAlpha = 1; }
       // our van
       if (!(inv > 0 && Math.floor(t * 10) % 2)) {
         const vx = W / 2 - 36 + steer * 6, vy = H - 58 - bounce * 6 + (Math.abs(px) > 1 ? (Math.random() - .5) * 3 : 0);
@@ -834,9 +845,10 @@ function drive3d(choice, opts) {
         r.textAlign = 'left'; }
       // phone buttons (also show what the keys do)
       if (true) {   // brake in both corners, gas = both thumbs (keyboard: ▲)
-        if (DRIFT) { const dh = key.X || touch.X; r.fillStyle = dh ? 'rgba(247,196,24,.65)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40); r.fillStyle = brake ? 'rgba(233,102,90,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(W - 96, H - 46, 92, 40);
-          r.fillStyle = '#fff'; r.textAlign = 'center'; r.fillText(dh ? 'DRIFT!' : 'DRIFT', 50, H - 26); r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', W - 50, H - 26);
-          r.fillStyle = '#222'; r.fillRect(4, H - 56, 92, 6); r.fillStyle = dmeter > 0.8 ? '#ff7a2a' : '#f7c418'; r.fillRect(5, H - 55, 90 * dmeter, 4); }
+        if (DRIFT) { const dh = key.X || touch.X;   /* DRIFT in both bottom corners, small BRAKE buttons above them */
+          for (const bx of [4, W - 96]) { r.fillStyle = dh ? 'rgba(247,196,24,.7)' : 'rgba(16,21,31,.55)'; r.fillRect(bx, H - 46, 92, 40); r.fillStyle = brake ? 'rgba(233,102,90,.7)' : 'rgba(16,21,31,.5)'; r.fillRect(bx + (bx < W / 2 ? 0 : 32), H - 76, 60, 24);
+            r.fillStyle = '#fff'; r.textAlign = 'center'; r.fillText(dh ? 'DRIFT!' : 'DRIFT', bx + 46, H - 26); r.fillText('BRAKE', bx + (bx < W / 2 ? 30 : 62), H - 62);
+            r.fillStyle = '#222'; r.fillRect(bx, H - 50, 92, 4); r.fillStyle = dmeter > 0.8 ? '#ff7a2a' : '#f7c418'; r.fillRect(bx, H - 50, 92 * dmeter, 4); } r.textAlign = 'left'; }
         else { r.fillStyle = brake ? 'rgba(233,102,90,.6)' : 'rgba(16,21,31,.45)'; r.fillRect(4, H - 46, 92, 40); r.fillRect(W - 96, H - 46, 92, 40);
         r.fillStyle = '#fff'; r.textAlign = 'center'; r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', 50, H - 26); r.fillText(brake ? 'BRAKE!' : '▼ BRAKE', W - 50, H - 26); }
         if (gas) { r.fillStyle = '#7bd65b'; r.textAlign = 'right'; r.fillText('GAS!', W - 10, crashes ? 66 : 52); } r.textAlign = 'left';
