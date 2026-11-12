@@ -841,7 +841,8 @@ GAMES.push({
     const reel = I.A || I.ptr.down;
     s.nextTug -= dt;
     if (s.nextTug <= 0 && s.warn <= 0 && s.tug <= 0) s.warn = 0.95;   /* a longer heads-up before it tugs */
-    if (s.warn > 0) { s.warn -= dt; if (s.warn <= 0) s.tug = 0.85; }
+    if (s.warn > 0) { s.warn -= dt; if (s.warn <= 0) { s.tug = 0.85; if ((I.A || I.ptr.down) && !(s.gruntCD > 0)) { SFX('grunt', { vol: 0.7, rate: 0.95 + Math.random() * 0.1 }); s.gruntCD = 3; } } }   /* it tugs while you're reeling: you strain */
+    s.gruntCD = (s.gruntCD || 0) - dt;
     if (s.tug > 0) { s.tug -= dt; if (s.tug <= 0) s.nextTug = (2.2 + s.rnd() * 1.8) / Math.sqrt(s.k); }
     // swing: it drifts in the trap; steer against it
     s.swv += (s.rnd() - 0.5) * 2.2 * dt; s.swv = clamp(s.swv, -0.6, 0.6);
@@ -854,6 +855,7 @@ GAMES.push({
     if (s.idle > 2.2) s.prog = Math.max(0, s.prog - 3 * dt);
     if (s.ten >= 100) { s.snaps++; s.ten = 15; s.prog = Math.max(0, s.prog - 15); s.flash = 0.4; }
     s.flash = Math.max(0, (s.flash || 0) - dt);
+    if (s.prog >= 100 && !s.end) SFX('grunt', { vol: 0.8, rate: 0.9 });   /* one last heave */
     if (s.prog >= 100) s.end = { win: true, stars: stars3(s.snaps === 0 && s.t < 26, s.snaps <= 1), line: `Landed it! A ${(14 + s.rnd() * 9).toFixed(1)}-inch trophy.` };
     else if (s.snaps >= 3) s.end = { win: false, stars: 0, line: 'Snapped three times. It got away.' };
     else if (s.t >= s.TIME) s.end = { win: false, stars: 0, line: 'Still down there. Somewhere.' };
