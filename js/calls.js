@@ -109,11 +109,13 @@ const CALLS = [
     intro: [['CUST', "There's six of them. They're very fast."], ['MATT', 'Rod opened the gate.'], ['ROD', '...I opened the gate.']],
     tool: { q: 'Six dogs loose. Priority?', opts: ['ROUND UP THE DOGS', 'START THE INSPECTION', 'HIDE IN THE VAN'], right: 0, good: 'Dogs first.', bad: 'The dogs are now in Maine.' },
     game: 'dogs', lead: 'matt', culprit: [['MATT', 'All six. One was in the van eating my lunch.'], ['CUST', "That's Biscuit. He does that."]], tip: 'Inspections before a sale save surprises after.', pay: 350 },
-  { id: 'wentworth', title: 'THE HOTEL BACKUP', story: true, gate: 'jetter', town: 'JACKSON', addr: 'the big hotel', cust: { name: 'MANAGER', seed: 107 }, ext: 'hotel', room: 'basement', window: 90,
-    ring: "We have a full house and every ground floor room is... backing up. Please hurry.",
-    intro: [['CUST', 'We have a wedding at four.'], ['ROD', "Then we've got till three."], ['MATT', 'No pressure.']],
-    tool: { q: 'Hotel main is packed. Gear?', opts: ['JETTER', 'TOILET AUGER', 'PRAYER'], right: 0, good: 'Big line, big water.', bad: "That's a hotel, not a powder room." },
-    game: 'flush', lead: 'rod', culprit: [['ROD', 'Grease from the kitchen plus a hundred guests.'], ['CUST', 'The wedding is saved!'], ['MATT', "Don't serve the gravy."]], tip: 'Commercial kitchens need grease traps pumped on schedule.', pay: 1200 },
+  { id: 'wentworth', title: 'THE INN BACKUP', story: true, gate: 'jetter', town: 'JACKSON', addr: 'the big inn', cust: { name: 'MANAGER', seed: 107 }, ext: 'hotel', room: 'basement', window: 90,
+    ring: "We have sixty-one rooms and every one of them is booked. Something is very wrong under the building.",
+    intro: [['CUST', "Sixty-one rooms. Full. Please tell me this is quick."], ['ROD', "When'd the septic get pumped last?"], ['CUST', '...Pumped?'], ['ROD', "There it is. Tank's full. The solids hit the outlet pipe and packed it soft, all the way back.", 'rod_suspicious'], ['MATT', 'How far back?'], ['ROD', "By now? Thirty feet, easy."],
+      ['MATT', 'So why is nothing coming up in the rooms?'], ['ROD', "Water finds its level. There's a spot under the building where it can get out. So it's getting out. Under the building."], ['CUST', "UNDER the building?!"], ['ROD', "Poke a hole in that cleanout cap and it'd shoot out like a mini jetter."], ['MATT', "Let's not do that."]],
+    tool: { q: "Soft clog packed thirty feet back from a full tank. How do you get at it?", opts: ['JET IT FROM THE TANK SIDE', 'OPEN THE CLEANOUT CAP', 'SNAKE IT FROM A GUEST ROOM'], right: 0, good: "Matt, you're gonna have to find the pipe.", bad: "All that pressure behind it. That cap's going to fly off and so is your face." },
+    game: 'flush', lead: 'matt', culprit: [['CARD', 'THE TANK', "Matt reaches into the septic up to the shoulder. He can't see a thing."], ['MATT', 'Feeling around... feeling around...', 'matt_stare'], ['MATT', 'Found the pipe.', 'matt_tired'], ['ROD', 'Feed the jetter in.'], ['CARD', 'WHOOSH', 'Thirty feet of soft clog lets go all at once.'], ['CUST', "So the guests never knew?"], ['ROD', 'The guests never knew.'], ['MATT', 'I knew. My whole arm knows.']],
+    tip: 'Pump your septic on schedule. A full tank pushes solids into the pipe, and it packs solid all the way back.', pay: 1200 },
 ],
 // ---------------- APRIL ----------------
 [
