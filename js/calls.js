@@ -59,11 +59,12 @@ const CALLS = [
 ],
 // ---------------- FEBRUARY ----------------
 [
-  { id: 'false-teeth', title: 'FALSE TEETH', town: 'BERLIN', addr: 'Glen Ave', cust: { name: 'EARL', seed: 52 }, ext: 'house', room: 'bathroom', window: 85,
-    ring: "I sneezed. My teeth went in the toilet. And then I flushed. Out of habit.",
-    intro: [['CUST', "Upper plate. Cost me eight hundred dollars."], ['ROD', "They're in the trap. Probably smiling at us."]],
-    tool: { q: 'Something hard stuck in the trap. Gear?', opts: ['GRABBER + TOILET AUGER', 'JETTER', 'PLUNGE IT HARDER'], right: 0, good: 'Fish them out.', bad: "You'll push them down the line." },
-    needs: 'waxring', game: 'claw', lead: 'rod', culprit: [['ROD', 'One upper plate. Rinse those. Twice.'], ['CUST', 'Boil them?'], ['ROD', 'Burn them. Buy new ones.']], tip: "Close the lid. You'd be amazed what falls in.", pay: 260 },
+  { id: 'false-teeth', title: 'TEETH IN THE TOILET', story: true, town: 'BERLIN', addr: 'Glen Ave', cust: { name: 'DOT', seed: 52 }, ext: 'house', room: 'bathroom', window: 85,
+    ring: "Hello? My teeth fell in the toilet. ...No, I didn't flush. They went down by themselves.",
+    intro: [['CUST', 'I set them on the sink like I always do. The lid was up. The toilet is RIGHT there.'], ['CUST', 'I bumped them. Plop. Gone.'], ['ROD', "Lid open, right next to the sink."], ['MATT', "She's not wrong. That's a bad layout."], ['ROD', "They're in the trap. I can feel 'em."]],
+    tool: { q: 'A set of dentures stuck in the toilet trap. Gear?', opts: ['TOILET AUGER WITH THE HOOK BIT', 'JETTER', 'PLUNGE IT HARDER'], right: 0, good: 'Hook them and pull them back up. Gently.', bad: "You'll shove her teeth down the main line." },
+    needs: 'waxring', game: 'claw', lead: 'rod', culprit: [['CARD', 'GOT EM', 'Rod hooks the dentures and fishes them out.'], ['CUST', 'Oh, thank you! Thank you!'], ['CUST', 'What can I put them in to clean them?'], ['ROD', '...', 'rod_stare'], ['ROD', "Ugh. I can't recommend anything...", 'rod_stare'], ['ROD', "You'll have to ask your dentist."], ['ROD', 'It is covered in shit.']],
+    tip: "Close the lid. Especially if the sink is right next to it.", pay: 260 },
   { id: 'vape', title: 'THE VAPE', town: 'GORHAM', addr: 'Lancaster Rd', cust: { name: 'TYLER', seed: 58 }, ext: 'house', room: 'bathroom', window: 80,
     ring: "Uh. Something got flushed. I don't wanna say what. It's a... USB thing.",
     intro: [['MATT', 'Is it a vape?'], ['CUST', '...It might be a vape.']],
