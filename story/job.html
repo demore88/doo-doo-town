@@ -17,12 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794516362"></script>
-<script src="../js/calls.js?v=1794516362"></script>
-<script src="../js/banter.js?v=1794516362"></script>
-<script src="../js/placeholders.js?v=1794516362"></script>
-<script src="../js/music.js?v=1794516362"></script>
-<script src="../js/sfx.js?v=1794516362"></script>
+<script src="../js/state.js?v=1794523847"></script>
+<script src="../js/calls.js?v=1794523847"></script>
+<script src="../js/banter.js?v=1794523847"></script>
+<script src="../js/placeholders.js?v=1794523847"></script>
+<script src="../js/music.js?v=1794523847"></script>
+<script src="../js/sfx.js?v=1794523847"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -341,6 +341,7 @@ function van(x, y) { if (IMG.van) { const N = Math.max(1, Math.round(IMG.van.wid
 const SAVE = DDT.get(), MONTH = SAVE.month || 0;
 const JOB = Object.assign({}, CALLS.flat().find(c => c.id === DDT.param('id')) || CALLS[0][1]);
 if (JOB.solo) window.rod = function () {};   /* solo job: Matt went out alone */
+if (JOB.home) window.matt = function () {};   /* it came to Rod's house: just Rod */
 const BOSS = JOB.solo ? 'MATT' : 'ROD', BP = m => JOB.solo ? 'matt_' + ({ annoyed: 'tired', happy: 'happy', normal: 'normal' }[m] || 'normal') : 'rod_' + m;
 // Same call, different day, different job: the overworked games swap with a related one that still fits the story (picked once per visit).
 { const ALT = { cable: ['cable', 'detective', 'flush', 'camera', 'stairs'], pull: ['pull', 'claw'], claw: ['claw', 'pull', 'beads'], septic: ['septic', 'septic', 'poop'], bubble: ['bubble', 'overflow'], overflow: ['overflow', 'splash'], flush: ['flush', 'splash'], detective: ['detective', 'cable'], camera: ['camera', 'detective'] };   /* camera only swaps in if you own one */
@@ -411,6 +412,7 @@ const SCENES = {};
 SCENES.arrive = async () => {
   Object.assign(st, { vanX: -170, crew: false, rx: 54, mx: 80, mBehind: true, rBehind: false, cust: false, upset: true });
   if (JOB.solo) Object.assign(st, { mx: 54, mBehind: false });   /* alone: Matt gets out of the driver's seat */
+  if (JOB.home) return homeArrive();
   view = () => {
     exterior(JOB.ext, JOB.cust.seed, MONTH);
     if (st.crew && st.mBehind) matt(st.mx, 228, 6, 1.6);
@@ -438,6 +440,22 @@ SCENES.arrive = async () => {
   await lines(JOB.intro);
   st.upset = false;
 };
+
+// a job that shows up at Rod's own house: no van. A red car pulls into the driveway and a guy gets out.
+async function homeArrive() {
+  Object.assign(st, { carX: -150, cust: false, rx: 300 });
+  const redCar = (x, y) => { g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x + 62, y + 2, 64, 6, 0, 0, 7); g.fill();
+    R(x + 4, y - 30, 120, 22, '#a8161c'); R(x + 26, y - 48, 66, 20, '#8f1217'); R(x + 32, y - 45, 24, 14, '#9cc3d8'); R(x + 60, y - 45, 26, 14, '#9cc3d8');
+    R(x + 4, y - 30, 120, 4, '#c5262c'); R(x + 118, y - 26, 6, 6, '#ffe38a'); R(x + 2, y - 26, 5, 5, '#ff5a3a');
+    for (const wx of [x + 28, x + 98]) { g.fillStyle = '#151515'; g.beginPath(); g.arc(wx, y - 8, 11, 0, 7); g.fill(); g.fillStyle = '#9a9a9a'; g.beginPath(); g.arc(wx, y - 8, 4, 0, 7); g.fill(); } };
+  view = () => { exterior(JOB.ext, JOB.cust.seed, MONTH); redCar(st.carX, 240); rod(EXT_DOOR.x + 30, EXT_DOOR.y + 28, 0, 1.2); if (st.cust) customer(st.cx, 236, JOB.cust.seed, 1.5, 'normal'); };
+  await fadeIn(500);
+  await card(['SUNDAY', "ROD'S HOUSE"], 1400);
+  DDTSfx.play('van_arrive'); await tween(st, 'carX', 30, 1800, k => 1 - Math.pow(1 - k, 3));
+  DDTSfx.play('van_door_close'); await wait(300); st.cx = 180; st.cust = true;
+  await lines(JOB.intro.slice(0, 2)); await tween(st, 'cx', EXT_DOOR.x - 20, 1400, k => k);   /* walks up to Rod's door */
+  await lines(JOB.intro.slice(2));
+}
 
 SCENES.tool = async () => {
   view = () => { interior(JOB.room, JOB.cust.seed, MONTH, roomArtFor(JOB)); cast('normal'); };

@@ -191,12 +191,12 @@
 
 <audio id="music" src="assets/doo_doo_town.mp3" loop preload="auto"></audio>
 <audio id="call" src="assets/call_fluffernutter.mp3" preload="auto"></audio>
-<script src="js/state.js?v=1794516362"></script>
-<script src="js/sfx.js?v=1794516362"></script>
-<script src="js/sqcalls.js?v=1794516362"></script>
-<script src="js/songs.js?v=1794516362"></script>
-<script src="js/drive3d.js?v=1794516362"></script>
-<script src="js/music.js?v=1794516362"></script>
+<script src="js/state.js?v=1794523847"></script>
+<script src="js/sfx.js?v=1794523847"></script>
+<script src="js/sqcalls.js?v=1794523847"></script>
+<script src="js/songs.js?v=1794523847"></script>
+<script src="js/drive3d.js?v=1794523847"></script>
+<script src="js/music.js?v=1794523847"></script>
 <script>
 const W = 480, H = 270, LOOP_W = 6688;           // strip loop width at 270px tall
 const cv = document.getElementById('c'), g = cv.getContext('2d');
@@ -318,7 +318,12 @@ document.querySelectorAll('#menu .btn').forEach(b => b.onclick = () => {
         .map(([k, n], i) => `<button class="btn scn" onclick="location.href='story/coffee.html?scene=${k}'">${i + 1}. ${n}</button>`).join('')}
       <div class="grp">STORY JOB · OUT OF THIS WORLD</div>
       ${[['window','THE WINDOW'],['beam','BEAM ME UP'],['lang','LEARN THE LINGO (GAME)'],['toilet','THE SPACE TOILET'],['cable','CABLE THE HOSE (GAME)'],['reveal','THE CULPRIT'],['dropoff','THE DROP-OFF']]
-        .map(([k, n], i) => `<button class="btn scn" onclick="location.href='story/alien.html?scene=${k}'">${i + 1}. ${n}</button>`).join('')}`);
+        .map(([k, n], i) => `<button class="btn scn" onclick="location.href='story/alien.html?scene=${k}'">${i + 1}. ${n}</button>`).join('')}
+      <div class="grp">STORY JOBS · EVERY ONE</div><div id="sc-jobs" style="color:#9fb3d9">loading…</div>`);
+    fetch('js/calls.js').then(r => r.text()).then(t => {   /* every story job in calls.js: play it from the start, or jump to the ending */
+      const L = t.split('\n').filter(l => /story: true/.test(l) && /id: '/.test(l)).map(l => [l.match(/id: '([^']+)'/)[1], (l.match(/title: '([^']+)'/) || l.match(/title: "([^"]+)"/) || [0, '?'])[1]]).filter(([id]) => id !== 'alien');
+      const el = $('#sc-jobs'); if (!el) return;
+      el.innerHTML = L.map(([id, n], i) => `<div style="display:flex;gap:.4em"><button class="btn scn" style="flex:1" onclick="location.href='story/job.html?id=${id}'">${i + 1}. ${n}</button><button class="btn scn" style="min-width:5.5em" onclick="location.href='story/job.html?id=${id}&scene=after'">ENDING</button></div>`).join(''); }).catch(() => {});
     $('#sc-call').onclick = () => { hidePanel(); intro(); };
     $('#sc-drive').onclick = () => { hidePanel(); devDrive(); };
     return;

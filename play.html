@@ -17,12 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="js/state.js?v=1794516362"></script>
-<script src="js/calls.js?v=1794516362"></script>
-<script src="js/banter.js?v=1794516362"></script>
-<script src="js/placeholders.js?v=1794516362"></script>
-<script src="js/music.js?v=1794516362"></script>
-<script src="js/sfx.js?v=1794516362"></script>
+<script src="js/state.js?v=1794523847"></script>
+<script src="js/calls.js?v=1794523847"></script>
+<script src="js/banter.js?v=1794523847"></script>
+<script src="js/placeholders.js?v=1794523847"></script>
+<script src="js/music.js?v=1794523847"></script>
+<script src="js/sfx.js?v=1794523847"></script>
 <script>
 DDT.root = '';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -1021,6 +1021,8 @@ SCENES.hub = async () => {
       const leave = Math.max(30, s.today.time - 420 + 10), due = (s.today.time - 420) + Math.max(45, c.window);   // due counts from when you called them back
       const rival = !c.story && !c.page && !c.jam && s.month >= 1 && Math.random() < 0.18;
       setStep('job');
+      if (c.home) {   /* it comes to you: no drive */
+        s = DDT.get(); s.today.time += 5; s.today.late = 0; DDT.save(s); continue; }
       if (s.today.from === c.town) {
         s = DDT.get(); s.today.time += 10; s.today.late = Math.max(0, s.today.time - 420 - due); DDT.save(s);
         await card([DDT.clock(s.today.time), `ACROSS TOWN · ${c.town}`], 1200); continue;

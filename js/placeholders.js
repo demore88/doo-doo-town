@@ -31,7 +31,7 @@ function custBuild(seed) {
 // ---------- DRAWN CUSTOMERS: 15 pixel-art homeowners. Picked by seed, matched to the name (no "Gloria" in a beard), mirrored at random. ----------
 const CUST_SEX = 'mffmfmmfmmfmmfx' + 'f'.repeat(30) + 'm'.repeat(30);   // c0..c74 (x = either)
 const CUST_F = /^(BEA|BEV|CAROL|DEB|DIANE|DOREEN|ELLEN|GAIL|GLORIA|HELEN|JESS|JUNE|KAYLA|LINDA|MAEVE|MARGE|NANCY|PRIYA|ROSE|SUE|TINA|ANN|MARY|KAREN|BETTY|JEAN|PAM|DOT|LISA|AMY)/;
-const CUST_M = /^(ART|BOB|BRENT|BUCK|BUD|DUANE|EARL|ED|FRANK|GRANT|GREG|HAL|JOE|JR|LOU|MIKE|NED|PHIL|RAY|RON|STAN|TODD|TYLER|VERN|WALT|CHEF)/;
+const CUST_M = /^(ART|BOB|BRENT|BUCK|BUD|DUANE|EARL|ED|FRANK|GRANT|GREG|HAL|JOE|JR|LOU|MIKE|NED|PHIL|RAY|RON|STAN|TODD|TYLER|VERN|WALT|CHEF|RED CAR GUY|BIG GUY)/;
 const _cimg = {}, CUST_NAME = {};
 function custImg(i, face) { const k = 'c' + i + (face ? '_face' : ''); if (k in _cimg) return _cimg[k]; _cimg[k] = null; const im = new Image(); im.onload = () => (_cimg[k] = im); im.src = ART + 'cust/' + k + '.png'; return null; }
 function custPick(seed) {
