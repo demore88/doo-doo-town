@@ -17,12 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1795108330"></script>
-<script src="../js/calls.js?v=1795108330"></script>
-<script src="../js/banter.js?v=1795108330"></script>
-<script src="../js/placeholders.js?v=1795108330"></script>
-<script src="../js/music.js?v=1795108330"></script>
-<script src="../js/sfx.js?v=1795108330"></script>
+<script src="../js/state.js?v=1795109021"></script>
+<script src="../js/calls.js?v=1795109021"></script>
+<script src="../js/banter.js?v=1795109021"></script>
+<script src="../js/placeholders.js?v=1795109021"></script>
+<script src="../js/music.js?v=1795109021"></script>
+<script src="../js/sfx.js?v=1795109021"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -441,30 +441,54 @@ SCENES.arrive = async () => {
   st.upset = false;
 };
 
-// a job that shows up at Rod's own house: no van. A red car pulls into the driveway and a guy gets out.
+// a job that shows up at Rod's own house: no van. A red car pulls into the driveway and a guy gets out with a toilet.
+const HOME = { yard: null, car: null, pot: null };
+function homeLoad() {   /* load the yard, the car and the toilet, and wait for them: never flash the stand-in art first */
+  const ld = (k, src) => new Promise(res => { if (HOME[k]) return res(); const im = new Image(); im.onload = () => { HOME[k] = im; res(); }; im.onerror = res; im.src = src; });
+  custImg(custPick(JOB.cust.seed).i);
+  return Promise.race([Promise.all([ld('yard', '../assets/alien/bg_yard_dawn.jpg'), ld('car', '../assets/red_car.png'), ld('pot', '../assets/mg/toilet.png')]), new Promise(res => setTimeout(res, 6000))]);
+}
+function homeState(parked) { Object.assign(st, parked ? { carX: 330, carF: 3, cust: true, cx: 196, carry: false, potAt: 226, rodOut: true } : { carX: W + 20, carF: 0, cust: false, cx: 0, carry: false, potAt: null, rodOut: false }); }
+function homeScene(mood) {   /* st.carF: 0 toilet in the back seat · 1 door open, toilet inside · 2 door open, seat empty · 3 shut and empty */
+  if (HOME.yard) { g.save(); g.imageSmoothingEnabled = true; g.drawImage(HOME.yard, 0, 0, W, H); g.restore(); } else R(0, 0, W, H, '#05070c');
+  const pot = (x, y) => { if (!HOME.pot) return; g.save(); g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x, y + 1, 11, 3, 0, 0, 7); g.fill(); g.imageSmoothingEnabled = false; g.drawImage(HOME.pot, x - 10, y - 30, 20, 30); g.restore(); };
+  if (st.rodOut) rod(150, 214, 0, 1.4);
+  if (HOME.car) { const fw = HOME.car.width / 4, w = 150, h = w * HOME.car.height / fw; g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(HOME.car, (st.carF || 0) * fw, 0, fw, HOME.car.height, st.carX - 12, 250 - h + 8, w, h); g.restore(); }
+  if (st.potAt != null) pot(st.potAt, 246);
+  if (st.cust) { customer(st.cx, 246, JOB.cust.seed, 1.5, mood || 'normal'); if (st.carry) pot(st.cx + (st.carryDir || -1) * 9, 236 + Math.round(Math.sin(performance.now() / 90))); }   /* hugging the toilet as he walks */
+}
 async function homeArrive() {
-  const yard = new Image(); yard.src = '../assets/alien/bg_yard_dawn.jpg';   /* Rod's log house, the same one from the alien story */
-  Object.assign(st, { carX: W + 20, cust: false, potOut: false });
-  const carImg = new Image(); carImg.src = '../assets/red_car.png'; const potImg = new Image(); potImg.src = '../assets/mg/toilet.png';   /* red_car.png: 2 frames, toilet in the back seat / back seat empty */
-  const redCar = (x, y) => { if (!(carImg.complete && carImg.naturalWidth)) return; const fw = carImg.width / 2, w = 150, h = w * carImg.height / fw;
-    g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(carImg, st.potOut ? fw : 0, 0, fw, carImg.height, x - 12, y - h + 8, w, h);
-    if (st.potOut && potImg.complete && potImg.naturalWidth) { g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x - 22, y + 4, 12, 3, 0, 0, 7); g.fill(); g.imageSmoothingEnabled = false; g.drawImage(potImg, x - 33, y - 28, 22, 33); }   /* the toilet, sitting in Rod's driveway */
-    g.restore(); };
-  view = () => {
-    if (yard.complete && yard.naturalWidth) { g.save(); g.imageSmoothingEnabled = true; g.drawImage(yard, 0, 0, W, H); g.restore(); } else exterior(JOB.ext, JOB.cust.seed, MONTH);
-    redCar(st.carX, 250); rod(150, 214, 0, 1.4); if (st.cust) customer(st.cx, 246, JOB.cust.seed, 1.5, 'normal'); };
+  view = () => R(0, 0, W, H, '#05070c'); homeState(false); await homeLoad();
+  view = () => homeScene('normal');
   await fadeIn(500);
   await card(['SUNDAY', "ROD'S HOUSE"], 1400);
   DDTSfx.play('van_arrive'); await tween(st, 'carX', 330, 1800, k => 1 - Math.pow(1 - k, 3));
-  DDTSfx.play('van_door_close'); await wait(300); st.cx = 320; st.cust = true;
-  await lines(JOB.intro.slice(0, 1)); DDTSfx.play('van_door_open'); st.potOut = true; await lines(JOB.intro.slice(1, 2));   /* he hauls the toilet out of the back seat */
-  await tween(st, 'cx', 196, 1600, k => k);   /* walks up to Rod's door */
-  await lines(JOB.intro.slice(2));
+  await lines(JOB.intro.slice(0, 1));
+  DDTSfx.play('van_door_close'); await wait(250); st.cx = 372; st.cust = true; await wait(350);   /* the driver gets out */
+  await tween(st, 'cx', 392, 500, k => k);
+  DDTSfx.play('van_door_open'); st.carF = 1; await lines(JOB.intro.slice(1, 2));   /* opens the back door: there it is */
+  st.carF = 2; st.carry = true; st.carryDir = -1; DDTSfx.play('grunt', { vol: 0.5 }); await wait(500);
+  DDTSfx.play('van_door_close'); st.carF = 3; await wait(300);
+  await tween(st, 'cx', 240, 2600, k => k);   /* carries it across the yard */
+  st.carry = false; st.potAt = 226; DDTSfx.play('metal_clunk', { vol: 0.4 }); await wait(350);
+  await tween(st, 'cx', 196, 600, k => k);   /* and walks up to Rod's door */
+  await lines(JOB.intro.slice(2, 3)); DDTSfx.play('door'); await wait(500); st.rodOut = true; await wait(300);
+  await lines(JOB.intro.slice(3));
+}
+async function homeLeave(rest) {   /* he carries it back, loads it on the bare seat, backs out, and is never seen again */
+  await tween(st, 'cx', 240, 500, k => k); st.potAt = null; st.carry = true; st.carryDir = 1; DDTSfx.play('grunt', { vol: 0.5 });
+  await tween(st, 'cx', 392, 2400, k => k);
+  DDTSfx.play('van_door_open'); st.carF = 2; await wait(350); st.carry = false; st.carF = 1; await wait(350);
+  await lines(rest.slice(0, 1));
+  DDTSfx.play('van_door_close'); st.carF = 0; await wait(300); st.cust = false; DDTSfx.play('van_door_close'); await wait(400);
+  DDTSfx.play('horn_beep', { vol: 0.5 }); await tween(st, 'carX', W + 40, 2200, k => k * k);
+  await lines(rest.slice(1));
 }
 
 SCENES.tool = async () => {
   view = () => { interior(JOB.room, JOB.cust.seed, MONTH, roomArtFor(JOB)); cast('normal'); };
-  st.inX = -250; await fadeIn(300); await walkIn();
+  if (JOB.home) { view = () => R(0, 0, W, H, '#05070c'); homeState(true); await homeLoad(); view = () => homeScene('normal'); }
+  st.inX = -250; await fadeIn(300); if (!JOB.home) await walkIn();
   const T0 = JOB.tool;
   const c = await say(BOSS, BP('normal'), T0.q, T0.opts);
   JS.toolRight = c === T0.right; saveJS();
@@ -504,6 +528,7 @@ SCENES.after = async () => {
   JS.win = mg.win; JS.stars = mg.stars; JS.carl = !!mg.carl; if (mg.extraTime && !JS.restApplied) { JS.restApplied = true; if (DDT.inCampaign()) DDT.apply({ time: mg.extraTime }); } saveJS();   /* carl: got run out of the crawlspace, the other guy fixed it */
   st.happy = mg.win;
   view = () => { interior(JOB.room, JOB.cust.seed, MONTH, roomArtFor(JOB)); cast(st.happy ? 'happy' : 'upset'); };
+  if (JOB.home) { view = () => R(0, 0, W, H, '#05070c'); homeState(true); await homeLoad(); view = () => homeScene('normal'); }
   IMG.cust = custPortrait(JOB.cust.seed, mg.win ? 'happy' : 'upset');
   await fadeIn(300); DDTSfx.play(mg.win ? 'drain' : 'clog');
   if (!mg.win) {   // a failed run is a failed run: try again (costs time and energy) or leave it broken
@@ -523,7 +548,7 @@ SCENES.after = async () => {
   if (JOB.game === 'camera' && !JOB.solo && Math.random() < 0.15) {   /* a rare moment on any camera job: the camera line */
     await lines([['CARD', 'MEANWHILE', 'Rod is leaning way in, feeding the camera line, eyes on the screen.'], ['CARD', '', 'Matt looks straight at him.'], ['CARD', '', 'Matt slowly reaches toward his face.'], ['CARD', '', 'Rod notices. They lock eyes.'], ['CARD', '', 'Matt gently pulls the camera line out of Rod\'s mouth.'], ['ROD', '...', 'rod_stare'], ['MATT', '...', 'matt_stare'], ['CARD', '10 SECONDS OF SILENCE', ''], ['ROD', '...', 'rod_stare']]);
   }
-  await lines(JOB.culprit);
+  if (JOB.home) { await lines(JOB.culprit.slice(0, -2)); await homeLeave(JOB.culprit.slice(-2)); } else await lines(JOB.culprit);
   if (JOB.extra === 'tightShirt') await tightShirt();
   SND.ding(); await card(['PRO TIP', JOB.tip.toUpperCase()], 2200, '#7dffb0');
 };

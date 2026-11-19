@@ -36,6 +36,7 @@ const _cimg = {}, CUST_NAME = {};
 function custImg(i, face) { const k = 'c' + i + (face ? '_face' : ''); if (k in _cimg) return _cimg[k]; _cimg[k] = null; const im = new Image(); im.onload = () => (_cimg[k] = im); im.src = ART + 'cust/' + k + '.png'; return null; }
 function custPick(seed) {
   let nm = CUST_NAME[seed]; if (!nm && typeof JOB !== 'undefined' && JOB && JOB.cust && JOB.cust.seed === seed) nm = CUST_NAME[seed] = String(JOB.cust.name || '').toUpperCase();
+  if (nm === 'RED CAR GUY') return { i: 'og', flip: 0 };   /* the Sunday Toilet guy: old, grey zip-up hoodie, grey hat (cust/cog.png) */
   const sex = nm && CUST_F.test(nm) ? 'f' : nm && CUST_M.test(nm) ? 'm' : '';
   const pool = []; for (let i = 0; i < CUST_SEX.length; i++) if (!sex || CUST_SEX[i] === sex || CUST_SEX[i] === 'x') pool.push(i);
   const h = Math.abs((seed * 2654435761) | 0); return { i: pool[h % pool.length], flip: (h >> 5) & 1 };
