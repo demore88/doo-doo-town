@@ -75,10 +75,23 @@ window.DDT_RADIO = (() => {
   };
   b.onclick = () => { ddtFS(); f.focus(); };
   const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  const upd = () => { b.style.display = !TOUCH || document.fullscreenElement ? 'none' : 'flex'; };
+  const upd = () => { b.style.display = !TOUCH || document.fullscreenElement || (window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()) ? 'none' : 'flex'; };   /* the app is already full screen */
+  // Android back button (app only): on the title screen it closes the game; anywhere else, press it twice to go back to the title
+  if (window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.App) {
+    let armed = 0; const toast = document.createElement('div');
+    toast.style.cssText = "position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9;background:rgba(10,13,20,.92);color:#f7c418;border:2px solid #f7c418;border-radius:6px;padding:10px 14px;font:10px 'Press Start 2P',monospace;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap";
+    toast.textContent = 'PRESS BACK AGAIN FOR THE MAIN MENU'; document.body.appendChild(toast);
+    Capacitor.Plugins.App.addListener('backButton', () => {
+      let path = ''; try { path = f.contentWindow.location.pathname; } catch (e) {}
+      if (/\/index\.html$|\/$/.test(path)) { Capacitor.Plugins.App.exitApp(); return; }
+      if (Date.now() - armed < 2200) { armed = 0; toast.style.opacity = '0'; ddtLoad('index.html'); return; }
+      armed = Date.now(); toast.style.opacity = '1'; setTimeout(() => { if (Date.now() - armed >= 2100) toast.style.opacity = '0'; }, 2200);
+    });
+  }
   document.addEventListener('fullscreenchange', upd); upd();
   f.addEventListener('load', () => { try { document.title = f.contentDocument.title; } catch (e) {} f.focus(); }, { once: true });
-  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
+  const APP = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());   // running as the Android app: files are already on the phone
+  if (!APP && 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
 </script>
 </body>
 </html>
