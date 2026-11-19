@@ -90,6 +90,7 @@
 </style>
 </head>
 <body>
+<div id="loading" style="position:fixed;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;background:#0b0e15;color:#f7c418;font:12px 'Press Start 2P',monospace;text-align:center;line-height:2">LOADING...<br><span style="color:#9fb3d9;font-size:8px">GETTING THE TOOLS OFF THE TRUCK</span></div>
 <div id="wrap"><div id="stage">
   <canvas id="c" width="1440" height="810"></canvas>
   <div id="pad">
@@ -113,10 +114,10 @@
   <div class="scr" id="result"><div class="box" id="resbox"></div></div>
 </div></div>
 <audio id="music" src="../assets/doo_doo_town.mp3" loop preload="auto"></audio>
-<script src="../js/state.js?v=1794525535"></script>
-<script src="../js/songs.js?v=1794525535"></script>
-<script src="../js/sfx.js?v=1794525535"></script>
-<script src="games.js?v=1794525535"></script>
+<script src="../js/state.js?v=1795107171"></script>
+<script src="../js/songs.js?v=1795107171"></script>
+<script src="../js/sfx.js?v=1795107171"></script>
+<script src="games.js?v=1795107171"></script>
 <script>
 const cv = document.getElementById('c'); g = cv.getContext('2d'); const SCALE = 3; g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
 const $ = s => document.querySelector(s);
@@ -280,7 +281,8 @@ function finish() {
 }
 
 // ---------- loop ----------
-let prevShake = 0, prevPants = null, endT = 0;
+let prevShake = 0, prevPants = null, endT = 0, oopsN = 0;
+const oops = e => { if (oopsN++ < 3) console.error('frame error:', e && e.stack || e); };
 function frame(ms) {
   g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
   const dt = Math.min(1 / 30, (ms - last) / 1000 || 0); last = ms;
@@ -290,7 +292,7 @@ function frame(ms) {
       const I = { L: held.L, R: held.R, U: held.U, D: held.D, A: held.A, B: held.B, Lp: edge.L, Rp: edge.R, Up: edge.U, Dp: edge.D, Ap: edge.A, Bp: edge.B, ptr: { ...ptr } };
       for (const k in edge) edge[k] = 0; ptr.clicked = false;
       if (I.Ap) beep(880, .03, 'square', .025);
-      G.update(s, dt * (s.spd || 1), I);
+      try { G.update(s, dt * (s.spd || 1), I); } catch (e) { oops(e); }   /* never let one bad frame freeze the game */
       if ((s.shake || 0) > prevShake + 0.01) beep(110, .18, 'sawtooth', .06, -40);
       prevShake = s.shake || 0;
       if (s.end) { phase = 'ending'; endT = 0.75; if (s.end.win) beep(880, .08); }   // hold on the final moment before the results slide in
@@ -298,7 +300,8 @@ function frame(ms) {
     } else if (phase === 'ready') { readyT -= dt; for (const k in edge) edge[k] = 0; ptr.clicked = false; if (readyT <= 0) { phase = 'play'; beep(1046, .1); } }
     g.save();
     if (s.shake > 0) { s.shake = Math.max(0, s.shake - dt); g.translate((Math.random() - .5) * 6, (Math.random() - .5) * 6); }
-    G.draw(s, {}); g.restore();
+    try { G.draw(s, {}); } catch (e) { oops(e); for (let i = 0; i < 16; i++) g.restore(); g.save(); }   /* e.g. art still downloading on a slow connection */
+    g.restore();
     if (phase === 'ending') { const k = Math.max(0, endT / 0.75); if (s.end.win) { g.globalAlpha = k * k * 0.55; R(0, 0, W, H, '#fff'); g.globalAlpha = 1; } else { g.globalAlpha = (1 - k) * 0.5; R(0, 0, W, H, '#200'); g.globalAlpha = 1; } }
     if (phase === 'ready') { const go = readyT <= 0.8, k = go ? 1 + Math.max(0, readyT - 0.55) * 2.4 : 1; R(0, 110, W, 50, 'rgba(16,21,31,.85)'); T(go ? 'GO!' : 'GET READY', 240, 135, go ? '#7dffb0' : '#f7c418', 16 * k, 'center'); }
   } else { R(0, 0, W, H, '#0b0e15'); }
@@ -310,10 +313,12 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && pha
 const load = (k, src) => new Promise(r => { const i = new Image(); i.onload = () => { IMG[k] = i; r(); }; i.onerror = r; i.src = src; });
 const loadMG = () => fetch('../assets/mg/sizes.json').then(r => r.json()).then(o => Promise.all(Object.keys(o).map(n => load('mg_' + n, '../assets/mg/' + n + '.png')))).catch(() => {});
 const capped = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);   // art helps, but never holds up the game
-Promise.all([capped(loadMG(), 2500), load('matt', '../assets/matt_dance.png'), load('matt_more', '../assets/matt_more.png'), load('ron_sheet', '../assets/ron_sheet.png'), load('rod_port', '../assets/rod_normal.png'), ...['stare', 'annoyed', 'confused', 'gross', 'smug', 'laugh', 'shocked', 'happy', 'tired', 'panic', 'normal'].map(f => load('rodf_' + f, '../assets/rod_' + f + '.png')), load('matt_walk', '../assets/matt_walk.png'), load('rod_walk', '../assets/rod_walk.png'), load('rod', '../assets/rod_dance.png'), load('rod_more', '../assets/rod_more.png'), load('van', '../assets/van_left.png'), load('van_back', '../assets/van_back.png'), load('bg_yard3', '../assets/bg_yard3.png'),
+Promise.all([capped(loadMG(), 12000),   /* wait for the art (first visit on a slow phone), but never forever */ load('matt', '../assets/matt_dance.png'), load('matt_more', '../assets/matt_more.png'), load('ron_sheet', '../assets/ron_sheet.png'), load('rod_port', '../assets/rod_normal.png'), ...['stare', 'annoyed', 'confused', 'gross', 'smug', 'laugh', 'shocked', 'happy', 'tired', 'panic', 'normal'].map(f => load('rodf_' + f, '../assets/rod_' + f + '.png')), load('matt_walk', '../assets/matt_walk.png'), load('rod_walk', '../assets/rod_walk.png'), load('rod', '../assets/rod_dance.png'), load('rod_more', '../assets/rod_more.png'), load('van', '../assets/van_left.png'), load('van_back', '../assets/van_back.png'), load('bg_yard3', '../assets/bg_yard3.png'),
   document.fonts ? document.fonts.load('8px "Press Start 2P"').catch(() => {}) : 0]).then(() => {
+    { const ld = $('#loading'); if (ld) ld.remove(); }
     buildGrid(); requestAnimationFrame(frame);
-    if (EMBED) { const i = GAMES.findIndex(x => x.id === EMBED); if (i >= 0) { openIntro(i); if (store.get('seen_' + EMBED)) start(); }   /* played it before: skip the how-to, straight to READY */
+    if (EMBED) { let i = GAMES.findIndex(x => x.id === EMBED); if (i < 0) { console.error('unknown game: ' + EMBED); i = Math.max(0, GAMES.findIndex(x => x.id === 'cable')); }   /* never a blank screen */
+      if (i >= 0) { openIntro(i); if (store.get('seen_' + EMBED)) start(); }   /* played it before: skip the how-to, straight to READY */
       $('#home').textContent = '< BACK'; }
     if (DDT.param('lead')) $('#heroes').style.display = 'none';
   });

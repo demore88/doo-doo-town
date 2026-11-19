@@ -476,9 +476,9 @@ function partsFor(j) { const t = jobText(j), g = j.game, out = [];
 function gearFor(j) { const g = j.game, out = [];
   if (['cable', 'detective', 'flush'].includes(g)) out.push('heads');
   if (['camera', 'detective', 'septic', 'locate'].includes(g)) out.push('camera');
-  if (['jet', 'bubble', 'overflow', 'thaw'].includes(g)) out.push('jetter');
-  if (['splash', 'sprinkler', 'poop', 'gag', 'crawl', 'stairs'].includes(g) || ['crawl', 'yard'].includes(j.room)) out.push('waders', 'muckboots');
-  if (['gag', 'splash', 'sprinkler', 'poop'].includes(g)) out.push('ppe');
+  if (['jetter', 'bubble', 'overflow', 'steamer'].includes(g)) out.push('jetter');
+  if (['dodge', 'sprinkler', 'poop', 'gag', 'crawl', 'stairs'].includes(g) || ['crawl', 'yard'].includes(j.room)) out.push('waders', 'muckboots');
+  if (['gag', 'dodge', 'sprinkler', 'poop'].includes(g)) out.push('ppe');
   return out; }
 const SHOP = [
   // parts: used up on jobs that need them, billed to the customer at 3x

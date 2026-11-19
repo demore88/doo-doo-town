@@ -17,12 +17,12 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1794525535"></script>
-<script src="../js/calls.js?v=1794525535"></script>
-<script src="../js/banter.js?v=1794525535"></script>
-<script src="../js/placeholders.js?v=1794525535"></script>
-<script src="../js/music.js?v=1794525535"></script>
-<script src="../js/sfx.js?v=1794525535"></script>
+<script src="../js/state.js?v=1795107171"></script>
+<script src="../js/calls.js?v=1795107171"></script>
+<script src="../js/banter.js?v=1795107171"></script>
+<script src="../js/placeholders.js?v=1795107171"></script>
+<script src="../js/music.js?v=1795107171"></script>
+<script src="../js/sfx.js?v=1795107171"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -344,7 +344,7 @@ if (JOB.solo) window.rod = function () {};   /* solo job: Matt went out alone */
 if (JOB.home) window.matt = function () {};   /* it came to Rod's house: just Rod */
 const BOSS = JOB.solo ? 'MATT' : 'ROD', BP = m => JOB.solo ? 'matt_' + ({ annoyed: 'tired', happy: 'happy', normal: 'normal' }[m] || 'normal') : 'rod_' + m;
 // Same call, different day, different job: the overworked games swap with a related one that still fits the story (picked once per visit).
-{ const ALT = { cable: ['cable', 'detective', 'flush', 'camera', 'stairs'], pull: ['pull', 'claw'], claw: ['claw', 'pull', 'beads'], septic: ['septic', 'septic', 'poop'], bubble: ['bubble', 'overflow'], overflow: ['overflow', 'splash'], flush: ['flush', 'splash'], detective: ['detective', 'cable'], camera: ['camera', 'detective'] };   /* camera only swaps in if you own one */
+{ const ALT = { cable: ['cable', 'detective', 'flush', 'camera', 'stairs'], pull: ['pull', 'claw'], claw: ['claw', 'pull', 'beads'], septic: ['septic', 'septic', 'poop'], bubble: ['bubble', 'overflow'], overflow: ['overflow', 'dodge'], flush: ['flush', 'dodge'], detective: ['detective', 'cable'], camera: ['camera', 'detective'] };   /* camera only swaps in if you own one */
   const key = 'alt_' + JOB.id + '_' + (DDT.get().day || 0) + '_' + (DDT.get().month || 0); let pick = null; try { pick = sessionStorage.getItem(key); } catch (e) {}
   if (!pick && !JOB.story && ALT[JOB.game]) { let opts = ALT[JOB.game].filter(gm => gm !== 'camera' || (DDT.get().inv || {}).camera); const rec = DDT.get().recent || []; const fresh = opts.filter(gm => !rec.includes(gm)); if (fresh.length) opts = fresh;
     pick = opts[Math.floor(Math.random() * opts.length)]; try { sessionStorage.setItem(key, pick); } catch (e) {} }
@@ -594,7 +594,7 @@ function frame(now) {
     if (Math.floor(now / 500) % 2) T('TAP TO START', 240, 170, '#fff', 8, 'center');
     if (ptr.clicked || confirmHit()) { started = true; ac(); const q = new URLSearchParams(location.search).get('scene'); runFrom(Math.max(0, ORDER.indexOf(q))); }
   } else {
-    view(); if (typeof JOB !== 'undefined' && JOB.night) { g.save(); g.globalCompositeOperation = 'multiply'; g.fillStyle = '#3d4a78'; g.fillRect(0, 0, W, H); g.restore(); }   /* night jobs: tint the whole scene dark */
+    try { view(); } catch (e) { if (!window.__vErr) { window.__vErr = 1; console.error("view error:", e && e.stack || e); } for (let i = 0; i < 16; i++) g.restore(); }   /* art still loading: skip the frame, never freeze */ if (typeof JOB !== 'undefined' && JOB.night) { g.save(); g.globalCompositeOperation = 'multiply'; g.fillStyle = '#3d4a78'; g.fillRect(0, 0, W, H); g.restore(); }   /* night jobs: tint the whole scene dark */
     if (game) { const gm = game; gm.update(dt); gm.draw(); }   // update may finish the game and clear it
     else if (!dialogInput() && st.waitTap && (ptr.clicked || confirmHit())) { const f = st.waitTap; st.waitTap = null; f(); }
     drawDialog();

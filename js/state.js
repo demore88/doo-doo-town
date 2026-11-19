@@ -47,11 +47,12 @@ const DDT = {
 };
 
 // =====================================================================
-// RELEASE SWITCH: set to false before sharing the game publicly.
-// true  = SKIP buttons, DEV labels and the CUTSCENES menu are visible (for testing)
-// false = clean player build
+// RELEASE SWITCH. Dev mode = SKIP buttons, DEV labels and the CUTSCENES menu (for testing).
 // =====================================================================
-DDT.DEV = true;
+DDT.DEV = (() => {   // RELEASE: off for players. Testers: open the game once with ?dev=1 to turn it on (it sticks), ?dev=0 to turn it off.
+  try { let q = new URLSearchParams(location.search).get('dev'); try { if (q == null && window.top !== window) q = new URLSearchParams(window.top.location.search).get('dev'); } catch (e) {}
+    if (q === '1') localStorage.setItem('ddt_dev', '1'); if (q === '0') localStorage.removeItem('ddt_dev');
+    return localStorage.getItem('ddt_dev') === '1'; } catch (e) { return false; } })();
 
 // ---------- a New England year, month by month (0 = January) ----------
 // leaf: canopy colors for leafy trees (null = bare branches). snow: snow on the ground.

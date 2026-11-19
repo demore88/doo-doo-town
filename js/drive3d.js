@@ -277,6 +277,7 @@ function drive3d(choice, opts) {
   if (typeof DDT !== 'undefined' && DDT.DEV) { window.__kidsmom = () => startKidsMomCall(); window.__yukon = () => { const n = addCar(pos + PZ + 12 * SEG, false); for (let i = 0; i < 300 && !n.yukon; i++) Object.assign(n, addCar(pos + PZ + 12 * SEG, false)); cars.push(n); }; }
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__jump = mi => { pos = mi * SEG_PER_MI * SEG; };   /* dev: jump down the road */
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__px = () => px;
+  if (typeof DDT !== 'undefined' && DDT.DEV) window.__end = () => { pos = (N - 44) * SEG; };   /* dev: jump to the end of the drive */
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__rz = v => { rz = pos + PZ + v * SEG; };
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__drift = () => ({ px, c: segAt(pos + PZ + 6 * SEG).curve, c0: segAt(pos + PZ).curve, gap: (rz - (pos + PZ)) / SEG, left: N - 40 - (pos + PZ) / SEG, won: rivalWon, crashes, done, sp: speed / TOP });   /* dev: where the van is across the road */
   if (typeof DDT !== 'undefined' && DDT.DEV) window.__critter = (kind, ahead) => critters.push({ seg: Math.floor((pos + PZ) / SEG) + (ahead || 30), kind, off: ahead < 4 ? px : px + 1.2, dir: ahead < 4 ? 1 : 0, hit: false, snap: 0, flash: 0 });   /* dev: drop an animal ahead */   // dev: lets the test harness check for overlaps
@@ -419,7 +420,8 @@ function drive3d(choice, opts) {
 
   // ---------- the loop ----------
   return new Promise(res => {
-    function frame(ms) {
+    function frame(ms) { try { frame0(ms); } catch (e) { if (!window.__dErr) { window.__dErr = 1; console.error('drive error:', e && e.stack || e); } for (let i = 0; i < 16; i++) r.restore(); if (!done) requestAnimationFrame(frame); } }   /* one bad frame never freezes the drive */
+    function frame0(ms) {
       if (done) return;
       if (last === null) last = ms;
       const dt = Math.min(0.05, (ms - last) / 1000); last = ms; if (vanReady() && artReady()) { if (!artOK) { artOK = true; for (const c of cars) c.hw = (c.img.width || 44) * c.sc / 320; } t += dt; }   /* the clock doesn't start until the art is in */

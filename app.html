@@ -16,6 +16,9 @@
 <body>
 <script src="js/songs.js"></script>
 <script>
+// ---------- warm the art cache in the background, a few pictures at a time, so the first mini-game opens fast ----------
+setTimeout(() => { fetch('assets/mg/sizes.json').then(r => r.json()).then(async o => { const names = Object.keys(o);
+  for (let i = 0; i < names.length; i += 4) await Promise.all(names.slice(i, i + 4).map(n => new Promise(res => { const im = new Image(); im.onload = im.onerror = res; im.src = 'assets/mg/' + n + '.png'; }))); }).catch(() => {}); }, 4000);
 // ---------- the van radio, owned by this outer page so it plays straight through every screen change ----------
 window.DDT_RADIO = (() => {
   const TR = [['doo_doo_town.mp3', 'DOO DOO TOWN'], ['doo_doo_town_rock.mp3', 'DOO DOO TOWN ROCK'], ["that_cloggin_sound.mp3", "THAT CLOGGIN' SOUND"], ['brown_friday.mp3', 'BROWN FRIDAY'], ['the_brown_note.mp3', 'THE BROWN NOTE'], ['nightmares.mp3', 'NIGHTMARES']];

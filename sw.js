@@ -2,10 +2,10 @@
    Pages and scripts: network first (so updates show up right away), cache when offline.
    Art: network first too (a cheap 'not modified' check), falling back to the cache if the signal is slow or gone.
    Music: served from the cache, refreshed in the background (big files). */
-const CACHE = 'ddt-v4';
+const CACHE = 'ddt-v5';
 const CORE = ['./', './index.html', './app.html', './play.html', './arcade/index.html', './arcade/games.js',
   './story/job.html', './story/stop.html', './story/coffee.html', './story/fluffernutter.html', './story/alien.html',
-  './js/calls.js', './js/drive3d.js', './js/sqcalls.js', './js/banter.js', './js/music.js', './js/placeholders.js', './js/sfx.js', './js/state.js',
+  './js/calls.js', './js/drive3d.js', './js/sqcalls.js', './js/banter.js', './js/music.js', './js/songs.js', './js/placeholders.js', './js/sfx.js', './js/state.js',
   './assets/PressStart2P.ttf', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
