@@ -3,4 +3,4 @@
 set -e
 cd "$(dirname "$0")"
 rm -rf www && mkdir www && cp -r /home/claude/drain-trail/menu/. www/ && rm -rf www/.git www/README.md
-git add -A && git commit -qm "Update game files" && git push -q origin main
+git add -A && git commit -qm "Update game files" && git push -q origin HEAD:android
