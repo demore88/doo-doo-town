@@ -1,0 +1,547 @@
+// =====================================================================
+// DOO DOO TOWN — the year. 12 months · 4 calls + 1 story job each.
+// EVERYTHING HERE IS PLACEHOLDER DIALOGUE built from the crew's real calls.
+// Edit freely: each call is one object. Speakers: 'ROD', 'MATT', 'CUST'.
+//
+//   id, title, town, addr, cust:{name, seed}, ext (outside art), room (inside art)
+//   ring:    what the customer says on the phone
+//   window:  minutes from the 7:00 call until they expect you
+//   intro:   lines when you arrive
+//   tool:    the "pick the right gear" question (right = index of the correct answer)
+//   game:    arcade mini-game id  ·  lead: who should take it ('rod' skill / 'matt' hustle)
+//   culprit: lines after the fix  ·  tip: the promo lesson  ·  pay, needs (part used), gate (item that unlocks a story job)
+//   page:    a hand-built cutscene page instead of the generic job
+// =====================================================================
+const MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+
+const TOWNS = {
+  BERLIN: 'Route 16', GORHAM: 'Route 16', RANDOLPH: 'Route 2', JACKSON: 'Route 16', BARTLETT: 'Route 302', CONWAY: 'Route 16',
+  FREEDOM: 'Route 153', OSSIPEE: 'Route 16', TAMWORTH: 'Route 113', FRYEBURG: 'Route 302', SHELBURNE: 'Route 2', MILAN: 'Route 16',
+};
+
+// physical games go better with Matt leading; skill games go better with Rod leading
+const PHYS = ['bubble', 'dodge', 'sprinkler', 'stairs', 'crawl', 'dogs', 'pull', 'overflow', 'pour', 'locate'];
+const SKILL = ['steamer', 'cable', 'camera', 'septic', 'detective', 'jetter', 'gag', 'claw', 'flush', 'poop'];
+
+const CALLS = [
+// ---------------- JANUARY ----------------
+[
+  { id: 'fluffernutter', title: 'THE FLUFFERNUTTER CALL', town: 'RANDOLPH', addr: '23 Boulder Lane', page: 'story/fluffernutter.html', call: 'fluffer', window: 75, pay: 540, game: 'cable' },
+  { id: 'frozen-kitchen', title: 'ICEBOX KITCHEN', town: 'BERLIN', addr: 'Hutchins St', cust: { name: 'DOREEN', seed: 11 }, ext: 'house', room: 'kitchen', window: 90,
+    ring: "My kitchen sink won't drain and it's twenty below. Is that related?",
+    intro: [['CUST', "It just stopped. The water sits there and never goes down."], ['ROD', 'Line runs along the outside wall. It froze.'], ['CUST', "I've been pouring hot water down it all morning."], ['MATT', "Yeah... that won't do it."]],
+    tool: { q: "Frozen kitchen line. How do we attack it?", opts: ['FROM BELOW: STEAMER UP THROUGH THE CLEANOUT', 'MORE HOT WATER DOWN THE SINK', 'CABLE IT FROM THE SINK'], right: 0,
+      good: 'Steam hose up through the cleanout. Bucket underneath to catch it.', bad: "Hot water floats on cold water. It'll never reach the ice." },
+    roomArt: 'bg_kitchen2', game: 'steamer', lead: 'rod',
+    culprit: [['MATT', "Steam's through the ice. Got a hole open. Water's coming down into the bucket."], ['ROD', 'Cap the cleanout. Now run the hot water in the sink.'],
+              ['CUST', "That's what I was doing all morning!"], ['ROD', "Before, your hot water just sat on top of the cold water in the pipe. Now there's a hole, so the hot water passes right through the freeze-up and melts the rest."],
+              ['MATT', "Let it run hot for a good ten minutes."]],
+    tip: "Frozen drain? Open a hole from below first. Then hot water can pass through and melt the rest.", pay: 390 },
+  { id: 'find-septic-snow', title: 'TWO FEET OF SNOW', town: 'SHELBURNE', addr: 'North Rd', cust: { name: 'WALT', seed: 23 }, ext: 'camp', room: 'yard', window: 100,
+    ring: "Septic's full. Where's the tank? No idea. Never had it pumped.",
+    intro: [['CUST', "Bought the place in '09. Never pumped it."], ['MATT', "Fifteen years... and two feet of snow on top."]],
+    tool: { q: 'Find a buried tank under the snow. Best bet?', opts: ['PROBE ROD + SHOVEL', 'GUESS AND DIG', 'ASK THE NEIGHBOR'], right: 0, good: 'Probe it. Find the lid.', bad: 'That could take all day.' },
+    roomArt: 'bg_yard2', game: 'septic', lead: 'rod', culprit: [['MATT', 'Found it. Ten feet from where he said.'], ['CUST', 'Huh. I always shoveled the wrong spot.']], tip: 'Pump your tank every 2-3 years. Know where your lid is.', pay: 455 },
+  { id: 'hot-wheel', title: 'THE HOT WHEEL', town: 'GORHAM', addr: 'Main St', cust: { name: 'JESS', seed: 31 }, ext: 'house', room: 'bathroom', window: 80,
+    ring: "My toilet keeps gurgling. And it flushes really slow.",
+    intro: [['CUST', 'Every time I flush it, it gurgles. Then it takes forever to go down.'], ['ROD', "Something's stuck in the trap."]],
+    tool: { q: 'Something is stuck in the toilet trap. Gear?', opts: ['TOILET AUGER', 'MAIN LINE MACHINE', 'DYNAMITE'], right: 0, good: 'Closet auger. Gentle.', bad: 'Way too much machine for a toilet.',
+      badBy: { 2: "Rod. We can't just blow stuff up to watch it explode." } },
+    needs: 'waxring', roomArt: 'bg_bathroom4', game: 'pull', lead: 'matt', culprit: [['MATT', 'Found your gurgle. One red Hot Wheel.'], ['MATT', "And it's haulin' a lil dookie in the trunk."], ['CUST', "...My son is SO grounded."]], tip: 'Toilet lid locks are cheap. Toy cars are not plumbing.', pay: 270 },
+  // story job
+  { id: 'the-pot', title: 'THE POT', story: true, town: 'MILAN', addr: 'Bridge St', cust: { name: 'HAL', seed: 47 }, ext: 'house', room: 'yard', window: 90,
+    ring: "Toilet won't go down. It's ten degrees out. And it's... full.",
+    intro: [['CARD', 'TEN DEGREES', 'The line from the toilet to the septic is frozen solid.'], ['ROD', "I'll grind through the ice from inside. Matt, dig out the tank and watch for water."], ['MATT', 'Tank lid off. Nothing yet.'], ['MATT', "Let me go plunge the toilet a little, see if I can push some water through."],
+      ['CARD', 'THE BATHROOM', 'Matt opens the door on SHIT MOUNTAIN.'], ['MATT', "Sir. That's at least seven inches over the rim.", 'matt_shocked'], ['CUST', "Yeah, it wasn't going down, so I just... kept going."], ['MATT', "Before we can touch that toilet, you gotta scoop it out."], ['CUST', 'With what?'], ['MATT', 'Anything.'], ['CARD', '', 'He comes back with a cooking pot.']],
+    tool: { q: "He walks out the back door with a pot full of soupy wet shit, heading for the side of the house. There's a ten-year-old kid who lives here...", opts: ['"WAIT! DON\'T DUMP IT THERE. BRING IT TO THE TANK, I HAVE IT OPEN!"', 'LET HIM DUMP IT BY THE HOUSE'], right: 0, good: 'He stops. He turns. He heaves it toward the tank... where Matt is standing.', bad: "The kid plays out here. When the snow melts that's a surprise for April." },
+    game: 'dodge', lead: 'matt', culprit: [['CARD', 'SPLOOSH', 'Shitty piss water. Boots. Pants. Everything.'], ['MATT', '...', 'matt_stare'], ['MATT', '...', 'matt_stare'], ['CARD', '', 'To his credit, some of it did go in the tank.'], ['CUST', "Oh. Oh no. I'm so sorry. I am SO sorry."], ['MATT', "Rod. Add three hundred dollars.", 'matt_tired'], ['ROD', 'For what?'], ['MATT', 'For tossing a pot of piss and shit on me.']],
+    tip: 'Frozen line? Stop flushing. And if your plumber says bring it to the tank... walk it there.', pay: 840 },
+  { id: 'fishy-story', title: 'THE BIG STINK', story: true, town: 'OSSIPEE', addr: 'Route 25', cust: { name: 'HOST', seed: 257 }, ext: 'house', room: 'basement', window: 120,
+    ring: "Hi, I own an Airbnb. The guests say nothing downstairs drains. The line might be... frozen?",
+    intro: [['CARD', 'THE AIRBNB', 'Downstairs. Finished basement. Frozen line.'], ['ROD', "Cleanout's back here. Let me crack it."], ['CARD', 'THE CAP COMES OFF', 'Something comes out. A smell.'], ['MATT', "Oh no. Oh NO. That's fishy. That's PISSY.", 'matt_shocked'], ['MATT', "That's super smelly fishy piss.", 'matt_tired'], ['ROD', "Yep. Breathe through your mouth."], ['MATT', 'Then I TASTE it!']],
+    tool: { q: "Matt's gag reflex is going. He's about to lose it. What do you grab?", opts: ['EVERY AIR FRESHENER IN THE HOUSE', 'TOUGH IT OUT', 'OPEN A WINDOW'], right: 0, good: 'Spray it. Spray all of it.', bad: "It's winter and that smell is stronger than the wind." },
+    game: 'gag', lead: 'matt', culprit: [['CARD', 'PSSSSSSSSSHHHHHH', 'Matt empties every can of air freshener in the Airbnb.'], ['MATT', "I almost threw up. That NEVER happens.", 'matt_tired'], ['ROD', "It smells like Hawaiian Breeze and fish piss in here now."], ['MATT', 'Better than just fish piss.'], ['ROD', "Line's thawed and draining."], ['MATT', "I'm dying. I am actually dying.", 'matt_tired']],
+    tip: "Rental downstairs gets cold? Keep the heat on. Frozen lines back up, and you don't want to smell what's waiting behind them.", pay: 1080 },
+],
+// ---------------- FEBRUARY ----------------
+[
+  { id: 'false-teeth', title: 'TEETH IN THE TOILET', story: true, town: 'BERLIN', addr: 'Glen Ave', cust: { name: 'DOT', seed: 52 }, ext: 'house', room: 'bathroom', window: 85,
+    ring: "Hello? My teeth fell in the toilet. ...No, I didn't flush. They went down by themselves.",
+    intro: [['CUST', 'I set them on the sink like I always do. The lid was up. The toilet is RIGHT there.'], ['CUST', 'I bumped them. Plop. Gone.'], ['ROD', "Lid open, right next to the sink."], ['MATT', "She's not wrong. That's a bad layout."], ['ROD', "They're in the trap. I can feel 'em."]],
+    tool: { q: 'A set of dentures stuck in the toilet trap. Gear?', opts: ['TOILET AUGER WITH THE HOOK BIT', 'JETTER', 'PLUNGE IT HARDER'], right: 0, good: 'Hook them and pull them back up. Gently.', bad: "You'll shove her teeth down the main line." },
+    needs: 'waxring', game: 'claw', lead: 'rod', culprit: [['CARD', 'GOT EM', 'Rod hooks the dentures and fishes them out.'], ['CUST', 'Oh, thank you! Thank you!'], ['CUST', "I'm gonna wear them again."], ['CUST', 'What can I put them in to clean them?'], ['ROD', '...', 'rod_stare'], ['ROD', "Ugh. I can't recommend anything...", 'rod_stare'], ['ROD', "You'll have to ask your dentist."], ['ROD', 'It is covered in shit.']],
+    tip: "Close the lid. Especially if the sink is right next to it.", pay: 310 },
+  { id: 'vape', title: 'THE VAPE', town: 'GORHAM', addr: 'Lancaster Rd', cust: { name: 'TYLER', seed: 58 }, ext: 'house', room: 'bathroom', window: 80,
+    ring: "Uh. Something got flushed. I don't wanna say what. It's a... USB thing. Please hurry.",
+    intro: [['MATT', 'Is it a vape?'], ['CUST', '...It might be a vape.'], ['ROD', "You're on septic?"], ['CUST', 'Yeah?'], ['ROD', "Then we've got till it hits the tank. After that it's gone. And so is your tank, eventually.", 'rod_suspicious'], ['MATT', 'Grabber. Now.']],
+    tool: { q: "A vape is sliding toward the septic tank. Gear?", opts: ['THE GRABBER', 'THE JETTER', 'FLUSH IT AGAIN'], right: 0, good: "Down the toilet, reach, reach...", bad: "Congratulations. The vape lives in the septic tank now." },
+    game: 'claw', lead: 'matt', culprit: [['CARD', 'GOT IT', 'Matt pulls it out with the grabber. Two more feet and it was in the tank.'], ['MATT', 'Blueberry ice.', 'matt_stare'], ['MATT', 'Still has a charge.'], ['CUST', '...Can I have it back?'], ['ROD', 'No.', 'rod_stare'], ['CUST', "Don't tell my mom."]],
+    tip: 'If it has a battery, it does not go in the toilet. On septic, you only get one chance to get it back.', pay: 270 },
+  { id: 'kitty-litter-jet', title: 'LITTER BOX LINE', town: 'CONWAY', addr: 'Pine St', cust: { name: 'MARGE', seed: 64 }, ext: 'house', room: 'basement', window: 120,
+    ring: "The whole house is backing up and I only flush clumping litter. It says flushable!",
+    intro: [['ROD', "Clumping litter turns to concrete in a pipe."], ['MATT', 'Sounds familiar. Randolph flashbacks.']],
+    tool: { q: 'Main line packed with cement-like litter. Gear?', opts: ['JETTER', 'PLUNGER', 'TOILET AUGER'], right: 0, good: 'Cut it out with water.', bad: "Won't even dent it." },
+    game: 'jetter', lead: 'rod', culprit: [['ROD', 'Look at that. Cat-crete.'], ['CUST', 'But the bag—'], ['MATT', 'The bag lies.']], tip: 'Kitty litter goes in the trash. Always.', pay: 625 },
+  { id: 'orbeez', title: 'WATER BEADS', story: true, town: 'FRYEBURG', addr: 'Main St', cust: { name: 'KAYLA', seed: 70 }, ext: 'house', room: 'bathroom', window: 120,
+    ring: "My kids flushed a bag of those water beads down the toilet. Now nothing goes down.",
+    intro: [['CUST', 'The tiny ones. They grow.'], ['ROD', 'They swell up to a hundred times their size.'], ['MATT', 'So a hundred times our problem.'], ['ROD', "Run the hose to the jetter."], ['CUST', "...We're on a well. The beads drank it dry. That's my last bucket."], ['MATT', 'One bucket.'], ['ROD', 'Dump it in the tank. Make it count.']],
+    tool: { q: 'Toilet line packed with swollen water beads. Gear?', opts: ['JETTER + BUCKETS', 'DRAIN CLEANER', 'CABLE MACHINE'], right: 0, good: 'Flush them out and catch them.', bad: "They'll just squish around it." },
+    game: 'beads', lead: 'matt', culprit: [['MATT', 'Two five-gallon buckets. Of beads.'], ['ROD', 'Out of ONE bucket of water.'], ['MATT', 'Physics is weird.'], ['CUST', "Can the kids have them back?"], ['ROD', 'No.']], tip: 'Water beads + drains = a very expensive day.', pay: 575 },
+],
+// ---------------- MARCH ----------------
+[
+  { id: 'hair-monster', title: 'MINI CHEWBACCA', town: 'JACKSON', addr: 'Carter Notch Rd', cust: { name: 'PRIYA', seed: 83 }, ext: 'house', room: 'bathroom', window: 110,
+    ring: "The shower drain is slow. Like, standing-in-a-pond slow.",
+    intro: [['CUST', "My whole family has long hair. All five of us."], ['MATT', "Oh no. I know where this is going."]],
+    tool: { q: 'Slow shower drain, lots of long hair. Gear?', opts: ['DRAIN ZIP + SMALL CABLE', 'JETTER', 'SHOP VAC'], right: 0, good: 'Hook it and pull.', bad: "You'll just pack it tighter." },
+    game: 'pull', lead: 'matt', culprit: [['MATT', 'It has a face. It is a mini Chewbacca.'], ['CUST', "That... is a LOT of hair."]], tip: 'A $5 drain screen saves a $250 call.', pay: 300 },
+  { id: 'cigarette-butts', title: 'BUTT CHUGGER', town: 'BERLIN', addr: 'Main St', cust: { name: 'RAY', seed: 89 }, ext: 'business', room: 'bathroom', window: 90,
+    ring: "Bar toilet keeps clogging. I don't know why. People are classy here.",
+    intro: [['ROD', "There's a no-smoking sign. Next to an ashtray."], ['CUST', "Ashtray's for decoration."]],
+    tool: { q: 'Bar toilet, keeps clogging. Look first?', opts: ['CAMERA THE LINE', 'JUST PLUNGE IT', 'REPLACE THE TOILET'], right: 0, good: "Let's see what's down there.", bad: "It'll be back next Friday." },
+    game: 'camera', lead: 'rod', culprit: [['ROD', 'Thousands of cigarette butts. A wall of them.'], ['CUST', 'Classy people.']], tip: 'Butts go in the ashtray. Not the bowl.', pay: 480 },
+  { id: 'wipes-airbnb', title: 'FLUSHABLE WIPES', town: 'CONWAY', addr: 'Kearsarge Rd', cust: { name: 'BRENT', seed: 95 }, ext: 'house', room: 'basement', window: 120,
+    ring: "My rental's backing up. Guests are leaving reviews. With emojis.",
+    intro: [['CUST', 'I put flushable wipes in every bathroom. As a treat.'], ['MATT', 'Oh. Oh, Brent.']],
+    tool: { q: 'Rental main line full of wipes. Gear?', opts: ['CABLE MACHINE', 'DRAIN CLEANER', 'BIGGER TOILET'], right: 0, good: 'Cut through the rope.', bad: "Chemicals don't eat wipes." },
+    game: 'cable', lead: 'rod', culprit: [['ROD', 'A rope of wipes. Forty feet long.'], ['CUST', 'They SAID flushable.'], ['MATT', 'So did the kitty litter.']], tip: 'Flushable wipes are not flushable. Ever.', pay: 540, needs: 'cleanout35' },
+  { id: 'farm-dogs', title: 'FARM DOGS', town: 'FREEDOM', addr: 'Ossipee Lake Rd', cust: { name: 'BEV', seed: 101 }, ext: 'farm', room: 'yard', window: 130,
+    ring: "Sewer inspection for the sale. Oh — and don't let the dogs out. Ever.",
+    intro: [['CUST', "There's six of them. They're very fast."], ['MATT', 'Rod opened the gate.'], ['ROD', '...I opened the gate.']],
+    tool: { q: 'Six dogs loose. Priority?', opts: ['ROUND UP THE DOGS', 'START THE INSPECTION', 'HIDE IN THE VAN'], right: 0, good: 'Dogs first.', bad: 'The dogs are now in Maine.' },
+    game: 'dogs', lead: 'matt', culprit: [['MATT', 'All six. One was in the van eating my lunch.'], ['CUST', "That's Biscuit. He does that."]], tip: 'Inspections before a sale save surprises after.', pay: 420 },
+  { id: 'stairs-of-death', title: 'STAIRS OF DEATH', story: true, town: 'BARTLETT', addr: 'Cobb Farm Rd', cust: { name: 'GLORIA', seed: 77 }, ext: 'house', room: 'basement', window: 110,
+    ring: "Main line's backed up. Oh, the house is built down the side of the hill. You'll see.",
+    intro: [['CARD', 'THE DRIVEWAY', 'The house starts at the road... and goes DOWN.'], ['MATT', "One flight. Two flights. Three flights."], ['ROD', "And one more inside to get to the main part of the house."], ['MATT', 'Four flights of stairs.', 'matt_stare'], ['ROD', "And the auger machine doesn't walk itself."], ['MATT', "Down AND back up?"], ['ROD', 'Down and back up.', 'rod_tired']],
+    tool: { q: "Roots in the main line, four flights down. What do you haul down there?", opts: ['THE AUGER MACHINE, BOTH OF US CARRY IT', 'ROD CARRIES IT ALONE', 'THROW IT DOWN THE STAIRS'], right: 0, good: 'Slow. Together. One step at a time.', bad: "Rod's knees just filed a complaint." },
+    game: 'stairs', lead: 'matt', culprit: [['ROD', 'Roots. That was it. Just roots.'], ['MATT', 'Twenty minutes of work.'], ['ROD', 'Forty minutes of stairs.'], ['CUST', "Thanks, guys! Watch the steps on the way out."], ['MATT', '...We know.', 'matt_tired']],
+    tip: "Know where your cleanout is. If it's four flights down, maybe put one in at the top.", pay: 720 },
+  { id: 'wentworth', title: 'THE INN BACKUP', story: true, gate: 'jetter', town: 'JACKSON', addr: 'The Stayworthless Inn', cust: { name: 'MANAGER', seed: 107 }, ext: 'hotel', room: 'basement', window: 90,
+    ring: "We have sixty-one rooms and every one of them is booked. Something is very wrong under the building.",
+    intro: [['CUST', "Sixty-one rooms. Full. Please tell me this is quick."], ['ROD', "When'd the septic get pumped last?"], ['CUST', '...Pumped?'], ['ROD', "There it is. Tank's full. The solids hit the outlet pipe and packed it soft, all the way back.", 'rod_suspicious'], ['MATT', 'How far back?'], ['ROD', "By now? Thirty feet, easy."],
+      ['MATT', 'So why is nothing coming up in the rooms?'], ['ROD', "Water finds its level. There's a spot under the building where it can get out. So it's getting out. Under the building."], ['CUST', "UNDER the building?!"], ['ROD', "Poke a hole in that cleanout cap and it'd shoot out like a mini jetter."], ['MATT', "Hundreds of gallons blasting all over the floor. Let's not do that."]],
+    tool: { q: "Soft clog packed thirty feet back from a full tank. How do you get at it?", opts: ['JET IT FROM THE TANK SIDE', 'OPEN THE CLEANOUT CAP', 'SNAKE IT FROM A GUEST ROOM'], right: 0, good: "Matt, you're gonna have to find the pipe.", bad: "Open that cleanout and hundreds of gallons come blasting out all over the floor. Jet it from the septic line." },
+    game: 'flush', lead: 'matt', culprit: [['CARD', 'THE TANK', "Matt reaches into the septic up to the shoulder. He can't see a thing."], ['MATT', 'Feeling around... feeling around...', 'matt_stare'], ['MATT', 'Found the pipe.', 'matt_tired'], ['ROD', 'Feed the jetter in.'], ['CARD', 'WHOOSH', 'Thirty feet of soft clog lets go all at once.'], ['CUST', "So the guests never knew?"], ['ROD', 'The guests never knew.'], ['MATT', 'I knew. My whole arm knows.']],
+    tip: 'Pump your septic on schedule. A full tank pushes solids into the pipe, and it packs solid all the way back.', pay: 1440 },
+],
+// ---------------- APRIL ----------------
+[
+  { id: 'trailer-crawl', once: true, title: 'UNDER THE TRAILER', town: 'MILAN', addr: 'Rt 16', cust: { name: 'DUANE', seed: 113 }, ext: 'trailer', room: 'crawl', window: 110,
+    ring: "Something smells under the trailer. Real bad. Since about Christmas.",
+    intro: [['ROD', "Pipe's probably separated under there."], ['MATT', "And who's skinny enough to crawl under there?"], ['ROD', '...']],
+    tool: { q: 'Separated pipe under a trailer. Part?', opts: ['FERNCO COUPLING', 'DUCT TAPE', 'GUM'], right: 0, good: 'Fernco it back together.', bad: "That'll last until Tuesday." },
+    game: 'crawl', lead: 'matt', culprit: [['MATT', "Pipe just hanging there. Since Christmas."], ['CUST', "I thought it was the neighbor's."]], tip: 'A bad smell under the house is never "the neighbor".', pay: 455, needs: 'fernco15' },
+  { id: 'septic-full-1', title: 'FULL TANK', town: 'OSSIPEE', addr: 'Granite Rd', cust: { name: 'LOU', seed: 125 }, ext: 'house', room: 'yard', window: 140,
+    ring: "The yard's squishy and it smells. Is my lawn supposed to be squishy?",
+    intro: [['MATT', 'The grass is greener over the leach field.'], ['ROD', "That's not a good sign."]],
+    tool: { q: 'Squishy yard, full tank. First step?', opts: ['FIND AND OPEN THE TANK', 'MOW THE LAWN', 'BLAME THE RAIN'], right: 0, good: 'Find the lid.', bad: "It's not the rain." },
+    game: 'septic', lead: 'rod', culprit: [['ROD', "Tank's full to the lid. Needs a pump."], ['CUST', 'When was it last pumped?'], ['MATT', "You tell us."]], tip: 'Every 2–3 years. Set a reminder.', pay: 360 },
+  { id: 'poop-yard', title: 'THE DOG YARD', town: 'GORHAM', addr: 'Jimtown Rd', cust: { name: 'STAN', seed: 131 }, ext: 'house', room: 'yard', window: 90,
+    ring: "Septic lid's out back. Watch your step. Three dogs. No pooper scooper.",
+    intro: [['MATT', 'How long since anybody picked up the yard?'], ['CUST', 'Define "picked up".']],
+    tool: { q: 'Dog minefield between you and the lid. Plan?', opts: ['WATCH YOUR STEP', 'RUN FOR IT', 'SEND ROD'], right: 0, good: 'Slow and careful.', bad: 'Squish.' },
+    game: 'poop', lead: 'matt', culprit: [['MATT', 'Made it to the lid.'], ['ROD', 'Check your boots before you get in my van.']], tip: 'Keep a clear path to your septic lid.', pay: 310 },
+  { id: 'bacteria', title: 'UNDISCLOSED', story: true, town: 'CONWAY', addr: 'Washington St', cust: { name: 'GAIL', seed: 137 }, ext: 'house', room: 'yard', window: 120,
+    ring: "The sewer's backing up into the garage. It's coming out under the door and down the driveway.",
+    intro: [['CARD', 'THE DRIVEWAY', "It's frozen. Brown. Shiny."], ['MATT', "That's a shit ice rink.", 'matt_stare'], ['ROD', "Roots in the main. It packed soft behind them and backed up into the garage."], ['MATT', "Anything we should know before we start?"], ['CUST', 'Nope! Nothing.']],
+    tool: { q: 'Roots and a soft clog in the main line. Gear?', opts: ['THE BIG DRAIN AUGER WITH A ROOT CUTTER', 'PLUNGER', 'SALT THE DRIVEWAY'], right: 0, good: 'Run it down. Rod, watch the splash.', bad: "The rink's not the problem. The pipe is." },
+    game: 'cable', lead: 'rod', culprit: [['CARD', 'SPLASH. SPLASH. SPLASH.', 'Rod gets hit a few times running the big auger down.'], ['ROD', "Roots are cut. She's flowing."], ['CARD', 'A CAR PULLS IN', 'A home health nurse gets out and stares at them.'], ['NURSE', "Why aren't you two wearing PPE?"], ['MATT', '...Why WOULD we be?', 'matt_shocked'], ['NURSE', 'The homeowner has C. diff.'], ['ROD', '...', 'rod_stare'], ['ROD', "Nobody told us. We asked.", 'rod_annoyed'], ['ROD', "That's the last time we come to this house. You don't hide that from the guys working in your sewer.", 'rod_annoyed'], ['MATT', 'Bleach. All of it. Me included.'], ['ROD', 'From now on we suit up. Every job.', 'rod_annoyed']],
+    tip: "Wear your PPE. Every job. And tell your plumber if anyone in the house is sick. They're working in it.", pay: 780 },
+],
+// ---------------- MAY ----------------
+[
+  { id: 'poison-ivy', title: 'POISON IVY', town: 'TAMWORTH', addr: 'Chocorua Rd', cust: { name: 'FRANK', seed: 143 }, ext: 'camp', room: 'yard', window: 140,
+    ring: "Septic cover is out in the woods somewhere. Bit overgrown.",
+    intro: [['MATT', 'Leaves of three...'], ['ROD', '...let it be.'], ['MATT', "It's all leaves of three, Rod."]],
+    tool: { q: 'Lid is in a poison ivy patch. Gear?', opts: ['LONG SLEEVES + GLOVES', 'SHORTS', 'BARE HANDS'], right: 0, good: 'Cover up.', bad: 'You will itch for two weeks.' },
+    roomArt: 'bg_yard2', game: 'septic', lead: 'rod', culprit: [['ROD', 'Found it. Under the ivy. Of course.'], ['MATT', 'I already itch.']], tip: 'Keep your septic lid clear and marked.', pay: 360 },
+  { id: 'cheesecake', title: 'THE CHEESECAKE', town: 'CONWAY', addr: 'North Main St', cust: { name: 'DIANE', seed: 149 }, ext: 'house', room: 'kitchen', window: 110,
+    ring: "The kitchen sink is clogged. It's... dessert related.",
+    intro: [['CUST', 'The cheesecake fell. I put it down the disposal.'], ['MATT', 'The whole thing?'], ['CUST', 'It was a big cheesecake.']],
+    tool: { q: 'A whole cheesecake in the kitchen line. Gear?', opts: ['CABLE MACHINE', 'FORK', 'MORE HOT WATER'], right: 0, good: 'Cut it loose.', bad: 'It just gets creamier.' },
+    needs: 'ptrap', game: 'cable', lead: 'rod', culprit: [['ROD', 'Graham cracker crust. Packed solid.'], ['MATT', "Still smells pretty good, honestly."]], tip: "Disposals aren't trash cans. Especially for cheesecake.", pay: 360 },
+  { id: 'gag-smell', title: 'THE SMELL', town: 'BERLIN', addr: 'School St', cust: { name: 'VERN', seed: 155 }, ext: 'house', room: 'basement', window: 90,
+    ring: "There's a smell. You'll know it when you get here.",
+    intro: [['MATT', '...Oh no. I know it already.'], ['ROD', "Breathe through your mouth."], ['MATT', "Then I can TASTE it, Rod."]],
+    tool: { q: 'Sewer gas in the basement. Check first?', opts: ['DRY FLOOR DRAIN TRAP', 'THE ROOF VENT', 'THE FRIDGE'], right: 0, good: 'Trap dried out. Gas coming up.', bad: "It's not the fridge." },
+    game: 'gag', lead: 'rod', culprit: [['ROD', "Trap dried out. Pour water in it once a month."], ['CUST', "That's it?"], ['MATT', "That's it. I'll never smell again."]], tip: 'Pour water in unused floor drains once a month.', pay: 240 },
+  { id: 'second-inlet', title: 'THE SECOND INLET', town: 'FRYEBURG', addr: 'Portland St', cust: { name: 'ED', seed: 161 }, ext: 'house', room: 'basement', window: 130,
+    ring: "We fixed the line last year but it's backing up again. Different spot this time.",
+    intro: [['ROD', "There's a second pipe going into this tank."], ['MATT', 'Bermico. The old cardboard pipe.'], ['ROD', "Collapsed."]],
+    tool: { q: 'Mystery second line. How do we find it?', opts: ['CAMERA + LOCATOR', 'DIG EVERYTHING', 'GUESS'], right: 0, good: 'See it, then dig once.', bad: "That's a lot of lawn." },
+    game: 'detective', lead: 'rod', culprit: [['ROD', 'Bermico. Basically wet cardboard.'], ['CUST', 'From the fifties?'], ['MATT', 'From the fifties.']], tip: 'Old Bermico pipe collapses. Camera it before it surprises you.', pay: 660 },
+  { id: 'grease-detective', title: 'THE TAR PAPER PIPE', story: true, gate: 'camera', town: 'BARTLETT', addr: 'Route 302', cust: { name: 'TINA', seed: 167 }, ext: 'house', room: 'yard', window: 130,
+    ring: "The washer and the kitchen sink keep backing up. We just put in a brand new septic tank!",
+    intro: [['MATT', 'Pipe leaves the house... heads straight for the new septic tank.'], ['MATT', "So why's it backing up?", 'matt_stare'], ['ROD', 'Camera it.'], ['MATT', "Camera goes out... and the pipe stops making sense."], ['MATT', "It's not even PVC. It's soft. It's... paper?"], ['ROD', 'Orangeburg. Bermico. Tar paper pipe from the seventies.', 'rod_tired'], ['ROD', 'Supposed to last twenty years. That was fifty years ago.']],
+    tool: { q: "Nothing on the camera lines up with the new tank. What now?", opts: ['GRAB A SHOVEL AND DIG IT UP', 'SNAKE IT HARDER', 'TELL HER IT GOES TO THE TANK'], right: 0, good: "Sometimes you just gotta dig.", bad: "It's not a clog. The pipe itself is the problem." },
+    game: 'detective', lead: 'matt', culprit: [['CARD', 'AN HOUR LATER', 'Rod is standing in a hole.'], ['ROD', "Found it. It runs right UNDERNEATH the pipe to the new tank.", 'rod_gross'], ['MATT', 'Going where?'], ['ROD', 'An old cesspool. The washer and the kitchen were never hooked to the new tank at all.'], ['CUST', "So the new septic tank..."], ['MATT', "Is lovely. Your sink just doesn't know it exists."], ['ROD', "Gotta replace this pipe and tie it into the new tank."]],
+    tip: "Old black tar paper pipe (Orangeburg) only lasts about 20 years. If you have it, it's living on borrowed time.", pay: 960 },
+],
+// ---------------- JUNE ----------------
+[
+  { id: 'septic-full-2', title: 'FULL TANK, PART 2', town: 'FREEDOM', addr: 'Loon Lake Rd', cust: { name: 'CAROL', seed: 173 }, ext: 'camp', room: 'yard', window: 140,
+    ring: "Summer camp's open, the family's up, and the toilet's not flushing.",
+    intro: [['CUST', 'Twelve people this weekend.'], ['MATT', 'On a tank for two.']],
+    tool: { q: 'Camp tank overloaded. Plan?', opts: ['PUMP THE TANK', 'TELL THEM TO HOLD IT', 'USE THE LAKE'], right: 0, good: 'Pump it.', bad: 'Absolutely not the lake.' },
+    game: 'septic', lead: 'rod', culprit: [['ROD', 'Pumped. Go easy on it this weekend.'], ['CUST', "No promises."]], tip: 'Big weekend? Pump before, not after.', pay: 420 },
+  { id: 'overflow-kitchen', title: 'RESTAURANT RUSH', town: 'CONWAY', addr: 'Main St', cust: { name: 'CHEF', seed: 179 }, ext: 'business', room: 'kitchen', window: 70,
+    ring: "Floor drain in the kitchen is coming UP. We open in an hour!",
+    intro: [['CUST', 'We have a hundred covers tonight.'], ['ROD', 'Then nobody runs a sink till I say.']],
+    tool: { q: 'Kitchen floor drain backing up. First?', opts: ['SHUT OFF THE SINKS', 'KEEP COOKING', 'MOP FASTER'], right: 0, good: 'Stop the flow first.', bad: "It's coming up faster." },
+    game: 'bubble', lead: 'matt', culprit: [['ROD', 'Grease trap was full. Pumped and jetted.'], ['CUST', 'Saved the dinner rush!']], tip: 'Pump your grease trap on schedule.', pay: 840 },
+  { id: 'lost-camera-toy', title: 'THE SHINY THING', town: 'JACKSON', addr: 'Thorn Hill Rd', cust: { name: 'JUNE', seed: 185 }, ext: 'house', room: 'bathroom', window: 120,
+    ring: "My ring went down the bathroom sink. My wedding ring.",
+    intro: [['ROD', "It's in the trap. Don't run the water."], ['CUST', "I just ran the water."], ['ROD', "...Still in the trap. Probably."]],
+    tool: { q: 'Ring in a sink trap. Gear?', opts: ['BUCKET + WRENCH, PULL THE TRAP', 'JETTER', 'DRAIN CLEANER'], right: 0, good: 'Pop the trap.', bad: 'Goodbye ring.' },
+    needs: 'ptrap', game: 'claw', lead: 'rod', culprit: [['ROD', 'Here you go.'], ['CUST', "Oh thank you! Don't tell my husband."]], tip: 'Lost something down the sink? Stop running water and call.', pay: 215 },
+  { id: 'sunday-toilet-pre', title: 'BUCKET FLUSH', town: 'GORHAM', addr: 'Promenade St', cust: { name: 'BUD', seed: 191 }, ext: 'house', room: 'bathroom', window: 90,
+    ring: "Water's shut off for repairs. Toilet's full. What do I do?",
+    intro: [['MATT', 'Bucket flush. Pour it fast, right in the bowl.'], ['CUST', 'Show me.']],
+    tool: { q: 'No water to the toilet. Flush it how?', opts: ['BUCKET, POURED FAST', 'BUCKET, POURED SLOW', 'WAIT FOR THE WATER'], right: 0, good: 'Fast pour triggers the siphon.', bad: 'Slow just fills the bowl.' },
+    game: 'pour', lead: 'matt', culprit: [['MATT', 'Whoosh. Science.'], ['CUST', 'I learned something today.']], tip: 'No water? A fast bucket pour will flush a toilet.', pay: 180 },
+  { id: 'campground', title: 'THE CAMPGROUND FLUSH', story: true, gate: 'jetter', town: 'OSSIPEE', addr: 'the campground', cust: { name: 'OWNER', seed: 197 }, ext: 'campground', room: 'yard', window: 100,
+    ring: "Fourth of July weekend. Every bathroom on the campground just stopped.",
+    intro: [['CUST', "Three hundred campers. One bathhouse."], ['MATT', 'And one very bad line.'], ['CARD', 'THE MAINTENANCE SHED', 'A drain machine. A camera reel. A locator. All the same brands as theirs.'], ['MATT', '...What the hell? Are those OUR tools?', 'matt_shocked'], ['CARD', '', 'The maintenance guy walks up. He is VERY interested in what Rod is doing.'], ['MAINT', 'So which cutter head you running? And how far in before you switch? What PSI on the jetter?'], ['ROD', 'Well, you start with the...'], ['MATT', 'Rod.', 'matt_stare'], ['ROD', '...What?']],
+    tool: { q: 'Bathhouse main line, holiday weekend. Gear?', opts: ['JETTER', 'PLUNGERS FOR EVERYONE', 'CLOSE THE CAMPGROUND'], right: 0, good: 'Clear it fast.', bad: 'Three hundred angry campers.' },
+    game: 'flush', lead: 'rod', culprit: [['ROD', 'Tampons. Lots of tampons.', 'rod_gross'], ['MATT', 'How many is lots?'], ['ROD', 'About thirty.'], ['CUST', '...THIRTY?'], ['CARD', 'MEANWHILE', 'A group of teenage girls by the pavilion are laughing way too hard.'], ['MATT', 'It was a prank.', 'matt_stare'], ['ROD', 'Happy Fourth of July.', 'rod_tired'], ['MAINT', 'Thirty, huh. Good to know. How\'d you get them out again? Step by step.'], ['MATT', 'Rod. He has been taking NOTES. For YEARS.', 'matt_stare'], ['ROD', '...', 'rod_stare'], ['ROD', '...That\'s why they stopped calling us.', 'rod_annoyed']], tip: 'Campground or home: toilets take toilet paper. That\'s the list. Tampons go in the trash.', pay: 1320 },
+],
+// ---------------- JULY ----------------
+[
+  { id: 'cleanout-corn', title: 'THE CORN', town: 'BERLIN', addr: 'Pleasant St', cust: { name: 'ART', seed: 203 }, ext: 'house', room: 'basement', window: 90,
+    ring: "Basement drain is backing up. There's... corn. In it.",
+    intro: [['ROD', "Line's under pressure. Careful with that cap."], ['MATT', 'How careful?'], ['ROD', 'Very.']],
+    tool: { q: 'Pressurized cleanout. How do you open it?', opts: ['SLOW, STANDING TO THE SIDE', 'FAST, FACE FIRST', "DON'T"], right: 0, good: 'Easy does it.', bad: 'CORN. EVERYWHERE.' },
+    game: 'sprinkler', lead: 'matt', culprit: [['MATT', 'Corn. Like a confetti cannon.'], ['ROD', "Haven't eaten it since."]], tip: 'Never yank a cleanout cap on a backed-up line. Call us.', pay: 455, needs: 'cleanout35' },
+  { id: 'comfort-joy-pre', title: 'DOUBLE TROUBLE', town: 'CONWAY', addr: 'Seavey St', cust: { name: 'TODD', seed: 215 }, ext: 'house', room: 'bathroom', window: 110,
+    ring: "Both bathrooms clogged at once. On the same day. Is that a sign?",
+    intro: [['ROD', "When everything clogs at once, it's the main."], ['MATT', 'So it IS a sign.']],
+    tool: { q: 'Every drain in the house is slow. Where?', opts: ['THE MAIN LINE', 'EACH TOILET', 'THE SINKS'], right: 0, good: 'Find the common point.', bad: "You'll be here all week." },
+    roomArt: 'bg_bathroom5', game: 'cable', lead: 'rod', culprit: [['ROD', 'Roots in the main.'], ['CUST', 'From what tree?'], ['MATT', 'That one. The one you love.']], tip: 'Every drain slow at once = main line. Call before it backs up.', pay: 505 },
+  { id: 'gurgle-camp', title: 'THE GURGLE', town: 'TAMWORTH', addr: 'Cleveland Hill Rd', cust: { name: 'SUE', seed: 221 }, ext: 'camp', room: 'bathroom', window: 140,
+    ring: "The toilet burps when the washer drains. Out loud. At night.",
+    intro: [['MATT', "It's talking to you."], ['ROD', 'Vent is blocked.']],
+    tool: { q: 'Toilet burps when the washer runs. Check?', opts: ['THE ROOF VENT', 'THE TOILET', 'THE WASHER'], right: 0, good: "Bird's nest in the vent, probably.", bad: "Nope." },
+    game: 'jetter', lead: 'matt', culprit: [['MATT', "Squirrel's nest in the vent. Squirrel not home."], ['CUST', 'Thank goodness.']], tip: 'Gurgling drains can mean a blocked vent.', pay: 335 },
+  { id: 'comfort-and-joy', title: 'COMFORT AND JOY', story: true, town: 'FRYEBURG', addr: 'over the Maine line', cust: { name: 'BEVERLY', seed: 227 }, ext: 'house', room: 'bathroom', window: 100,
+    ring: "Hi, is this Rod? My toilet's clogged and I'm all by myself out here.",
+    intro: [['CARD', 'ON THE PHONE', 'Rod has her on speaker in the van.'], ['ROD', "Don't worry! Just sit down and get comfortable, because we're on our way!"], ['CUST', "Oh, honey. I haven't been with a man in a long time."], ['CUST', "I wouldn't mind a little comfort..."], ['ROD', '...', 'rod_stare'], ['CARD', '', 'Matt looks at Rod. Rod looks at Matt.'], ['MATT', '...', 'matt_shocked'], ['ROD', "Oh... well. We'll be there to figure out what's clogging things.", 'rod_stare'], ['ROD', 'See you soon.'], ['CARD', 'FRYEBURG, MAINE', 'Twenty minutes later.'], ['MATT', "You're going in first.", 'matt_stare']],
+    tool: { q: "Old house. Old pipes. Nothing drains. Gear?", opts: ['CABLE MACHINE TO THE DRUM TRAP', 'PLUNGER', 'CANDLES AND SOFT MUSIC'], right: 0, good: 'Strictly business.', bad: "Absolutely not." },
+    roomArt: 'bg_bathroom5', game: 'pull', lead: 'rod', culprit: [['ROD', "These pipes are older than me. Full of rust.", 'rod_gross'], ['CARD', 'THE DRUM TRAP', 'An old drum trap under the floor. Packed solid.'], ['ROD', "Drum trap's clogged. That's your whole problem."], ['ROD', "All clear. You're all set, ma'am."], ['CUST', 'Already? You boys could stay for coffee...'], ['MATT', "We have another call!", 'matt_shocked'], ['CARD', 'IN THE VAN', ''], ['MATT', '"Get comfortable."', 'matt_stare'], ['ROD', "I'm never saying that again.", 'rod_annoyed']],
+    tip: 'Clogged toilet? Sit tight, we are on our way. ...Rod has stopped telling people to get comfortable.', pay: 840 },
+  { id: 'auto-shop', title: 'SONDE CROSSING', town: 'GORHAM', addr: 'Main St', cust: { name: 'JR', seed: 233 }, ext: 'business', room: 'yard', window: 100,
+    ring: "Shop floor drain's backing up into the bays. Line goes out under Main Street somewhere.",
+    intro: [['CUST', "It runs out to the city main. Under the road. During tourist season."], ['MATT', "So I'm playing in traffic."], ['ROD', "You're LOCATING in traffic. Wear the vest."]],
+    tool: { q: 'Need to know where the line runs under the street. Gear?', opts: ['CAMERA + LOCATOR', 'DIG UP THE ROAD', 'GUESS'], right: 0, good: 'Push the camera, follow the beep.', bad: "The town will not love that." },
+    game: 'locate', lead: 'matt', culprit: [['ROD', 'Belly right under the yellow line. Holds oil and sand.'], ['CUST', 'From the car wash bay?'], ['MATT', 'From the car wash bay.']], tip: 'Shop drains need an oil separator. And it needs cleaning.', pay: 780 },
+],
+// ---------------- AUGUST ----------------
+[
+  { id: 'covid-call', title: 'THE QUARANTINE CALL', town: 'BERLIN', addr: 'Third Ave', cust: { name: 'RON', seed: 233 }, ext: 'house', room: 'bathroom', window: 90,
+    ring: "*cough* Toilet's clogged. *cough* I'll leave the door open.",
+    intro: [['ROD', 'Masks on. Gloves on.'], ['MATT', "We've done this before."]],
+    tool: { q: 'Sick house, clogged toilet. Gear?', opts: ['PPE + TOILET AUGER', 'JUST GLOVES', 'HOLD BREATH'], right: 0, good: 'In and out, safe.', bad: "Don't bring it home." },
+    game: 'pull', lead: 'matt', culprit: [['MATT', 'Way too much toilet paper. Panic-buy levels.'], ['CUST', '*cough* I bought forty rolls.']], tip: 'Go easy on the paper. Flush twice if you need to.', pay: 265 },
+  { id: 'kitchen-grease-2', title: 'BACON CITY', town: 'GORHAM', addr: 'Mechanic St', cust: { name: 'BEA', seed: 239 }, ext: 'house', room: 'kitchen', window: 100,
+    ring: "Kitchen sink. Slow. I only pour grease down with HOT water, so it's fine.",
+    intro: [['ROD', "Hot water just moves it further down."], ['MATT', 'Then it cools. And hardens.'], ['CUST', '...Oh.']],
+    tool: { q: 'Grease-packed kitchen line. Gear?', opts: ['JETTER', 'MORE HOT WATER', 'PLUNGER'], right: 0, good: 'Cut and flush.', bad: 'That is how we got here.' },
+    game: 'bubble', lead: 'rod', culprit: [['ROD', 'A grease log. Like a candle.'], ['CUST', 'Can I make it a candle?'], ['MATT', 'Please do not.']], tip: 'Hot water does not make grease safe.', pay: 480 },
+  { id: 'camera-sale', title: 'PRE-SALE CAMERA', town: 'BARTLETT', addr: 'Bear Notch Rd', cust: { name: 'REALTOR', seed: 245 }, ext: 'house', room: 'basement', window: 130,
+    ring: "Closing's Friday. Buyer wants the sewer scoped. Today, ideally.",
+    intro: [['ROD', "Let's see what you're buying."], ['CUST', 'Please let it be nothing.']],
+    tool: { q: 'Sewer inspection. Gear?', opts: ['CAMERA', 'FLASHLIGHT', 'VIBES'], right: 0, good: 'Scope it.', bad: "That's not an inspection." },
+    game: 'camera', lead: 'rod', culprit: [['ROD', 'One belly, one root. Nothing scary.'], ['CUST', 'Closing is ON!']], tip: 'Buying a house? Camera the sewer first.', pay: 415 },
+  { id: 'septic-full-3', title: 'LABOR DAY TANK', town: 'FRYEBURG', addr: 'Lovewell Pond Rd', cust: { name: 'NED', seed: 251 }, ext: 'camp', room: 'yard', window: 150,
+    ring: "The fair's in town and so is my whole family. Tank's done.",
+    intro: [['MATT', 'Twenty people. One tank.'], ['ROD', 'Pump first. Then talk about a bigger tank.']],
+    tool: { q: 'Overloaded tank. Plan?', opts: ['FIND IT + PUMP', 'ADD ENZYMES', 'SEND EVERYONE HOME'], right: 0, good: 'Pump it.', bad: "Enzymes don't empty a tank." },
+    game: 'septic', lead: 'rod', culprit: [['ROD', "Pumped. You need a bigger tank, Ned."], ['CUST', "Next year."]], tip: 'Septic additives are not a pump-out.', pay: 430 },
+  { id: 'rival-quote', title: 'THE $35,000 QUOTE', story: true, gate: 'camera', town: 'CONWAY', addr: 'Pine Hill Rd', cust: { name: 'ELLEN', seed: 287 }, ext: 'house', room: 'basement', window: 120,
+    ring: "A new plumber says I need a whole new system. Thirty-five thousand. Can you look first?",
+    intro: [['ROD', 'Free second opinion. Always.'], ['MATT', "Let's see what thirty-five thousand looks like."]],
+    tool: { q: 'Is the system really shot? How do we know?', opts: ['CAMERA THE WHOLE LINE', 'TRUST THE OTHER GUY', 'DIG IT ALL UP'], right: 0, good: 'Look before anyone spends a dime.', bad: "That's how people get taken." },
+    game: 'camera', lead: 'rod', culprit: [['ROD', 'One blockage. Flex shaft. Under thirty minutes.'], ['ROD', 'System is fine.'], ['CUST', 'So... not thirty-five thousand?'], ['MATT', 'About thirty-four thousand six hundred less.'], ['CARD', 'ONE YEAR LATER', 'Not a single problem since.']], tip: 'Big quote? Get a second opinion. Ours is free.', pay: 480 },
+],
+// ---------------- SEPTEMBER ----------------
+[
+  { id: 'roots-1', title: 'MAPLE ROOTS', town: 'RANDOLPH', addr: 'Durand Rd', cust: { name: 'HELEN', seed: 263 }, ext: 'farm', room: 'basement', window: 100,
+    ring: "Every fall my basement drain backs up. Every single fall.",
+    intro: [['ROD', 'Same time every year? Roots.'], ['MATT', 'The maple is drinking your sewer.']],
+    tool: { q: 'Root-choked main. Gear?', opts: ['CABLE WITH ROOT CUTTER', 'PLUNGER', 'AXE THE TREE'], right: 0, good: 'Cut the roots.', bad: "Let's not." },
+    needs: 'cleanout35', game: 'cable', lead: 'rod', culprit: [['ROD', 'A root ball the size of a cat.'], ['CUST', "Fluffernutter's size?"], ['MATT', '...You know Grant?']], tip: 'Yearly backups = roots. A yearly cut prevents the flood.', pay: 505 },
+  { id: 'claw-keys', title: 'THE KEYS', town: 'CONWAY', addr: 'Washington St', cust: { name: 'MIKE', seed: 269 }, ext: 'business', room: 'bathroom', window: 80,
+    ring: "My car keys went in the toilet. The fob ones. I'm locked out of my car.",
+    intro: [['MATT', 'How?'], ['CUST', 'Back pocket. I bent over.']],
+    tool: { q: 'Keys in the toilet. Gear?', opts: ['GRABBER', 'JETTER', 'NEW CAR'], right: 0, good: 'Fish them out.', bad: "That's how you lose them for good." },
+    needs: 'waxring', game: 'claw', lead: 'matt', culprit: [['MATT', 'Still beeps. Barely.'], ['CUST', 'My hero.']], tip: 'Back pockets and toilets do not mix.', pay: 230 },
+  { id: 'big-overflow', title: 'THANKSGIVING EARLY', town: 'BERLIN', addr: 'Grove St', cust: { name: 'PAT', seed: 275 }, ext: 'house', room: 'basement', window: 80,
+    ring: "We had the family reunion. The basement is now a lake.",
+    intro: [['ROD', 'Thirty people, one septic.'], ['MATT', 'The basement had a reunion too.']],
+    tool: { q: 'Basement flooding from the floor drain. First?', opts: ['STOP ALL WATER USE', 'START MOPPING', 'OPEN A WINDOW'], right: 0, good: 'Stop adding to it.', bad: "Everyone just flushed again." },
+    game: 'overflow', lead: 'matt', culprit: [['ROD', 'Tank full and the outlet was packed.'], ['CUST', 'Never hosting again.']], tip: 'Big party? Pump the tank first.', pay: 600 },
+  { id: 'jetter-roots', title: 'THE RENTAL ROW', town: 'GORHAM', addr: 'Railroad St', cust: { name: 'LANDLORD', seed: 281 }, ext: 'house', room: 'basement', window: 120,
+    ring: "Four apartments, one line. Everyone's mad at me. Including me.",
+    intro: [['MATT', 'Four kitchens, one line.'], ['ROD', 'Grease plus wipes plus roots.'], ['CUST', 'The trifecta.']],
+    tool: { q: 'Shared line, everything in it. Gear?', opts: ['JETTER', 'TOILET AUGER', 'EVICTION NOTICE'], right: 0, good: 'Scour it.', bad: 'Not enough machine.' },
+    game: 'jetter', lead: 'rod', culprit: [['ROD', 'Cleared all four.'], ['CUST', 'Can you put up signs?'], ['MATT', 'We have magnets.']], tip: 'Shared lines need shared rules. Only flush the 3 Ps.', pay: 780 },
+  { id: 'pipe-separation', title: 'THE SEPARATION', story: true, solo: true, jam: true, night: true, town: 'CONWAY', addr: 'the cul-de-sac', cust: { name: 'NANCY', seed: 119 }, ext: 'house', room: 'yard', window: 140,
+    ring: "It's Saturday night, I know. But the toilets are backing up and it's getting worse.",
+    intro: [['CARD', 'SATURDAY NIGHT', "Emergency call. Matt takes it. Alone."], ['CARD', 'THE LIGHTS', "It's the 9/11 memorial up on Mt. Washington. Two big beams of light going straight up into the sky, like the towers."], ['CARD', 'THE TRAFFIC', "Cars parked on both sides of the road. All the way to Conway."], ['MATT', 'Beautiful. Also, I have not moved in twenty minutes.', 'matt_tired'], ['CARD', 'THE CUL-DE-SAC', 'Finally. A house at the end of a cul-de-sac.'], ['CUST', 'Thank you for coming out. Tonight of all nights.']],
+    tool: { q: 'Saturday night, main line backing up, Rod is not coming. What goes in the line?', opts: ['THE CLOGDOG', 'A PLUNGER', 'THE SEPTIC PUMP'], right: 0, good: 'Feed it in. It keeps going... and going...', bad: "That's not reaching a main line." },
+    game: 'cable', lead: 'matt', culprit: [['CARD', 'TOO EASY', "The cable keeps feeding. It never hits anything. That's not good."], ['CARD', 'STUCK', "Then it stops. And it won't come back. The ClogDog went out the line and into the dirt."], ['MATT', '...Oh no.', 'matt_stare'], ['CARD', 'THE GAP', 'The pipe pulled apart six to eight inches underground. Probably from the day it went in. It just finally turned into a problem.'], ['CUST', 'So... is it fixed?'], ['MATT', "No. And now my machine lives here too."], ['CARD', 'THE NEXT DAY', 'The excavation crew digs it up. There is the gap. There is the ClogDog, sitting in the dirt.', 'day'], ['MATT', "Hi buddy."]],
+    tip: "If the snake keeps going and never hits anything, stop. That line might not be a line anymore.", pay: 480 },
+  { id: 'alien', title: 'OUT OF THIS WORLD', story: true, page: 'story/alien.html', town: 'BERLIN', addr: "Rod's house", window: 999, pay: 0, game: 'cable' },
+],
+// ---------------- OCTOBER ----------------
+[
+  { id: 'piss-kitty', title: 'PISS KITTY', story: true, town: 'GORHAM', addr: 'Lancaster Rd', cust: { name: 'DORIS', seed: 311 }, ext: 'house', room: 'bathroom', window: 120,
+    ring: "It smells like piss in my house. All the time. EVERYWHERE. And before you ask, I do NOT have a cat. I have never had a cat.",
+    intro: [['CUST', "Every room. Every morning. Something new is wet."], ['ROD', "Could be a dry trap. Could be a cracked vent."], ['MATT', "...Could be."], ['CUST', "And I do NOT have a cat."], ['MATT', "...Right."]],
+    tool: { q: 'Mystery piss smell, every room. First move?', opts: ['SNIFF IT OUT, ROOM BY ROOM', 'SNAKE THE MAIN LINE', 'AIR FRESHENER'], right: 0, good: 'Follow your nose.', bad: "That smell is not coming from the main." },
+    game: 'kitty', lead: 'matt', culprit: [['MATT', "...PISS KITTY."], ['ROD', "You KNOW that cat?"], ['MATT', "He lived in my house for three months. Stood up in the hallway like a little man. I thought it was the dog."], ['CUST', "Where did it GO?"], ['MATT', "Next house. He always goes to the next house."], ['ROD', "...Is he paying rent anywhere?"], ['MATT', "Doris, check your boots before you put them on. For a while."]],
+    tip: "Mystery smell? Check your floor drain traps... and check for a cat you didn't know you had.", pay: 540 },
+  { id: 'doo-doo-stick', title: 'THE DOO DOO STICK', story: true, gate: 'camera', town: 'GORHAM', addr: 'Mill St', cust: { name: 'BIG GUY', seed: 307 }, ext: 'house', room: 'basement', window: 120,
+    ring: "Yeah, toilet's clogged. I already tried to clear it myself. Didn't go great.",
+    intro: [['CARD', 'THE CUSTOMER', 'The guy who opens the door is BUILT. Works out. Big dude.'], ['CUST', 'I tried to clear it myself. Ran a snake down there.'], ['ROD', '...That\'s a cable flex snake.', 'rod_stare'], ['ROD', "That's for CABLE."], ['CUST', "It's a snake."], ['CARD', 'THE CRAWLSPACE', "Down in the basement there's still a crawlspace off to the right. Something is leaning in there."], ['MATT', 'Look at this, Rod. A duct-taped super stick.'], ['MATT', "I bet they use it when they clog up."], ['MATT', "...But look. Something's missing off the end."], ['CARD', '...', 'Rod and Matt look at each other.']],
+    tool: { q: "A cable TV flex snake is jammed in the line. First move?", opts: ['JIGGLE IT LOOSE', 'YANK IT OUT HARD', 'LEAVE IT AND SNAKE PAST IT'], right: 0, good: "Rod works it back and forth. Easy... easy... out.", bad: "Now it's kinked in there worse." },
+    game: 'camera', lead: 'rod', culprit: [['CARD', 'IT GOES THROUGH', "The clog lets go. But something keeps catching. Every time."], ['ROD', "I'm going in from the septic side."], ['CARD', 'THE CAMERA', 'Rod pushes the camera up from the tank. On the way back, something comes with it.'], ['CARD', 'THE RAILING', "Thick wood. Stair railing. Caught at the elbow headed to the septic tank."], ['MATT', "That's the end of the super stick."], ['CARD', 'FOUR FEET', 'They pull it out. About four feet of railing. Covered.'], ['ROD', 'The doo doo stick.'], ['CARD', 'IT LIVES ON THE TRUCK NOW', "It rides with us. If you don't pay, we chase you with it."], ['MATT', "It is far worse to be touched by the doo doo stick than to be beaten by it."]],
+    tip: "A cable snake is for cable. A stair railing is for stairs. Neither one goes in the toilet.", pay: 540 },
+  { id: 'leaf-drain', title: 'LEAF SEASON', town: 'JACKSON', addr: 'Black Mountain Rd', cust: { name: 'GREG', seed: 293 }, ext: 'house', room: 'yard', window: 120,
+    ring: "The outside drain is overflowing. It's raining. And leaves. So many leaves.",
+    intro: [['MATT', 'Peak foliage. Peak clog.'], ['ROD', 'Clear the grate first.']],
+    tool: { q: 'Yard drain packed with leaves. Gear?', opts: ['RAKE + SMALL CABLE', 'CAMERA', 'WAIT FOR WINTER'], right: 0, good: 'Clear and cable.', bad: 'It will freeze like that.' },
+    game: 'cable', lead: 'matt', culprit: [['MATT', 'Leaves. And a tennis ball.'], ['CUST', "We don't play tennis."]], tip: 'Clear your outdoor drains before the freeze.', pay: 310 },
+  { id: 'halloween-candy', title: 'CANDY WRAPPERS', town: 'BERLIN', addr: 'Sweden St', cust: { name: 'TINA B', seed: 299 }, ext: 'house', room: 'bathroom', window: 90,
+    ring: "My kids hid the evidence. In the toilet.",
+    intro: [['CUST', 'Forty candy wrappers.'], ['MATT', 'A heist.']],
+    tool: { q: 'Wrappers in the toilet. Gear?', opts: ['TOILET AUGER', 'JETTER', 'CHOCOLATE'], right: 0, good: 'Closet auger.', bad: 'Too much.' },
+    game: 'pull', lead: 'matt', culprit: [['MATT', 'Full-size bars. These kids are pros.'], ['CUST', 'Grounded. All of them.']], tip: 'Wrappers go in the trash, kids.', pay: 250 },
+  { id: 'camp-close', title: 'CLOSING CAMP', town: 'FREEDOM', addr: 'Ossipee Lake', cust: { name: 'BOB', seed: 305 }, ext: 'camp', room: 'yard', window: 150,
+    ring: "Closing the camp for winter. Can you pump and check the tank before the freeze?",
+    intro: [['ROD', 'Smart man. Before the freeze.'], ['MATT', 'Rare. Cherish it.']],
+    tool: { q: 'Winterizing the camp. First?', opts: ['FIND + PUMP THE TANK', 'TURN OFF EVERYTHING', 'JUST LEAVE'], right: 0, good: 'Pump, then winterize.', bad: 'Spring you will regret that.' },
+    game: 'septic', lead: 'rod', culprit: [['ROD', 'Pumped and checked. See you in May.'], ['CUST', 'Have a good winter, boys.']], tip: 'Closing camp? Pump before the freeze.', pay: 395 },
+  { id: 'sump-dodge', title: 'THE SUMP GEYSER', town: 'GORHAM', addr: 'Androscoggin St', cust: { name: 'JOE', seed: 311 }, ext: 'house', room: 'basement', window: 90,
+    ring: "Water is shooting out of a pipe in my basement. Like a fountain.",
+    intro: [['MATT', 'A fountain. In the basement.'], ['ROD', 'Shut-off first, questions later.']],
+    tool: { q: 'Pipe spraying. First move?', opts: ['SHUT THE MAIN VALVE', 'DUCT TAPE', 'TAKE A PHOTO'], right: 0, good: 'Stop the water.', bad: "It's still spraying." },
+    game: 'sprinkler', lead: 'matt', culprit: [['MATT', 'Cracked fitting. Fernco and done.'], ['CUST', 'I took a photo anyway.']], tip: 'Know where your main shut-off is.', pay: 360, needs: 'fernco125' },
+],
+// ---------------- NOVEMBER ----------------
+[
+  { id: 'thanksgiving', title: 'TURKEY GREASE', town: 'CONWAY', addr: 'Kearsarge St', cust: { name: 'LINDA', seed: 317 }, ext: 'house', room: 'kitchen', window: 70,
+    ring: "It's Thanksgiving. The kitchen sink is full of turkey grease. My in-laws are watching.",
+    intro: [['MATT', 'Happy Thanksgiving.'], ['CUST', 'Is it?']],
+    tool: { q: 'Turkey grease clog, holiday. Gear?', opts: ['CABLE + HOT WATER FLUSH', 'MORE GRAVY', 'CANCEL THANKSGIVING'], right: 0, good: 'Clear it before the pie.', bad: 'Not helping.' },
+    roomArt: 'bg_kitchen1', game: 'bubble', lead: 'matt', culprit: [['MATT', 'Saved Thanksgiving.'], ['CUST', 'Take a plate.'], ['ROD', "We'll take two."]], tip: 'Turkey fat goes in a can. Not the sink.', pay: 540 },
+  { id: 'deer-camp', title: 'DEER CAMP', town: 'MILAN', addr: 'the camp', cust: { name: 'BUCK', seed: 323 }, ext: 'camp', room: 'bathroom', window: 150,
+    ring: "Eight guys at deer camp, one toilet. It's bad.",
+    intro: [['MATT', 'Eight guys. Chili night.'], ['ROD', "God help us."]],
+    tool: { q: 'Deer camp toilet. Gear?', opts: ['TOILET AUGER', 'SHOTGUN', 'ANOTHER TOILET'], right: 0, good: 'Auger it.', bad: 'Absolutely not.' },
+    game: 'pull', lead: 'matt', culprit: [['MATT', 'A roll of paper. Whole. Un-unrolled.'], ['CUST', 'Gary.'], ['ROD', "It's always a Gary."]], tip: 'One flush per... situation.', pay: 290 },
+  { id: 'frozen-line-2', title: 'THE FIRST FREEZE', town: 'SHELBURNE', addr: 'Village Rd', cust: { name: 'ROSE', seed: 329 }, ext: 'house', room: 'basement', window: 110,
+    ring: "First cold night and nothing drains. Again. Like last year.",
+    intro: [['ROD', 'Line has a belly. Water sits and freezes.'], ['CUST', 'A belly?'], ['MATT', 'A sag in the pipe. Water naps there.']],
+    tool: { q: 'Frozen belly in the line. Gear?', opts: ['STEAMER + CABLE', 'SALT', 'WAIT FOR SPRING'], right: 0, good: 'Thaw it and clear it.', bad: "It'll back up first." },
+    game: 'steamer', lead: 'rod', culprit: [['ROD', "Thawed. Get that belly fixed this summer."], ['CUST', 'Will you come back?'], ['MATT', 'Every year, apparently.']], tip: 'Lines that freeze every year need a fix, not a thaw.', pay: 480 },
+  // story job: the grease highway (finished basement, no cleanout, two buckets, one medium shirt)
+  { id: 'grease-highway', title: 'THE GREASE HIGHWAY', story: true, town: 'BERLIN', addr: 'Norway St', cust: { name: 'DEB', seed: 335 }, ext: 'house', room: 'basement', window: 110, extra: 'tightShirt', stink: true, roomArt: 'bg_basement4',
+    ring: "Kitchen sink's backed up. I plunged it. I Drano'd it. Nothing.",
+    intro: [['CUST', "The pipes go down through the basement. It's all finished down there, though."],
+            ['ROD', "P-trap under the sink, S-trap in the wall. Where's your cleanout?", 'rod_suspicious'],
+            ['CUST', '...Behind the paneling?'],
+            ['MATT', 'Behind the paneling.', 'matt_stare'],
+            ['CUST', "Hold on. I'll get the crowbar."],
+            ['CARD', 'CRACK. CRACK. CRACK.', 'Deb pries the paneling off the wall herself. There it is. The cleanout.'],
+            ['ROD', "The kitchen line runs from one side of the house to the other. That's a long way for grease to hide.", 'rod_tired']],
+    tool: { q: 'The cleanout is behind where the paneling was. The whole line is full of grease water. Plan?', opts: ['OPEN THE CLEANOUT. BUCKETS UNDER IT', 'CABLE IT FROM THE SINK', 'MORE DRANO'], right: 0,
+      good: "Matt, buckets. Both of them. Rod cracks the cap...", bad: "Too far. The cable won't get through all that grease.",
+      badBy: { 2: "Rod. The Drano is part of the clog now." } },
+    needs: 'cleanout35', game: 'overflow', lead: 'matt',
+    culprit: [['CARD', 'THE CAP COMES OFF', 'Nasty grease water comes blasting out of the cleanout. All over Rod.'], ['ROD', '...', 'rod_gross'], ['ROD', 'There it is. A grease log as long as my arm.', 'rod_gross'],
+              ['MATT', "Rod. You're... soaked.", 'matt_shocked'],
+              ['ROD', "I'm aware, Matt.", 'rod_annoyed'],
+              ['MATT', "Grease always smells so sour. It's worse than poop. I'd take poop.", 'matt_tired']],
+    tip: "Grease goes in the trash, not the sink. And a finished basement needs an access panel for the cleanout.", pay: 780 },
+  { id: 'lost-jetter', title: 'THE LOST JETTER', story: true, gate: 'jetter', town: 'FRYEBURG', addr: 'off the main road', cust: { name: 'HOMEOWNER', seed: 341 }, ext: 'house', room: 'yard', window: 120,
+    ring: "There's a pipe coming out at the road below my house. It's running. And it smells... bad.",
+    intro: [['CARD', 'AT THE ROAD', 'A pipe comes out of the bank, running water down to the road.'], ['MATT', 'Rain drain, right? Why does it smell like sewage?', 'matt_suspicious'], ['ROD', "Only one way to find out. Jet it up toward the house."], ['MATT', 'Feeding hose... fifty feet... seventy-five...'], ['ROD', "Keep going."]],
+    tool: { q: 'The jetter head is way up the line toward the house. Now what?', opts: ['KEEP FEEDING IT', 'PULL IT BACK AND CAMERA IT FIRST', 'CALL IT A DAY'], right: 1, good: "Good call. ...Oh. It won't come back.", bad: "It's already gone. It went somewhere it shouldn't." },
+    game: 'jetter', lead: 'rod', culprit: [['ROD', "It won't come back. It's stuck.", 'rod_annoyed'], ['MATT', 'Stuck on what?'], ['ROD', "It went out a break in the pipe. It's off in the dirt somewhere.", 'rod_tired'], ['MATT', "That's an eight hundred dollar jetter head.", 'matt_shocked'], ['CARD', 'SNIP', 'They cut a hundred feet of hose and leave it in the ground.'], ['ROD', "This is a French drain. Rain water. But it smells like sewage because the line from the septic to the leach field must be broken."], ['MATT', "So shitty piss water is leaking into the ground, into the French drain, and out to the road.", 'matt_tired'], ['CARD', 'TO THIS DAY', 'The jetter head has never been recovered.'], ['ROD', 'We never speak of this.']],
+    tip: "If the drain at the bottom of your yard smells like sewage, your septic line is probably broken. Get it looked at.", pay: 720 },
+],
+// ---------------- DECEMBER ----------------
+[
+  { id: 'xmas-guests', title: 'HOLIDAY GUESTS', town: 'GORHAM', addr: 'Gorham Hill Rd', cust: { name: 'NOEL', seed: 347 }, ext: 'house', room: 'bathroom', window: 90,
+    ring: "We have twelve people for Christmas and the guest toilet is done.",
+    intro: [['MATT', 'Ho ho... oh no.'], ['ROD', 'Guest toilets always go first.']],
+    tool: { q: 'Holiday toilet. Gear?', opts: ['TOILET AUGER', 'TINSEL', 'A BIGGER GUEST'], right: 0, good: 'Auger.', bad: 'No.' },
+    game: 'pull', lead: 'matt', culprit: [['MATT', 'A candy cane. And a small ornament.'], ['CUST', 'The cat did it.']], tip: 'Tell your guests: only flush the 3 Ps.', pay: 310 },
+  { id: 'septic-xmas', title: 'BURIED FOR CHRISTMAS', town: 'RANDOLPH', addr: 'Pinkham B Rd', cust: { name: 'GRANT', seed: 999 }, ext: 'farm', room: 'yard', window: 120,
+    ring: "It's Grant. From Randolph. The tank's full... and there's three feet of snow.",
+    intro: [['MATT', 'Grant!'], ['CUST', 'Fluffernutter says hi.'], ['ROD', 'Is it flushable litter again?'], ['CUST', '...No comment.']],
+    tool: { q: 'Find the tank under three feet of snow. Gear?', opts: ['PROBE ROD + SHOVEL', 'SNOWBLOWER', 'WAIT FOR APRIL'], right: 0, good: 'Probe and dig.', bad: 'Not in time for Christmas.' },
+    game: 'septic', lead: 'rod', culprit: [['ROD', 'Found it. Pumped it.'], ['CUST', 'Merry Christmas, boys!']], tip: 'Mark your septic lid before the snow.', pay: 480 },
+  { id: 'dec-sink', title: 'SHORTBREAD', town: 'BERLIN', addr: 'Granite St', cust: { name: 'MAEVE', seed: 353 }, ext: 'house', room: 'kitchen', window: 90,
+    ring: "Cookie dough down the sink. Five batches. Don't ask.",
+    intro: [['MATT', 'Five batches?'], ['CUST', "They didn't rise."]],
+    tool: { q: 'Dough in the kitchen line. Gear?', opts: ['CABLE MACHINE', 'OVEN', 'ICING'], right: 0, good: 'Cut it out.', bad: 'Now it\'s baked in.' },
+    needs: 'ptrap', roomArt: 'bg_kitchen3', game: 'cable', lead: 'rod', culprit: [['ROD', 'Shortbread. Uncooked. Rock hard.'], ['MATT', 'Can we have the good batch?']], tip: 'Dough and grease go in the trash.', pay: 360 },
+  { id: 'dec-dogs', title: 'REINDEER GAMES', town: 'FREEDOM', addr: 'Elm St', cust: { name: 'BEV', seed: 101 }, ext: 'farm', room: 'yard', window: 140,
+    ring: "It's Bev. From the farm. Dogs are fine, toilet's not. Remember to close the gate.",
+    intro: [['ROD', "I'm closing the gate."], ['MATT', 'Rod. You opened the gate.'], ['ROD', '...']],
+    tool: { q: 'Dogs are loose again. Priority?', opts: ['ROUND UP THE DOGS', 'START THE JOB', 'HIDE'], right: 0, good: 'Dogs first.', bad: 'Biscuit is in the van again.' },
+    game: 'dogs', lead: 'matt', culprit: [['MATT', 'All six. Biscuit had my lunch again.'], ['CUST', 'He likes you.']], tip: 'Inspections, toilets, and dogs. We do it all.', pay: 385 },
+  { id: 'sunday-toilet', title: 'THE SUNDAY TOILET', story: true, home: true, town: 'BERLIN', addr: "Rod's house", cust: { name: 'RED CAR GUY', seed: 359 }, ext: 'house', room: 'yard', window: 100,
+    ring: "*knock knock knock* ...on a Sunday. At Rod's house.",
+    intro: [['CARD', 'SUNDAY', "Rod's day off. A red car pulls into his driveway."], ['CARD', 'THE BACKSEAT', 'The driver gets out and pulls something out of the backseat.'], ['CARD', 'KNOCK KNOCK', 'He carries it up to the house and knocks on the door.'], ['CUST', "Hi. I've got a clogged toilet."], ['ROD', '...', 'rod_stare']],
+    tool: { q: "Sunday. Your day off. A stranger at your door with a clogged toilet. You say:", opts: ['SUNDAY IS AN EMERGENCY CHARGE', "WE'RE NOT OPEN ON SUNDAY"], right: 0, good: "\"That's okay. I brought it.\" ROD: \"What do you mean?\" He steps aside and points. There is a toilet sitting in Rod's yard. ROD: \"You really brought your toilet to my house.\"", bad: "\"That's okay. I brought it.\" ROD: \"What do you mean?\" He steps aside and points. There is a toilet sitting in Rod's yard. ROD: \"You really brought your toilet to my house.\"" },
+    game: 'pour', lead: 'rod', culprit: [['CARD', 'UNCLOGGED', 'Rod augers the toilet right there in the yard. Something comes out.'], ['CARD', 'A BONE', "It's a vertebra."], ['ROD', "I hope that's a deer vertebra.", 'rod_stare'], ['CARD', 'TEST FLUSH', 'Rod dumps a bucket of water in. It flushes. Onto the lawn.'], ['CUST', "Great. So... I don't have any money."], ['ROD', 'Ha! Thank you for the story. And for bringing the toilet.'], ['CARD', 'THE BACKSEAT', 'He picks the toilet up and puts it right back in the backseat. Nothing on the seat. No towel. No bag.'], ['CARD', 'GOODBYE', 'He backs out, waves, and drives away. Never to be seen again.']],
+    tip: "If you bring your toilet to the plumber's house, at least put a towel on the seat.", pay: 0 },
+],
+];
+
+// ---------- running gag: nobody gets Rod's name right ----------
+const WRONG_NAMES = ['Rob', 'Raj', 'Ron', 'Ross', 'Rodney', 'Randy', 'Rich', 'Bob', 'Roger', 'Reggie', 'Rudy', 'Brad', 'Rick', 'Roy', 'Rex', 'Ray', 'Rocco', 'Ralph'];
+const RODS_REPLY = ['...Rod.', "It's Rod.", 'Rod. With a D.', 'Close enough.', '...Sure.', 'Rod. Like a cleanout rod.', "That's... fine.", 'Rod. Rhymes with "odd".'];
+function wrongName() { const s = DDT.get(); s.wrongName = (s.wrongName || 0) + 1; DDT.save(s); return WRONG_NAMES[Math.floor(Math.random() * WRONG_NAMES.length)]; }
+const rodsReply = () => RODS_REPLY[Math.floor(Math.random() * RODS_REPLY.length)];
+
+// ---------- RON, GOD OF DRAINS ----------
+// Every review says Ron did it. Nobody has ever met Ron. Rod does nothing (allegedly).
+const RON_REVIEWS = [
+  'Ron was a lifesaver! Fixed it in no time.', "Can't thank Ron enough. The other guy mostly watched.", 'RON. What a legend. 10/10.',
+  'Ron fixed it in minutes. His helper with the beard was nice too.', 'Ask for Ron! Ron is the best!', 'Ron did it again!!!',
+  "Ron didn't even get dirty. How??", 'I will name my next child Ron.', 'Ron explained everything. Very professional. Smelled great.',
+  'Shoutout to Ron! (Not sure who the other two were.)', 'Ron came down from the mountain and the toilet flushed.', 'Five stars for Ron. Zero stars for my plumbing.',
+];
+const RON_REACT = [['MATT', 'matt_happy', 'Ron strikes again.'], ['ROD', 'rod_stare', '...I was there.'], ['MATT', 'matt_normal', "Ron's having a big year."],
+  ['ROD', 'rod_confused', "I've never met this man."], ['MATT', 'matt_suspicious', 'One day we will meet Ron.'], ['ROD', 'rod_smug', 'Good for Ron.']];
+// the boys talking about Ron, in the van between stops (picked so the same one doesn't come up twice in a row)
+const RON_BANTER = [
+  [['MATT', 'matt_normal', "Do you think Ron has a van?"], ['ROD', 'rod_annoyed', "Ron doesn't have a van, Matt. Ron doesn't exist."], ['MATT', 'matt_suspicious', "Then who's been on the magazine?"]],
+  [['ROD', 'rod_suspicious', "Lady at the hardware store asked me how Ron's doing."], ['MATT', 'matt_happy', "What'd you say?"], ['ROD', 'rod_tired', "I said he's doing great. I panicked."]],
+  [['MATT', 'matt_happy', "I made Ron a Facebook page."], ['ROD', 'rod_angry', "You WHAT."], ['MATT', 'matt_normal', "He has more followers than us."]],
+  [['ROD', 'rod_confused', "My mother called me Ron at Easter."], ['MATT', 'matt_stare', "...Your own mother."], ['ROD', 'rod_sad', "She said it was a slip. She did it twice."]],
+  [['MATT', 'matt_normal', "If Ron's so good, why's he never in the crawlspace?"], ['ROD', 'rod_smug', "Finally. Somebody gets it."]],
+  [['ROD', 'rod_normal', "New rule. Anybody who says Ron pays double."], ['MATT', 'matt_happy', "We'd be rich, Rod."], ['ROD', 'rod_stare', "...Forget it."]],
+  [['MATT', 'matt_suspicious', "What if YOU'RE Ron and you don't know it?"], ['ROD', 'rod_shocked', "Don't. Don't do that to me."]],
+  [['ROD', 'rod_annoyed', "Guy at the gas station: 'Hey, ain't you the Ron guy?'"], ['MATT', 'matt_happy', "You ARE the Ron guy."], ['ROD', 'rod_angry', "I'm the ROD guy."]],
+  [['MATT', 'matt_normal', "I bet Ron drinks his coffee black. No sugar. Like a legend."], ['ROD', 'rod_tired', "I drink my coffee black."], ['MATT', 'matt_stare', "...Huh."]],
+  [['ROD', 'rod_suspicious', "Somebody left a review for Ron at the dentist."], ['MATT', 'matt_shocked', "Ron does TEETH now?"]],
+  [['MATT', 'matt_happy', "Ron's probably got a heated garage. And a hot tub."], ['ROD', 'rod_normal', "Ron's probably got a lot of things. Like credit for my work."]],
+  [['ROD', 'rod_stare', "I'm gonna start answering the phone 'This is Ron.'"], ['MATT', 'matt_shocked', "You can't. That's how he wins."]],
+  [['MATT', 'matt_normal', "Maybe Ron is a ghost. Like a plumbing ghost."], ['ROD', 'rod_tired', "Then he can haunt the septic jobs."]],
+  [['ROD', 'rod_annoyed', "The bank sent a letter. 'Dear Ron.'"], ['MATT', 'matt_happy', "Did Ron pay the loan?"], ['ROD', 'rod_stare', "Ron did not pay the loan."]],
+  [['MATT', 'matt_suspicious', "Every town we go to, Ron got there first."], ['ROD', 'rod_normal', "Ron hasn't been ANYWHERE, Matt."], ['MATT', 'matt_stare', "That's what he wants you to think."]],
+  [['ROD', 'rod_sad', "My kid asked if Ron could come to his birthday."], ['MATT', 'matt_happy', "Is Ron coming?"], ['ROD', 'rod_angry', "THERE IS NO RON."]],
+  [['MATT', 'matt_normal', "If you ever meet Ron, what do you say?"], ['ROD', 'rod_smug', "'Nice hair. Grab a plunger.'"]],
+  [['ROD', 'rod_tired', "Do you think Ron ever gets the poop in his socks?"], ['MATT', 'matt_happy', "Never. Ron's socks are pristine."]],
+  [['MATT', 'matt_happy', "Rod. ROD. Look out the window."], ['ROD', 'rod_shocked', "...Is that a BILLBOARD?"], ['MATT', 'matt_happy', "'Best plumber in Mt. Washington.' He's got a billboard now."], ['ROD', 'rod_angry', "WHO IS PAYING FOR THIS."]],
+  [['ROD', 'rod_normal', "Customer hugged me today. Called me Ron in my ear."], ['MATT', 'matt_stare', "In your EAR?"], ['ROD', 'rod_tired', "Whispered it. Like a secret."]],
+];
+const RON_HEADLINES = [['RON DOES IT', 'AGAIN'], ['RON: GOD OF', 'DRAINS'], ['HOW RON SAVED', 'THE NORTH COUNTRY'], ["RON'S TOP TIP:", "ONLY FLUSH THE 3 P'S"],
+  ['RON WON', 'THE WINTER'], ['THE MAN, THE MYTH,', 'THE PLUNGER'], ['RON VS THE', 'FROZEN LINE'], ['RON CLEARS', '1,000 DRAINS'],
+  ['IS RON REAL?', 'WE ASKED ROD'], ['RON OF THE', 'YEAR'], ['RON SAVES', 'CHRISTMAS'], ['RON LIFTS', 'A SEPTIC LID WITH ONE HAND']];
+// ---------- what the boys grabbed: shown in their hands in the van ----------
+const SNACK_FOOD = /SANDWICH|BURRITO|MUFFIN|PASTR|HOLES|BREAKFAST|SAMOSA|PIE|ENCHILADA|PLATE|PORK|DESSERT|SPECIAL|MASALA|VINDALOO/;
+const SNACK_DRINK = /COFFEE|ESPRESSO|LATTE|ICED|SODA|WILDCAT|DRIP|AMERICANO|CAPP/;
+function snackOf(stopId, item, lunch) { return { stop: stopId, red: stopId === 'granite', food: SNACK_FOOD.test(item), drink: SNACK_DRINK.test(item) || stopId === 'granite' || stopId === 'coreshot', lunch: !!lunch }; }
+const pickOne = a => a[Math.floor(Math.random() * a.length)];
+
+// ---------- fittings sprite sheet (assets/fittings.png · 13 x 6 cells of 32px) ----------
+const FITTINGS = [
+  ['PVC', 'COUPLING', '90 ELBOW', '45 ELBOW', 'CROSS', 'TEE', 'WYE', 'SANITARY TEE', 'REDUCER', 'REDUCER 2', 'BUSHING', 'CLEANOUT', 'CLEANOUT CAP', 'P-TRAP'],
+  ['CPVC', 'COUPLING', '90 ELBOW', '45 ELBOW', 'TEE', 'CROSS', 'REDUCER', 'MPT', 'FEMALE', 'FPT', 'CAP', 'PLUG', 'PLUG 2', 'UNION'],
+  ['PEX', 'COUPLING', '90 ELBOW', '45 ELBOW', 'TEE', 'REDUCER', 'MALE', 'FEMALE', 'ADAPTER', 'COUPLING 2', 'ELBOW', 'TEE 2', 'STUB', 'CAP'],
+  ['COPPER', 'COUPLING', '90 ELBOW', '45 ELBOW', 'TEE', 'TEE 2', 'REDUCER', 'MALE', 'ADAPTER', 'ADAPTER 2', 'CAP', 'PLUG', 'PLUG 2', 'UNION'],
+  ['GALV', 'COUPLING', '90 ELBOW', '45 ELBOW', 'TEE', 'CROSS', 'CROSS 2', 'REDUCER', 'BUSHING', 'MALE', 'NIPPLE', 'CAP', 'PLUG', 'UNION'],
+  ['BRASS', 'COUPLING', 'ELBOW', '45 ELBOW', 'TEE', 'CROSS', 'UNION', 'OTHER', 'VALVE', 'HOSE', 'STREET ELBOW', 'CHECK VALVE', 'COMPRESSION', 'BALL VALVE'],
+];   // FITTINGS[row][col + 1] names the cell at (col, row)
+
+// ---------- Fernko's Supply ----------
+// better gear = bigger jobs: every major piece of equipment you own adds to what a job pays (up to about +40%)
+function gearPts(s) { const v = (s && s.inv) || {}; return (v.heads ? 1 : 0) + (v.ppe ? 1 : 0) + (v.camera ? 2 : 0) + (v.jetter ? 2 : 0) + (v.waders || v.muckboots ? 0.5 : 0); }
+function gearPay(s) { return 1 + 0.06 * gearPts(s); }
+// what on the truck fits this job? parts get used and billed at 3x; gear just helps. Each one that fits: +1 rep (max +3).
+function jobText(j) { return [j.title, j.ring, j.room, JSON.stringify(j.intro || ''), JSON.stringify(j.culprit || ''), j.tool ? j.tool.q : ''].join(' ').toLowerCase(); }
+function partsFor(j) { const t = jobText(j), g = j.game, out = [];
+  if (j.room === 'kitchen' || /kitchen|washer|laundry|dishwasher/.test(t)) out.push('fernco2');
+  if (/\btub\b|shower|trailer/.test(t)) out.push('fernco15');
+  if (/vanity|bathroom sink|lav sink|pedestal/.test(t)) out.push('fernco125');
+  if (/\bsink\b/.test(t)) out.push('ptrap');
+  if (/toilet/.test(t) && ['claw', 'pull', 'flush', 'beads', 'pour'].includes(g)) out.push('waxring');
+  if (/cleanout/.test(t)) out.push('cleanout35');
+  return out.filter(id => id !== j.needs); }
+function gearFor(j) { const g = j.game, out = [];
+  if (['cable', 'detective', 'flush'].includes(g)) out.push('heads');
+  if (['camera', 'detective', 'septic', 'locate'].includes(g)) out.push('camera');
+  if (['jetter', 'bubble', 'overflow', 'steamer'].includes(g)) out.push('jetter');
+  if (['dodge', 'sprinkler', 'poop', 'gag', 'crawl', 'stairs'].includes(g) || ['crawl', 'yard'].includes(j.room)) out.push('waders', 'muckboots');
+  if (['gag', 'dodge', 'sprinkler', 'poop'].includes(g)) out.push('ppe');
+  return out; }
+const SHOP = [
+  // parts: used up on jobs that need them, billed to the customer at 3x
+  { id: 'fernco125', name: '1-1/4" FERNCO', price: 12, kind: 'part', desc: "Rubber coupling for small drains. BENEFIT on any job it fits (used automatically): billed back at 3x, +1 rep, and the job is a level easier.", icon: [0, 0] },
+  { id: 'fernco15', name: '1-1/2" FERNCO', price: 14, kind: 'part', desc: "Sink, tub and trailer lines. BENEFIT on any job it fits (used automatically): billed back at 3x, +1 rep, a level easier.", icon: [0, 1] },
+  { id: 'fernco2', name: '2" FERNCO', price: 16, kind: 'part', desc: "Washer and kitchen lines. BENEFIT on any job it fits (used automatically): billed back at 3x, +1 rep, a level easier.", icon: [0, 4] },
+  { id: 'cleanout35', name: '3-1/2" COPPER CLEANOUT', price: 45, kind: 'part', desc: "Main line cleanout plug. Rod's right, grab two. BENEFIT on any job it fits (used automatically): billed back at 3x, +1 rep, a level easier.", icon: [10, 3] },
+  { id: 'ptrap', name: 'P-TRAP KIT', price: 18, kind: 'part', desc: "Sink jobs: rings, dough, cheesecake. BENEFIT on any job it fits (used automatically): billed back at 3x, +1 rep, a level easier.", icon: [12, 0] },
+  { id: 'waxring', name: 'WAX RING', price: 9, kind: 'part', desc: "Every time you pull a toilet. BENEFIT on any job it fits (used automatically): billed back at 3x, +1 rep, a level easier." },
+  // gear: buy once, keep
+  { id: 'heads', name: 'CUTTER HEAD SET', price: 220, kind: 'gear', desc: "BENEFIT: every snake/cable job is one level easier. Also +1 rep on every job it helps with.", icon: [4, 5] },
+  { id: 'muckboots', name: 'MUCK BOOTS', price: 100, kind: 'gear', desc: "Knee high. BENEFIT: +1 pair of pants (one extra hit) in every messy game, and an easier wade. Also +1 rep on every job it helps with." },
+  { id: 'waders', name: 'CHEST WADERS', price: 120, kind: 'gear', desc: "Chest high. BENEFIT: +1 pair of pants in every messy game, the easiest wade, half splash damage. Also +1 rep on every job it helps with." },
+  { id: 'ppe', name: 'PPE KIT', price: 600, kind: 'gear', desc: "Suits, masks, respirators. BENEFIT: a spare pair of pants on every job (one more hit before you're done). Also +1 rep on every job it helps with." },
+  { id: 'espresso', name: "ROD'S ESPRESSO MAKER", price: 400, kind: 'gear', desc: "Rod insists. BENEFIT: +8 stamina every morning." },
+  { id: 'camera', name: 'SEWER CAMERA + LOCATOR', price: 16500, kind: 'gear', desc: "BENEFIT: unlocks the camera story jobs, and the septic search shows which way the pipe leaves the house. Also +1 rep on every job it helps with." },
+  { id: 'probes', name: 'PROBE RODS x5', price: 30, kind: 'part', desc: "Spare steel probe rods. BENEFIT on septic hunts: +5 probes. Used up on the job." },
+  { id: 'deerins', name: 'DEER INSURANCE', price: 450, kind: 'gear', desc: "Full comprehensive from an agent in Gorham who has seen things. BENEFIT: hit all the deer you want. No lost time, no cracked glass." },
+  { id: 'glass', name: 'NEW WINDSHIELD', price: 350, kind: 'service', desc: "Rod knows a guy in Gorham. BENEFIT: every crack from every crash, gone. Clear view again." },
+  { id: 'jetter', name: 'JETTER TRAILER', price: 14200, kind: 'gear', desc: "4,000 PSI. BENEFIT: unlocks the hotel, campground and lost-jetter story jobs. Also +1 rep on every job it helps with." },
+];
+// day one: you borrowed $80,000 (enough for the basics, not the camera or jetter). This is what it takes to open the doors.
+const STARTUP = [
+  { id: 'van', name: 'FORD TRANSIT VAN', price: 58000, need: true, desc: "High roof. BENEFIT: gets you to every job." },
+  { id: 'wrap', name: 'VAN WRAP + LETTERING', price: 3500, need: true, desc: "BENEFIT: people see you coming. Needed to look legit." },
+  { id: 'insure', name: 'INSURANCE + LICENSE', price: 4800, need: true, desc: "First year. BENEFIT: you are allowed to work. Sadly not optional." },
+  { id: 'mainline', name: 'MAIN LINE MACHINE', price: 6400, need: true, desc: "100 ft of cable. BENEFIT: main line and basement jobs (3 to 6 inch pipe)." },
+  { id: 'drum', name: 'SMALL DRUM MACHINE', price: 2900, need: true, desc: "BENEFIT: sink, tub and small-line jobs (1-1/2 to 2 inch)." },
+  { id: 'hand', name: 'TOILET AUGER + HAND TOOLS', price: 1600, need: true, desc: "Plungers, wrenches, flashlights. BENEFIT: toilet and everyday jobs." },
+  { id: 'shop', name: 'SHOP VAC, BUCKETS, TARPS', price: 600, need: true, desc: "Two 5-gallon buckets minimum. BENEFIT: cleanup on every job." },
+  { id: 'stock', name: 'STARTER PARTS', price: 400, need: true, desc: "BENEFIT: a few Ferncos, cleanouts, P-traps and wax rings to start, so early jobs go easier.",
+    gives: { fernco125: 2, fernco15: 2, fernco2: 2, cleanout35: 3, ptrap: 2, waxring: 3 } },
+  { id: 'camera', name: 'SEWER CAMERA + LOCATOR', price: 16500, need: false, desc: "Optional. BENEFIT: unlocks the camera story jobs, and the septic search shows the pipe. You can buy it later at Fernko's." },
+  { id: 'jetter', name: 'JETTER TRAILER', price: 14200, need: false, desc: "Optional. BENEFIT: unlocks the hotel, campground and lost-jetter story jobs. Also sold at Fernko's." },
+  { id: 'ppe', name: 'PPE KIT', price: 600, need: false, desc: "Optional. BENEFIT: a spare pair of pants on every job (one more hit before you're done)." },
+];
+
+
+// ---------- food stops (placeholder unless a page exists) ----------
+const STOPS = {
+  breakfast: [
+    { id: 'coreshot', name: 'CORE SHOT', town: 'GORHAM', page: 'story/coffee.html', time: 25 },
+    { id: 'dookies', name: "DOOKIE'S", town: 'GORHAM', time: 15, color: '#e8762b', sign: '#e0218a', who: "DOOKIE'S",
+      out: 'bg_dookies_out', inside: 'bg_dookies_in', port: 'dookies_barista', door: 232,
+      greet: "Welcome to Dookie's! ...Oh. It's you guys. What do you want?",
+      menu: [['LARGE ICED · $4', { stamina: 15, cost: 8 }, 'Iced coffee in January. Respect.'], ['BOX OF DOOKIE HOLES · $7', { health: 5, mood: 1, cost: 7 }, "Don't say it. I've heard every joke."], ['EGG SANDWICH · $6', { health: 10, cost: 12 }, 'Hot and fast. Like you guys, apparently.']] },
+    { id: 'wmc', name: 'WHITE MOUNTAIN CAFE', town: 'GORHAM', time: 30, color: '#4a6a8a', sign: '#f2efe6', who: 'BARISTA',
+      menu: [['ESPRESSO + MUFFIN · $7', { stamina: 15, health: 5, cost: 14 }, 'Local and good.'], ['BIG BREAKFAST · $12', { health: 20, stamina: 10, cost: 24, time: 15 }, "You won't need lunch."], ['JUST AN ESPRESSO · $3', { stamina: 12, cost: 6 }, 'In and out.']] },
+    { id: 'granite', name: 'GRANITE GRIND', town: 'LANCASTER', time: 120, far: 'An hour there, an hour back.', color: '#5a5a62', sign: '#f7c418', who: 'BARISTA',
+      menu: [['WILDCAT COFFEE · $5', { stamina: 40, cost: 10, jitters: true }, 'The big red cup. Good luck, boys.'], ['LATTE · $5', { stamina: 20, mood: 1, cost: 10 }, 'Smooth.'], ['BREAKFAST BURRITO · $9', { health: 15, cost: 18 }, 'A brick of joy.']] },
+  ],
+  lunch: [
+    { id: 'rosies', name: "ROSIE'S", town: 'TAMWORTH', time: 40, color: '#b8433a', sign: '#fff', who: 'ROSIE',
+      menu: [['DINER SPECIAL · $12', { health: 20, stamina: 15, cost: 24 }, 'Like Grandma made.'], ['PIE · $5', { mood: 1, stamina: 10, cost: 10 }, 'Always the pie.']] },
+    { id: 'havelis', name: "HAVELI'S", town: 'CONWAY', time: 45, color: '#7a2d5a', sign: '#f7c418', who: 'SERVER',
+      menu: [['CHICKEN TIKKA MASALA · $15', { health: 25, stamina: 15, cost: 30 }, 'Extra naan. You look hungry.'], ['LAMB VINDALOO · $16', { health: 20, stamina: 20, mood: 1, cost: 32 }, "Hot hot. You sure?"], ['SAMOSAS TO GO · $8', { health: 10, stamina: 5, cost: 16, time: -15 }, 'Eat in the van.']] },
+    { id: 'casamigos', name: 'CASAMIGOS', town: 'CONWAY', time: 40, color: '#2e8a6a', sign: '#fff', who: 'SERVER',
+      menu: [['ENCHILADAS · $14', { health: 20, stamina: 15, cost: 28 }, 'Careful, the plate is hot.'], ['BURRITO · $12', { health: 20, stamina: 10, cost: 24 }, 'Big as your arm.'], ['MEXICAN SODA · $3', { stamina: 8, mood: 1, cost: 6, time: -10 }, 'Glass bottle. The good stuff.']] },
+    { id: 'backwoods', name: 'BACKWOODS BBQ', town: 'OSSIPEE', time: 45, color: '#5a3a1e', sign: '#f7c418', who: 'PITMASTER',
+      menu: [['BRISKET PLATE · $16', { health: 25, stamina: 20, cost: 32, time: 10 }, 'Nap risk: high.'], ['PULLED PORK · $12', { health: 20, stamina: 10, cost: 24 }, 'Smoky.']] },
+    { id: 'underground', name: 'UNDERGROUND BAKERY', town: 'CONWAY', time: 30, color: '#3a3a52', sign: '#f2efe6', who: 'BAKER',
+      menu: [['ESPRESSO + PASTRY · $8', { stamina: 15, health: 5, cost: 16 }, 'Fresh out of the oven.'], ['LATTE + DESSERT · $10', { stamina: 12, mood: 2, cost: 20 }, 'Treat yourselves.'], ['BOX OF PASTRIES · $14', { mood: 2, health: 5, cost: 14 }, 'For the van.']] },
+  ],
+};
+// Jetter work doesn't start until summer: any jetter story job set earlier in the year moves to July.
+(() => { for (let m = 0; m < 5; m++) { const keep = []; for (const c of CALLS[m]) { if (c.story && c.gate === 'jetter') CALLS[6].push(c); else keep.push(c); } CALLS[m] = keep; } })();

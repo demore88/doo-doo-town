@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>if (/[?&]play=/.test(location.search)) document.documentElement.classList.add("embedboot");</script>
+<style id="ddt-touch">html,body{overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}</style>
+<script id="ddt-fs">(function(){var touch=("ontouchstart" in window)||navigator.maxTouchPoints>0;if(window.top!==window){if(touch)addEventListener("pointerdown",function(){try{parent.ddtFS&&parent.ddtFS()}catch(e){}},true);return}var root=location.href.split(/[?#]/)[0].replace(/(story|arcade)\/[^\/]*$|[^\/]*$/,"");location.replace(root+"app.html?p="+encodeURIComponent(location.href.slice(root.length)))})();</script>
+<link rel="manifest" href="../manifest.webmanifest"><meta name="theme-color" content="#2a5ab0"><link rel="icon" href="../icons/icon-192.png"><link rel="apple-touch-icon" href="../icons/apple-180.png"><meta name="mobile-web-app-capable" content="yes"><script>if ("serviceWorker" in navigator && window.top === window && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch(() => {});</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Doo Doo Town — Mini-Game Arcade</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  @font-face{font-family:'Press Start 2P';src:url('../assets/PressStart2P.ttf') format('truetype');font-display:block}
+  html,body{margin:0;height:100%;background:#0b0e15;color:#fff;font-family:'Press Start 2P',monospace;overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  #stage{position:relative;aspect-ratio:16/9;container-type:size;width:min(100vw,calc(100vh*16/9));width:min(100vw,calc(100dvh*16/9))}
+  canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;touch-action:none}
+  .scr{position:absolute;inset:0;display:none;overflow:auto;background:#0b0e15f2;font-size:clamp(7px,1.15cqw,13px);line-height:1.9}
+  .scr.on{display:block}
+  html.embedboot #menu{display:none !important}   /* on a job: never flash the arcade's game list */
+  h1{color:#f7c418;font-size:2em;text-align:center;margin:3% 0 .4em;text-shadow:3px 3px 0 #2c6cd6}
+  .sub{text-align:center;color:#9fb3d9;margin-bottom:1.2em}
+  .row{display:flex;justify-content:center;gap:.8em;margin:.6em 0 1.2em;flex-wrap:wrap}
+  .pill,.btn{font:inherit;background:#10151f;color:#fff;border:3px solid #f7c418;padding:.55em 1em;cursor:pointer;box-shadow:3px 3px 0 #000}
+  .pill.on{background:#f7c418;color:#10151f}
+  .btn:hover,.btn:focus-visible,.pill:hover,.card:hover,.card:focus-visible{background:#2c6cd6;outline:none}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(15em,1fr));gap:.8em;padding:0 4% 6%}
+  .card{font:inherit;text-align:left;display:flex;flex-direction:column;justify-content:flex-start;background:#151c2b;color:#fff;border:3px solid #3a4a6a;padding:.8em;cursor:pointer;box-shadow:3px 3px 0 #000}
+  .card b{color:#f7c418;display:block;margin-bottom:.3em}
+  .card .thumb{display:block;width:100%;aspect-ratio:256/136;object-fit:cover;image-rendering:pixelated;border:2px solid #0b0e15;margin-bottom:.5em}
+  .card i{font-style:normal;color:#9fb3d9;font-size:.85em;display:block}
+  .card .st{color:#f7c418;margin-top:.4em}
+  .box{max-width:44em;margin:4% auto;background:#10151f;border:4px solid #f7c418;box-shadow:6px 6px 0 #000;padding:3% 4%}
+  #result{background:rgba(11,14,21,.25)} #result .box{max-width:26em;margin:2% auto;background:rgba(16,21,31,.72);border-width:3px;padding:1.4% 2.4%;line-height:1.6}
+  #result .big{font-size:1.5em;margin:.1em 0} #result .stars{font-size:1.2em} #result p{margin:.4em 0}
+  @keyframes resin{from{transform:translateY(-14px) scale(.96);opacity:0}to{transform:none;opacity:1}}
+  @keyframes starpop{0%{transform:scale(0) rotate(-40deg);opacity:0}60%{transform:scale(1.7) rotate(8deg);opacity:1}100%{transform:scale(1)}}
+  @keyframes bestglow{0%,100%{color:#f7c418}50%{color:#fff}}
+  #result .box{animation:resin .28s ease-out both}
+  #result .stars span{display:inline-block} #result .stars .on{animation:starpop .36s ease-out both} #result .stars .off{opacity:.45}
+  #result .best{text-align:center;font-size:.8em;margin:.2em 0;animation:bestglow .7s linear infinite}
+  #result .tip{text-align:center;font-size:.7em;color:#9fb3d9;margin:.3em 0}
+  .scr{animation:scrin .22s ease-out both} @keyframes scrin{from{opacity:0}to{opacity:1}}
+  .box h2{color:#f7c418;margin:0 0 .3em;font-size:1.5em}
+  .box .tag{color:#9fb3d9;margin-bottom:1em}
+  .box ul{padding-left:1.2em;margin:.6em 0}
+  .box li{margin:.35em 0}
+  .ctl{color:#7bd65b;margin:1em 0}
+  /* the how-to fills the whole screen: two columns, no scrolling */
+  #introbox{position:absolute;inset:3% 2.5%;margin:0;max-width:none;box-sizing:border-box;padding:2.2% 3%;overflow:hidden;display:grid;grid-template-columns:2fr 1fr;grid-template-rows:auto 1fr;column-gap:4%;font-size:clamp(7px,1.55cqw,16px);line-height:1.45}
+  #introbox .head{grid-column:1 / -1}
+  #introbox .head h2{font-size:1.7em;margin:.1em 0 .25em}
+  #introbox .head .tag{margin-bottom:.4em}
+  #introbox ul{margin:0;padding-left:1.1em;align-self:start}
+  #introbox li{margin:.45em 0}
+  #introbox .side{display:flex;flex-direction:column;justify-content:space-between;min-height:0}
+  #introbox .side .ctl{margin:0}
+  #introbox .side .row{margin:0;justify-content:flex-start;flex-wrap:wrap;gap:.6em}
+  #introbox .side .btn{font-size:1.25em;padding:.8em 1.2em}
+  .big{font-size:2.2em;text-align:center;margin:.2em 0}
+  .stars{font-size:2em;text-align:center;color:#f7c418;letter-spacing:.2em}
+  #pad{position:absolute;inset:0;pointer-events:none;display:none}
+  #pad.on{display:block}
+  #pad button{pointer-events:auto;position:absolute;font:inherit;font-size:clamp(10px,2.4cqw,22px);background:rgba(16,21,31,.35);color:#fff;border:2px solid rgba(255,255,255,.5);border-radius:10px;width:9%;aspect-ratio:1;touch-action:none}
+  #pad button.dn{background:rgba(247,196,24,.6)}
+  #pad .A{right:3%;bottom:8%;width:15%;border-radius:50%;border-color:#f7c418;font-size:clamp(8px,1.6cqw,16px)}
+  #pad.nodp .dp{display:none}
+  /* floating thumbstick: put your thumb down anywhere in the left half and slide; it follows your thumb */
+  #pad.stick .dp{display:none} #stickzone{display:none;position:absolute;left:0;bottom:0;width:48%;height:72%;pointer-events:auto;touch-action:none}
+  #pad.stick #stickzone{display:block} #pad.lefty #stickzone{left:auto;right:0}
+  #stickbase{position:absolute;width:88px;height:88px;margin:-44px 0 0 -44px;border-radius:50%;border:2px solid rgba(255,255,255,.45);background:rgba(16,21,31,.28);display:none;pointer-events:none}
+  #stickknob{position:absolute;left:50%;top:50%;width:38px;height:38px;margin:-19px 0 0 -19px;border-radius:50%;background:rgba(247,196,24,.75);border:2px solid #fff}
+  #pad.lr .dp[data-k=U],#pad.lr .dp[data-k=D],#pad.ud .dp[data-k=L],#pad.ud .dp[data-k=R]{display:none}
+  /* left/right games: ◀ on the left edge, ▶ on the right edge, the action button in the middle */
+  #pad.lr .dp[data-k=L]{left:3% !important;bottom:8% !important;width:13%}#pad.lr .dp[data-k=R]{left:auto !important;right:3%;bottom:8% !important;width:13%}
+  /* the action button rides your strong thumb's arc (up and in from the bottom corner) */
+  #pad .A{right:4%;bottom:12%}
+  #pad.lr .A{right:15%;left:auto;bottom:28%;width:13%}
+  /* left-handed: everything mirrors */
+  #pad .B{display:none;left:4%;bottom:52%;width:13%;border-radius:50%;border-color:#9fd1ff;font-size:clamp(8px,1.5cqw,15px)}
+  #pad.crawl .A,#pad.crawl.b2 .B{display:none}
+  #pad.runner .A{right:3%;bottom:30%;width:14%} #pad.runner.b2 .B{left:auto;right:5%;bottom:5%;width:12%}   /* Cleanout Blowout: JUMP over SLIDE on the right thumb */   /* Under the Trailer: everything is tapped right on the screen (BAG and the fight buttons live in the right panel) */
+  #pad.b2 .B{display:block} #pad.lr .B{left:15%;bottom:28%}   /* the second button: the same action on the left (SPIN), or a left-thumb action (HOLD BREATH) */
+  #pad.lefty .A{right:auto;left:4%}
+  #pad.lefty.lr .A{left:15%;right:auto}
+  #pad.lefty:not(.lr) .dp[data-k=L]{left:auto !important;right:22%}#pad.lefty:not(.lr) .dp[data-k=R]{left:auto !important;right:2%}
+  #pad.lefty:not(.lr) .dp[data-k=U]{left:auto !important;right:12%}#pad.lefty:not(.lr) .dp[data-k=D]{left:auto !important;right:12%}
+  #top{position:absolute;top:.4%;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:5}
+  #top button{font:inherit;font-size:clamp(5px,.8cqw,9px);background:#10151fcc;color:#fff;border:1px solid #9fb3d9;padding:.35em .55em;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="loading" style="position:fixed;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;background:#0b0e15;color:#f7c418;font:12px 'Press Start 2P',monospace;text-align:center;line-height:2">LOADING...<br><span style="color:#9fb3d9;font-size:8px">GETTING THE TOOLS OFF THE TRUCK</span></div>
+<div id="wrap"><div id="stage">
+  <canvas id="c" width="1440" height="810"></canvas>
+  <div id="pad">
+    <button class="dp" data-k="L" style="left:2%;bottom:18%">◀</button><button class="dp" data-k="R" style="left:22%;bottom:18%">▶</button>
+    <button class="dp" data-k="U" style="left:12%;bottom:34%">▲</button><button class="dp" data-k="D" style="left:12%;bottom:2%">▼</button>
+    <div id="stickzone"><div id="stickbase"><div id="stickknob"></div></div></div>
+    <button data-k="A" class="A" id="actbtn">GO</button>
+    <button data-k="B" class="B" id="act2">B</button>
+  </div>
+  <div id="top"><button id="quit" style="display:none">✕ QUIT</button><button id="padbtn">PAD</button><button id="snd">♪ OFF</button></div>
+
+  <div class="scr on" id="menu">
+    <h1>MINI-GAME ARCADE</h1>
+    <div class="sub">DOO DOO TOWN THE GAME! · EVERY JOB SKILL, ONE AT A TIME</div>
+    <div class="row"><button class="btn" id="home">&lt; MAIN MENU</button></div>
+    <div class="row" id="diffs"><button class="pill" data-d="0">EASY</button><button class="pill on" data-d="1">NORMAL</button><button class="pill" data-d="2">HARD</button></div>
+    <div class="row" id="heroes"><button class="pill" data-h="rod">PLAY AS ROD</button><button class="pill" data-h="matt">PLAY AS MATT</button></div>
+    <div class="grid" id="grid"></div>
+  </div>
+  <div class="scr" id="intro"><div class="box" id="introbox"></div></div>
+  <div class="scr" id="result"><div class="box" id="resbox"></div></div>
+</div></div>
+<audio id="music" src="../assets/doo_doo_town.mp3" loop preload="auto"></audio>
+<script src="../js/state.js?v=1795109021"></script>
+<script src="../js/songs.js?v=1795109021"></script>
+<script src="../js/sfx.js?v=1795109021"></script>
+<script src="games.js?v=1795109021"></script>
+<script>
+const cv = document.getElementById('c'); g = cv.getContext('2d'); const SCALE = 3; g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
+const $ = s => document.querySelector(s);
+const DIFF_K = [0.85, 1, 1.2], DIFF_N = ['EASY', 'NORMAL', 'HARD'];
+let diff = 1, cur = null, s = null, phase = 'menu', readyT = 0, last = 0, soundOn = false;
+let hero = DDT.param('lead') === 'matt' ? 'matt' : DDT.param('lead') === 'rod' ? 'rod' : ((() => { try { return localStorage.getItem('ddt_hero'); } catch (e) { return null; } })() || (DDT.get() || {}).arcadeHero || 'matt');   /* the main menu's PLAYER pick */
+DDT.root = '../';
+// EMBED MODE: arcade/index.html?play=<id>&diff=<0-2>&ret=<url> plays one game as part of a job, then hands back.
+const EMBED = DDT.param('play');
+const SOLO = DDT.param('solo') === '1';   // started from the main menu just to play it: quitting or continuing goes back to the menu, never into a saved game
+if (EMBED && DDT.param('diff') !== null) diff = +DDT.param('diff');
+const store = { get(k) { try { return JSON.parse(localStorage.getItem('ddt_' + k)); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem('ddt_' + k, JSON.stringify(v)); } catch (e) {} } };
+
+// ---------- input ----------
+const held = { L: 0, R: 0, U: 0, D: 0, A: 0, B: 0 }, edge = { L: 0, R: 0, U: 0, D: 0, A: 0, B: 0 };
+const ptr = { x: 0, y: 0, down: false, clicked: false };
+const KEYS = { arrowleft: 'L', a: 'L', arrowright: 'R', d: 'R', arrowup: 'U', w: 'U', arrowdown: 'D', s: 'D', ' ': 'A', enter: 'A', z: 'A', x: 'A', j: 'A', k: 'A', shift: 'B', q: 'B', e: 'B' };   // SPACE is the action key everywhere
+addEventListener('keydown', e => {
+  const k = KEYS[e.key.toLowerCase()];
+  if (e.key === 'Escape' && phase === 'play') return quit();
+  if (!k || phase !== 'play' && phase !== 'ready') return;
+  e.preventDefault(); if (!e.repeat) edge[k] = 1; held[k] = 1;
+});
+addEventListener('keyup', e => { const k = KEYS[e.key.toLowerCase()]; if (k) held[k] = 0; });
+addEventListener('blur', () => { for (const k in held) held[k] = 0; ptr.down = false; });
+function toCanvas(e) { const b = cv.getBoundingClientRect(); return [(e.clientX - b.left) / b.width * W, (e.clientY - b.top) / b.height * H]; }
+cv.addEventListener('pointerdown', e => { [ptr.x, ptr.y] = toCanvas(e); ptr.down = true; ptr.clicked = true; try { cv.setPointerCapture(e.pointerId); } catch (_) {} });
+cv.addEventListener('pointermove', e => { if (ptr.down) [ptr.x, ptr.y] = toCanvas(e); });
+cv.addEventListener('pointerup', () => ptr.down = false); cv.addEventListener('pointercancel', () => ptr.down = false);
+document.querySelectorAll('#pad button').forEach(b => {
+  const k = b.dataset.k;
+  b.addEventListener('pointerdown', e => { e.preventDefault(); held[k] = 1; edge[k] = 1; b.classList.add('dn'); try { b.setPointerCapture(e.pointerId); } catch (_) {} });
+  const up = () => { held[k] = 0; b.classList.remove('dn'); };
+  b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+});
+let STICK_OMNI = false, STICK_H = false;   /* STICK_H: the stick only steers left/right (no up/down) */
+{ // the thumbstick: origin is wherever your thumb lands; direction is how far you slide from there
+  const z = $('#stickzone'), base = $('#stickbase'), knob = $('#stickknob'); let id = null, ox = 0, oy = 0;
+  const setK = (k, on) => { if (on && !held[k]) edge[k] = 1; held[k] = on ? 1 : 0; };
+  const move = e => { if (e.pointerId !== id) return; const r = z.getBoundingClientRect(), dx = e.clientX - ox, dy = e.clientY - oy, m = Math.hypot(dx, dy), lim = 34, k = m > lim ? lim / m : 1;
+    knob.style.transform = `translate(${dx * k}px,${dy * k}px)`;
+    if (STICK_OMNI) { setK('L', dx < -12 && -dx > Math.abs(dy) * 0.45); setK('R', dx > 12 && dx > Math.abs(dy) * 0.45); setK('U', dy < -12 && -dy > Math.abs(dx) * 0.45); setK('D', dy > 12 && dy > Math.abs(dx) * 0.45); return; }   /* 8 directions, diagonals included */
+    if (STICK_H) { setK('L', dx < -9); setK('R', dx > 9); return; }
+    setK('L', dx < -9); setK('R', dx > 9); setK('U', dy < -22 && Math.abs(dy) > Math.abs(dx) * 1.2); setK('D', dy > 22 && Math.abs(dy) > Math.abs(dx) * 1.2); };
+  z.addEventListener('pointerdown', e => { e.preventDefault(); id = e.pointerId; const r = z.getBoundingClientRect(); ox = e.clientX; oy = e.clientY; base.style.left = (ox - r.left) + 'px'; base.style.top = (oy - r.top) + 'px'; base.style.display = 'block'; knob.style.transform = ''; try { z.setPointerCapture(id); } catch (_) {} move(e); });
+  z.addEventListener('pointermove', move);
+  const end = e => { if (e.pointerId !== id) return; id = null; base.style.display = 'none'; ['L', 'R', 'U', 'D'].forEach(k => held[k] = 0); };
+  z.addEventListener('pointerup', end); z.addEventListener('pointercancel', end); z.addEventListener('lostpointercapture', end);
+}
+let coarse = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+let padOn = coarse;
+addEventListener('touchstart', () => { if (!coarse) { coarse = true; padOn = true; showPad(); } }, { passive: true });
+$('#home').onclick = () => { DDT.nav(SOLO ? DDT.back('index.html') : EMBED ? DDT.back('play.html') : '../index.html'); };
+$('#padbtn').onclick = () => { padOn = !padOn; showPad(); };
+function showPad() {
+  const G = cur != null ? GAMES[cur] : null;
+  $('#pad').classList.toggle('on', padOn && (phase === 'play' || phase === 'ready') && !(G && G.pad === false));
+  $('#pad').classList.toggle('lefty', ((DDT.get() || {}).hand) === 'L');
+  $('#pad').classList.toggle('nodp', !!(G && G.dpad === false)); $('#pad').classList.toggle('lr', !!(G && G.dpad === 'lr')); $('#pad').classList.toggle('ud', !!(G && G.dpad === 'ud')); $('#pad').classList.toggle('stick', !!(G && (G.dpad === 'stick' || G.dpad === 'omni'))); $('#pad').classList.toggle('b2', !!(G && G.act2)); $('#pad').classList.toggle('crawl', !!(G && G.id === 'crawl')); if (G && G.act2) $('#act2').textContent = G.act2; STICK_OMNI = !!(G && G.dpad === 'omni'); STICK_H = !!(G && G.stickH);
+  $('#actbtn').textContent = (G && G.act) || 'GO'; $('#actbtn').style.display = G && G.act === null ? 'none' : '';
+  $('#padbtn').textContent = padOn ? 'PAD ON' : 'PAD';
+}
+
+// ---------- sound ----------
+let ac = null;
+function beep(f, d, type = 'square', v = 0.05, slide = 0) {
+  /* sound effects play whether or not the music is on */
+  try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), gg = ac.createGain(), t = ac.currentTime;
+    o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.linearRampToValueAtTime(f + slide, t + d);
+    gg.gain.setValueAtTime(v, t); gg.gain.exponentialRampToValueAtTime(0.0001, t + d); o.connect(gg).connect(ac.destination); o.start(t); o.stop(t + d); } catch (e) {}
+}
+const music = $('#music'); music.volume = 0.35;
+$('#snd').onclick = () => { soundOn = !soundOn; $('#snd').textContent = soundOn ? '♪ ON' : '♪ OFF'; if (soundOn) music.play().catch(() => {}); else music.pause(); };
+
+// ---------- menu ----------
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function buildGrid() {
+  $('#grid').innerHTML = '';
+  GAMES.forEach((G, i) => {
+    const best = store.get(G.id + '_' + diff) || 0;
+    const b = document.createElement('button'); b.className = 'card';
+    b.innerHTML = `<img class="thumb" src="../assets/thumbs/${G.id}.jpg" alt="" onerror="this.remove()"><b>${i + 1}. ${G.name}</b><i>${G.tag}</i><div class="st">${'★'.repeat(best)}${'☆'.repeat(3 - best)}</div>`;
+    b.onclick = () => openIntro(i); $('#grid').appendChild(b);
+  });
+  { // the Clog Kings race: the van drive, head to head, about two minutes of open road
+    let w = 0; try { w = +localStorage.getItem('ddt_race_wins') || 0; } catch (e) {}
+    const b = document.createElement('button'); b.className = 'card';
+    b.innerHTML = `<img class="thumb" src="../assets/thumbs/race.jpg" alt="" onerror="this.remove()"><b>${GAMES.length + 1}. CLOG KINGS RACE</b><i>Beat them to the job · two minutes, open road</i><div class="st">${w ? w + ' WIN' + (w > 1 ? 'S' : '') : 'NO WINS YET'}</div>`;
+    b.onclick = () => DDT.nav(DDT.root + 'index.html?drive=1&rival=1&arcade=1&from=BERLIN&to=CONWAY&route=' + encodeURIComponent('Route 16') + '&leave=480&due=600&mode=2&ret=' + encodeURIComponent('arcade/index.html'));
+    $('#grid').appendChild(b); }
+  { // the midnight downhill drift: the same road engine, the Auto Road, all hairpins
+    const b = document.createElement('button'); b.className = 'card';
+    b.innerHTML = `<img class="thumb" src="../assets/thumbs/drift.jpg" alt="" onerror="this.remove()"><b>${GAMES.length + 2}. DOWNHILL DRIFT</b><i>Midnight · the Auto Road · don't tell anybody</i><div class="st">7.6 MILES OF HAIRPINS</div>`;
+    b.onclick = () => DDT.nav(DDT.root + 'index.html?drive=1&rival=1&arcade=1&drift=1&from=BERLIN&to=BOTTOM&route=' + encodeURIComponent('Auto Road') + '&leave=0&due=999&mode=2&ret=' + encodeURIComponent('arcade/index.html'));
+    $('#grid').appendChild(b); }
+}
+function heroPills() { document.querySelectorAll('#heroes .pill').forEach(q => q.classList.toggle('on', q.dataset.h === hero)); }
+document.querySelectorAll('#heroes .pill').forEach(p => p.onclick = () => { hero = p.dataset.h; heroPills(); try { localStorage.setItem('ddt_hero', hero); } catch (e) {} try { const sv = DDT.get(); sv.arcadeHero = hero; DDT.save(sv); } catch (e) {} });
+heroPills();
+document.querySelectorAll('#diffs .pill').forEach(p => p.onclick = () => { diff = +p.dataset.d; document.querySelectorAll('#diffs .pill').forEach(q => q.classList.toggle('on', q === p)); buildGrid(); });
+function screen(id) { document.querySelectorAll('.scr').forEach(x => x.classList.toggle('on', x.id === id)); }
+function openIntro(i) {
+  cur = i; const G = GAMES[i]; phase = 'intro'; screen('intro'); $('#quit').style.display = 'none'; showPad();
+  const HS = HEROES[hero];
+  const touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const ctl = touch ? (G.phone || (G.pad === false ? 'Tap the game.' : 'The pad on the left moves. The big button is ' + (G.act || 'GO') + '.')) : G.ctl;
+  const job = EMBED && DDT.param('job') ? `<div class="tag" style="color:#f7c418;margin:0">ON THE JOB: ${DDT.param('job')}</div>` : '';
+  $('#introbox').innerHTML = `<div class="head">${job}<h2>${G.name}</h2><div class="tag">${G.tag} · ${DIFF_N[diff]}</div></div>
+    <ul>${G.how.map(h => `<li>${h}</li>`).join('')}</ul>
+    <div class="side"><div class="ctl">${touch ? 'PHONE' : 'KEYBOARD'}: ${ctl}</div>
+    <div class="row"><button class="btn" id="go">START &gt;</button><button class="btn" id="back">ALL GAMES</button></div></div>`;
+  $('#go').onclick = start; $('#back').onclick = toMenu; $('#go').focus();
+  if (EMBED) $('#back').style.display = 'none';
+  fitIntro();
+}
+function fitIntro() {   // shrink the text until the whole how-to fits on one screen
+  const b = $('#introbox'); if (!b || !b.offsetParent) return;
+  let fs = Math.min(17, b.clientWidth / 46); b.style.fontSize = fs + 'px';
+  while (fs > 5 && (b.scrollHeight > b.clientHeight + 1 || b.scrollWidth > b.clientWidth + 1)) { fs -= 0.5; b.style.fontSize = fs + 'px'; }
+}
+addEventListener('resize', () => { if (phase === 'intro') fitIntro(); });
+function toMenu() { phase = 'menu'; screen('menu'); $('#quit').style.display = 'none'; showPad(); buildGrid(); }
+function quit() { const Gq = GAMES[cur]; if (Gq && Gq.leave) Gq.leave(s); if (SOLO) return DDT.nav(DDT.back('index.html')); openIntro(cur); }
+$('#quit').onclick = quit;
+const NO_K = new Set(['kitty', 'beads', 'septic', 'pour', 'stairs', 'crawl', 'detective', 'flush', 'poop', 'superron', 'steamer']);   // games with no speed knob of their own: their clock runs a little faster instead
+function start() {
+  const G = GAMES[cur];
+  s = { hero, H: HEROES[hero], diff, k: DIFF_K[diff], rnd: rng((Date.now() ^ (cur * 7919)) >>> 0), t: 0, shake: 0, room: DDT.param('room') || '', camera: DDT.param('cam') === '1', item: DDT.param('item') || '' };   // room: kitchen = black grease, not brown
+  { // fair challenge: a game you keep acing gets a little tougher; one you keep failing eases off a little
+    const aced = Math.min(4, store.get('aced_' + G.id) || 0), fails = Math.min(3, store.get('fails_' + G.id) || 0);
+    s.adapt = Math.max(0.85, Math.min(1.2, 1 + aced * 0.05 - fails * 0.05)); }
+  G.init(s);
+  if (NO_K.has(G.id)) s.spd = s.adapt; else s.k *= s.adapt;   /* after init, so games that set their own s.k still get it */ if (DDT.param('boots') === '1' && s.pantsMax) { s.pantsMax++; s.pants++; }   // boots or waders
+  if (DDT.param('ppe') === '1' && s.pantsMax) { s.pantsMax++; s.pants++; }   // the PPE kit: a spare pair of pants: one more pair of pants in the messy games
+  for (const k in held) { held[k] = 0; edge[k] = 0; } ptr.down = false; ptr.clicked = false;
+  phase = G.noReady ? 'play' : 'ready'; readyT = 1.6; screen(''); $('#quit').style.display = ''; showPad();   /* noReady: slow, story-ish games just start, no GET READY / GO! */
+}
+function finish() {
+  const G = GAMES[cur], e = s.end; if (G.leave) G.leave(s); phase = 'result'; showPad(); store.set('seen_' + G.id, 1);
+  const key = G.id + '_' + diff, prev = store.get(key) || 0, newBest = e.win && e.stars > prev; if (newBest) store.set(key, e.stars);
+  const streak = e.win ? (store.get('streak') || 0) + 1 : 0; store.set('streak', streak);
+  if (e.win) { store.set('fails_' + G.id, 0); if (e.stars === 3) store.set('aced_' + G.id, (store.get('aced_' + G.id) || 0) + 1); } else { store.set('fails_' + G.id, (store.get('fails_' + G.id) || 0) + 1); store.set('aced_' + G.id, Math.max(0, (store.get('aced_' + G.id) || 0) - 1)); }   // wins in a row, across games
+  if (e.win) { for (let i = 0; i < e.stars; i++) setTimeout(() => beep([659, 784, 1047][i], .14), 380 + i * 300); if (e.stars === 3) setTimeout(() => { beep(1319, .3); }, 1300); }   // one ding per star, rising
+  else { beep(196, .4, 'sawtooth', .05, -80); }
+  const starHtml = e.win ? [0, 1, 2].map(i => i < e.stars ? `<span class="on" style="animation-delay:${0.38 + i * 0.3}s">★</span>` : '<span class="off">☆</span>').join('') : '<span class="off">☆☆☆</span>';
+  const extra = (newBest && prev ? '<div class="best">NEW BEST!</div>' : e.win && e.stars === 3 ? '<div class="best">PERFECT JOB!</div>' : '') + (streak >= 3 ? `<div class="best">${streak} IN A ROW!</div>` : '')
+    + (!e.win ? `<div class="tip">TIP: ${G.how[Math.min(G.how.length - 1, 1 + Math.floor(Math.random() * (G.how.length - 1)))]}</div>` : e.stars < 3 ? '<div class="tip">3 stars is out there. Cleaner and faster.</div>' : '');
+  $('#resbox').innerHTML = `<div class="big" style="color:${e.win ? '#7bd65b' : '#e9665a'}">${e.win ? 'JOB DONE!' : 'NOT THIS TIME'}</div>
+    <div class="stars">${starHtml}</div>
+    <p style="text-align:center">${e.line}</p>${extra}
+    <div class="row"><button class="btn" id="again">RETRY</button>${cur < GAMES.length - 1 ? '<button class="btn" id="next">NEXT GAME &gt;</button>' : ''}<button class="btn" id="all">ALL GAMES</button></div>`;
+  screen('result'); $('#quit').style.display = 'none';
+  $('#again').onclick = start; $('#all').onclick = toMenu; if ($('#next')) $('#next').onclick = () => openIntro(cur + 1);
+  $('#again').focus();
+  if (EMBED) {
+    if (!SOLO) store.set('mg', { id: G.id, win: !!e.win, stars: e.win ? e.stars : 0, carl: !!e.carl, extraTime: e.extraTime || 0, at: Date.now() });
+    $('#resbox .row').innerHTML = SOLO ? '<button class="btn" id="again2">PLAY AGAIN</button><button class="btn" id="cont">MAIN MENU</button>' : '<button class="btn" id="cont">CONTINUE &gt;</button>';
+    if (SOLO) $('#again2').onclick = start;
+    $('#cont').onclick = () => { DDT.nav(DDT.back('play.html')); }; $('#cont').focus();
+  }
+}
+
+// ---------- loop ----------
+let prevShake = 0, prevPants = null, endT = 0, oopsN = 0;
+const oops = e => { if (oopsN++ < 3) console.error('frame error:', e && e.stack || e); };
+function frame(ms) {
+  g.setTransform(SCALE, 0, 0, SCALE, 0, 0); g.imageSmoothingEnabled = false;
+  const dt = Math.min(1 / 30, (ms - last) / 1000 || 0); last = ms;
+  if (phase === 'ready' || phase === 'play' || phase === 'result' || phase === 'ending') {
+    const G = GAMES[cur];
+    if (phase === 'play') {
+      const I = { L: held.L, R: held.R, U: held.U, D: held.D, A: held.A, B: held.B, Lp: edge.L, Rp: edge.R, Up: edge.U, Dp: edge.D, Ap: edge.A, Bp: edge.B, ptr: { ...ptr } };
+      for (const k in edge) edge[k] = 0; ptr.clicked = false;
+      if (I.Ap) beep(880, .03, 'square', .025);
+      try { G.update(s, dt * (s.spd || 1), I); } catch (e) { oops(e); }   /* never let one bad frame freeze the game */
+      if ((s.shake || 0) > prevShake + 0.01) beep(110, .18, 'sawtooth', .06, -40);
+      prevShake = s.shake || 0;
+      if (s.end) { phase = 'ending'; endT = 0.75; if (s.end.win) beep(880, .08); }   // hold on the final moment before the results slide in
+    } else if (phase === 'ending') { endT -= dt; if (s.fx || s.pops) { try { if (typeof FX === 'function') FX(s, dt); } catch (e) {} } if (endT <= 0) finish();
+    } else if (phase === 'ready') { readyT -= dt; for (const k in edge) edge[k] = 0; ptr.clicked = false; if (readyT <= 0) { phase = 'play'; beep(1046, .1); } }
+    g.save();
+    if (s.shake > 0) { s.shake = Math.max(0, s.shake - dt); g.translate((Math.random() - .5) * 6, (Math.random() - .5) * 6); }
+    try { G.draw(s, {}); } catch (e) { oops(e); for (let i = 0; i < 16; i++) g.restore(); g.save(); }   /* e.g. art still downloading on a slow connection */
+    g.restore();
+    if (phase === 'ending') { const k = Math.max(0, endT / 0.75); if (s.end.win) { g.globalAlpha = k * k * 0.55; R(0, 0, W, H, '#fff'); g.globalAlpha = 1; } else { g.globalAlpha = (1 - k) * 0.5; R(0, 0, W, H, '#200'); g.globalAlpha = 1; } }
+    if (phase === 'ready') { const go = readyT <= 0.8, k = go ? 1 + Math.max(0, readyT - 0.55) * 2.4 : 1; R(0, 110, W, 50, 'rgba(16,21,31,.85)'); T(go ? 'GO!' : 'GET READY', 240, 135, go ? '#7dffb0' : '#f7c418', 16 * k, 'center'); }
+  } else { R(0, 0, W, H, '#0b0e15'); }
+  requestAnimationFrame(frame);
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden && phase === 'play') { for (const k in held) held[k] = 0; openIntro(cur); } });
+
+// ---------- boot ----------
+const load = (k, src) => new Promise(r => { const i = new Image(); i.onload = () => { IMG[k] = i; r(); }; i.onerror = r; i.src = src; });
+const loadMG = () => fetch('../assets/mg/sizes.json').then(r => r.json()).then(o => Promise.all(Object.keys(o).map(n => load('mg_' + n, '../assets/mg/' + n + '.png')))).catch(() => {});
+const capped = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);   // art helps, but never holds up the game
+Promise.all([capped(loadMG(), 12000),   /* wait for the art (first visit on a slow phone), but never forever */ load('matt', '../assets/matt_dance.png'), load('matt_more', '../assets/matt_more.png'), load('ron_sheet', '../assets/ron_sheet.png'), load('rod_port', '../assets/rod_normal.png'), ...['stare', 'annoyed', 'confused', 'gross', 'smug', 'laugh', 'shocked', 'happy', 'tired', 'panic', 'normal'].map(f => load('rodf_' + f, '../assets/rod_' + f + '.png')), load('matt_walk', '../assets/matt_walk.png'), load('rod_walk', '../assets/rod_walk.png'), load('rod', '../assets/rod_dance.png'), load('rod_more', '../assets/rod_more.png'), load('van', '../assets/van_left.png'), load('van_back', '../assets/van_back.png'), load('bg_yard3', '../assets/bg_yard3.png'),
+  document.fonts ? document.fonts.load('8px "Press Start 2P"').catch(() => {}) : 0]).then(() => {
+    { const ld = $('#loading'); if (ld) ld.remove(); }
+    buildGrid(); requestAnimationFrame(frame);
+    if (EMBED) { let i = GAMES.findIndex(x => x.id === EMBED); if (i < 0) { console.error('unknown game: ' + EMBED); i = Math.max(0, GAMES.findIndex(x => x.id === 'cable')); }   /* never a blank screen */
+      if (i >= 0) { openIntro(i); if (store.get('seen_' + EMBED)) start(); }   /* played it before: skip the how-to, straight to READY */
+      $('#home').textContent = '< BACK'; }
+    if (DDT.param('lead')) $('#heroes').style.display = 'none';
+  });
+showPad();
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "appId": "com.demore88.doodootown",
+  "appName": "Doo Doo Town",
+  "webDir": "www",
+  "android": { "backgroundColor": "#0e1118", "allowMixedContent": false, "webContentsDebuggingEnabled": false }
+}

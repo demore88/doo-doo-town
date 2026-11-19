@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Doo Doo Town</string>
+    <string name="title_activity_main">Doo Doo Town</string>
+    <string name="package_name">com.demore88.doodootown</string>
+    <string name="custom_url_scheme">com.demore88.doodootown</string>
+</resources>

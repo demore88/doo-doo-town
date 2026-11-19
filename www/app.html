@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<style id="ddt-touch">html,body{overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Doo Doo Town the Game!</title>
+<link rel="manifest" href="./manifest.webmanifest"><meta name="theme-color" content="#2a5ab0">
+<link rel="icon" href="./icons/icon-192.png"><link rel="apple-touch-icon" href="./icons/apple-180.png"><meta name="mobile-web-app-capable" content="yes">
+<style>
+  html,body{margin:0;height:100%;background:#0e1118;overflow:hidden}
+  .gf{position:fixed;inset:0;width:100%;height:100%;border:0;display:block}
+  #max{position:fixed;right:10px;bottom:10px;z-index:9;width:44px;height:44px;border-radius:10px;border:2px solid #f7c418;background:rgba(16,21,31,.85);display:flex;align-items:center;justify-content:center;padding:0}
+</style>
+</head>
+<body>
+<script src="js/songs.js"></script>
+<script>
+// ---------- warm the art cache in the background, a few pictures at a time, so the first mini-game opens fast ----------
+setTimeout(() => { fetch('assets/mg/sizes.json').then(r => r.json()).then(async o => { const names = Object.keys(o);
+  for (let i = 0; i < names.length; i += 4) await Promise.all(names.slice(i, i + 4).map(n => new Promise(res => { const im = new Image(); im.onload = im.onerror = res; im.src = 'assets/mg/' + n + '.png'; }))); }).catch(() => {}); }, 4000);
+// ---------- the van radio, owned by this outer page so it plays straight through every screen change ----------
+window.DDT_RADIO = (() => {
+  const TR = [['doo_doo_town.mp3', 'DOO DOO TOWN'], ['doo_doo_town_rock.mp3', 'DOO DOO TOWN ROCK'], ["that_cloggin_sound.mp3", "THAT CLOGGIN' SOUND"], ['brown_friday.mp3', 'BROWN FRIDAY'], ['the_brown_note.mp3', 'THE BROWN NOTE'], ['nightmares.mp3', 'NIGHTMARES']];
+  const a = new Audio(); a.preload = 'auto'; a.volume = 0.5;
+  let muted0 = false; try { muted0 = localStorage.getItem('ddt_mute') === '1'; } catch (e) {}
+  const st = { idx: -1, on: false, muted: muted0, onTrack: null };
+  let fadeT = null;
+  const tell = () => { try { st.onTrack && st.onTrack(TR[st.idx][1]); } catch (e) {} };
+  function load(i) { st.idx = ((i % TR.length) + TR.length) % TR.length; a.src = 'assets/music/' + TR[st.idx][0]; tell(); }
+  const go = () => { a.muted = st.muted; if (st.on && !st.muted) a.play().catch(() => {}); };
+  const fileOf = i => TR[i] ? TR[i][0] : '';
+  function playFile(f) { let i = TR.findIndex(x => x[0] === f); if (i < 0) { const S = DDT_SONGS.ALL.find(x => x.file === f); if (!S) return; TR.push([S.file, S.name]); i = TR.length - 1; } st.idx = i; a.src = 'assets/music/' + f; tell(); }
+  a.addEventListener('ended', () => {   /* next song: from the player's playlist (MUSIC on the title screen) */
+    const rot = DDT_SONGS.rotation().map(x => x.file).filter(f => f !== fileOf(st.idx) && (f !== 'nightmares.mp3' || fileOf(st.idx) === 'nightmares.mp3')), pool = rot.length ? rot : DDT_SONGS.rotation().map(x => x.file);
+    playFile(pool[Math.floor(Math.random() * pool.length)]); go(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) a.pause(); else go(); });
+  return {
+    audio: a, st,
+    on(start) { clearInterval(fadeT); a.volume = 0.5; st.on = true; if (st.idx < 0) { load(start); if (!DDT_SONGS.inRotation(fileOf(st.idx))) { const R = DDT_SONGS.rotation(); playFile(R[0].file); } } go(); },   // picks up exactly where it paused
+    fade(ms = 700) { clearInterval(fadeT); if (!st.on) return; st.on = false; const v0 = a.volume, t0 = performance.now();
+      fadeT = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / ms); a.volume = v0 * (1 - k); if (k >= 1) { clearInterval(fadeT); a.pause(); a.volume = 0.5; } }, 30); },
+    pause() { clearInterval(fadeT); st.on = false; a.pause(); a.volume = 0.5; },
+    spooky() { st.on = true; load(5); go(); },
+    reset() { this.pause(); st.idx = -1; },
+    nudge() { if (st.on && !st.muted && a.paused) a.play().catch(() => {}); },
+    toggleMute() { st.muted = !st.muted; try { localStorage.setItem('ddt_mute', st.muted ? '1' : '0'); } catch (e) {} go(); if (st.muted) a.muted = true; return st.muted; },
+    name() { return st.idx >= 0 ? TR[st.idx][1] : ''; },
+  };
+})();
+</script>
+<!-- On phones the whole game runs inside this one frame, so full screen stays on while the game moves between screens. -->
+<iframe class="gf" allow="autoplay; fullscreen"></iframe>
+<button id="max" aria-label="Full screen"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></svg></button>
+<script>
+  let p = new URLSearchParams(location.search).get('p') || 'index.html';
+  if (!/^[\w\-\/.]+\.html([?#].*)?$/.test(p) || p.includes('..') || p.startsWith('app.html')) p = 'index.html';
+  let f = document.querySelector('.gf'); const b = document.getElementById('max');
+  f.src = p + (p.includes('?') ? '&' : '?') + 't=' + Date.now();   // never an old saved copy of the first screen
+  // Every screen change loads into a fresh frame (the old one stays up until the new one is ready, then goes away).
+  // Chrome can keep a finger "stuck" to an old screen; a brand-new frame always starts with clean touches.
+  // Screen changes dip to black and back (a short fade), so nothing pops or flashes between screens.
+  const veil = document.createElement('div'); veil.style.cssText = 'position:fixed;inset:0;background:#0b0e15;opacity:0;pointer-events:none;transition:opacity .16s ease;z-index:5'; document.body.appendChild(veil);
+  window.ddtLoad = url => {
+    const nf = document.createElement('iframe'); nf.className = 'gf'; nf.allow = 'autoplay; fullscreen'; nf.style.visibility = 'hidden';
+    veil.style.transition = 'opacity .16s ease'; veil.style.opacity = '1';
+    let done = false; const show = () => { if (done) return; done = true; nf.style.visibility = ''; const old = f; f = nf; old.remove(); try { document.title = nf.contentDocument.title; } catch (e) {} nf.focus();
+      setTimeout(() => { veil.style.transition = 'opacity .28s ease'; veil.style.opacity = '0'; }, 90); };   // give the new screen a beat to draw its first frame
+    f.after(nf); nf.addEventListener('load', show, { once: true }); setTimeout(show, 4000);   // never get stuck on black
+    setTimeout(() => { nf.src = url; }, 150);   // let the fade-out land before the swap
+  };
+  window.ddtFS = () => {
+    const d = document.documentElement; if (document.fullscreenElement || !d.requestFullscreen) return;
+    d.requestFullscreen({ navigationUI: 'hide' }).then(() => { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); }).catch(() => {});
+  };
+  b.onclick = () => { ddtFS(); f.focus(); };
+  const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const upd = () => { b.style.display = !TOUCH || document.fullscreenElement || (window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()) ? 'none' : 'flex'; };   /* the app is already full screen */
+  // Android back button (app only): on the title screen it closes the game; anywhere else, press it twice to go back to the title
+  if (window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.App) {
+    let armed = 0; const toast = document.createElement('div');
+    toast.style.cssText = "position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9;background:rgba(10,13,20,.92);color:#f7c418;border:2px solid #f7c418;border-radius:6px;padding:10px 14px;font:10px 'Press Start 2P',monospace;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap";
+    toast.textContent = 'PRESS BACK AGAIN FOR THE MAIN MENU'; document.body.appendChild(toast);
+    Capacitor.Plugins.App.addListener('backButton', () => {
+      let path = ''; try { path = f.contentWindow.location.pathname; } catch (e) {}
+      if (/\/index\.html$|\/$/.test(path)) { Capacitor.Plugins.App.exitApp(); return; }
+      if (Date.now() - armed < 2200) { armed = 0; toast.style.opacity = '0'; ddtLoad('index.html'); return; }
+      armed = Date.now(); toast.style.opacity = '1'; setTimeout(() => { if (Date.now() - armed >= 2100) toast.style.opacity = '0'; }, 2200);
+    });
+  }
+  document.addEventListener('fullscreenchange', upd); upd();
+  f.addEventListener('load', () => { try { document.title = f.contentDocument.title; } catch (e) {} f.focus(); }, { once: true });
+  const APP = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());   // running as the Android app: files are already on the phone
+  if (!APP && 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
+</script>
+</body>
+</html>
