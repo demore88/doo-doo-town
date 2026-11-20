@@ -352,13 +352,18 @@ document.querySelectorAll('#menu .btn').forEach(b => b.onclick = () => {
     Mt. Washington Sewer &amp; Drain Cleaning<br>603-356-6555 · 603-752-2145<br>
     <img src="assets/nes_logo.jpg" alt="No End Studios" style="width:70%;max-width:320px;margin:10px auto 2px;display:block"><a href="https://noendstudios.com" target="_blank" style="color:#9fd0e0">noendstudios.com</a> · <a href="privacy.html" target="_blank" style="color:#9fd0e0">Privacy Policy</a>`);
   if (a === 'biz') showPanel(`<h3 style="color:#f7c418">GET A GAME FOR YOUR BUSINESS</h3>
-    <img src="assets/nes_logo.jpg" alt="No End Studios" style="width:62%;max-width:300px;margin:0 auto 8px;display:block">
+    <div style="display:flex;align-items:flex-end;justify-content:center;gap:10px;margin:0 0 8px"><img src="assets/nes_panel.png" alt="No End Studios" style="width:68%;max-width:420px;max-height:15vh;object-fit:contain;align-self:center"><canvas id="bizmatt" width="227" height="378" style="position:static;display:block;height:min(96px,19vh);width:min(58px,11.5vh);flex:none"></canvas></div>
     <div style="color:#fff;margin-bottom:8px">Plumber? Drain guy? Any local business?<br>Want a game like this one, built from <span style="color:#7dffb0">your</span> crew and <span style="color:#7dffb0">your</span> real job stories, to share with your customers?</div>
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0 10px">
       <div style="border:2px solid #f7c418;border-radius:6px;padding:8px 10px;min-width:42%"><div style="color:#f7c418;font-size:1.3em">$695</div>YOUR OWN GAME</div>
-      <div style="border:2px solid #7dffb0;border-radius:6px;padding:8px 10px;min-width:42%"><div style="color:#7dffb0;font-size:1.3em">+$495</div>ORIGINAL SOUNDTRACK<br>5 SONGS</div></div>
+      <div style="border:2px solid #7dffb0;border-radius:6px;padding:8px 10px;min-width:42%"><div style="color:#7dffb0;font-size:1.3em">+$295</div>ORIGINAL SOUNDTRACK<br>5 SONGS</div></div>
     <a class="btn" href="mailto:NES.demore@gmail.com?subject=${encodeURIComponent('A game for my business')}&body=${encodeURIComponent('Hi Matthew,\n\nI saw Doo Doo Town and want a game for my business.\n\nBusiness name:\nWhat we do:\nTown/area:\nInterested in the soundtrack too? (yes/no)\nBest phone number:\n')}" style="display:inline-block;text-decoration:none;color:#10151f;background:#f7c418">EMAIL NO END STUDIOS</a>
     <div style="margin-top:8px">NES.demore@gmail.com · <a href="https://noendstudios.com" target="_blank" style="color:#9fd0e0">noendstudios.com</a></div>`);
+  if (a === 'biz') { const cv = $('#bizmatt'), k = cv.getContext('2d'), im = new Image(), t0 = performance.now();
+    im.src = 'assets/matt_dance.png';
+    (function f() { if (!cv.isConnected) return; requestAnimationFrame(f); if (!im.complete || !im.naturalWidth) return;
+      const fw = im.width / 9, ps = pose((performance.now() - t0) / 1000, 0); k.clearRect(0, 0, cv.width, cv.height);
+      k.drawImage(im, ps.f * fw, 0, fw, im.height, 0, 10 + ps.hop * 3, cv.width, cv.height - 10); })(); }
 });
 
 
