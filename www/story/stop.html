@@ -17,11 +17,11 @@
 </head>
 <body>
 <div id="wrap"><canvas id="c" width="1440" height="810"></canvas></div>
-<script src="../js/state.js?v=1795109021"></script>
-<script src="../js/calls.js?v=1795109021"></script>
-<script src="../js/placeholders.js?v=1795109021"></script>
-<script src="../js/music.js?v=1795109021"></script>
-<script src="../js/sfx.js?v=1795109021"></script>
+<script src="../js/state.js?v=1795151329"></script>
+<script src="../js/calls.js?v=1795151329"></script>
+<script src="../js/placeholders.js?v=1795151329"></script>
+<script src="../js/music.js?v=1795151329"></script>
+<script src="../js/sfx.js?v=1795151329"></script>
 <script>
 DDT.root = '../';
 DDTMusic.play('van');   // you pull in with the van radio on; it goes off when the door shuts
@@ -293,7 +293,7 @@ function drawDialog() {
     d.boxes = d.opts.map((o, i) => [tx + 4, oy + i * 13, tw - 8, 12]);
     if (pressed('ArrowUp')) d.sel = (d.sel + d.opts.length - 1) % d.opts.length;
     if (pressed('ArrowDown')) d.sel = (d.sel + 1) % d.opts.length;
-    d.opts.forEach((o, i) => { const [x, y, w, h] = d.boxes[i]; R(x, y, w, h, i === d.sel ? '#2c6cd6' : '#1d2638'); T((i === d.sel ? '> ' : '  ') + o, x + 4, y + 6, '#fff', 6, 'left', false); });
+    d.opts.forEach((o, i) => { const [x, y, w, h] = d.boxes[i]; R(x, y, w, h, i === d.sel ? '#2c6cd6' : '#1d2638'); const [ol, orr] = String(o).split('|'); T((i === d.sel ? '> ' : '  ') + ol, x + 4, y + 6, '#fff', 6, 'left', false); if (orr) T(orr, x + w - 4, y + 6, i === d.sel ? '#d8ffe6' : '#7dffb0', 6, 'right', false); });
   } else if (done && Math.floor(performance.now() / 400) % 2) T('v', tx + tw - 8, ty + th - 8, '#f7c418', 8, 'right');
   if (padOn) { const P = choicePad();
     for (const [k, lab] of [['up', '▲'], ['dn', '▼']]) { const [x, y, w, h] = P[k]; R(x, y, w, h, '#262f45'); g.strokeStyle = '#9fb3d9'; g.lineWidth = 1.5; g.strokeRect(x + .5, y + .5, w - 1, h - 1); T(lab, x + w / 2, y + h / 2 + 1, '#fff', 10, 'center', false); }
@@ -394,13 +394,20 @@ async function redCupMoment() {
   await say('MATT', 'matt_redcup', 'Worth it. Every single minute.');
   view = prev;
 }
+// what an item does, right on the button: name · price | +15 STA +5 HP ...
+function menuLine(m) {
+  const f = m[1], fx = [], nm = m[0].replace(/ · \$\d+$/, '');
+  if (f.stamina) fx.push(`+${f.stamina} STA`); if (f.health) fx.push(`+${f.health} HP`); if (f.mood) fx.push(`+${f.mood} MOOD`);
+  if (f.jitters) fx.push('JITTERS'); if (f.time) fx.push(f.time < 0 ? `SAVES ${-f.time} MIN` : `+${f.time} MIN`);
+  return `${nm} · $${f.cost || 0}|${fx.join(' ')}`;
+}
 SCENES.order = async () => {
   await STOP_READY; if (IMG.stopPort) IMG.cust = IMG.cust_happy = IMG.stopPort;
   if (IMG.stopIn) view = () => { g.drawImage(IMG.stopIn, 0, 0); rod(96, 304, 7, 4); matt(396, 304, 7, 4); };
   else { view = () => { counterRoom(STOP); customer(400, 140, STOP.name.length * 31, 2); matt(300, 330, 7, 4); rod(200, 330, 7, 4); }; st.dialogTop = true; }
   window.ESP = IS_LUNCH ? null : DDTSfx.loop('espresso_loop');
   await fadeIn(300);
-  const c = await say(STOP.who, 'cust', STOP.greet || (IS_LUNCH ? 'Lunch, boys? What are we having?' : 'Morning! What can I get you?'), STOP.menu.map(m => m[0]));
+  const c = await say(STOP.who, 'cust', STOP.greet || (IS_LUNCH ? 'Lunch, boys? What are we having?' : 'Morning! What can I get you?'), STOP.menu.map(menuLine));
   const m = STOP.menu[c];
   await say(STOP.who, 'cust_happy', m[2]);
   const fx = { ...m[1] }; fx.money = -(fx.cost || 0); delete fx.cost; fx.time = (fx.time || 0) + STOP.time;

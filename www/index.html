@@ -132,6 +132,12 @@
 </style>
 </head>
 <body>
+<div id="nes" style="position:fixed;inset:0;z-index:99;background:#000;display:flex;align-items:center;justify-content:center;transition:opacity .6s"><img src="assets/nes_logo.jpg" alt="No End Studios" style="width:min(80vw,900px);opacity:0;transition:opacity .8s"></div>
+<script>(function(){const d=document.getElementById('nes'),im=d.firstChild;let seen=0;try{seen=sessionStorage.ddt_nes}catch(e){}
+if(seen){d.remove();return}try{sessionStorage.ddt_nes=1}catch(e){}
+const done=()=>{if(!d.isConnected)return;d.style.opacity=0;setTimeout(()=>d.remove(),650)};
+const show=()=>{im.style.opacity=1;setTimeout(()=>{im.style.opacity=0;setTimeout(done,800)},2000)};
+im.complete?setTimeout(show,150):(im.onload=()=>setTimeout(show,150),im.onerror=done);d.onclick=done;setTimeout(done,5000)})();</script>
 <div id="wrap"><div id="stage">
   <canvas id="c" width="1440" height="810"></canvas>
   <div id="ui">
@@ -145,6 +151,7 @@
       <button class="btn" data-a="music">MUSIC</button>
       <button class="btn" data-a="how">HOW TO PLAY</button>
       <button class="btn" data-a="credits">CREDITS</button>
+      <button class="btn" data-a="biz" style="color:#7dffb0;border-color:#7dffb0">WANT A GAME FOR YOUR BUSINESS?</button>
       <button class="btn dev" data-a="scenes">CUTSCENES (DEV)</button>
     </div>
     <div id="pick">PLAYER<button data-h="matt" title="Play as Matt" style="background-image:url(assets/matt_normal.png)"></button><button data-h="rod" title="Play as Rod" style="background-image:url(assets/rod_normal.png)"></button></div>
@@ -191,12 +198,12 @@
 
 <audio id="music" src="assets/doo_doo_town.mp3" loop preload="auto"></audio>
 <audio id="call" src="assets/call_fluffernutter.mp3" preload="auto"></audio>
-<script src="js/state.js?v=1795109021"></script>
-<script src="js/sfx.js?v=1795109021"></script>
-<script src="js/sqcalls.js?v=1795109021"></script>
-<script src="js/songs.js?v=1795109021"></script>
-<script src="js/drive3d.js?v=1795109021"></script>
-<script src="js/music.js?v=1795109021"></script>
+<script src="js/state.js?v=1795151329"></script>
+<script src="js/sfx.js?v=1795151329"></script>
+<script src="js/sqcalls.js?v=1795151329"></script>
+<script src="js/songs.js?v=1795151329"></script>
+<script src="js/drive3d.js?v=1795151329"></script>
+<script src="js/music.js?v=1795151329"></script>
 <script>
 const W = 480, H = 270, LOOP_W = 6688;           // strip loop width at 270px tall
 const cv = document.getElementById('c'), g = cv.getContext('2d');
@@ -342,7 +349,21 @@ document.querySelectorAll('#menu .btn').forEach(b => b.onclick = () => {
     Based on real calls. Names withheld to protect the guilty.<br>
     Sound effects from <a href="https://www.zapsplat.com" target="_blank" style="color:#9fd0e0">zapsplat.com</a><br>
     Toilet 3D model: "Toilet" by Osian3D (<a href="https://www.fab.com/listings/86bf065a-5c59-4c05-9637-16e2c03d9c13" target="_blank" style="color:#9fd0e0">Fab</a>), licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" style="color:#9fd0e0">CC BY 4.0</a>. Changed: rendered to pixel art, recolored, water added.<br><br>
-    Mt. Washington Sewer &amp; Drain Cleaning<br>603-356-6555 · 603-752-2145`);
+    Mt. Washington Sewer &amp; Drain Cleaning<br>603-356-6555 · 603-752-2145<br>
+    <img src="assets/nes_logo.jpg" alt="No End Studios" style="width:70%;max-width:320px;margin:10px auto 2px;display:block"><a href="https://noendstudios.com" target="_blank" style="color:#9fd0e0">noendstudios.com</a> · <a href="privacy.html" target="_blank" style="color:#9fd0e0">Privacy Policy</a>`);
+  if (a === 'biz') showPanel(`<h3 style="color:#f7c418">GET A GAME FOR YOUR BUSINESS</h3>
+    <div style="display:flex;align-items:flex-end;justify-content:center;gap:10px;margin:0 0 8px"><img src="assets/nes_panel.png" alt="No End Studios" style="width:68%;max-width:420px;max-height:15vh;object-fit:contain;align-self:center"><canvas id="bizmatt" width="227" height="378" style="position:static;display:block;height:min(96px,19vh);width:min(58px,11.5vh);flex:none"></canvas></div>
+    <div style="color:#fff;margin-bottom:8px">Plumber? Drain guy? Any local business?<br>Want a game like this one, built from <span style="color:#7dffb0">your</span> crew and <span style="color:#7dffb0">your</span> real job stories, to share with your customers?</div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0 10px">
+      <div style="border:2px solid #f7c418;border-radius:6px;padding:8px 10px;min-width:42%"><div style="color:#f7c418;font-size:1.3em">$695</div>YOUR OWN GAME</div>
+      <div style="border:2px solid #7dffb0;border-radius:6px;padding:8px 10px;min-width:42%"><div style="color:#7dffb0;font-size:1.3em">+$295</div>ORIGINAL SOUNDTRACK<br>5 SONGS</div></div>
+    <a class="btn" href="mailto:NES.demore@gmail.com?subject=${encodeURIComponent('A game for my business')}&body=${encodeURIComponent('Hi Matthew,\n\nI saw Doo Doo Town and want a game for my business.\n\nBusiness name:\nWhat we do:\nTown/area:\nInterested in the soundtrack too? (yes/no)\nBest phone number:\n')}" style="display:inline-block;text-decoration:none;color:#10151f;background:#f7c418">EMAIL NO END STUDIOS</a>
+    <div style="margin-top:8px">NES.demore@gmail.com · <a href="https://noendstudios.com" target="_blank" style="color:#9fd0e0">noendstudios.com</a></div>`);
+  if (a === 'biz') { const cv = $('#bizmatt'), k = cv.getContext('2d'), im = new Image(), t0 = performance.now();
+    im.src = 'assets/matt_dance.png';
+    (function f() { if (!cv.isConnected) return; requestAnimationFrame(f); if (!im.complete || !im.naturalWidth) return;
+      const fw = im.width / 9, ps = pose((performance.now() - t0) / 1000, 0); k.clearRect(0, 0, cv.width, cv.height);
+      k.drawImage(im, ps.f * fw, 0, fw, im.height, 0, 10 + ps.hop * 3, cv.width, cv.height - 10); })(); }
 });
 
 

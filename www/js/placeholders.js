@@ -9,7 +9,7 @@ const SKIN = ['#f1c9a5', '#e0ac85', '#c68863', '#9a6544', '#6e4630', '#f6d7bd'];
 const HAIR = ['#2a1d14', '#5a3a22', '#8a5a2e', '#c9a050', '#d9d4ca', '#7a2e1e', '#111'];
 const SHIRT = ['#2c6cd6', '#c0392b', '#2e8a3a', '#7a2d5a', '#d08a30', '#4a4a52', '#2b6f7a', '#8a6a3a'];
 function season(month) { const n = DDT.seasonPal(month).name; return n === 'winter' || n === 'thaw' ? 'winter' : n === 'fall' || n === 'early fall' ? 'fall' : 'summer'; }
-function placeholderTag() { T('PLACEHOLDER ART', 474, 26, 'rgba(255,255,255,.35)', 5, 'right', false); }
+function placeholderTag() { if (typeof DDT !== 'undefined' && !DDT.DEV) return; T('PLACEHOLDER ART', 474, 26, 'rgba(255,255,255,.35)', 5, 'right', false); }
 
 // ---------- customers ----------
 function custLook(seed) {
