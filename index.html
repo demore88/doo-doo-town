@@ -132,6 +132,12 @@
 </style>
 </head>
 <body>
+<div id="nes" style="position:fixed;inset:0;z-index:99;background:#000;display:flex;align-items:center;justify-content:center;transition:opacity .6s"><img src="assets/nes_logo.jpg" alt="No End Studios" style="width:min(80vw,900px);opacity:0;transition:opacity .8s"></div>
+<script>(function(){const d=document.getElementById('nes'),im=d.firstChild;let seen=0;try{seen=sessionStorage.ddt_nes}catch(e){}
+if(seen){d.remove();return}try{sessionStorage.ddt_nes=1}catch(e){}
+const done=()=>{if(!d.isConnected)return;d.style.opacity=0;setTimeout(()=>d.remove(),650)};
+const show=()=>{im.style.opacity=1;setTimeout(()=>{im.style.opacity=0;setTimeout(done,800)},2000)};
+im.complete?setTimeout(show,150):(im.onload=()=>setTimeout(show,150),im.onerror=done);d.onclick=done;setTimeout(done,5000)})();</script>
 <div id="wrap"><div id="stage">
   <canvas id="c" width="1440" height="810"></canvas>
   <div id="ui">
@@ -145,6 +151,7 @@
       <button class="btn" data-a="music">MUSIC</button>
       <button class="btn" data-a="how">HOW TO PLAY</button>
       <button class="btn" data-a="credits">CREDITS</button>
+      <button class="btn" data-a="biz" style="color:#7dffb0;border-color:#7dffb0">WANT A GAME FOR YOUR BUSINESS?</button>
       <button class="btn dev" data-a="scenes">CUTSCENES (DEV)</button>
     </div>
     <div id="pick">PLAYER<button data-h="matt" title="Play as Matt" style="background-image:url(assets/matt_normal.png)"></button><button data-h="rod" title="Play as Rod" style="background-image:url(assets/rod_normal.png)"></button></div>
@@ -342,7 +349,16 @@ document.querySelectorAll('#menu .btn').forEach(b => b.onclick = () => {
     Based on real calls. Names withheld to protect the guilty.<br>
     Sound effects from <a href="https://www.zapsplat.com" target="_blank" style="color:#9fd0e0">zapsplat.com</a><br>
     Toilet 3D model: "Toilet" by Osian3D (<a href="https://www.fab.com/listings/86bf065a-5c59-4c05-9637-16e2c03d9c13" target="_blank" style="color:#9fd0e0">Fab</a>), licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" style="color:#9fd0e0">CC BY 4.0</a>. Changed: rendered to pixel art, recolored, water added.<br><br>
-    Mt. Washington Sewer &amp; Drain Cleaning<br>603-356-6555 · 603-752-2145`);
+    Mt. Washington Sewer &amp; Drain Cleaning<br>603-356-6555 · 603-752-2145<br>
+    <img src="assets/nes_logo.jpg" alt="No End Studios" style="width:70%;max-width:320px;margin:10px auto 2px;display:block"><a href="https://noendstudios.com" target="_blank" style="color:#9fd0e0">noendstudios.com</a> · <a href="privacy.html" target="_blank" style="color:#9fd0e0">Privacy Policy</a>`);
+  if (a === 'biz') showPanel(`<h3 style="color:#f7c418">GET A GAME FOR YOUR BUSINESS</h3>
+    <img src="assets/nes_logo.jpg" alt="No End Studios" style="width:62%;max-width:300px;margin:0 auto 8px;display:block">
+    <div style="color:#fff;margin-bottom:8px">Plumber? Drain guy? Any local business?<br>Want a game like this one, built from <span style="color:#7dffb0">your</span> crew and <span style="color:#7dffb0">your</span> real job stories, to share with your customers?</div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0 10px">
+      <div style="border:2px solid #f7c418;border-radius:6px;padding:8px 10px;min-width:42%"><div style="color:#f7c418;font-size:1.3em">$695</div>YOUR OWN GAME</div>
+      <div style="border:2px solid #7dffb0;border-radius:6px;padding:8px 10px;min-width:42%"><div style="color:#7dffb0;font-size:1.3em">+$495</div>ORIGINAL SOUNDTRACK<br>5 SONGS</div></div>
+    <a class="btn" href="mailto:NES.demore@gmail.com?subject=${encodeURIComponent('A game for my business')}&body=${encodeURIComponent('Hi Matthew,\n\nI saw Doo Doo Town and want a game for my business.\n\nBusiness name:\nWhat we do:\nTown/area:\nInterested in the soundtrack too? (yes/no)\nBest phone number:\n')}" style="display:inline-block;text-decoration:none;color:#10151f;background:#f7c418">EMAIL NO END STUDIOS</a>
+    <div style="margin-top:8px">NES.demore@gmail.com · <a href="https://noendstudios.com" target="_blank" style="color:#9fd0e0">noendstudios.com</a></div>`);
 });
 
 
@@ -766,7 +782,7 @@ if (!DDT.DEV) { const b = document.querySelector('[data-a="scenes"]'); if (b) b.
 document.getElementById('drivestats').onclick = () => { let R = {}; try { R = JSON.parse(localStorage.getItem('ddt_drive_rec') || '{}'); } catch (e) {}
   const T = R.tot || {}, B = R.best, n = v => (v || 0).toLocaleString(), animals = o => (o.deer || 0) + (o.moose || 0) + (o.turkeys || 0) + (o.squirrel || 0) + (o.raccoon || 0), cars = o => (o.cars || 0) + (o.trucks || 0) + (o.headons || 0) + (o.rear || 0);
   const row = (k, v, c) => `<tr><td style="text-align:left;padding:0 10px 0 0;color:#9fb3d9">${k}</td><td style="text-align:right;color:${c || '#fff'}">${v}</td></tr>`;
-  const col = (o, title) => `<div style="flex:1;min-width:46%"><div style="color:#f7c418;margin-bottom:6px">${title}<br><a href="privacy.html" target="_blank" style="color:#9fd0ff">Privacy Policy</a></div><table style="width:100%;font-size:.62em;line-height:1.25">${
+  const col = (o, title) => `<div style="flex:1;min-width:46%"><div style="color:#f7c418;margin-bottom:6px">${title}</div><table style="width:100%;font-size:.62em;line-height:1.25">${
     row('MILES', (o.miles || 0).toFixed ? (+o.miles).toFixed(1) : o.miles, '#7dffb0') + row('POINTS', n(o.score ?? o.points), '#f7c418') + row('NEAR MISSES', n(o.near), '#7dffb0') + row('BEST COMBO', 'x' + (o.bestCombo || 0)) +
     row('TOOLBOXES', n(o.kits)) + row('TOOLBOXES USED', n(o.kitsUsed)) + row('CRASHES', n(cars(o)), '#e9665a') + row('&nbsp; CARS', n(o.cars)) + row('&nbsp; LOG TRUCKS', n(o.trucks)) + row('&nbsp; HEAD-ONS', n(o.headons)) + row('&nbsp; REAR-ENDED', n(o.rear)) +
     row('ANIMALS HIT', n(animals(o)), '#e9665a') + row('&nbsp; DEER', n(o.deer)) + row('&nbsp; MOOSE', n(o.moose)) + row('&nbsp; TURKEYS', n(o.turkeys)) + row('&nbsp; SQUIRRELS', n(o.squirrel)) + row('&nbsp; RACCOONS', n(o.raccoon))}</table></div>`;
